@@ -53,7 +53,7 @@
               <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Investments</span></a>
               <nav class="nav nav-sub">
                 <a href="{% url 'investment_list' %}" class="nav-sub-link">View Current Investments</a>
-                <a href="{% url 'addInvestment' %}" class="nav-sub-link">Add New Investments</a>
+                <a href="{% url 'add_investment' %}" class="nav-sub-link">Add New Investments</a>
 
               </nav>
             </li>
@@ -205,109 +205,73 @@
 
 
     <div class="main main-app p-3 p-lg-4">
-        <div class="row row-cols-auto g-4 g-xxl-5">
-            <div class="col-xl">
-                <div class="container">
-                    <h2 class="mb-5">Investment Detail</h2>
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label for="investmentId" class="form-label">Investment ID</label>
-                                    <input type="number" class="form-control" id="investmentId" min="1">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="investmentName" class="form-label">Investment Name</label>
-                                    <input type="text" class="form-control" id="investmentName">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="investmentDate" class="form-label">Investment Date</label>
-                                    <input type="date" class="form-control" id="investmentDate">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="{{ form.investment_type.id_for_label }}">Investment Type</label>
-                                    {{ form.investment_type }}
-                                    <label for="investmentType" class="form-label">Investment Type</label>
-                                    <input type="text" class="form-control" id="investmentType">
-                                </div>
-                            </div>
+      <div class="row row-cols-auto g-4 g-xxl-5">
+          <div class="col-xl">
+              <div class="container">
+                <h2 class="mb-5">Investment Detail</h2>
 
-                            <div class="col-md-4">
-                                
-                                <div class="form-group mb-3">
-                                    <label for="investmentAmount" class="form-label">Amount Invested</label>
-                                    <input type="number" class="form-control" id="investmentAmount" min="1" step="0.01">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="currency" class="form-label">Currency</label>
-                                    <select class="form-select" id="currency" required name="currency_type">
-                                      <option selected disabled value="">Select a currency</option>
-                                      <option>GHC</option>
-                                      <option>USD</option>
-                                      <option>GBP</option>
-                                      <option>EUR</option>
-                                      <option>JPY</option>
-                                    </select>
-                                    <div class="invalid-feedback">
-                                      Please select a currency.
-                                    </div>
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="investmentTerm" class="form-label">Investment Term (Years)</label>
-                                    <input type="number" class="form-control" id="investmentTerm">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="investmentRate" class="form-label">Interest Rate (%)</label>
-                                    <input type="number" step="0.01" class="form-control" id="investmentRate" min="1">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                               
-                                <div class="form-group mb-3">
-                                    <label for="maturityDate" class="form-label">Maturity Date</label>
-                                    <input type="date" class="form-control" id="maturityDate">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="risk" class="form-label">Risk Level</label>
-                                    <select class="form-select" id="risk" required name="risk_level">
-                                      <option selected disabled value="">Select risk level</option>
-                                      <option>Low</option>
-                                      <option>Medium</option>
-                                      <option>High</option>
-                                    </select>
-                                    <div class="invalid-feedback">
-                                      Please select an option.
-                                    </div>
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="xreturn" class="form-label">Expected Return</label>
-                                    <input type="number" class="form-control" id="xreturn" min="1" step="0.01">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="currentValue" class="form-label">Current Value</label>
-                                    <input type="number" class="form-control" id="currentValue">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="remark" class="form-label">Remarks</label>
-                                    <textarea class="form-control" name="remark" id="remark"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Submit</button>
-                    </form>
-                </div>
-                
-            </div>
+                <form method="POST">
+                  {% csrf_token %}
+                  <div class="row g-5">
+                      <div class="col-md-4">
+                          <div class="form-group mb-3">
+                              <label for="investmentId" class="form-label">Investment Name</label>
+                              <input type="text" class="form-control" id="investmentId" min="1" name="account_name">
+                          </div>
+                          <div class="form-group mb-3">
+                              <label for="investmentName" class="form-label">Account Type</label>
+                              <input type="text" class="form-control" id="investmentName" name="account_type">
+                          </div>
+                          <div class="form-group mb-3">
+                              <label for="investmentDate" class="form-label">Account Number</label>
+                              <input type="number" class="form-control" id="investmentDate" name="account_number">
+                          </div>
+                          <div class="form-group mb-3">
+                              <label for="principal_amount">Principal Amount</label>
+                              <input type="number" class="form-control" id="principal_amount" name="principal_amount">
+                              <label for="investmentType" class="form-label">Accumulated Interest</label>
+                              <input type="number" class="form-control" id="investmentType" name="interest_amount">
+                          </div>
+                      </div>
+              
+                      <div class="col-md-4">
+                          <div class="form-group mb-3">
+                              <label for="investmentAmount" class="form-label">Investment Start Date</label>
+                              <input type="datetime-local" class="form-control" id="investmentAmount" name="interest_start_date">
+                          </div>
+                          <div class="form-group mb-3">
+                              <label for="investmentTerm" class="form-label">Investment End Date</label>
+                              <input type="datetime-local" class="form-control" id="investmentTerm" name="interest_end_date">
+                          </div>
+                      </div>
+              
+                      <div class="col-md-4">
+                          <div class="form-group mb-3">
+                              <label for="maturityDate" class="form-label">Percentage Interest</label>
+                              <input type="number" min="1" step="0.01" class="form-control" id="maturityDate" name="interest_percentage">
+                          </div>
+                      </div>
+                  </div>
+                  <input type="submit" class="btn btn-primary" value="Submit">
+                </form>
+              
+
+
+            
+              </div>
+
+          </div>
+              
         </div>
+      </div>
 
 
       
       <!-- row -->
 
       <div class="main-footer mt-5">
-        <span>&copy; 2023. Dashbyte. All Rights Reserved.</span>
-        <span>Created by: <a href="http://themepixels.me/" target="_blank">Themepixels</a></span>
+        <span>&copy; 2024. Vestrex Tech. All Rights Reserved.</span>
+        <span>Created by: <a href="http://vestrex.com/" target="_blank">Vestrex.com</a></span>
       </div>
       <!-- main-footer -->
     </div>
