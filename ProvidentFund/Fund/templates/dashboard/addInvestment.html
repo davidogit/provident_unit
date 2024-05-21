@@ -1,0 +1,328 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  
+<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:16:10 GMT -->
+<head>
+
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Meta -->
+    <meta name="description" content="">
+    <meta name="author" content="Themepixels">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" type="image/x-icon" href="../assets/img/favicon.png">
+
+    <title>DashByte - Premium Dashboard Template</title>
+
+    <!-- Vendor CSS -->
+    <!-- <link rel="stylesheet" href="../lib/remixicon/fonts/remixicon.css">
+    <link rel="stylesheet" href="../lib/apexcharts/apexcharts.css"> -->
+
+    <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
+    <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
+
+    <!-- Template CSS -->
+    <!-- <link rel="stylesheet" href="../assets/css/style.min.css"> -->
+
+    <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
+
+  </head>
+  <body>
+
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-logo">dashbyte</a>
+      </div><!-- sidebar-header -->
+      <div id="sidebarMenu" class="sidebar-body">
+        <div class="nav-group show">
+          <a href="#" class="nav-label">Dashboard</a>
+          <ul class="nav nav-sidebar">
+            <li class="nav-item">
+              <a href="finance.html" class="nav-link active"><i class="ri-pie-chart-2-fill"></i> <span>Finance Monitoring</span></a>
+            </li>
+
+        </div><!--nav-group -->
+        <div class="nav-group show">
+          <a href="#" class="nav-label">Fund Management</a>
+          <ul class="nav nav-sidebar">
+            <li class="nav-item">
+              <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Investments</span></a>
+              <nav class="nav nav-sub">
+                <a href="{% url 'investment_list' %}" class="nav-sub-link">View Current Investments</a>
+                <a href="{% url 'addInvestment' %}" class="nav-sub-link">Add New Investments</a>
+
+              </nav>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link has-sub"><i class="ri-account-circle-line"></i> <span>Members</span></a>
+              <nav class="nav nav-sub">
+                <a href="{% url 'member_list' %}" class="nav-sub-link">Active PF Members</a>
+                <a href="../pages/sign-in-2.html" class="nav-sub-link">Add Member</a>
+              </nav>
+            </li>
+
+          </ul>
+        </div><!-- nav-group -->
+
+      </div><!-- sidebar-body -->
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-top">
+          <div class="sidebar-footer-thumb">
+            <img src="../assets/img/img1.jpg" alt="">
+          </div><!-- sidebar-footer-thumb -->
+          <div class="sidebar-footer-body">
+            <h6><a href="../pages/profile.html">PF Manager</a></h6>
+            <p>Manager</p>
+          </div><!-- sidebar-footer-body -->
+          <a id="sidebarFooterMenu" href="#" class="dropdown-link"><i class="ri-arrow-down-s-line"></i></a>
+        </div><!-- sidebar-footer-top -->
+        <div class="sidebar-footer-menu">
+          <nav class="nav">
+            <a href="#"><i class="ri-edit-2-line"></i> Edit Profile</a>
+            <a href="#"><i class="ri-profile-line"></i> View Profile</a>
+          </nav>
+          <hr>
+          <nav class="nav">
+            <a href="#"><i class="ri-question-line"></i> Help Center</a>
+            <a href="#"><i class="ri-lock-line"></i> Privacy Settings</a>
+            <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
+            <a href="#"><i class="ri-logout-box-r-line"></i> Log Out</a>
+          </nav>
+        </div><!-- sidebar-footer-menu -->
+      </div><!-- sidebar-footer -->
+    </div><!-- sidebar -->
+
+    <div class="header-main px-3 px-lg-4">
+      <a id="menuSidebar" href="#" class="menu-link me-3 me-lg-4"><i class="ri-menu-2-fill"></i></a>
+
+      <div class="form-search me-auto">
+        <input type="text" class="form-control" placeholder="Search">
+        <i class="ri-search-line"></i>
+      </div><!-- form-search -->
+
+      <div class="dropdown dropdown-skin">
+        <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="ri-settings-3-line"></i></a>
+        <div class="dropdown-menu dropdown-menu-end mt-10-f">
+          <label>Skin Mode</label>
+          <nav id="skinMode" class="nav nav-skin">
+            <a href="#" class="nav-link active">Light</a>
+            <a href="#" class="nav-link">Dark</a>
+          </nav>
+          <hr>
+          <label>Sidebar Skin</label>
+          <nav id="sidebarSkin" class="nav nav-skin">
+            <a href="#" class="nav-link active">Default</a>
+            <a href="#" class="nav-link">Prime</a>
+            <a href="#" class="nav-link">Dark</a>
+          </nav>
+          <hr>
+          <label>Direction</label>
+          <nav id="layoutDirection" class="nav nav-skin">
+            <a href="#" class="nav-link active">LTR</a>
+            <a href="#" class="nav-link">RTL</a>
+          </nav>
+        </div><!-- dropdown-menu -->
+      </div><!-- dropdown -->
+
+      <div class="dropdown dropdown-notification ms-3 ms-xl-4">
+        <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><small>3</small><i class="ri-notification-3-line"></i></a>
+        <div class="dropdown-menu dropdown-menu-end mt-10-f me--10-f">
+          <div class="dropdown-menu-header">
+            <h6 class="dropdown-menu-title">Notifications</h6>
+          </div><!-- dropdown-menu-header -->
+          <ul class="list-group">
+            <li class="list-group-item">
+              <div class="avatar online"><img src="../assets/img/img10.jpg" alt=""></div>
+              <div class="list-group-body">
+                <p><strong>Dominador Manuel</strong> and <strong>100 other people</strong> reacted to your comment "Tell your partner that...</p>
+                <span>Aug 20 08:55am</span>
+              </div><!-- list-group-body -->
+            </li>
+            <li class="list-group-item">
+              <div class="avatar online"><img src="../assets/img/img11.jpg" alt=""></div>
+              <div class="list-group-body">
+                <p><strong>Angela Ighot</strong> tagged you and <strong>9 others</strong> in a post.</p>
+                <span>Aug 18 10:30am</span>
+              </div><!-- list-group-body -->
+            </li>
+            <li class="list-group-item">
+              <div class="avatar"><span class="avatar-initial bg-primary">a</span></div>
+              <div class="list-group-body">
+                <p>New listings were added that match your search alert <strong>house for rent</strong></p>
+                <span>Aug 15 08:10pm</span>
+              </div><!-- list-group-body -->
+            </li>
+            <li class="list-group-item">
+              <div class="avatar online"><img src="../assets/img/img14.jpg" alt=""></div>
+              <div class="list-group-body">
+                <p>Reminder: <strong>Jerry Cuares</strong> invited you to like <strong>Cuares Surveying Services</strong>. <br><a href="#">Accept</a> or <a href="#">Decline</a></p>
+                <span>Aug 14 11:50pm</span>
+              </div><!-- list-group-body -->
+            </li>
+            <li class="list-group-item">
+              <div class="avatar online"><img src="../assets/img/img15.jpg" alt=""></div>
+              <div class="list-group-body">
+                <p><strong>Dyanne Aceron</strong> reacted to your post <strong>King of the Bed</strong>.</p>
+                <span>Aug 10 05:30am</span>
+              </div><!-- list-group-body -->
+            </li>
+          </ul>
+          <div class="dropdown-menu-footer"><a href="#">Show all Notifications</a></div>
+        </div><!-- dropdown-menu -->
+      </div><!-- dropdown -->
+      <div class="dropdown dropdown-profile ms-3 ms-xl-4">
+          <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><div class="avatar online"><img src="../assets/img/img1.jpg" alt=""></div></a>
+          <div class="dropdown-menu dropdown-menu-end mt-10-f">
+            <div class="dropdown-menu-body">
+              <div class="avatar avatar-xl online mb-3"><img src="../assets/img/img1.jpg" alt=""></div>
+              <h5 class="mb-1 text-dark fw-semibold">Shaira Diaz</h5>
+              <p class="fs-sm text-secondary">Premium Member</p>
+
+              <nav class="nav">
+                <a href="#"><i class="ri-edit-2-line"></i> Edit Profile</a>
+                <a href="#"><i class="ri-profile-line"></i> View Profile</a>
+              </nav>
+              <hr>
+              <nav class="nav">
+                <a href="#"><i class="ri-question-line"></i> Help Center</a>
+                <a href="#"><i class="ri-lock-line"></i> Privacy Settings</a>
+                <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
+                <a href="#"><i class="ri-logout-box-r-line"></i> Log Out</a>
+              </nav>
+            </div><!-- dropdown-menu-body -->
+          </div><!-- dropdown-menu -->
+      </div><!-- dropdown -->
+    </div><!-- header-main -->
+
+
+
+
+
+
+
+    <div class="main main-app p-3 p-lg-4">
+        <div class="row row-cols-auto g-4 g-xxl-5">
+            <div class="col-xl">
+                <div class="container">
+                    <h2 class="mb-5">Investment Detail</h2>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="investmentId" class="form-label">Investment ID</label>
+                                    <input type="number" class="form-control" id="investmentId" min="1">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="investmentName" class="form-label">Investment Name</label>
+                                    <input type="text" class="form-control" id="investmentName">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="investmentDate" class="form-label">Investment Date</label>
+                                    <input type="date" class="form-control" id="investmentDate">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.investment_type.id_for_label }}">Investment Type</label>
+                                    {{ form.investment_type }}
+                                    <label for="investmentType" class="form-label">Investment Type</label>
+                                    <input type="text" class="form-control" id="investmentType">
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                
+                                <div class="form-group mb-3">
+                                    <label for="investmentAmount" class="form-label">Amount Invested</label>
+                                    <input type="number" class="form-control" id="investmentAmount" min="1" step="0.01">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="currency" class="form-label">Currency</label>
+                                    <select class="form-select" id="currency" required name="currency_type">
+                                      <option selected disabled value="">Select a currency</option>
+                                      <option>GHC</option>
+                                      <option>USD</option>
+                                      <option>GBP</option>
+                                      <option>EUR</option>
+                                      <option>JPY</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                      Please select a currency.
+                                    </div>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="investmentTerm" class="form-label">Investment Term (Years)</label>
+                                    <input type="number" class="form-control" id="investmentTerm">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="investmentRate" class="form-label">Interest Rate (%)</label>
+                                    <input type="number" step="0.01" class="form-control" id="investmentRate" min="1">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                               
+                                <div class="form-group mb-3">
+                                    <label for="maturityDate" class="form-label">Maturity Date</label>
+                                    <input type="date" class="form-control" id="maturityDate">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="risk" class="form-label">Risk Level</label>
+                                    <select class="form-select" id="risk" required name="risk_level">
+                                      <option selected disabled value="">Select risk level</option>
+                                      <option>Low</option>
+                                      <option>Medium</option>
+                                      <option>High</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                      Please select an option.
+                                    </div>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="xreturn" class="form-label">Expected Return</label>
+                                    <input type="number" class="form-control" id="xreturn" min="1" step="0.01">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="currentValue" class="form-label">Current Value</label>
+                                    <input type="number" class="form-control" id="currentValue">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="remark" class="form-label">Remarks</label>
+                                    <textarea class="form-control" name="remark" id="remark"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+                
+            </div>
+        </div>
+
+
+      
+      <!-- row -->
+
+      <div class="main-footer mt-5">
+        <span>&copy; 2023. Dashbyte. All Rights Reserved.</span>
+        <span>Created by: <a href="http://themepixels.me/" target="_blank">Themepixels</a></span>
+      </div>
+      <!-- main-footer -->
+    </div>
+    <!-- main -->
+
+
+    <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
+    <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'lib/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
+    <script src="{% static 'lib/apexcharts/apexcharts.min.js' %}"></script>
+
+    <script src="{% static 'assets/js/script.js' %}"></script>
+    <script src="{% static 'assets/js/db.data.js' %}"></script>
+    <script src="{% static 'assets/js/db.finance.js' %}"></script>
+  </body>
+
+<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:17:10 GMT -->
+</html>
