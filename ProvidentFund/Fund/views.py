@@ -11,12 +11,6 @@ class Invest(TemplateView):
     template_name='dashboard/finance.html'
 
 
-# class AddInvestment(TemplateView):
-#     template_name = 'dashboard/addInvestment.html'
-
-# class InvestMentList(TemplateView):
-#     template_name= 'dashboard/investment_list.html'
-
 class MemberList(TemplateView):
     template_name= 'dashboard/member_list.html'
 
@@ -41,15 +35,3 @@ class AddInvestment(CreateView):
     template_name = 'dashboard/addInvestment.html'
     success_url = reverse_lazy('investment_list')
 
-
-# def addInvestment(request):
-#     if request.method == 'POST':
-#         investmentForm = AddInvestmentForm(request.POST)
-
-#         if investmentForm.is_valid():
-#             investmentForm.save()
-
-#             return redirect('InvestmentListView')
-
-#     return render(request,'dashboard/addInvestment.html')
-    
