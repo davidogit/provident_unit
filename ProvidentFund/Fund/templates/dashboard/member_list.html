@@ -64,21 +64,27 @@
               <th>Deposit Amount</th>
               <th>Revenue</th>
               <th>Active/Inactive</th>
+              <th>Subscription Date</th>
+              <th>Last Updated</th>
             </tr>
           </thead>
-          <tbody>
-            {% for member in member_list %}
-            <tr>
-              <td>{{ member.id }}</td>
-              <td><a href="{% url 'member_detail' member.pk %}">{{member.first_name}}</a></td>
-              <td>{{member.last_name}}</td>
-              <td>{{member.staff_id}}</td>
-              <td>{{ member.total_amount_to_date }}</td>
-              <td>{{member.profit}}</td>
-              <td>{{ member.status }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
+    
+            <tbody>
+              {% for member in member_list %}
+                <tr>
+                  <td><a href="{% url 'member_detail' member.pk %}">{{ member.id }}</a></td>
+                  <td>{{member.first_name}}</td>
+                  <td>{{member.last_name}}</td>
+                  <td>{{member.staff_id}}</td>
+                  <td>{{ member.total_amount_to_date }}</td>
+                  <td>{{member.profit}}</td>
+                  <td>{{ member.status }}</td>
+                  <td>{{ member.subscription_date }}</td>
+                  <td>{{ member.updated_date }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+
         </table>
       </div>
     </div><!-- card-body -->

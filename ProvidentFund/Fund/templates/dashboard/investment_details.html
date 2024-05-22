@@ -2,4 +2,50 @@
 
 {% block content %}
 
+<div class="main main-app p-4 p-lg-4">
+    <div class="row g-3 justify-content-center">
+       
+        <div class="col-md-12 col-xl-10">
+          <div class="card card-one">
+            <div class="card-body">
+                <div class="row g-5">
+                    <div class="row card-value text-center">
+                        <h2 class="mb-5 mt-5 text-decoration-underline">
+                            Investment Detail
+                        </h2>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-5 h5">No.: {{ investment_detail.id }}</p>
+                        <p class="mb-5 h5">Investment Name: {{ investment_detail.account_name }}</p>
+                        <p class="mb-5 h5">Account Number: {{ investment_detail.account_number }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <!-- <p class="mb-5 h5">Name of Investment: {{ investment_detail.account_type }}</p> -->
+                        <p class="mb-5 h5">Investment Type: {{ investment_detail.investment_type }}</p>
+                        <p class="mb-5 h5">Interest Percentage: {{ investment_detail.interest_percentage }}%</p>
+                        <p class="mb-5 h5">Account Type: {{ investment_detail.account_type }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-5 h5">Maturity Date: {{ investment_detail.interest_end_date }}</p>
+                        <p class="mb-5 h5">Principal: {{ investment_detail.principal_amount }}</p>
+                        <p class="mb-5 h5">Total Interest: {{ investment_detail.interest_amount }}</p>
+                        <p class="mb-5 h5">Date of Investment: {{ investment_detail.created_date }}</p>
+                        
+                    </div>
+                </div>
+                <!-- <input class="btn btn-primary" type="submit" value="update"> -->
+                
+                
+                <div class="row g-2 d-flex justify-content-between">
+                    <div class="col-1">
+                        <a class="btn btn-primary" href="{% url 'investment_update' investment_detail.pk %}">update</a>
+                    </div>
+                    <div class="col-1 justify-content-end">
+                        <a class="btn btn-danger" href="{% url 'delete_investment' investment_detail.pk %}">Delete</a>
+                    </div>
+                </div>
+            </div><!-- card-body -->
+          </div><!-- card-one -->
+    </div>
+</div>
 {% endblock %}

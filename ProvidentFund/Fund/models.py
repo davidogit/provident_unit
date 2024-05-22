@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 
 # Create your models here.
 
@@ -18,15 +19,22 @@ class InvestmentDetail(models.Model):
     def __str__(self):
         return f'{self.account_name}\'s account'
     
+    def get_absolute_url(self):
+        return reverse('investment_detail', kwargs={'pk':self.pk})
+    
 
 class Member(models.Model):
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
     staff_id = models.PositiveIntegerField(unique=True)
-    total_amount_to_date = models.DecimalField(max_digits=10, decimal_places=2)
-    profit = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20)
+    total_amount_to_date = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    profit = models.DecimalField(max_digits=10, decimal_places=2,blank=True, null=True)
+    status = models.CharField(max_length=20,blank=True, null=True)
     subscription_date = models.DateTimeField(auto_now_add=True)
+    updated_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}\'s account'
+    
+    def get_absolute_url(self):
+        return reverse('member_detail', kwargs={'pk':self.pk})

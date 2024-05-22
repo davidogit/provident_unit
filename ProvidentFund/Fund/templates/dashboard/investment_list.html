@@ -28,15 +28,15 @@
                   <label class="card-title fw-medium text-dark mb-1">Total Investments</label>
                 </div><!-- col -->
                 <div class="col-2">
-                  <h3 class="card-value mb-1">{{ investment_count }}</h3>
+                  <h3 class="card-value mb-1">{{ T_bills_count }}</h3>
                   <label class="card-title fw-medium text-dark mb-1">Treasury Bills</label>
                 </div><!-- col -->
                 <div class="col-2">
-                  <h3 class="card-value mb-1">{{ investment_count }}</h3>
+                  <h3 class="card-value mb-1">{{ F_deposit_count }}</h3>
                   <label class="card-title fw-medium text-dark mb-1">Fixed Deposits</label>
                 </div><!-- col -->
                 <div class="col-2">
-                  <h3 class="card-value mb-1">{{ investment_count }}</h3>
+                  <h3 class="card-value mb-1">{{ D_interest_count }}</h3>
                   <label class="card-title fw-medium text-dark mb-1">Delayed Interests</label>
                 </div><!-- col -->
                 <div class="col-3">
@@ -73,13 +73,14 @@
               <th>Investment start Date</th>
               <th>Investment end Date</th>
               <th>Date Created</th>
+              <th>Last Updated</th>
               <!-- <th>Rate</th> -->
             </tr>
           </thead>
           <tbody>
             {% for investment in investment_list %}
             <tr>
-              <td><a href="#">{{ investment.account_name }}</a></td>
+              <td><a href="{% url 'investment_detail' investment.pk %}">{{ investment.account_name }}</a></td>
               <td>{{ investment.investment_type }}</td>
               <td>{{ investment.account_type }}</td>
               <td>{{ investment.account_number }}</td>
@@ -89,6 +90,7 @@
               <td>{{ investment.interest_start_date }}</td>
               <td>{{ investment.interest_end_date }}</td>
               <td>{{ investment.created_date }}</td>
+              <td>{{ investment.updated_date }}</td>
       
             {% endfor %}
           </tbody>

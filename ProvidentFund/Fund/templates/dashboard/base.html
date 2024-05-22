@@ -14,7 +14,7 @@
     <meta name="author" content="Themepixels">
 
     <!-- Favicon -->
-    <link rel="shortcut icon" type="image/x-icon" href="../assets/img/favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
 
     <title>DashByte - Premium Dashboard Template</title>
 
@@ -61,7 +61,7 @@
               <a href="#" class="nav-link has-sub"><i class="ri-account-circle-line"></i> <span>Members</span></a>
               <nav class="nav nav-sub">
                 <a href="{% url 'member_list' %}" class="nav-sub-link">Active PF Members</a>
-                <a href="../pages/sign-in-2.html" class="nav-sub-link">Add Member</a>
+                <a href="{% url 'add_member' %}" class="nav-sub-link">Add Member</a>
               </nav>
             </li>
 

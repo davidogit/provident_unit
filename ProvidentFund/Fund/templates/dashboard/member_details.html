@@ -20,13 +20,23 @@
                     </div>
                     <div class="col-md-4">
                         <p class="mb-5 h5">Total Amount: {{ member.total_amount_to_date }}</p>
-                        <p class="mb-5 h5">Total Interest: {{ member.total_interest_to_date }}</p>
+                        <p class="mb-5 h5">Total Interest: {{ member.profit }}</p>
                     </div>
                     <div class="col-md-4">
-                        <p class="mb-5 h5">Total Amount: {{ member.total_amount_to_date }}</p>
-                        <p class="mb-5 h5">Total Interest: {{ member.total_interest_to_date }}</p>
+                        <p class="mb-5 h5">Subscription Date: {{ member.subscription_date }}</p>
+                        <!-- <p class="mb-5 h5">Total Interest: {{ member.total_interest_to_date }}</p> -->
                     </div>
                 </div>
+
+                <div class="row g-2 d-flex justify-content-between">
+                    <div class="col-1">
+                        <a class="btn btn-primary" href="{% url 'member_update' member.pk %}">update</a>
+                    </div>
+                    <div class="col-1 justify-content-end">
+                        <a class="btn btn-danger" href="{% url 'delete_member' member.pk %}">Delete</a>
+                    </div>
+                </div>
+
             </div><!-- card-body -->
           </div><!-- card-one -->
     </div>
