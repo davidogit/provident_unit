@@ -5,7 +5,7 @@ from django.views.generic import TemplateView, ListView,DetailView,UpdateView,Cr
 # Create your views here.
 from Fund.models import InvestmentDetail, Member
 from django.urls import reverse_lazy
-# from Fund.forms import AddInvestmentForm
+from Fund.forms import InvestmentUpdateForm
 
 class Invest(TemplateView):
     template_name='dashboard/finance.html'
@@ -25,6 +25,9 @@ class InvestmentListView(ListView):
         context = super().get_context_data(**kwargs)
         queryset = self.get_queryset()
 
+        context['inv_type_t_bill'] = queryset.filter(investment_type='T-bills')
+        context['inv_type_f_dep'] = queryset.filter(investment_type='F-deposit')
+        context['inv_type_d_int'] = queryset.filter(investment_type='D-interest')
         context['investment_count']= queryset.count()
         context['T_bills_count'] = queryset.filter(investment_type='T-bills').count()
         context['F_deposit_count'] = queryset.filter(investment_type='F-deposit').count()
@@ -50,6 +53,7 @@ class AddInvestment(CreateView):
 class InvestmentUpdateView(UpdateView):
     model = InvestmentDetail
     fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage')
+    # form_class = InvestmentUpdateForm
     template_name = 'dashboard/investment_form.html'
 
 
