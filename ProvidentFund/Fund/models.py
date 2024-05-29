@@ -16,6 +16,16 @@ class InvestmentDetail(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
 
+
+    # # calculates the tenure of investment
+    # def calculate_tenure(self):
+    #     return (self.interest_end_date - self.interest_start_date).days
+    
+    # # serves as a property to self
+    # @property
+    # def tenure(self):
+    #     return self.calculate_tenure()
+
     def __str__(self):
         return f'{self.account_name}\'s account'
     
