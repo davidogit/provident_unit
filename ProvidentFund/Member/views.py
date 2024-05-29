@@ -10,4 +10,4 @@ from django.views.generic import TemplateView
 #     template_name= 'signin.html'
 
 class LoginTemplateView(TemplateView):
-    template_name = 'signin.html' 
+    template_name = 'files/base.html'
