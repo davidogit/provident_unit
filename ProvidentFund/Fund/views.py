@@ -65,14 +65,14 @@ class InvestmentDetailView(DetailView):
 # Adding an investment
 class AddInvestment(CreateView):
     model=InvestmentDetail
-    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage')
+    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
     template_name = 'dashboard/investment_form.html'
     success_url = reverse_lazy('investment_list')
 
 # Updating an Investement's details
 class InvestmentUpdateView(UpdateView):
     model = InvestmentDetail
-    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage')
+    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
     # form_class = InvestmentUpdateForm
     template_name = 'dashboard/investment_form.html'
 

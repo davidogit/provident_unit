@@ -8,29 +8,29 @@ class InvestmentDetail(models.Model):
     account_type = models.CharField(max_length=50)
     account_name = models.CharField(max_length=50)
     account_number = models.IntegerField(unique=True)
-    principal_amount = models.DecimalField(decimal_places=2, max_digits=10)
-    interest_percentage = models.DecimalField(decimal_places=2, max_digits=3)
-    interest_amount = models.DecimalField(decimal_places=2, max_digits=10, blank=True, null=True)
+    principal_amount = models.DecimalField(decimal_places=2, max_digits=100)
+    interest_percentage = models.DecimalField(decimal_places=2, max_digits=5)
+    interest_amount = models.DecimalField(decimal_places=2, max_digits=100, blank=True, null=True)
     interest_start_date = models.DateField(null=False, blank=False)
     interest_end_date = models.DateField(null=False, blank=False)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
 
 
-    # # calculates the tenure of investment
-    # def calculate_tenure(self):
-    #     return (self.interest_end_date - self.interest_start_date).days
+    # calculates the tenure of investment
+    def calculate_tenure(self):
+        return (self.interest_end_date - self.interest_start_date).days
     
-    # # serves as a property to self
-    # @property
-    # def tenure(self):
-    #     return self.calculate_tenure()
-
+    # serves as a property to self
+    @property
+    def tenure(self):
+        return self.calculate_tenure()
+    
     def __str__(self):
         return f'{self.account_name}\'s account'
     
     def get_absolute_url(self):
-        return reverse('investment_detail', kwargs={'pk':self.pk})
+        return reverse('investment_detail', kwargs={'pk':self.pk}) 
     
 
 class Member(models.Model):
