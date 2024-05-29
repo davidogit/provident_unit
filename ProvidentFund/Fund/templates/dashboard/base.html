@@ -54,6 +54,7 @@
               <nav class="nav nav-sub">
                 <a href="{% url 'investment_list' %}" class="nav-sub-link">View Current Investments</a>
                 <a href="{% url 'add_investment' %}" class="nav-sub-link">Add New Investments</a>
+                
 
               </nav>
             </li>
@@ -63,23 +64,34 @@
                 <a href="{% url 'member_list' %}" class="nav-sub-link">Active PF Members</a>
                 <a href="{% url 'add_member' %}" class="nav-sub-link">Add Member</a>
               </nav>
-            </li>
-
-            <li class="nav-item">
-              <a href="#" class="nav-link has-sub"><i class="ri-lock-2-line"></i> <span>Contribution</span></a>
-              <nav class="nav nav-sub">
-                <a href="../pages/sign-in.html" class="nav-sub-link">Provident Fund 1</a>
-                <a href="../pages/sign-in-2.html" class="nav-sub-link">Provident Fund 2</a>
-                <!-- <a href="../pages/sign-up.html" class="nav-sub-link">Sign Up Basic</a>
-                <a href="../pages/sign-up-2.html" class="nav-sub-link">Sign Up Cover</a>
-                <a href="../pages/verify-account.html" class="nav-sub-link">Verify Account</a>
-                <a href="../pages/forgot-password.html" class="nav-sub-link">Forgot Password</a>
-                <a href="../pages/lock-screen.html" class="nav-sub-link">Lock Screen</a> -->
-              </nav>
-
+            </li>   
+        
+              
           </ul>
         </div><!-- nav-group -->
-
+        
+          <div class="nav-group show">
+            <a href="#" class="nav-label">Contributions Management</a>
+            <ul class="nav nav-sidebar">
+              <li class="nav-item">
+                <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Provident fund 1</span></a>
+                <nav class="nav nav-sub">
+                  <a href="{% url 'contributions_list' %}" class="nav-sub-link">View Contributions</a>
+                  <a href="{% url 'contributions_list' %}" class="nav-sub-link">Individual Contributions</a>
+  
+                </nav>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link has-sub"><i class="ri-account-circle-line"></i> <span>Provident fund 2</span></a>
+                <nav class="nav nav-sub">
+                  <a href="{% url 'contributions_listpf2' %}" class="nav-sub-link">View Contributions</a>
+                  <a href="{% url 'contributions_listpf2' %}" class="nav-sub-link">Individual Contributions</a>
+                </nav>
+              </li>
+  
+            </ul>
+          </div><!-- nav-group -->
+  
       </div><!-- sidebar-body -->
       <div class="sidebar-footer">
         <div class="sidebar-footer-top">
