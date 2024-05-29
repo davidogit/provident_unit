@@ -6,6 +6,8 @@ from django.views.generic import TemplateView, ListView,DetailView,UpdateView,Cr
 from Fund.models import InvestmentDetail, Member
 from django.urls import reverse_lazy
 from Fund.forms import InvestmentUpdateForm
+from django.db.models import Sum,F, FloatField
+from django.db.models.functions import Cast
 
 class Invest(TemplateView):
     template_name='dashboard/finance.html'
@@ -32,6 +34,24 @@ class InvestmentListView(ListView):
         context['T_bills_count'] = queryset.filter(investment_type='T-bills').count()
         context['F_deposit_count'] = queryset.filter(investment_type='F-deposit').count()
         context['D_interest_count'] = queryset.filter(investment_type='D-interest').count()
+
+        # calculating interest based on interest rate
+
+
+        for investment in queryset:
+            inv_principal = investment.principal_amount
+            inv_principal = float(inv_principal)
+            inv_rate = investment.interest_percentage
+            inv_rate = float(inv_rate)
+
+            if inv_principal != 0.0 and inv_rate !=0.0:
+                inv_return = ((inv_rate)/100)*inv_principal
+            else:
+                inv_return = 0.0
+
+            investment.interest_amount = inv_return
+            # Saving newly calculated return to database
+            investment.save()
         
         return context
     
@@ -72,7 +92,31 @@ class MemberListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        queryset = self.get_queryset()
         context['member_count'] = self.get_queryset().count()
+
+        # calculate total contribution
+        total_contribution = queryset.aggregate(total=Sum(Cast('total_amount_to_date',FloatField())*1.0))['total'] or 0.0
+
+        # calculating total profit
+        total_profit = InvestmentDetail.objects.aggregate(total=Sum(Cast('interest_amount',FloatField())*1.0))['total'] or 0.0
+
+        # Individual profit calculation
+
+        for member in queryset:
+            member_contribution = member.total_amount_to_date or 0.0
+            member_contribution = float(member_contribution)
+
+            if total_contribution !=0:
+                member_profit = ((member_contribution)/(total_contribution))*total_profit
+            else:
+                member_profit = 0.0
+
+            member.profit = member_profit
+            # save new profit to database
+            member.save()
+
+        context['member_list']= queryset
         return context
     
 

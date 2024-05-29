@@ -10,4 +10,7 @@ class InvestmentAdmin(admin.ModelAdmin):
 
 admin.site.register(InvestmentDetail,InvestmentAdmin)
 
-admin.site.register(Member)
+class MemberAdmin(admin.ModelAdmin):
+    readonly_fields = ('profit',)
+
+admin.site.register(Member,MemberAdmin)

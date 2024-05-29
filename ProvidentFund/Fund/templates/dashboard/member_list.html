@@ -73,11 +73,11 @@
               {% for member in member_list %}
                 <tr>
                   <td><a href="{% url 'member_detail' member.pk %}">{{ member.id }}</a></td>
-                  <td>{{member.first_name}}</td>
-                  <td>{{member.last_name}}</td>
-                  <td>{{member.staff_id}}</td>
+                  <td>{{ member.first_name }}</td>
+                  <td>{{ member.last_name }}</td>
+                  <td>{{ member.staff_id }}</td>
                   <td>{{ member.total_amount_to_date }}</td>
-                  <td>{{member.profit}}</td>
+                  <td>{{ member.profit|floatformat:"2" }}</td>
                   <td>{{ member.status }}</td>
                   <td>{{ member.subscription_date }}</td>
                   <td>{{ member.updated_date }}</td>
