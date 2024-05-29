@@ -3,6 +3,6 @@ from Member import views
 
 
 urlpatterns=[
-    path('', views.LoginView.as_view(), name='loginView')
+    path('', views.LoginTemplateView.as_view(), name='loginView')
 
 ]
