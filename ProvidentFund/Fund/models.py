@@ -8,13 +8,19 @@ class InvestmentDetail(models.Model):
     account_type = models.CharField(max_length=50)
     account_name = models.CharField(max_length=50)
     account_number = models.IntegerField(unique=True)
-    principal_amount = models.DecimalField(decimal_places=2, max_digits=100)
-    interest_percentage = models.DecimalField(decimal_places=2, max_digits=5)
-    interest_amount = models.DecimalField(decimal_places=2, max_digits=100, blank=True, null=True)
+    principal_amount = models.FloatField()
+    interest_percentage = models.FloatField()
+    # Rollover percentage interest
+    rollover_interest_percentage = models.FloatField(null=True, blank=True)
+
+    interest_amount = models.FloatField(blank=True, null=True)
     interest_start_date = models.DateField(null=False, blank=False)
     interest_end_date = models.DateField(null=False, blank=False)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
+    CHOICES = [('ROLLOVER','Roll Over'),('END','End'),('NULL', 'null')]
+    roll_over = models.CharField(choices=CHOICES, default='NULL', max_length=15)
+    
 
 
     # calculates the tenure of investment
@@ -24,8 +30,31 @@ class InvestmentDetail(models.Model):
     # serves as a property to self
     @property
     def tenure(self):
+        print('calculating tenure')
         return self.calculate_tenure()
     
+    # Roll over Principal Calculation
+    def calculate_rollover_principal(self):
+        return (self.principal_amount+ self.interest_amount)
+    
+    @property
+    def rollover_principal(self):
+        print('calculating rollover principal')
+        return self.calculate_rollover_principal()
+    
+
+    # Rollover accumulated amount
+    def calculate_rollover_accumulated_amount(self):
+        if self.rollover_interest_percentage is None or self.rollover_principal is None:
+            return 0
+        return (((self.rollover_interest_percentage/100.0)*(self.rollover_principal))+ self.rollover_principal)
+    
+    @property
+    def rollover_accumulated_amount(self):
+        print('calculating rollover amount')
+        return self.calculate_rollover_accumulated_amount()
+
+
     def __str__(self):
         return f'{self.account_name}\'s account'
     

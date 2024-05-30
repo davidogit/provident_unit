@@ -156,13 +156,31 @@
                       <th>Account Type</th>
                       <th>Account Number</th>
                       <th>Principal Amount</th>
+
+                      <!-- {% if investment.roll_over == 'ROLLOVER' %}
+                      <th>Principal Rollover</th>
+                      {% endif %} -->
+
                       <th>Percentage Interest (%)</th>
+
+                      <!-- {% if investment.roll_over == 'ROLLOVER' %}
+                      <th>Interest Rollover</th>
+                      {% endif %} -->
+
                       <th>Accumulated Interest</th>
+
+                      <!-- {% if investment.roll_over == 'ROLLOVER' %}
+                      <th>Rollover Accumulated Interest</th>
+                      {% endif %} -->
+
                       <th>Investment start Date</th>
                       <th>Maturity Date</th>
                       <th>Tenure</th>
                       <th>Date Created</th>
                       <th>Last Updated</th>
+                      <th>Roll Over</th>
+                      <th>Roll Over Interest Percentage (%)</th>
+                      <th>Roll Over Accumulated Amount</th>
                       <!-- <th>Rate</th> -->
                     </tr>
                   </thead>
@@ -181,6 +199,15 @@
                       <td>{{ investment.tenure }} days</td>
                       <td>{{ investment.created_date }}</td>
                       <td>{{ investment.updated_date }}</td>
+                      <!-- Rollover Principal -->
+                      <td><select class="form-control" name="rollover" id="">
+                        <option value="Null">Null</option>
+                        <option value="End">End</option>
+                        <option value="Roll over">Roll over</option>
+                      </select></td>
+                      <!-- Rollover Principal -->
+                      <td>{{ investment.rollover_interest_percentage }}</td>
+                      <td>{{ investment.rollover_accumulated_amount }}</td>
               
                     {% endfor %}
                   </tbody>
