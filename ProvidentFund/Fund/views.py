@@ -45,7 +45,7 @@ class InvestmentListView(ListView):
             inv_rate = float(inv_rate)
 
             if inv_principal != 0.0 and inv_rate !=0.0:
-                inv_return = ((inv_rate)/100)*inv_principal
+                inv_return = ((inv_rate)/100)*inv_principal + inv_principal
             else:
                 inv_return = 0.0
 
@@ -76,10 +76,17 @@ class InvestmentUpdateView(UpdateView):
     # form_class = InvestmentUpdateForm
     template_name = 'dashboard/investment_form.html'
 
+# Updating rollover interest percentage field only
+class RolloverPercentage(UpdateView):
+    model = InvestmentDetail
+    fields =('rollover_interest_percentage',)
+    context_object_name = 'rollover'
+    template_name = 'dashboard/rollover_percentage.html'
 
 # Deleting an Investment from Database
 class InvestmentDeleteView(DeleteView):
     model = InvestmentDetail
+    context_object_name = 'investment'
     template_name = 'dashboard/delete_investment.html'
     success_url = reverse_lazy('investment_list')
 
@@ -132,6 +139,10 @@ class AddMemberView(CreateView):
     fields = ('first_name','last_name','staff_id')
     template_name = 'dashboard/member_form.html'
     success_url = reverse_lazy('member_list')
+
+    def form_invalid(self, form):
+        print(form.errors)  # Add this line to log the form errors
+        return super().form_invalid(form)
 
 
 # Updating an member's details

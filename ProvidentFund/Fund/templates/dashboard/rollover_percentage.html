@@ -1,0 +1,45 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+
+<div class="main main-app p-4 p-lg-4">
+    <div class="row g-3 justify-content-center">
+       
+        <div class="col-md-12 col-xl-10">
+          <div class="card card-one">
+            <div class="card-body">
+                <div class="row g-5">
+                    <div class="row card-value text-center">
+                        <h2 class="mb-5 mt-5 text-decoration-underline">
+                            Investment Detail
+                        </h2>
+                    </div>
+
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="row g-5">
+                            <div class="col-md-5">
+        
+                                <div class="form-group mb-3">
+                                    <label for="disabledTextInput" class="form-label h3">Roll Over Percentage: {{ rollover.rollover_principal }}</label>
+                                </div>
+        
+                            </div>
+                    
+                            <div class="col-md-5">
+                                <div class="form-group mb-3">
+                                    <label for="rollover_percentage" class="form-label">Roll Over Interest Percentage</label>
+                                    <input type="number" min="1" step="0.01" class="form-control" id="rollover_percentage" name="rollover_interest_percentage">
+                                </div>
+                            </div>
+                
+                        </div>
+                        <input type="submit" class="btn btn-primary" value="Submit">
+                    </form>                    
+                </div>
+            </div><!-- card-body -->
+          </div><!-- card-one -->
+    </div>
+</div>
+{% endblock %}

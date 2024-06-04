@@ -11,7 +11,7 @@ class InvestmentDetail(models.Model):
     principal_amount = models.FloatField()
     interest_percentage = models.FloatField()
     # Rollover percentage interest
-    rollover_interest_percentage = models.FloatField(null=True, blank=True)
+    rollover_interest_percentage = models.FloatField(null=True, blank=True, default=0.0)
 
     interest_amount = models.FloatField(blank=True, null=True)
     interest_start_date = models.DateField(null=False, blank=False)
@@ -35,7 +35,10 @@ class InvestmentDetail(models.Model):
     
     # Roll over Principal Calculation
     def calculate_rollover_principal(self):
-        return (self.principal_amount+ self.interest_amount)
+        # rollover_interest_percentage = self.rollover_interest_percentage or 0.0
+        interest_amount = self.interest_amount or 0.0
+        roll_over_principal = interest_amount
+        return roll_over_principal
     
     @property
     def rollover_principal(self):
@@ -45,9 +48,11 @@ class InvestmentDetail(models.Model):
 
     # Rollover accumulated amount
     def calculate_rollover_accumulated_amount(self):
-        if self.rollover_interest_percentage is None or self.rollover_principal is None:
+        rollover_interest_percentage = self.rollover_interest_percentage or 0.0
+        rollover_principal = self.rollover_principal or 0.0
+        if rollover_interest_percentage == 0.0 or rollover_principal is None:
             return 0
-        return (((self.rollover_interest_percentage/100.0)*(self.rollover_principal))+ self.rollover_principal)
+        return (((rollover_interest_percentage/100.0)*(rollover_principal))+ rollover_principal)
     
     @property
     def rollover_accumulated_amount(self):

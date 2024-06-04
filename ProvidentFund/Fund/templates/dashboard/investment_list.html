@@ -200,11 +200,16 @@
                       <td>{{ investment.created_date }}</td>
                       <td>{{ investment.updated_date }}</td>
                       <!-- Rollover Principal -->
-                      <td><select class="form-control" name="rollover" id="">
-                        <option value="Null">Null</option>
-                        <option value="End">End</option>
-                        <option value="Roll over">Roll over</option>
-                      </select></td>
+                      <td>
+                        <select class="form-control" name="rollover" id="">
+                        {% if investment.rollover_interest_percentage != 0 %}
+                        <option value="Roll over">R</option>
+                        {% else %}
+                        <option value="Null">N</option>
+                        {% endif %}
+                        <!-- <option value="End">End</option> -->
+                      </select>
+                    </td>
                       <!-- Rollover Principal -->
                       <td>{{ investment.rollover_interest_percentage }}</td>
                       <td>{{ investment.rollover_accumulated_amount }}</td>
@@ -246,6 +251,9 @@
                       <th>Tenure</th>
                       <th>Date Created</th>
                       <th>Last Updated</th>
+                      <th>Roll Over</th>
+                      <th>Roll Over Interest Percentage (%)</th>
+                      <th>Roll Over Accumulated Amount</th>
                       <!-- <th>Rate</th> -->
                     </tr>
                   </thead>
@@ -264,6 +272,20 @@
                       <td>{{ investment.tenure }}</td>
                       <td>{{ investment.created_date }}</td>
                       <td>{{ investment.updated_date }}</td>
+                      <!-- Rollover Principal -->
+                      <td>
+                        <select class="form-control" name="rollover" id="">
+                        {% if investment.rollover_interest_percentage != 0 %}
+                        <option value="Roll over">R</option>
+                        {% else %}
+                        <option value="Null">N</option>
+                        {% endif %}
+                        <!-- <option value="End">End</option> -->
+                      </select>
+                    </td>
+                      <!-- Rollover Principal -->
+                      <td>{{ investment.rollover_interest_percentage }}</td>
+                      <td>{{ investment.rollover_accumulated_amount }}</td>
               
                     {% endfor %}
                   </tbody>

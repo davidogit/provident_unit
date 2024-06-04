@@ -40,6 +40,9 @@
                     <div class="col-1">
                         <a class="btn btn-primary" href="{% url 'investment_update' investment_detail.pk %}">update</a>
                     </div>
+                    <div class="col-2">
+                        <a class="btn btn-primary" href="{% url 'rollover_percentage' investment_detail.pk %}">Roll Over</a>
+                    </div>
                     <div class="col-1 justify-content-end">
                         <a class="btn btn-danger" href="{% url 'delete_investment' investment_detail.pk %}">Delete</a>
                     </div>

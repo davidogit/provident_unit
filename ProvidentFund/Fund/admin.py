@@ -9,7 +9,7 @@ class InvestmentDetailAdmin(admin.ModelAdmin):
     list_display=('account_name','account_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage','tenure','rollover_principal','rollover_accumulated_amount','rollover_interest_percentage')
 
 
-    readonly_fields = ('account_name','account_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage','investment_type')
+    readonly_fields = ('interest_amount','rollover_interest_percentage')
 
 
 admin.site.register(InvestmentDetail, InvestmentDetailAdmin)
