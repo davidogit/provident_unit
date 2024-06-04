@@ -6,4 +6,4 @@ from . models import InvestmentDetail
 class InvestmentUpdateForm(forms.ModelForm):
     class Mets:
         model = InvestmentDetail
-        fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage')
+        fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')

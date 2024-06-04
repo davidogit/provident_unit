@@ -5,10 +5,14 @@ from Fund.models import InvestmentDetail,Member
 
 
 
-class InvestmentAdmin(admin.ModelAdmin):
-    readonly_fields = ('account_name','account_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage')
+class InvestmentDetailAdmin(admin.ModelAdmin):
+    list_display=('account_name','account_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage','tenure','rollover_principal','rollover_accumulated_amount','rollover_interest_percentage')
 
-admin.site.register(InvestmentDetail,InvestmentAdmin)
+
+    readonly_fields = ('interest_amount','rollover_interest_percentage')
+
+
+admin.site.register(InvestmentDetail, InvestmentDetailAdmin)
 
 class MemberAdmin(admin.ModelAdmin):
     readonly_fields = ('profit',)
