@@ -6,17 +6,17 @@ from django.urls import reverse
 class ContributionsDetail(models.Model):
     EmployeeNo = models.PositiveIntegerField(primary_key=True)
     Fundtype = models.IntegerField()
-    EmployeeAmount = models.PositiveIntegerField()
-    EmployerAmount = models.PositiveIntegerField()
-    RetroEmployeeAmount = models.PositiveIntegerField()
-    RetroEmployerAmount = models.PositiveIntegerField()
-    Employee55Amount = models.PositiveIntegerField()
-    Employer55Amount = models.PositiveIntegerField() 
-    RetroEmployee55Amount = models.PositiveIntegerField()
-    RetroEmployer55Amount = models.PositiveIntegerField()
+    EmployeeAmount = models.FloatField()
+    EmployerAmount = models.FloatField()
+    RetroEmployeeAmount = models.FloatField()
+    RetroEmployerAmount = models.FloatField()
+    Employee55Amount = models.FloatField()
+    Employer55Amount = models.FloatField() 
+    RetroEmployee55Amount = models.FloatField()
+    RetroEmployer55Amount = models.FloatField()
     ContributionDate = models.DateTimeField( auto_now_add=True)
     CreatedDate = models.DateTimeField( auto_now_add=True)
-    UpdatedDate =  models.DateTimeField( auto_now_add=True) 
+    UpdatedDate =  models.DateTimeField( auto_now=True) 
 
 
 def __str__(self):
