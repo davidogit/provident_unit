@@ -11,8 +11,8 @@ from django.contrib.auth import login,authenticate
 # class LoginView(TemplateView):
 #     template_name= 'signin.html'
 
-class LoginTemplateView(TemplateView):
-    template_name = 'files/base.html'
+# class LoginTemplateView(TemplateView):
+#     template_name = 'files/base.html'
 
 # Importing Registration Forms
 
