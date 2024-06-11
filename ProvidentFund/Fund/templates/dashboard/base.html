@@ -30,6 +30,17 @@
 
     <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
 
+      <!-- Hiding Serch Results -->
+      <style>
+        #serach-results{
+          display: none;
+        }
+      </style>
+      <!-- Hiding Serch Results -->
+      <!-- JQuery for Serch implementation -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+      <!-- JQuery for Serch implementation -->
+
   </head>
   <body>
 
@@ -123,11 +134,16 @@
     <div class="header-main px-3 px-lg-4">
       <a id="menuSidebar" href="#" class="menu-link me-3 me-lg-4"><i class="ri-menu-2-fill"></i></a>
 
-      <div class="form-search me-auto">
-        <input type="text" class="form-control" placeholder="Search">
-        <i class="ri-search-line"></i>
+      
+      <div id="search-bar" class="me-auto">
+        <form method="GET">
+          <div class="form-search d-flex align-items-center justify-content-between">
+            <input type="text" class="form-control" placeholder="Search">
+            <button type="submit" class="btn btn-unstyled"><i class="ri-search-line"></i></button>
+          </div>
+        </form>
       </div><!-- form-search -->
-
+   
       <div class="dropdown dropdown-skin">
         <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="ri-settings-3-line"></i></a>
         <div class="dropdown-menu dropdown-menu-end mt-10-f">
