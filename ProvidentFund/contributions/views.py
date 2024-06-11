@@ -7,20 +7,22 @@ from .models import ContributionsDetail ,GeneralLedger
 from django.urls import reverse_lazy
 from Fund.models import Member
 from .models import StaffMember, GeneralLedger, StaffAPI
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 # from .models import StaffMember
 
 # Create your views here.
-
+@method_decorator(login_required,name = "dispatch")
 class Invest(TemplateView):
     template_name='dashboard/finance.html'
 
-# Creating List View for model
+@method_decorator(login_required,name = "dispatch")
 class ContributionsListView(ListView):
     context_object_name = 'memberships'
     model = StaffAPI
     template_name = 'contributions/contributions_list.html'
     paginate_by = 10
-
+@method_decorator(login_required,name = "dispatch")
 class ContributionsListView2(ListView):
     context_object_name = 'contributions_listpf2'
     model = ContributionsDetail
@@ -29,6 +31,7 @@ class ContributionsListView2(ListView):
     
 
 # Investment Detail View
+@method_decorator(login_required,name = "dispatch")
 class ContributionsDetailView(DetailView):
     model = ContributionsDetail
     template_name = 'contributions/contributions_details.html'
@@ -40,7 +43,10 @@ class ContributionsDetailView(DetailView):
 from django.views.generic import ListView, DetailView
 from .models import StaffMember, GeneralLedger, StaffAPI
 import requests
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 
+@method_decorator(login_required,name = "dispatch")
 class StaffMemberListView(ListView):
     model = StaffAPI
     template_name = 'contributions/staffmember_list.html'
@@ -52,7 +58,7 @@ class StaffMemberListView(ListView):
     #     response = requests.get('https://6662e51362966e20ef0a7cdb.mockapi.io/api/v1/addmembership')
     #     context['memberships'] = response.json()
     #     return context
-
+    @method_decorator(login_required,name = "dispatch")
     def get(self, request, *args, **kwargs):
         response = requests.get('https://6662e51362966e20ef0a7cdb.mockapi.io/api/v1/addmembership')
         memberships = response.json()
@@ -83,7 +89,7 @@ class StaffMemberListView(ListView):
 
 
 
-
+@method_decorator(login_required,name = "dispatch")
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
