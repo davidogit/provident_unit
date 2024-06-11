@@ -1,0 +1,28 @@
+<!-- templates/staffmember_detail.html -->
+{% extends 'dashboard/base.html' %} {% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="container mt-5 p-4">
+    <div class="row mt-5">
+      <div class="col col-md">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Name: {{ memberships.Fullname }}</h5>
+            <p class="card-text">Status: {{ memberships.status }}</p>
+            <p class="card-text">Fund Type: {{ memberships.Fundtype }}</p>
+            <p class="card-text">Email: {{ memberships.Datejoined }}</p>
+            {% comment %}
+            <p class="card-text">{{ memberships.address }}</p>
+            {% endcomment %} {% comment %}
+            <p class="card-text">{{ memberships.city }}</p>
+            <p class="card-text">{{ memberships.state }}</p>
+            <p class="card-text">{{ memberships.zip }}</p>
+            <p class="card-text">{{ memberships.country }}</p>
+            <p class="card-text">{{ memberships.bio }}</p>
+            {% endcomment %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock %}
+</div>
