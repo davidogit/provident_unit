@@ -1,8 +1,9 @@
 from django.shortcuts import render
 from django.views.generic import TemplateView
 from django.http import HttpResponse
-from django.contrib.auth import login,authenticate
+from django.contrib.auth import login,authenticate,logout
 from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
 # Create your views here.
 
 
@@ -69,3 +70,8 @@ def loginView(request):
             return HttpResponse('invalid login details')
 
     return render(request, 'login.html')
+
+@login_required
+def logoutView(request):
+    logout(request)
+    return redirect('login')
