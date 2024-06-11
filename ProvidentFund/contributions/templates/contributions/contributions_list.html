@@ -15,7 +15,8 @@
     </nav>
   </div> -->
 
-  {% comment %} <div class="row g-3 justify-content-center">
+  {% comment %}
+  <div class="row g-3 justify-content-center">
     <div class="col-md-12 col-xl-10">
       <div class="card card-one">
         <div class="card-body">
@@ -58,7 +59,8 @@
         <!-- card-body -->
       </div>
       <!-- card-one -->
-    </div> {% endcomment %}
+    </div>
+    {% endcomment %}
     <!-- col -->
 
     <div class="card card-one mt-3">
@@ -74,41 +76,40 @@
             </tr> -->
 
               <tr>
-                {% comment %} <th>EmployeeNo</th>
-                <th>FundType</th>
+                <th>PF Employee</th>
+                <th>PF Employer</th>
                 <th>EmployeeAmount</th>
-                <th>EmployerAmount</th> {% endcomment %}
+                <th>EmployerAmount</th>
                 <th>RetroEmployeeAmount</th>
                 <th>RetroEmployerAmount</th>
-                <th>Employee55Amount</th>
-                <th>Employer55Amount</th>
-                <th>RetroEmployee55Amount</th>
-                <th>RetroEmployer55Amount</th>
-                <th>ContributionDate</th>
-                <th>CreatedDate</th>
-                <th>UpdatedDate</th>
+                <th>Total interest</th>
+
                 <!-- <th>Rate</th> -->
               </tr>
             </thead>
             <tbody>
-              {% for contribution in contributions_list %}
+              {% for memberships in memberships %}
               <tr>
-                <td><a href="{% url 'contributions_details' contribution.pk  %}">{{ contribution.EmployeeNo }}</a></td>
-                {% comment %} <td>{{ contribution.EmployeeNo }}</td>
-                <td>{{ contribution.Fundtype }}</td>
-                <td>{{ contribution.EmployeeAmount }}</td>
-                <td>{{ contribution.EmployerAmount }}</td> {% endcomment %}
-                <td>{{ contribution.RetroEmployeeAmount }}</td>
-                <td>{{ contribution.RetroEmployerAmount }}</td>
-                <td>{{ contribution.Employee55Amount }}</td>
-                <td>{{ contribution.Employer55Amount }}</td>
-                <td>{{ contribution.RetroEmployee55Amount }}</td>
-                <td>{{ contribution.RetroEmployer55Amount }}</td>
-                <td>{{ contribution.ContributionDate }}</td>
-                <td>{{ contribution.CreatedDate }}</td>
-                <td>{{ contribution.UpdatedDate }}</td>
+                <td>
+                  <a href="{% url 'contributions_details' memberships.Id  %}"
+                    >{{ memberships.Id }}</a
+                  >
+                </td>
 
-                {% endfor %}
+                <td>{{ memberships.Fullname }}</td>
+                <td>{{ memberships.EmployeeAmount }}</td>
+                <td>{{ memberships.EmployerAmount }}</td>
+                <td>{{ memberships.Employee55Amount }}</td>
+                <td>{{ memberships.Employer55Amount }}</td>
+                <td>{{ memberships.RetroEmployerAmount }}</td>
+                <td>{{ memberships.RetroEmployeeAmount }}</td>
+                <td>{{ memberships.RetroEmployee55Amount }}</td>
+                <td>{{ memberships.RetroEmployer55Amount }}</td>
+                <td>{{ memberships.RetroEmployeeAmount }}</td>
+                <td>{{ memberships.RetroEmployerAmount }}</td>
+                
+
+              {% endfor %}
               </tr>
             </tbody>
           </table>
