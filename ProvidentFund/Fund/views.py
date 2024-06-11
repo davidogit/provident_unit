@@ -1,13 +1,17 @@
-from django.forms import BaseModelForm
-from django.http import HttpResponse
+# from django.db.models.query import QuerySet
+# from django.forms import BaseModelForm
+# from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
 # Create your views here.
 from Fund.models import InvestmentDetail, Member
 from django.urls import reverse_lazy
-from Fund.forms import InvestmentUpdateForm
-from django.db.models import Sum,F, FloatField
+# from Fund.forms import InvestmentUpdateForm
+from django.db.models import Sum,Q, FloatField
 from django.db.models.functions import Cast
+from django.core.paginator import Paginator
+
 
 class Invest(TemplateView):
     template_name='dashboard/finance.html'
@@ -27,17 +31,36 @@ class InvestmentListView(ListView):
         context = super().get_context_data(**kwargs)
         queryset = self.get_queryset()
 
+        # Grouping Investment based on Types
         context['inv_type_t_bill'] = queryset.filter(investment_type='T-bills')
         context['inv_type_f_dep'] = queryset.filter(investment_type='F-deposit')
         context['inv_type_d_int'] = queryset.filter(investment_type='D-interest')
+
+        # Getting queryset for each investment type
+        t_bill_queryset = queryset.filter(investment_type='T-bills')
+        f_deposit_queryset = queryset.filter(investment_type='F-deposit')
+        d_interest_queryset = queryset.filter(investment_type='D-interest')
+
+        # Paginating for each Tab-Pane
+        t_bill_page = self.request.GET.get('t_bill_page',1)
+        f_deposit_page = self.request.GET.get('f_deposit_page',1)
+        d_interest_page = self.request.GET.get('d_interest_page',1)
+
+
+        # Returning context keys for each page and applying pagination
+        context['t_bill_page'] = Paginator(t_bill_queryset, per_page=2).get_page(t_bill_page)
+        context['f_deposit_page'] = Paginator(f_deposit_queryset,2).get_page(f_deposit_page)
+        context['d_interest_page'] = Paginator(d_interest_queryset,10).get_page(d_interest_page)
+
+
+        # Counting Number of individual Investments
         context['investment_count']= queryset.count()
         context['T_bills_count'] = queryset.filter(investment_type='T-bills').count()
         context['F_deposit_count'] = queryset.filter(investment_type='F-deposit').count()
         context['D_interest_count'] = queryset.filter(investment_type='D-interest').count()
 
+
         # calculating interest based on interest rate
-
-
         for investment in queryset:
             inv_principal = investment.principal_amount
             inv_principal = float(inv_principal)
