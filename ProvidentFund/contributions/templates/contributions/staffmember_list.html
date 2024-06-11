@@ -1,0 +1,73 @@
+<!-- templates/staffmember_list.html -->
+{% extends 'dashboard/base.html' %} {%block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="container mt-4">
+    <h1 class="mb-4">Staff Members</h1>
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead class="table-dark">
+          <tr>
+            <th>Full Name</th>
+            <th>Staff Number</th>
+            <th>Date Joined</th>
+            <th>Status</th>
+            <th>Fund Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for membership in memberships %}
+          <tr>
+            <td>
+              <a href="{% url 'staff_member_detail' membership.Id  %}"
+                >{{ membership.Fullname }}</a
+              >
+            </td>
+            <td>{{ membership.Staffnumber }}</td>
+            <td>{{ membership.Datejoined }}</td>
+            <td>{{ membership.status }}</td>
+            <td>{{ membership.Fundtype }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if is_paginated %}
+    <nav aria-label="Page navigation example">
+      <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="?page={{ page_obj.previous_page_number }}"
+            aria-label="Previous"
+          >
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% endif %} {% comment %}
+        <li class="page-item"><a class="page-link" href="#">1</a></li>
+        {% endcomment %}
+        <li class="page-item">
+          <a class="page-link" href="#">{{ page_obj.number }}</a>
+        </li>
+        {% comment %}
+        <li class="page-item"><a class="page-link" href="#">3</a></li>
+        {% endcomment %} {% if page_obj.has_next %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="?page={{ page_obj.next_page_number }}"
+            aria-label="Next"
+          >
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+  <!-- Bootstrap JS and dependencies -->
+</div>
+{% endblock %}
