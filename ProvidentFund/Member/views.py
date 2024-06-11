@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.views.generic import TemplateView
 from django.http import HttpResponse
 from django.contrib.auth import login,authenticate
+from django.shortcuts import redirect
 # Create your views here.
 
 
@@ -57,7 +58,9 @@ def loginView(request):
         if user:
             login(request, user)
 
+            return redirect('finance_page')
+
         else:
             return HttpResponse('invalid login details')
 
-    return render(request, 'login.hrml')
+    return render(request, 'login.html')
