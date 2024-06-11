@@ -35,7 +35,8 @@
       <p class="card-text">Welcome back! Please login to continue.</p>
     </div><!-- card-header -->
 
-    <form action="">
+    <form action="" method="POST">
+      {% csrf_token %}
       <div class="card-body">
         <div class="mb-4">
           <label class="form-label">username</label>
@@ -47,7 +48,7 @@
           <input type="password" class="form-control" placeholder="Enter your password" name="password">
         </div>
         <!-- <button>OTP</button> -->
-        <button class="btn btn-primary btn-sign">Log In</button>
+        <input type="submit" class="btn btn-primary btn-sign" value="Login">
 
         <div class="divider"><span>or sign in with</span></div>
 

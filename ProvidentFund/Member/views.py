@@ -28,17 +28,22 @@ def registrationView(request):
 
         if form1.is_valid() and form2.is_valid:
 
-            form1.save(commit=False)
+            user = form1.save(commit=False)
             cleaned_password = form1.cleaned_data['password']
-            form1.set_password(cleaned_password)
+            user.set_password(cleaned_password)
 
-            form1.save()
+            user.save()
 
-            form2.user = form1
-            form2.save()
+            member = form2.save(commit=False)
+            member.user = user
+            member.save()
+
+            return redirect('login')
 
         else:
-            return HttpResponse('Some fields are invalid')
+            # return HttpResponse('Some fields are invalid')
+            errors = form1.errors.as_json() + form2.errors.as_json()
+            return HttpResponse(f'Some fields are invalid: {errors}')
     
     else:
         form1 = UserForm()
