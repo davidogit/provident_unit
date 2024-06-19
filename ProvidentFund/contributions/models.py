@@ -78,50 +78,50 @@ def get_absolute_url(self):
 
 # Temporary Staff Model For API test
 
-import uuid
+# import uuid
 
 
-class IntegerUUIDField(models.Field):
-    description = "A field to store integer values as UUIDs"
+# class IntegerUUIDField(models.Field):
+#     description = "A field to store integer values as UUIDs"
 
-    def db_type(self, connection):
-        return 'bigint'  # Assuming you want to use bigint for storing large integers
+#     def db_type(self, connection):
+#         return 'bigint'  # Assuming you want to use bigint for storing large integers
 
-    def from_db_value(self, value, expression, connection):
-        if value is None:
-            return value
-        return str(value)  # Convert integer to string
+#     def from_db_value(self, value, expression, connection):
+#         if value is None:
+#             return value
+#         return str(value)  # Convert integer to string
 
-    def to_python(self, value):
-        if isinstance(value, int):
-            return value
-        elif isinstance(value, str):
-            return int(value)
-        return value
+#     def to_python(self, value):
+#         if isinstance(value, int):
+#             return value
+#         elif isinstance(value, str):
+#             return int(value)
+#         return value
 
-    def get_prep_value(self, value):
-        return int(value) if value is not None else None
+#     def get_prep_value(self, value):
+#         return int(value) if value is not None else None
 
-# Example model using IntegerUUIDField
-    # Other fields...
+# # Example model using IntegerUUIDField
+#     # Other fields...
 
 class StaffAPI(models.Model):
-        Fullname = models.CharField(max_length=50)
-        Staffnumber = models.IntegerField()
-        Datejoined = models.DateTimeField(auto_now=True)
-        status = models.IntegerField()
-        Fundtype = models.CharField(max_length=50)
-        EmployeeAmount = models.CharField(max_length=50)
-        EmployerAmount = models.CharField(max_length=50)
-        RetroEmployeeAmount = models.CharField(max_length=50)
-        RetroEmployerAmount = models.CharField(max_length=50)
-        Employee55Amount = models.CharField(max_length=50)
-        Employer55Amount = models.CharField(max_length=50)
-        RetroEmployee55Amount = models.CharField(max_length=50)
-        RetroEmployer55Amount = models.CharField(max_length=50)
-        ContributionDate = models.CharField(max_length=50)
-        Id = IntegerUUIDField(unique=True, primary_key=True,editable=False)
-
-
-        def __str__(self):
-                return f'{self.Fullname}\'s'
+    Id = models.BigIntegerField(primary_key=True)
+    Fullname = models.CharField(max_length=255)
+    Staffnumber = models.IntegerField()
+    Datejoined = models.DateTimeField(auto_now=True)
+    status =  models.IntegerField()
+    Fundtype = models.CharField(max_length=50)
+    EmployeeAmount = models.DecimalField(max_digits=10, decimal_places=2)
+    EmployerAmount = models.DecimalField(max_digits=10, decimal_places=2)
+    RetroEmployeeAmount = models.DecimalField(max_digits=10, decimal_places=2)
+    RetroEmployerAmount = models.DecimalField(max_digits=10, decimal_places=2)
+    Employee55Amount = models.DecimalField(max_digits=10, decimal_places=2)
+    Employer55Amount = models.DecimalField(max_digits=10, decimal_places=2)
+    RetroEmployee55Amount = models.DecimalField(max_digits=10, decimal_places=2)
+    RetroEmployer55Amount = models.DecimalField(max_digits=10, decimal_places=2)
+    ContributionDate = models.DateTimeField(auto_now=True)
+    
+    
+    def __str__(self):
+        return self.Fullname

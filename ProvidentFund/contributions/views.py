@@ -58,40 +58,36 @@ class StaffMemberListView(ListView):
     #     response = requests.get('https://6662e51362966e20ef0a7cdb.mockapi.io/api/v1/addmembership')
     #     context['memberships'] = response.json()
     #     return context
-    @method_decorator(login_required,name = "dispatch")
+    @method_decorator(login_required, name="dispatch")
     def get(self, request, *args, **kwargs):
-        response = requests.get('https://6662e51362966e20ef0a7cdb.mockapi.io/api/v1/addmembership')
+        response = requests.get('https://66718737e083e62ee43bf829.mockapi.io/api/v1/addmembership')
         memberships = response.json()
-        
+
         for membership in memberships:
+            api_id = membership.get('Id')
             StaffAPI.objects.update_or_create(
-                Id=membership['Id'],
+                Id=api_id,
                 defaults={
-                    'Fullname': membership['Fullname'],
-                    'Staffnumber': membership['Staffnumber'],
-                    'Datejoined': membership['Datejoined'],
-                    'status' : membership['status'],
-                    'Fundtype' : membership['Fundtype'],
-                    'EmployeeAmount' : membership['EmployeeAmount'], 
-                    'EmployerAmount' : membership['EmployerAmount'],
-                    'RetroEmployeeAmount': membership['RetroEmployeeAmount'],
-                    'RetroEmployerAmount': membership['RetroEmployerAmount'],
-                    'Employee55Amount': membership['Employee55Amount'],
-                    'Employer55Amount' : membership['Employee55Amount'],
-                    'RetroEmployee55Amount': membership['RetroEmployee55Amount'], 
-                    'RetroEmployer55Amount' : membership['RetroEmployer55Amount'],
-                    'ContributionDate': membership['ContributionDate'],
+                    'Fullname': membership.get('Fullname', ''),
+                    'Staffnumber': membership.get('Staffnumber', ''),
+                    'Datejoined': membership.get('Datejoined', '1970-01-01'),
+                    'status': membership.get('status', ''),
+                    'Fundtype': membership.get('Fundtype', ''),
+                    'EmployeeAmount': membership.get('EmployeeAmount', 0.0),
+                    'EmployerAmount': membership.get('EmployerAmount', 0.0),
+                    'RetroEmployeeAmount': membership.get('RetroEmployeeAmount', 0.0),
+                    'RetroEmployerAmount': membership.get('RetroEmployerAmount', 0.0),
+                    'Employee55Amount': membership.get('Employee55Amount', 0.0),
+                    'Employer55Amount': membership.get('Employer55Amount', 0.0),
+                    'RetroEmployee55Amount': membership.get('RetroEmployee55Amount', 0.0),
+                    'RetroEmployer55Amount': membership.get('RetroEmployer55Amount', 0.0),
+                    'ContributionDate': membership.get('ContributionDate', '1970-01-01'),
                 }
             )
         return super().get(request, *args, **kwargs)
-    
 
-
-
-
-@method_decorator(login_required,name = "dispatch")
+@method_decorator(login_required, name="dispatch")
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
     context_object_name = 'memberships'
-
