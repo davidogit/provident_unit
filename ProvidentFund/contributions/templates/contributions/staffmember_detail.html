@@ -1,28 +1,89 @@
 <!-- templates/staffmember_detail.html -->
 {% extends 'dashboard/base.html' %} {% block content %}
 <div class="main main-app p-3 p-lg-4">
-  <div class="container mt-5 p-4">
-    <div class="row mt-5">
-      <div class="col col-md">
-        <div class="card">
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Staff Member Details</h5>
+          </div>
           <div class="card-body">
-            <h5 class="card-title">Name: {{ memberships.Fullname }}</h5>
-            <p class="card-text">Status: {{ memberships.status }}</p>
-            <p class="card-text">Fund Type: {{ memberships.Fundtype }}</p>
-            <p class="card-text">Email: {{ memberships.Datejoined }}</p>
-            {% comment %}
-            <p class="card-text">{{ memberships.address }}</p>
-            {% endcomment %} {% comment %}
-            <p class="card-text">{{ memberships.city }}</p>
-            <p class="card-text">{{ memberships.state }}</p>
-            <p class="card-text">{{ memberships.zip }}</p>
-            <p class="card-text">{{ memberships.country }}</p>
-            <p class="card-text">{{ memberships.bio }}</p>
-            {% endcomment %}
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h5 class="card-title">Name:</h5>
+                <p class="card-text">{{ memberships.Fullname }}</p>
+              </div>
+              <div class="col-md-6">
+                <h5 class="card-title">Status:</h5>
+                <p class="card-text">{{ memberships.status }}</p>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h5 class="card-title">Fund Type:</h5>
+                <p class="card-text">{{ memberships.Fundtype }}</p>
+              </div>
+              <div class="col-md-6">
+                <h5 class="card-title">Date Joined:</h5>
+                <p class="card-text">{{ memberships.Datejoined }}</p>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h5 class="card-title">Employee Amount:</h5>
+                <p class="card-text">{{ memberships.EmployeeAmount }}</p>
+              </div>
+              <div class="col-md-6">
+                <h5 class="card-title">Employer Amount:</h5>
+                <p class="card-text">{{ memberships.EmployerAmount }}</p>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h5 class="card-title">Retro Employee Amount:</h5>
+                <p class="card-text">{{ memberships.RetroEmployeeAmount }}</p>
+              </div>
+              <div class="col-md-6">
+                <h5 class="card-title">Retro Employer Amount:</h5>
+                <p class="card-text">{{ memberships.RetroEmployerAmount }}</p>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h5 class="card-title">Employee 55 Amount:</h5>
+                <p class="card-text">{{ memberships.Employee55Amount }}</p>
+              </div>
+              <div class="col-md-6">
+                <h5 class="card-title">Employer 55 Amount:</h5>
+                <p class="card-text">{{ memberships.Employer55Amount }}</p>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h5 class="card-title">Retro Employee 55 Amount:</h5>
+                <p class="card-text">{{ memberships.RetroEmployee55Amount }}</p>
+              </div>
+              <div class="col-md-6">
+                <h5 class="card-title">Retro Employer 55 Amount:</h5>
+                <p class="card-text">{{ memberships.RetroEmployer55Amount }}</p>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-12">
+                <h5 class="card-title">Contribution Date:</h5>
+                <p class="card-text">{{ memberships.ContributionDate }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'staff_member_list' %}" class="btn btn-secondary"
+              >Back to List</a
+            >
           </div>
         </div>
       </div>
     </div>
   </div>
-  {% endblock %}
 </div>
+{% endblock %}
