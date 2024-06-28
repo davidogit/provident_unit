@@ -20,7 +20,7 @@ app.conf.beat_schedule = {
     },
     'reduce_day_by_1':{
         'task': 'Fund.tasks.reduce_date',
-        'schedule': crontab(hour=0, minute=0, day_of_week='*', day_of_month='*', month_of_year='*')
+        'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
     }
 }
 

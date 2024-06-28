@@ -20,10 +20,6 @@ class Invest(TemplateView):
     template_name='dashboard/finance.html'
 
 
-# class MemberList(TemplateView):
-#     template_name= 'dashboard/member_list.html'
-
-
 # Creating List View for model
 @method_decorator(login_required, name='dispatch')
 class InvestmentListView(ListView):
@@ -62,23 +58,6 @@ class InvestmentListView(ListView):
         context['T_bills_count'] = queryset.filter(investment_type='T-bills').count()
         context['F_deposit_count'] = queryset.filter(investment_type='F-deposit').count()
         context['D_interest_count'] = queryset.filter(investment_type='D-interest').count()
-
-
-        # calculating interest based on interest rate
-        # for investment in queryset:
-        #     inv_principal = investment.principal_amount
-        #     inv_principal = float(inv_principal)
-        #     inv_rate = investment.interest_percentage
-        #     inv_rate = float(inv_rate)
-
-        #     if inv_principal != 0.0 and inv_rate !=0.0:
-        #         inv_return = ((inv_rate)/100)*inv_principal + inv_principal
-        #     else:
-        #         inv_return = 0.0
-
-        #     investment.interest_amount = inv_return
-        #     # Saving newly calculated return to database
-        #     investment.save()
         
         return context
     
@@ -135,28 +114,6 @@ class MemberListView(ListView):
         queryset = self.get_queryset()
         context['member_count'] = self.get_queryset().count()
 
-        # # calculate total contribution
-        # total_contribution = queryset.aggregate(total=Sum(Cast('total_amount_to_date',FloatField())*1.0))['total'] or 0.0
-
-        # # calculating total profit
-        # total_profit = InvestmentDetail.objects.aggregate(total=Sum(Cast('interest_amount',FloatField())*1.0))['total'] or 0.0
-
-        # # Individual profit calculation
-
-        # for member in queryset:
-        #     member_contribution = member.total_amount_to_date or 0.0
-        #     member_contribution = float(member_contribution)
-
-        #     if total_contribution !=0:
-        #         member_profit = ((member_contribution)/(total_contribution))*total_profit
-        #     else:
-        #         member_profit = 0.0
-
-        #     member.profit = member_profit
-        #     # save new profit to database
-        #     member.save()
-
-        # context['member_list']= queryset
         return context
     
 
@@ -194,3 +151,29 @@ class MemberDeleteView(DeleteView):
     model = Member
     template_name = 'dashboard/delete_member.html'
     success_url = reverse_lazy('member_list')
+
+
+
+
+# Query For Investment View
+@method_decorator(login_required, name='dispatch')
+class InvestmentQuery(ListView):
+    template_name = 'dashboard/query.html'
+    model = InvestmentDetail
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        date = self.request.GET.get('date')
+        inv_type = self.request.GET.get('inv_type')
+
+        if date and inv_type:
+            context['results'] = self.get_queryset().filter(created_date=date,investment_type=inv_type)
+        elif date:
+            context['results'] = self.get_queryset().filter(created_date=date)
+        elif inv_type:
+            context['results'] = self.get_queryset().filter(investment_type=inv_type)
+        else:
+            # Dont return anything
+            pass
+        return context

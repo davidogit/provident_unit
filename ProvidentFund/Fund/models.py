@@ -16,6 +16,7 @@ class InvestmentDetail(models.Model):
     CHOICES = [('ROLLOVER','Roll Over'),('END','End'),('NULL', 'null')]
     roll_over = models.CharField(choices=CHOICES, default='NULL', max_length=15)
     _remaining_days = models.PositiveIntegerField(default=0)
+    _status = models.CharField(max_length=20, default='Pending')
 
 
     def calculate_inv_interest(self):
@@ -51,14 +52,21 @@ class InvestmentDetail(models.Model):
     def remaining_days(self,value):
         self._remaining_days = value
 
+    # Status of Investment to be set by task
+    @property
+    def status(self):
+        return self._status
     
+    @status.setter
+    def status(self, value):
+        self._status = value
+    
+    # Set remaining days and status 
     def save(self, *args, **kwargs):
         if not self.pk:
             self._remaining_days = self.calculate_tenure()
         super().save(*args, **kwargs)
 
-
-    
 
     @property
     def rollover_principal(self):

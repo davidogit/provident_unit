@@ -2,6 +2,11 @@ from celery import shared_task
 from .models import Member,InvestmentDetail
 from django.utils import timezone
 
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 # Task to calculate profit for members daily
 @shared_task(bind=True)
@@ -41,20 +46,40 @@ def member_interest(self):
 @shared_task(bind=True)
 def reduce_date(self):
     investments = InvestmentDetail.objects.all()
+    current_date = timezone.now().date()
+
+    # update[] will hold all potential updates and save them in bulk
+    updates = []
     for inv in investments:
-        current_date = timezone.now().date()
+        # Checks if the investment is within duration
         if (inv.interest_start_date <= current_date <= inv.interest_end_date):     
             inv.remaining_days -=1
+            inv.status = 'Active'
+        
+        # Checks if investment is expired
         elif (current_date>inv.interest_end_date):
             inv.remaining_days = 0
+            inv.status = 'Expired'
+
+        # checks if investment is yet to begin
         elif (current_date < inv.interest_start_date):
             remaining_days = inv.tenure
             inv.remaining_days = remaining_days
+            inv.status = 'Not Start'
 
+        # Make sures remaining days do not go to negative due to daily deduction
         if inv.remaining_days<0:
             inv.remaining_days = 0
-            inv.save()
-        else:
-            inv.save()
+
+        updates.append(inv)
+    
+    # Using bulk update to save every instance at once for efficiency
+    # InvestmentDetail.objects.bulk_update(updates, ['_remaining_days','_status'])
+    try:
+        with transaction.atomic():
+            InvestmentDetail.objects.bulk_update(updates, ['remaining_days','status'])
+            logger.info('Investment Details Updated Succesfully')
+    except Exception as e:
+        logger.error(f'Error trying to update Investment Details {e}')
 
     return 'day_reduced_by_1'
