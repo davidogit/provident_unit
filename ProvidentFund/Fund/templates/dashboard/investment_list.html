@@ -177,6 +177,7 @@
                       <th>Investment start Date</th>
                       <th>Maturity Date</th>
                       <th>Tenure</th>
+                      <th>Days Left</th>
                       <th>Date Created</th>
                       <th>Last Updated</th>
                       <th>Roll Over</th>
@@ -198,6 +199,7 @@
                       <td>{{ investment.interest_start_date }}</td>
                       <td>{{ investment.interest_end_date }}</td>
                       <td>{{ investment.tenure }} days</td>
+                      <td>{{ investment.remaining_days }} days</td>
                       <td>{{ investment.created_date }}</td>
                       <td>{{ investment.updated_date }}</td>
                       <!-- Rollover Principal -->
@@ -293,6 +295,7 @@
                       <th>Investment start Date</th>
                       <th>Maturity Date</th>
                       <th>Tenure</th>
+                      <th>Days Left</th>
                       <th>Date Created</th>
                       <th>Last Updated</th>
                       <th>Roll Over</th>
@@ -314,6 +317,7 @@
                       <td>{{ investment.interest_start_date }}</td>
                       <td>{{ investment.interest_end_date }}</td>
                       <td>{{ investment.tenure }}</td>
+                      <td>{{ investment.remaining_days }}</td>
                       <td>{{ investment.created_date }}</td>
                       <td>{{ investment.updated_date }}</td>
                       <!-- Rollover Principal -->
@@ -341,7 +345,7 @@
           <!-- <p>Content for Fixed-Deposits.</p> -->
 
 
-          <!-- PAGINATION -->
+          <!-- PAGINATION  n-->
           
           <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center">
@@ -414,6 +418,7 @@
                       <th>Investment start Date</th>
                       <th>Maturity Date</th>
                       <th>Tenure</th>
+                      <th>Days Left</th>
                       <th>Date Created</th>
                       <th>Last Updated</th>
                       <!-- <th>Rate</th> -->
@@ -432,6 +437,7 @@
                       <td>{{ investment.interest_start_date }}</td>
                       <td>{{ investment.interest_end_date }}</td>
                       <td>{{ investment.tenure }}</td>
+                      <td>{{ investment.remaining_days }}</td>
                       <td>{{ investment.created_date }}</td>
                       <td>{{ investment.updated_date }}</td>
               
