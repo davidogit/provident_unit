@@ -1,0 +1,61 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row g-3 justify-content-center">
+        <form method="GET" action="">
+            <div class="col-md-12 col-xl-10">
+                <div class="card card-one">
+                    <div class="card-body">
+                        <div id="search-bar" class="me-auto">
+                            <div class="form-search d-flex align-items-center justify-content-between bg-secondary rounded-pill">
+                                <input type="date" class="form-control m-2 bg-light rounded-pill fst-italic" name="date" placeholder="Date">
+                                <select class="form-control m-2 bg-light rounded-pill fst-italic" name="investment_type" id="investmentType">
+                                    <option class="dropdown-item" value="T-bills">All</option>
+                                    <option class="dropdown-item" value="T-bills">Treasury Bill</option>
+                                    <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
+                                    <option class="dropdown-item" value="D-interest">Delayed Interest</option>
+                                </select>
+                                <button type="submit" class="btn btn-primary rounded-pill fst-italic">Search</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+
+        <!--Search Results Table -->
+        <div class="col-md-12 col-xl-10">
+            <div class="card card-two">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped table-borderless">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Add Date</th>
+                                    <th scope="col">Investment Type</th>
+                                    <th scope="col">Interest Rate</th>
+                                    <th scope="col">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inv in results %}
+                                <tr>
+                                    <td>{{ inv.created_date }}</td>
+                                    <td>{{ inv.investment_type }}</td>
+                                    <td>{{ inv.interest_percentage }}</td>
+                                    <td>{{ inv.status }}</td>
+
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+    </div>
+</div>
+
+
+{% endblock %}

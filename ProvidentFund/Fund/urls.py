@@ -15,5 +15,6 @@ urlpatterns =[
     path('deleteMember/<int:pk>/', views.MemberDeleteView.as_view(), name='delete_member'),
     path('deleteInvestment/<int:pk>/', views.InvestmentDeleteView.as_view(), name='delete_investment'),
     path('investmentRollover/<int:pk>/', views.RolloverPercentage.as_view(), name='rollover_percentage'),
+    path('investment_query/', views.InvestmentQuery.as_view(), name='query'),
 
 ]
