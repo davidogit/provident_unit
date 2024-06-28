@@ -1,16 +1,16 @@
 from django.urls import path
 from . import views
-from .views import ContributionsDetailView, StaffMemberListView, StaffMemberDetailView
+from . import views
 
 
 
 
 urlpatterns =[
     path('', views.Invest.as_view(), name='finance_page'),
-    path('ContributionsList/', views.ContributionsListView.as_view(), name='contributions_list'),
-    path('ContributionsList2/', views.ContributionsListView2.as_view(), name='contributions_listpf2'),
-    path('ContributionsDetailView/<int:pk>/', views.ContributionsDetailView.as_view(), name='contributions_details'),
-    path('staff/', StaffMemberListView.as_view(), name='staff_member_list'),
-    path('staff/<int:pk>/', StaffMemberDetailView.as_view(), name='staff_member_detail'),
+    path('staff/', views.StaffMemberListView.as_view(), name='staff_member_list'),
+    path('staff/<int:pk>/', views.StaffMemberDetailView.as_view(), name='staff_member_detail'),
+    path('staff/<int:pk>/opt-out/', views.OptOutMemberView.as_view(), name='opt_out_member'),
+    path('member-contributions/<int:membership_id>/', views.Contributed.as_view(), name='contribution-history'),
 ]
+
 

@@ -1,11 +1,8 @@
 from django.contrib import admin
-from .models import ContributionsDetail, StaffAPI, StaffMember, GeneralLedger
-
-
-admin.site.register(ContributionsDetail)
-
-admin.site.register(StaffMember)
-
-admin.site.register(GeneralLedger)
+from .models import  StaffAPI, Contribution
 
 admin.site.register(StaffAPI)
+
+
+admin.site.register(Contribution)
+
