@@ -131,8 +131,14 @@
       <div id="search-bar" class="me-auto">
         <form method="GET">
           <div class="form-search d-flex align-items-center justify-content-between">
-            <input type="text" class="form-control" placeholder="Search">
-            <button type="submit" class="btn btn-unstyled"><i class="ri-search-line"></i></button>
+            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-dark text-light" name="date" placeholder="Date">
+            <select class="form-control m-2 rounded-pill fst-italic bg-dark text-light" name="inv_type" id="investmentType">
+                <option class="dropdown-item" value="">All</option>
+                <option class="dropdown-item" value="T-bills">Treasury Bill</option>
+                <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
+                <option class="dropdown-item" value="D-interest">Delayed Interest</option>
+            </select>
+            <button type="submit" class="btn btn-primary rounded-pill fst-italic"><i class="ri-search-line"></i></button>
           </div>
         </form>
       </div><!-- form-search -->

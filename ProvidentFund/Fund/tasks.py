@@ -77,7 +77,7 @@ def reduce_date(self):
     # InvestmentDetail.objects.bulk_update(updates, ['_remaining_days','_status'])
     try:
         with transaction.atomic():
-            InvestmentDetail.objects.bulk_update(updates, ['remaining_days','status'])
+            InvestmentDetail.objects.bulk_update(updates, ['_remaining_days','_status'])
             logger.info('Investment Details Updated Succesfully')
     except Exception as e:
         logger.error(f'Error trying to update Investment Details {e}')
