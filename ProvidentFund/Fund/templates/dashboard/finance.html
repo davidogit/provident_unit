@@ -1,5 +1,7 @@
 {% extends 'dashboard/base.html' %}
 
+{% load number_filter %}
+
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
@@ -11,36 +13,27 @@
           <div class="col-6 col-sm-4 col-md">
             <div class="finance-item">
               <div class="finance-item-circle">
-                <h1>4.7B</h1>
-                <label>Total Investment</label>
+                <h1>{{ total_interest|abbreviate_number }}</h1>
+                <label>Total Interest</label>
               </div><!-- finance-item-circle -->
             </div><!-- finance-item -->
           </div><!-- col -->
           <div class="col-6 col-sm-4 col-md">
             <div class="finance-item">
               <div class="finance-item-circle">
-                <h1>60M</h1>
-                <label>Total Expenses</label>
+                <h1>{{ active_members|abbreviate_number }}</h1>
+                <label>Total Members</label>
               </div><!-- finance-item-circle -->
             </div><!-- finance-item -->
           </div><!-- col -->
           <div class="col-6 col-sm-4 col-md">
             <div class="finance-item">
               <div class="finance-item-circle bg-gray-400">
-                <h1>2.1B</h1>
-                <label>Gross Profit</label>
+                <h1>{{ active_inv|abbreviate_number }}</h1>
+                <label>Total Investments</label>
               </div><!-- finance-item-circle -->
             </div><!-- finance-item -->
           </div><!-- col -->
-          <div class="col-6 col-sm-4 col-md">
-            <div class="finance-item">
-              <div class="finance-item-circle bg-gray-400">
-                <h1>1.1B</h1>
-                <label>Net Profit</label>
-              </div><!-- finance-item-circle -->
-            </div><!-- finance-item -->
-          </div><!-- col -->
-          
           
         </div><!-- row -->
 

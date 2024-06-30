@@ -1,2 +1,4 @@
 # Remove db.sqlite3 from git
 db.sqlite3
+
+__pycache__/
