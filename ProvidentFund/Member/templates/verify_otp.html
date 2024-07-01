@@ -31,36 +31,30 @@
   <div class="card card-sign">
     <div class="card-header">
       <!-- <a href="../index.html" class="header-logo mb-4">dashbyte</a> -->
-      <h3 class="card-title">Log In</h3>
-      <p class="card-text">Welcome back! Please login to continue.</p>
+      <h3 class="card-title">Verify Identity</h3>
+      <p class="card-text">Please enter one-time-pin to continue.</p>
     </div><!-- card-header -->
 
     <form action="" method="POST">
       {% csrf_token %}
       <div class="card-body">
         <div class="mb-4">
-          <label class="form-label">Email</label>
-          <input type="text" class="form-control" placeholder="Enter your email" name="email">
+            <label for="otp" class="form-label">OTP:</label>
+            <input class="form-control" type="text" id="otp" name="otp" required>
         </div>
 
-        <div class="mb-4">
-          <label class="form-label d-flex justify-content-between">Password <a href="#">Forgot password?</a></label>
-          <input type="password" class="form-control" placeholder="Enter your password" name="password">
-        </div>
         <!-- <button>OTP</button> -->
-        <input type="submit" class="btn btn-primary btn-sign" value="Login">
-
-        <div class="divider"><span>or sign in with</span></div>
+        <input type="submit" class="btn btn-primary btn-sign" value="Verify">
 
         <!--<div class="row gx-2">
           <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div>
           <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div>
         </div><!- row -->
       </div><!-- card-body -->
-      <div class="card-footer">
-      </div><!-- card-footer -->
   </div><!-- card -->
   </form>
+
+
 
   <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
   <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
