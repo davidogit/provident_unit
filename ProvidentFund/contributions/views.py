@@ -50,7 +50,7 @@ class StaffMemberListView(ListView):
                 defaults={
                     'Fullname': membership.get('Fullname', ''),
                     'Staffnumber': membership.get('Staffnumber', ''),
-                    'Datejoined': membership.get('Datejoined', '1970-01-01'),
+                    'Datejoined': membership.get('Datejoined', ''),
                     'status': membership.get('status', ''),
                     'Fundtype': membership.get('Fundtype', ''),
                     'EmployeeAmount': membership.get('EmployeeAmount', 0.0),
@@ -61,8 +61,8 @@ class StaffMemberListView(ListView):
                     'Employer55Amount': membership.get('Employer55Amount', 0.0),
                     'RetroEmployee55Amount': membership.get('RetroEmployee55Amount', 0.0),
                     'RetroEmployer55Amount': membership.get('RetroEmployer55Amount', 0.0),
-                    'ContributionDate': membership.get('ContributionDate', '1970-01-01'),
-                    'ExitedDate': membership.get('ExitedDate', '1970-01-01'),
+                    'ContributionDate': membership.get('ContributionDate', ''),
+                    'ExitedDate': membership.get('ExitedDate', ''),
                     'ExitedFlag': membership.get('ExitedFlag', False),
                     # 'month': membership.get('month', '')
                  }
@@ -141,7 +141,7 @@ class Contributed(ListView):
     model = Contribution
     template_name = 'contributions/contributed.html'
     context_object_name = 'contributions'
-    paginate_by = 12
+    paginate_by = 10
 
     def get_queryset(self):
         user_id = self.kwargs.get('membership_id')
