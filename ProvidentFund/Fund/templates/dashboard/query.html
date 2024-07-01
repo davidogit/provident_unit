@@ -1,28 +1,60 @@
 {% extends 'dashboard/base.html' %}
 
+{% block search %}
+    <form method="GET">
+        <div class="form-search d-flex align-items-center justify-content-between">
+            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-dark text-light" name="date" placeholder="Date">
+            <select class="form-control m-2 rounded-pill fst-italic bg-dark text-light" name="inv_type" id="investmentType">
+                <option class="dropdown-item" value="">All</option>
+                <option class="dropdown-item" value="T-bills">Treasury Bill</option>
+                <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
+                <option class="dropdown-item" value="D-interest">Delayed Interest</option>
+            </select>
+            <button type="submit" class="btn btn-primary rounded-pill fst-italic"><i class="ri-search-line"></i></button>
+        </div>
+    </form>
+{% endblock %}
+
+
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
+
+    <div class="d-md-flex align-items-center justify-content-between mb-4">
+        <div>
+
+        </div>
+        <div class="d-flex gap-2 mt-3 mt-md-0">
+          <!-- <button type="button" class="btn btn-white d-flex align-items-center gap-2"><i class="ri-share-line fs-18 lh-1"></i>Share</button> -->
+          <button type="button" class="btn btn-white d-flex align-items-center gap-2"onclick="printTable()" ><i class="ri-printer-line fs-18 lh-1"></i>Print</button>
+          <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="exportTableToCSV('table_data.csv')"><i class="ri-bar-chart-2-line fs-18 lh-1"></i>Generate<span class="d-none d-sm-inline"> Report</span></button>
+        </div>
+    </div>
+
+<!-- Form for query -->
     <div class="row g-3 justify-content-center">
-        <form method="GET" action="">
-            <div class="col-md-12 col-xl-10">
-                <div class="card card-one">
-                    <div class="card-body">
+
+        <div class="col-md-12 col-xl-10">
+            <!-- <div class="card card-one">
+                <div class="card-body">
+                    <form method="GET" action="">
                         <div id="search-bar" class="me-auto">
                             <div class="form-search d-flex align-items-center justify-content-between bg-secondary rounded-pill">
                                 <input type="date" class="form-control m-2 bg-light rounded-pill fst-italic" name="date" placeholder="Date">
-                                <select class="form-control m-2 bg-light rounded-pill fst-italic" name="investment_type" id="investmentType">
-                                    <option class="dropdown-item" value="T-bills">All</option>
+                                <select class="form-control m-2 bg-light rounded-pill fst-italic" name="inv_type" id="investmentType">
+                                    <option class="dropdown-item" value="">All</option>
                                     <option class="dropdown-item" value="T-bills">Treasury Bill</option>
                                     <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
                                     <option class="dropdown-item" value="D-interest">Delayed Interest</option>
                                 </select>
-                                <button type="submit" class="btn btn-primary rounded-pill fst-italic">Search</button>
+                                <button type="submit" class="btn btn-primary rounded-pill fst-italic"><i class="ri-search-line"></i></button>
                             </div>
+                    
                         </div>
-                    </div>
+                    </form>
                 </div>
-            </div>
-        </form>
+            </div> -->
+        </div>
+<!-- Form for query --> 
 
 
         <!--Search Results Table -->
@@ -30,7 +62,7 @@
             <div class="card card-two">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover table-striped table-borderless">
+                        <table id="data-table" class="table table-hover table-striped table-borderless">
                             <thead>
                                 <tr>
                                     <th scope="col">Add Date</th>
@@ -40,22 +72,111 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for inv in results %}
-                                <tr>
-                                    <td>{{ inv.created_date }}</td>
-                                    <td>{{ inv.investment_type }}</td>
-                                    <td>{{ inv.interest_percentage }}</td>
-                                    <td>{{ inv.status }}</td>
+                                {% if results %}
+                                    {% for inv in results %}
+                                        <tr>
+                                            <td>{{ inv.created_date }}</td>
+                                            <td>{{ inv.investment_type }}</td>
+                                            <td>{{ inv.interest_percentage }}</td>
+                                            <td>{{ inv.status }}</td>
 
-                                </tr>
-                                {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td class="text-center text-danger " colspan="4">No records match your search</td>
+                                    </tr>
+                                {% endif %}
+                                
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
+            {% if is_paginated %}
+            <nav aria-label="Page navigation example">
+              <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                    <a
+                        class="page-link"
+                        href="?page={{ page_obj.previous_page_number }}"
+                        aria-label="Previous"
+                    >
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                    </li>
+                    {% endif %} {% comment %}
+                    <li class="page-item"><a class="page-link" href="#">1</a></li>
+                    {% endcomment %}
+                    <li class="page-item">
+                    <a class="page-link" href="#">{{ page_obj.number }}</a>
+                    </li>
+                    {% comment %}
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    {% endcomment %} {% if page_obj.has_next %}
+                    <li class="page-item">
+                    <a
+                        class="page-link"
+                        href="?page={{ page_obj.next_page_number }}"
+                        aria-label="Next"
+                    >
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                    </li>
+
+                    <li class="page-link">
+                        <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
+                    </li>
+                    {% endif %}
+              </ul>
+            </nav>
+            {% endif %}
+        
     </div>
 </div>
+
+
+
+<!-- PRINTING AND EXPORTING AS CSV -->
+
+<script>
+    function printTable() {
+        var printContents = document.getElementById('data-table').outerHTML;
+        var originalContents = document.body.innerHTML;
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+    }
+
+    function exportTableToCSV(filename) {
+        var csv = [];
+        var rows = document.querySelectorAll("#data-table tr");
+
+        for (var i = 0; i < rows.length; i++) {
+            var row = [], cols = rows[i].querySelectorAll("td, th");
+            
+            for (var j = 0; j < cols.length; j++) {
+                row.push(cols[j].innerText);
+            }
+            
+            csv.push(row.join(","));        
+        }
+
+        // Create a link to download CSV
+        var csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+        var downloadLink = document.createElement("a");
+        downloadLink.download = filename;
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+</script>
+
+
+<!-- PRINTING AND EXPORTING AS CSV -->
 
 
 {% endblock %}

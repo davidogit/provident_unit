@@ -11,7 +11,7 @@ class InvestmentDetail(models.Model):
     rollover_interest_percentage = models.FloatField(null=True, blank=True, default=0.0)
     interest_start_date = models.DateField(null=False, blank=False)
     interest_end_date = models.DateField(null=False, blank=False)
-    created_date = models.DateTimeField(auto_now_add=True)
+    created_date = models.DateField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     CHOICES = [('ROLLOVER','Roll Over'),('END','End'),('NULL', 'null')]
     roll_over = models.CharField(choices=CHOICES, default='NULL', max_length=15)

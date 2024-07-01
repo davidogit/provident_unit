@@ -1,6 +1,7 @@
 # from django.db.models.query import QuerySet
 # from django.forms import BaseModelForm
 # from django.http import HttpResponse
+from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
@@ -18,6 +19,26 @@ from django.contrib.auth.decorators import login_required
 @method_decorator(login_required, name='dispatch')
 class Invest(TemplateView):
     template_name='dashboard/finance.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Queryset to calculate total interest
+        interest_query = InvestmentDetail.objects.all().filter(_status = 'Pending')
+        context['total_interest'] = sum(inv.interest_amount for inv in interest_query)
+
+        # Queryset to calsulate total number of active investments
+        active_inv = InvestmentDetail.objects.all().filter(_status = 'Active')
+        context['active_inv'] = active_inv.count()
+
+        # Queryset to calsulate total number of Active Members
+        active_members = Member.objects.all()
+        context['active_members'] = active_members.count()
+
+        # Sum up all investments interest field
+        
+        print(context)
+        return context
+
 
 
 # Creating List View for model
@@ -160,20 +181,22 @@ class MemberDeleteView(DeleteView):
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
+    paginate_by = 5
+    context_object_name = 'results'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
+    # Using get_queryset so that we can paginate seperate queries based on filter
+    def get_queryset(self):
         date = self.request.GET.get('date')
         inv_type = self.request.GET.get('inv_type')
 
         if date and inv_type:
-            context['results'] = self.get_queryset().filter(created_date=date,investment_type=inv_type)
+            context = super().get_queryset().filter(created_date=date,investment_type=inv_type)
         elif date:
-            context['results'] = self.get_queryset().filter(created_date=date)
+            context = super().get_queryset().filter(created_date=date)
         elif inv_type:
-            context['results'] = self.get_queryset().filter(investment_type=inv_type)
+            context = super().get_queryset().filter(investment_type=inv_type)
         else:
-            # Dont return anything
-            pass
+            # Return whole investments --All--
+            context = super().get_queryset()
+
         return context
