@@ -1,80 +1,34 @@
-{% extends 'dashboard/base.html' %}
-{% block content %}
+{% extends 'dashboard/base.html' %} {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    <div class="container mt-5 p-4">
-        <div class="row mt-5">
-            <div class="col col-md">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Name: {{ membership.Fullname }}</h5>
-                        <p class="card-text">Status: {{ membership.status }}</p>
-                        <p class="card-text">Fund Type: {{ membership.Fundtype }}</p>
-                        <form method="post" action="{% url 'opt_out_member' membership.pk %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger">Opt Out</button>
-                            
-                        </form>
-                        <a href={% url 'contribution-history' membership.pk %} class="btn btn-primary">View contribution history</a>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <h4>Contributions</h4>
-                    <select id="year-select" name="year">
-                        <option value="">Select Year</option>
-                        {% for year in years %}
-                            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
-                        {% endfor %}
-                    </select>
-
-                    
-                    
-                    <table class="table mt-3">
-                        <thead>
-                            <tr>
-                                <th>Month</th>
-                                <th>Employee Amount</th>
-                                <th>Employer Amount</th>
-                                <th>Retro Employee Amount</th>
-                                <th>Retro Employer Amount</th>
-                                <th>Employee 55 Amount</th>
-                                <th>Employer 55 Amount</th>
-                                <th>Retro Employee 55 Amount</th>
-                                <th>Retro Employer 55 Amount</th> 
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if monthly_contributions %}
-                                {% for month, contributions in monthly_contributions.items %}
-                                    <tr>
-                                        <td>{{ month }}</td>
-                                        {% for contribution in contributions %}
-                                            <td>{{ contribution.EmployeeAmount }}</td>
-                                            <td>{{ contribution.EmployerAmount }}</td>
-                                            <td>{{ contribution.RetroEmployeeAmount }}</td>
-                                            <td>{{ contribution.RetroEmployerAmount }}</td>
-                                            <td>{{ contribution.Employee55Amount }}</td>
-                                            <td>{{ contribution.Employer55Amount }}</td>
-                                            <td>{{ contribution.RetroEmployee55Amount }}</td>
-                                            <td>{{ contribution.RetroEmployer55Amount }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="9">No contributions found for the selected year.</td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+  <div class="container mt-5 p-4">
+    <div class="row justify-content-center mt-5">
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Name: {{ membership.Fullname }}</h5>
+            <p class="card-text">
+              <strong>Status:</strong> {{ membership.status }}
+            </p>
+            <p class="card-text">
+              <strong>Fund Type:</strong> {{ membership.Fundtype }}
+            </p>
+            <form
+              method="post"
+              action="{% url 'opt_out_member' membership.pk %}"
+              class="mb-3"
+            >
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger">Opt Out</button>
+            </form>
+            <a
+              href="{% url 'contribution-history' membership.pk %}"
+              class="btn btn-primary"
+              >View Contribution History</a
+            >
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
-
-<script>
-    document.getElementById('year-select').addEventListener('change', function() {
-        window.location.href = '?year=' + this.value;
-    });
-</script>
 {% endblock %}

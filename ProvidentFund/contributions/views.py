@@ -5,17 +5,15 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from .models import StaffAPI, Contribution
 import requests
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views import View
 from django.utils import timezone
-from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from collections import defaultdict
 from datetime import datetime
 from django.shortcuts import redirect
+
 
 # Create your views here.
 @method_decorator(login_required,name = "dispatch")
@@ -66,7 +64,7 @@ class StaffMemberListView(ListView):
                     'ContributionDate': membership.get('ContributionDate', '1970-01-01'),
                     'ExitedDate': membership.get('ExitedDate', '1970-01-01'),
                     'ExitedFlag': membership.get('ExitedFlag', False),
-                    'month': membership.get('month', '')
+                    # 'month': membership.get('month', '')
                  }
             )
 
@@ -113,45 +111,68 @@ class StaffMemberDetailView(DetailView):
     template_name = 'contributions/staffmember_detail.html'
     context_object_name = 'membership'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        selected_year = self.request.GET.get('year')
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     selected_year = self.request.GET.get('year')
         
-        years = list(range(2020, datetime.now().year + 1))
-        context['years'] = years
-        context['selected_year'] = int(selected_year) if selected_year else None
+    #     years = list(range(2020, datetime.now().year + 1))
+    #     context['years'] = years
+    #     context['selected_year'] = int(selected_year) if selected_year else None
 
-        if selected_year:
-            contributions = Contribution.objects.filter(
-                member=self.object,
-                year=selected_year
-            ).order_by('ContributionDate')
+    #     if selected_year:
+    #         contributions = Contribution.objects.filter(
+    #             member=self.object,
+    #             year=selected_year
+    #         ).order_by('ContributionDate')
 
-            monthly_contributions = defaultdict(list)
-            for contribution in contributions:
-                month_name = contribution.ContributionDate.strftime('%B')
-                monthly_contributions[month_name].append(contribution)
+    #         monthly_contributions = defaultdict(list)
+    #         for contribution in contributions:
+    #             month_name = contribution.ContributionDate.strftime('%B')
+    #             monthly_contributions[month_name].append(contribution)
             
-            context['monthly_contributions'] = monthly_contributions
+    #         context['monthly_contributions'] = monthly_contributions
 
-        return context
+    #     return context
 
-@method_decorator(login_required,name = "dispatch")
+
+
+@method_decorator(login_required, name="dispatch")
 class Contributed(ListView):
     model = Contribution
     template_name = 'contributions/contributed.html'
     context_object_name = 'contributions'
-    paginate_by = 10
+    paginate_by = 12
 
     def get_queryset(self):
         user_id = self.kwargs.get('membership_id')
-        return super().get_queryset().filter(member_id=user_id)
-    
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
+        queryset = super().get_queryset().filter(member_id=user_id)
         
-    #     user_id = self.request.user.id
-    #     # year = self.request.GET.get('year')
-    #     context['user_contribution']= self.get_queryset()
+        selected_year = self.request.GET.get('year')
+        if not selected_year:
+            selected_year = datetime.now().year
+        queryset = queryset.filter(ContributionDate__year=selected_year)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        selected_year = self.request.GET.get('year')
+        if not selected_year:
+            selected_year = datetime.now().year 
+        
+        years = list(range(2020, datetime.now().year + 1))
+        
+        context['years'] = years
+        context['selected_year'] = int(selected_year)
+        
+        contributions = self.get_queryset().order_by('ContributionDate')
 
-    #     return context
+        monthly_contributions = defaultdict(list)
+        for contribution in contributions:
+            month_name = contribution.ContributionDate.strftime('%B')
+            monthly_contributions[month_name].append(contribution)
+        
+        context['monthly_contributions'] = dict(monthly_contributions)
+
+        return context

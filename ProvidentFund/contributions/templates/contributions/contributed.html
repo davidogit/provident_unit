@@ -1,79 +1,74 @@
 {% extends 'dashboard/base.html' %}
-
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    <div class="container mt-5 p-4">
-        <div class="row mt-5">
-            <div class="col col-md">
-                <div class="card">
-                    <div class="card-body">
-
-                        <table class="table mt-3">
-                            <thead>
-                                <tr>
-                    
-                                    <th>Month</th>
-                                    <th>Year</th>
-                                    <th>Amount contributed</th>
-                                    <th>Date of contribution</th>
-                                    
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for contribution in contributions %}
-                                        <tr>
-                                            <td>{{ contribution.month }}</td>
-                                            <td>{{ contribution.year }}</td>
-                                            <td>{{ contribution.total_contributions }}</td>
-                                            <td>{{ contribution.ContributionDate }}</td>
-                                            
-                                        </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-
-                        {% if is_paginated %}
-                        <nav aria-label="Page navigation example">
-                          <ul class="pagination">
-                            {% if page_obj.has_previous %}
-                            <li class="page-item">
-                              <a
-                                class="page-link"
-                                href="?page={{ page_obj.previous_page_number }}"
-                                aria-label="Previous"
-                              >
-                                <span aria-hidden="true">&laquo;</span>
-                              </a>
-                            </li>
-                            {% endif %} {% comment %}
-                            <li class="page-item"><a class="page-link" href="#">1</a></li>
-                            {% endcomment %}
-                            <li class="page-item">
-                              <a class="page-link" href="#">{{ page_obj.number }}</a>
-                            </li>
-                            {% comment %}
-                            <li class="page-item"><a class="page-link" href="#">3</a></li>
-                            {% endcomment %} 
-                            {% if page_obj.has_next %}
-                            <li class="page-item">
-                              <a
-                                class="page-link"
-                                href="?page={{ page_obj.next_page_number }}"
-                                aria-label="Next"
-                              >
-                                <span aria-hidden="true">&raquo;</span>
-                              </a>
-                            </li>
-                            {% endif %}
-                          </ul>
-                        </nav>
-                        {% endif %}
-                    
-                    </div>
-                </div>
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h4 class="mb-0">Contributions</h4>
+              <select id="year-select" name="year" class="form-select w-auto">
+                <option value="">Select Year</option>
+                {% for year in years %}
+                  <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+              </select>
             </div>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead class="thead-dark">
+                  <tr>
+                    <th scope="col">Month</th>
+                    <th scope="col">Year</th>
+                    <th scope="col">Amount Contributed</th>
+                    <th scope="col">Date of Contribution</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for contribution in contributions %}
+                    <tr>
+                      <td>{{ contribution.month }}</td>
+                      <td>{{ contribution.year }}</td>
+                      <td>{{ contribution.total_contributions }}</td>
+                      <td>{{ contribution.ContributionDate }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% if is_paginated %}
+              <nav aria-label="Page navigation example" class="mt-4">
+                <ul class="pagination justify-content-center">
+                  {% if page_obj.has_previous %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                      </a>
+                    </li>
+                  {% endif %}
+                  <li class="page-item">
+                    <a class="page-link" href="#">{{ page_obj.number }}</a>
+                  </li>
+                  {% if page_obj.has_next %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                      </a>
+                    </li>
+                  {% endif %}
+                </ul>
+              </nav>
+            {% endif %}
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
-
+<script>
+  document.getElementById('year-select').addEventListener('change', function() {
+    window.location.href = '?year=' + this.value;
+  });
+</script>
 {% endblock %}
