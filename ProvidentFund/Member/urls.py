@@ -7,5 +7,6 @@ urlpatterns=[
     path('register/', views.registrationView, name='register'),
     path('login/', views.loginView, name='login'),
     path('verify_otp/', views.verifyOtpView, name='verify_otp'),
-    path('logout/',views.logoutView, name='logout')
+    path('logout/',views.logoutView, name='logout'),
+    path('terms/', views.terms_and_conditions_view, name='terms_and_conditions'),
 ]

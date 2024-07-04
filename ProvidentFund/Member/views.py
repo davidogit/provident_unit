@@ -93,3 +93,8 @@ def verifyOtpView(request):
 def logoutView(request):
     logout(request)
     return redirect('login')
+
+
+def terms_and_conditions_view(request):
+    # Render the terms and conditions template
+    return render(request, 'terms_and_conditions.html')
