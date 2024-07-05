@@ -3,7 +3,23 @@ from django.urls import reverse
 
 class InvestmentDetail(models.Model):
     investment_type = models.CharField(max_length=50)
-    account_type = models.CharField(max_length=50)
+
+    current = 'Current'
+    checking ='Checking'
+    savings = 'Savings'
+    fixed_deposit = 'Fixed Deposit'
+    premium_checking = 'Premium Checking'
+    business = 'Business'
+    account = [
+        (current,'Current'),
+        (checking,'Checking'),
+        (savings,'Savings'),
+        (fixed_deposit,'Fixed Deposit'),
+        (premium_checking,'Premium Checking'),
+        (business,'Business')
+    ]
+
+    account_type = models.CharField(max_length=50, choices=account, default=current)
     account_name = models.CharField(max_length=50)
     account_number = models.IntegerField(unique=True)
     principal_amount = models.FloatField()
@@ -22,7 +38,7 @@ class InvestmentDetail(models.Model):
     def calculate_inv_interest(self):
         principal = self.principal_amount or 0.0
         rate = self.interest_percentage or 0.0
-        interest = (((rate / 100.0) * principal)+principal)  # Removed the + principal as it was redundant
+        interest = (((rate / 100.0) * principal)+principal)
         return interest
     
     @property
@@ -107,3 +123,36 @@ class Member(models.Model):
     
     def get_absolute_url(self):
         return reverse('member_detail', kwargs={'pk': self.pk})
+
+
+class DelayedInterest(models.Model):
+    from_date = models.DateField()
+    to_date = models.DateField()
+    amount = models.FloatField()
+    created_date = models.DateField(auto_now_add=True)
+    remarks = models.CharField(max_length=50)
+
+
+
+
+class BankInterest(models.Model):
+    GCB ='GCB'
+    ADB ='ADB'
+    CBG = 'CBG'
+    HFC = 'HFC'
+    Ecobank = 'Ecobank'
+    ABSA = 'ABSA'
+    names = [
+        (GCB,'GCB'),
+        (ADB,'ADB'),
+        (CBG,'CBG'),
+        (HFC,'HFC'),
+        (Ecobank,'Ecobank'),
+        (ABSA,'ABSA'),
+    ]
+    bank_name = models.CharField(max_length=20, choices=names, default=GCB)
+    from_date = models.DateField()
+    to_date = models.DateField()
+    amount = models.FloatField()
+    created_date = models.DateField(auto_now_add=True)
+    remarks = models.CharField(max_length=50)

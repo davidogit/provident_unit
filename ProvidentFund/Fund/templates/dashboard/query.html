@@ -1,18 +1,7 @@
 {% extends 'dashboard/base.html' %}
 
 {% block search %}
-    <form method="GET">
-        <div class="form-search d-flex align-items-center justify-content-between">
-            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-dark text-light" name="date" placeholder="Date">
-            <select class="form-control m-2 rounded-pill fst-italic bg-dark text-light" name="inv_type" id="investmentType">
-                <option class="dropdown-item" value="">All</option>
-                <option class="dropdown-item" value="T-bills">Treasury Bill</option>
-                <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
-                <option class="dropdown-item" value="D-interest">Delayed Interest</option>
-            </select>
-            <button type="submit" class="btn btn-primary rounded-pill fst-italic"><i class="ri-search-line"></i></button>
-        </div>
-    </form>
+
 {% endblock %}
 
 
@@ -29,6 +18,35 @@
           <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="exportTableToCSV('table_data.csv')"><i class="ri-bar-chart-2-line fs-18 lh-1"></i>Generate<span class="d-none d-sm-inline"> Report</span></button>
         </div>
     </div>
+
+
+    <form method="GET">
+        <div class="form-search d-flex align-items-center justify-content-between">
+            From:
+            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="from-date" placeholder="From">
+            To:
+            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="to-date" placeholder="To">
+            Type:
+            <select class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="inv_type" id="investmentType">
+                <option class="dropdown-item" value="">--</option>
+                <option class="dropdown-item" value="T-bills">Treasury Bill</option>
+                <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
+                <option class="dropdown-item" value="D-interest">Delayed Interest</option>
+            </select>
+            Status:
+            <select class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="status" id="status">
+                <!-- <option class="dropdown-item" value="">All</option> -->
+                <option class="dropdown-item" value="">--</option>
+                <option class="dropdown-item" value="Not started">Not started</option>
+                <option class="dropdown-item" value="active">Active</option>
+                <option class="dropdown-item" value="F-deposit">Maturing</option>
+                <option class="dropdown-item" value="matured">Matured/Expired</option>
+            </select>
+            <button type="submit" class="btn btn-primary rounded-pill fst-italic"><i class="ri-search-line"></i></button>
+        </div>
+    </form>
+
+
 
 <!-- Form for query -->
     <div class="row g-3 justify-content-center">
@@ -66,6 +84,8 @@
                             <thead>
                                 <tr>
                                     <th scope="col">Add Date</th>
+                                    <th scope="col">Start Date</th>
+                                    <th scope="col">Maturity Date</th>
                                     <th scope="col">Investment Type</th>
                                     <th scope="col">Interest Rate</th>
                                     <th scope="col">Status</th>
@@ -76,6 +96,8 @@
                                     {% for inv in results %}
                                         <tr>
                                             <td>{{ inv.created_date }}</td>
+                                            <td>{{ inv.interest_start_date }}</td>
+                                            <td>{{ inv.interest_end_date }}</td>
                                             <td>{{ inv.investment_type }}</td>
                                             <td>{{ inv.interest_percentage }}</td>
                                             <td>{{ inv.status }}</td>
@@ -84,7 +106,7 @@
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td class="text-center text-danger " colspan="4">No records match your search</td>
+                                        <td class="text-center text-danger " colspan="6">No records match your search</td>
                                     </tr>
                                 {% endif %}
                                 
@@ -106,15 +128,16 @@
                         <span aria-hidden="true">&laquo;</span>
                     </a>
                     </li>
-                    {% endif %} {% comment %}
+                    {% endif %}
+                    <!-- {% comment %}
                     <li class="page-item"><a class="page-link" href="#">1</a></li>
-                    {% endcomment %}
+                    {% endcomment %} -->
                     <li class="page-item">
                     <a class="page-link" href="#">{{ page_obj.number }}</a>
                     </li>
-                    {% comment %}
+                    <!-- {% comment %}
                     <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    {% endcomment %} {% if page_obj.has_next %}
+                    {% endcomment %} {% if page_obj.has_next %} -->
                     <li class="page-item">
                     <a
                         class="page-link"
