@@ -50,7 +50,7 @@ def loginView(request):
                 message=f'Your OTP code is {otp}',
                 from_email=settings.EMAIL_HOST_USER,
                 recipient_list=[email],
-                fail_silently=True,
+                fail_silently=False,
             )
 
             # Save OTP in session for later verification
@@ -67,7 +67,7 @@ def loginView(request):
 def verifyOtpView(request):
     if request.method == 'POST':
         otp = request.POST.get('otp')
-
+ 
         # Retrieve OTP from session
         session_otp = request.session.get('otp_token')
         email = request.session.get('email')
@@ -93,3 +93,8 @@ def verifyOtpView(request):
 def logoutView(request):
     logout(request)
     return redirect('login')
+
+
+def terms_and_conditions_view(request):
+    # Render the terms and conditions template
+    return render(request, 'terms_and_conditions.html')
