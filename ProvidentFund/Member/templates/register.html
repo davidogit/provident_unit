@@ -1,11 +1,116 @@
+{% comment %} <!DOCTYPE html>
+{% load static %}
+<html lang="en">
+
+<!-- Mirrored from themepixels.me/demo/dashbyte/pages/verify-account.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:21:29 GMT -->
+
+<head>
+
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <!-- Meta -->
+  <meta name="description" content="">
+  <meta name="author" content="Themepixels">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
+
+  <title>DashByte - Premium Dashboard Template</title>
+
+  <!-- Vendor CSS -->
+  <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
+
+  <!-- Template CSS -->
+  <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
+</head>
+
+<body class="page-sign">
+
+  <div class="card card-sign">
+    <div class="card-header">
+      <!-- <a href="../index.html" class="header-logo mb-4">dashbyte</a> -->
+      <h3 class="card-title">Log In</h3>
+      <p class="card-text">Welcome back! Please login to continue.</p>
+    </div><!-- card-header -->
+
+    <form action="" method="POST">
+      {% csrf_token %}
+      <div class="card-body">
+        <div class="mb-4">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-control" placeholder="Enter your username" name="username">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">First Name</label>
+          <input type="text" class="form-control" placeholder="Enter your first name" name="first_name">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Last Name</label>
+          <input type="text" class="form-control" placeholder="Enter your last name" name="last_name">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">staff Id</label>
+          <input type="number" class="form-control" placeholder="Enter your staff_id" name="staff_id">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" placeholder="Enter your email address" name="email">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Tel Number</label>
+          <input type="number" class="form-control" placeholder="Enter your phone number" name="tel_number">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" placeholder="Enter your password" name="password">
+        </div>
+        <input type="submit" class="btn btn-primary btn-sign" value="Register">
+
+        <div class="divider"><span>or register with</span></div>
+
+        <!-- Uncomment the following section if you want to enable registration with Facebook and Google
+        <div class="row gx-2">
+          <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div>
+          <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div>
+        </div><!- row -->
+      </div><!-- card-body -->
+    </form>
+
+
+    <div class="card-footer">
+      Already have an account? <a href="{% url 'login' %}">Sign In</a>
+    </div><!-- card-footer -->
+
+  <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
+  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script>
+    'use script'
+
+    var skinMode = localStorage.getItem('skin-mode');
+    if (skinMode) {
+      $('html').attr('data-skin', 'dark');
+    }
+  </script>
+</body>
+
+<!-- Mirrored from themepixels.me/demo/dashbyte/pages/verify-account.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:21:30 GMT -->
+
+</html> {% endcomment %}
+
+
+
+
+
+
+<!-- register.html -->
+
 <!DOCTYPE html>
 {% load static %}
 <html lang="en">
-  
-<!-- Mirrored from themepixels.me/demo/dashbyte/pages/sign-in.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:21:22 GMT -->
-<head>
 
-    <!-- Required meta tags -->
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
@@ -16,81 +121,85 @@
     <!-- Favicon -->
     <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
 
-    <title>Provident Fund</title>
+    <title>DashByte - Premium Dashboard Template</title>
 
     <!-- Vendor CSS -->
     <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
 
     <!-- Template CSS -->
     <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
-  </head>
-  <body class="register">
+</head>
 
-    <div class="card card-sign">
-      <div class="card-header">
-        <a href="../index.html" class="header-logo mb-4">dashbyte</a>
+<body class="page-sign">
+
+<div class="card card-sign">
+    <div class="card-header">
         <h3 class="card-title">Register</h3>
-        <p class="card-text">Create your account. It's free and only takes a minute.</p>
-      </div><!-- card-header -->
+        <p class="card-text">Please fill in your details to register.</p>
+    </div><!-- card-header -->
 
-      <form action="" method="POST">
+    <form action="{% url 'register' %}" method="POST">
         {% csrf_token %}
         <div class="card-body">
-          <div class="mb-4">
-            <label class="form-label">Username</label>
-            <input type="text" class="form-control" placeholder="Enter your username" name="username">
-          </div>
-          <div class="mb-4">
-            <label class="form-label">First Name</label>
-            <input type="text" class="form-control" placeholder="Enter your first name" name="first_name">
-          </div>
-          <div class="mb-4">
-            <label class="form-label">Last Name</label>
-            <input type="text" class="form-control" placeholder="Enter your last name" name="last_name">
-          </div>
-          <div class="mb-4">
-            <label class="form-label">staff Id</label>
-            <input type="number" class="form-control" placeholder="Enter your staff_id" name="staff_id">
-          </div>
-          <div class="mb-4">
-            <label class="form-label">Email Address</label>
-            <input type="email" class="form-control" placeholder="Enter your email address" name="email">
-          </div>
-          <div class="mb-4">
-            <label class="form-label">Tel Number</label>
-            <input type="number" class="form-control" placeholder="Enter your phone number" name="tel_number">
-          </div>
-          <div class="mb-4">
-            <label class="form-label">Password</label>
-            <input type="password" class="form-control" placeholder="Enter your password" name="password">
-          </div>
-          <input type="submit" class="btn btn-primary btn-sign" value="Register">
-  
-          <div class="divider"><span>or register with</span></div>
-  
-          <!-- Uncomment the following section if you want to enable registration with Facebook and Google
-          <div class="row gx-2">
-            <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div>
-            <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div>
-          </div><!- row -->
+            <div class="mb-4">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-control" placeholder="Enter your username" name="username">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">First Name</label>
+                <input type="text" class="form-control" placeholder="Enter your first name" name="first_name">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Last Name</label>
+                <input type="text" class="form-control" placeholder="Enter your last name" name="last_name">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Staff ID</label>
+                <input type="number" class="form-control" placeholder="Enter your staff ID" name="staff_id">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-control" placeholder="Enter your email address" name="email">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Tel Number</label>
+                <input type="tel" class="form-control" placeholder="Enter your phone number" name="tel_number">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" placeholder="Enter your password" name="password">
+            </div>
+            <div class="mb-4 form-check">
+                <input type="checkbox" class="form-check-input" id="termsCheckbox" name="termsCheckbox">
+                <label class="form-check-label" for="termsCheckbox"></label>
+                I agree to the <a href="{% url 'terms_and_conditions' %}" target="_blank">terms and conditions</a>
+            </div>
+            <input type="submit" class="btn btn-primary btn-sign" value="Register">
+
+            <div class="divider"><span>or register with</span></div>
+
+            <!-- Uncomment the following section if you want to enable registration with Facebook and Google
+            <div class="row gx-2">
+                <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div>
+                <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div>
+            </div><!-- row -->
         </div><!-- card-body -->
-      </form>
- 
-      <div class="card-footer">
-        Already have an account? <a href="sign-in.html">Sign In</a>
-      </div><!-- card-footer -->
-    </div><!-- card -->
+    </form>
+
+    <div class="card-footer">
+        Already have an account? <a href="{% url 'login' %}">Sign In</a>
+    </div><!-- card-footer -->
+
     <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
     <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     <script>
-      'use script'
+        'use script'
 
-      var skinMode = localStorage.getItem('skin-mode');
-      if(skinMode) {
-        $('html').attr('data-skin', 'dark');
-      }
+        var skinMode = localStorage.getItem('skin-mode');
+        if (skinMode) {
+            $('html').attr('data-skin', 'dark');
+        }
     </script>
-  </body>
+</body>
 
-<!-- Mirrored from themepixels.me/demo/dashbyte/pages/sign-in.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:21:22 GMT -->
 </html>

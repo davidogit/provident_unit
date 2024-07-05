@@ -45,6 +45,7 @@ def loginView(request):
             # # Generate OTP
             # otp = generate_unique_code()
 
+<<<<<<< HEAD
             # # Send OTP to user via email
             # send_mail(
             #     subject='Your PF OTP',
@@ -53,6 +54,16 @@ def loginView(request):
             #     recipient_list=[email],
             #     fail_silently=True,
             # )
+=======
+            # Send OTP to user via email
+            send_mail(
+                subject='Your PF OTP',
+                message=f'Your OTP code is {otp}',
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+>>>>>>> a61d16d331a2003fdc43674ca74048345e57b54c
 
             # Save OTP in session for later verification
             # request.session['otp_token'] = otp
@@ -65,6 +76,7 @@ def loginView(request):
 
     return render(request, 'login.html')
 
+<<<<<<< HEAD
 # def verifyOtpView(request):
 #     if request.method == 'POST':
 #         otp = request.POST.get('otp')
@@ -73,6 +85,16 @@ def loginView(request):
 #         session_otp = request.session.get('otp_token')
 #         email = request.session.get('email')
 #         password = request.session.get('password')
+=======
+def verifyOtpView(request):
+    if request.method == 'POST':
+        otp = request.POST.get('otp')
+ 
+        # Retrieve OTP from session
+        session_otp = request.session.get('otp_token')
+        email = request.session.get('email')
+        password = request.session.get('password')
+>>>>>>> a61d16d331a2003fdc43674ca74048345e57b54c
 
 #         if otp == session_otp:
 #             user = authenticate(request, username=email, password=password)
@@ -94,3 +116,8 @@ def loginView(request):
 def logoutView(request):
     logout(request)
     return redirect('login')
+
+
+def terms_and_conditions_view(request):
+    # Render the terms and conditions template
+    return render(request, 'terms_and_conditions.html')
