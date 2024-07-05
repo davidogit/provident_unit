@@ -41,53 +41,54 @@ def loginView(request):
         user = authenticate(request, username=email, password=password)
 
         if user:
-            # Generate OTP
-            otp = generate_unique_code()
+            login(request,user)
+            # # Generate OTP
+            # otp = generate_unique_code()
 
-            # Send OTP to user via email
-            send_mail(
-                subject='Your PF OTP',
-                message=f'Your OTP code is {otp}',
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[email],
-                fail_silently=True,
-            )
+            # # Send OTP to user via email
+            # send_mail(
+            #     subject='Your PF OTP',
+            #     message=f'Your OTP code is {otp}',
+            #     from_email=settings.EMAIL_HOST_USER,
+            #     recipient_list=[email],
+            #     fail_silently=True,
+            # )
 
             # Save OTP in session for later verification
-            request.session['otp_token'] = otp
-            request.session['email'] = email
-            request.session['password'] = password
+            # request.session['otp_token'] = otp
+            # request.session['email'] = email
+            # request.session['password'] = password
 
-            return redirect('verify_otp')
+            return redirect('finance_page')
         else:
             return HttpResponse('Invalid login details')
 
     return render(request, 'login.html')
 
-def verifyOtpView(request):
-    if request.method == 'POST':
-        otp = request.POST.get('otp')
+# def verifyOtpView(request):
+#     if request.method == 'POST':
+#         otp = request.POST.get('otp')
 
-        # Retrieve OTP from session
-        session_otp = request.session.get('otp_token')
-        email = request.session.get('email')
-        password = request.session.get('password')
+#         # Retrieve OTP from session
+#         session_otp = request.session.get('otp_token')
+#         email = request.session.get('email')
+#         password = request.session.get('password')
 
-        if otp == session_otp:
-            user = authenticate(request, username=email, password=password)
-            if user:
-                login(request, user)
-                # Clear session data after successful login
-                del request.session['otp_token']
-                del request.session['email']
-                del request.session['password']
-                return redirect('finance_page')
-            else:
-                return HttpResponse('Invalid login details')
-        else:
-            return HttpResponse('Invalid OTP')
+#         if otp == session_otp:
+#             user = authenticate(request, username=email, password=password)
+#             if user:
+#                 login(request, user)
+#                 # Clear session data after successful login
+#                 del request.session['otp_token']
+#                 del request.session['email']
+#                 del request.session['password']
+#                 return redirect('finance_page')
+#             else:
+#                 return HttpResponse('Invalid login details')
+#         else:
+#             return HttpResponse('Invalid OTP')
 
-    return render(request, 'verify_otp.html')
+#     return render(request, 'verify_otp.html')
 
 @login_required
 def logoutView(request):

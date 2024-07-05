@@ -95,6 +95,23 @@
   
             </ul>
           </div><!-- nav-group -->
+
+          
+          <div class="nav-group show">
+            <a href="#" class="nav-label">Admin Panel</a>
+            <ul class="nav nav-sidebar">
+              <li class="nav-item">
+                <a href="#" class="nav-link has-sub"><i class="ri-user-star-line fs-32 lh-1 me-3"></i> <span>User Management</span></a>
+                <nav class="nav nav-sub">
+                  <a href="{% url 'assign_roles' %}" class="nav-sub-link">Assign Roles</a>
+                  <a href="{% url 'add_user' %}" class="nav-sub-link">Add User</a>
+                  <a href="{% url 'manage_users' %}" class="nav-sub-link">Manage Users</a>
+                  
+                </nav>
+              </li>
+  
+            </ul>
+          </div><!-- nav-group -->
   
       </div><!-- sidebar-body -->
       <div class="sidebar-footer">

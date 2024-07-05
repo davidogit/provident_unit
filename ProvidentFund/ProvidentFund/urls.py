@@ -25,6 +25,6 @@ urlpatterns = [
     path('fund/', include('Fund.urls')),
     path('contributions/', include('contributions.urls')),
     path('members/', include('Member.urls')),
-    path('login/', views.loginView, name='login')
-
+    path('login/', views.loginView, name='login'),
+    path('admin_panel/', include('Admin.urls')),
 ]
