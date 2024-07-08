@@ -1,12 +1,12 @@
 from django.contrib import admin
-from Fund.models import InvestmentDetail,Member
+from Fund.models import InvestmentDetail,Member,BankInterest,DelayedInterest
 
 # Register your models here.
 
 
 
 class InvestmentDetailAdmin(admin.ModelAdmin):
-    list_display=('account_name','account_type','investment_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage','tenure','remaining_days','rollover_principal','rollover_accumulated_amount','rollover_interest_percentage')
+    list_display=('account_name','account_type','status','investment_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage','tenure','remaining_days','rollover_principal','rollover_accumulated_amount','rollover_interest_percentage')
 
 
     readonly_fields = ('interest_amount','rollover_interest_percentage','created_date')
@@ -19,3 +19,6 @@ class MemberAdmin(admin.ModelAdmin):
     list_display = ('first_name','last_name','total_amount_to_date','profit','status')
 
 admin.site.register(Member,MemberAdmin)
+
+admin.site.register(BankInterest)
+admin.site.register(DelayedInterest)

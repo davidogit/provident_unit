@@ -2,11 +2,12 @@
 # from django.forms import BaseModelForm
 # from django.http import HttpResponse
 from django.db.models.query import QuerySet
+from django.forms import BaseModelForm
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
 # Create your views here.
-from Fund.models import InvestmentDetail, Member
+from Fund.models import InvestmentDetail, Member,DelayedInterest,BankInterest
 from django.urls import reverse_lazy
 # from Fund.forms import InvestmentUpdateForm
 from django.db.models import Sum, FloatField
@@ -23,7 +24,7 @@ class Invest(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Queryset to calculate total interest
-        interest_query = InvestmentDetail.objects.all().filter(_status = 'Pending')
+        interest_query = InvestmentDetail.objects.all().filter(_status = 'Active')
         context['total_interest'] = sum(inv.interest_amount for inv in interest_query)
 
         # Queryset to calsulate total number of active investments
@@ -38,6 +39,8 @@ class Invest(TemplateView):
         
         print(context)
         return context
+
+
 
 
 
@@ -97,6 +100,11 @@ class AddInvestment(CreateView):
     fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
     template_name = 'dashboard/investment_form.html'
     success_url = reverse_lazy('investment_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['account_type'] = InvestmentDetail.account
+        return context
 
 # Updating an Investement's details
 @method_decorator(login_required, name='dispatch')
@@ -174,29 +182,93 @@ class MemberDeleteView(DeleteView):
     success_url = reverse_lazy('member_list')
 
 
-
+from django.utils import timezone
+from datetime import datetime
 
 # Query For Investment View
 @method_decorator(login_required, name='dispatch')
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
-    paginate_by = 5
-    context_object_name = 'results'
+    # paginate_by = 5
+    # context_object_name = 'results'
 
     # Using get_queryset so that we can paginate seperate queries based on filter
-    def get_queryset(self):
-        date = self.request.GET.get('date')
-        inv_type = self.request.GET.get('inv_type')
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
-        if date and inv_type:
-            context = super().get_queryset().filter(created_date=date,investment_type=inv_type)
-        elif date:
-            context = super().get_queryset().filter(created_date=date)
-        elif inv_type:
-            context = super().get_queryset().filter(investment_type=inv_type)
-        else:
-            # Return whole investments --All--
-            context = super().get_queryset()
+        from_date = self.request.GET.get('from-date','')
+        to_date = self.request.GET.get('to-date','')
+        inv_type = self.request.GET.get('inv_type','')
+        status = self.request.GET.get('status','')
 
+        # convert 'date' to date
+        from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
+        to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if from_date else None
+
+        # Get current date
+        current_date = timezone.now().date()
+
+        # get all investments
+        queryset = InvestmentDetail.objects.all()
+        query=[]
+        if (from_date and to_date) or (inv_type or status):
+            
+            for inv in queryset:
+                # queries matured investments within the given dates
+                if inv.status == 'Expired' and status=='matured' or (inv.investment_type==inv_type):
+                    if from_date==to_date:
+                        query.append(inv)
+                    elif (from_date<= inv.interest_end_date <= to_date):
+                        query.append(inv)
+                elif inv.status == 'Active' and status=='active' or inv.investment_type==inv_type:
+                    if from_date==to_date:
+                        query.append(inv)
+                    elif (inv.interest_start_date <= current_date <= inv.interest_end_date):
+                        query.append(inv)
+                elif inv.status == 'Not Start' and status =='Not started' or inv.investment_type==inv_type:
+                    if from_date==to_date:
+                        query.append(inv)
+                    elif (current_date < inv.interest_start_date):
+                        query.append(inv)
+                elif from_date and to_date:
+                    if (inv.created_date == from_date) and (inv.created_date == to_date):
+                        query.append(inv)
+
+            context['results'] = query
+
+        return context
+
+
+class DelayedInterestListView(ListView):
+    template_name = 'dashboard/delayed_interest_list.html'
+    model = DelayedInterest
+    paginate_by = 10
+    context_object_name = 'delayed_interest'
+
+
+
+class DelayedInterestCreateView(CreateView):
+    template_name = 'dashboard/delayed_interest_form.html'
+    model = DelayedInterest
+    fields = ('from_date','to_date','amount','remarks')
+    success_url = reverse_lazy('delayed_interest_list')
+
+
+class BankInterestListView(ListView):
+    template_name = 'dashboard/bank_interest_list.html'
+    model = BankInterest
+    paginate_by = 10
+    context_object_name = 'bank_interest'
+
+
+class BankInterestCreateView(CreateView):
+    template_name = 'dashboard/bank_interest_form.html'
+    model = BankInterest
+    fields = ('bank_name','from_date','to_date','amount','remarks')
+    success_url = reverse_lazy('bank_interest_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['banks'] = BankInterest.names
         return context

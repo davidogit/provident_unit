@@ -71,6 +71,22 @@
               </nav>
             </li>
             <li class="nav-item">
+              <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Delayed Interest</span></a>
+              <nav class="nav nav-sub">
+                <a href="{% url 'delayed_interest_list' %}" class="nav-sub-link">View Delayed Interests</a>
+                <a href="{% url 'add_delayed_interest' %}" class="nav-sub-link">Add Delayed Interest</a>
+                <a href="#" class="nav-sub-link">Generate Report</a>
+              </nav>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Bank Interest</span></a>
+              <nav class="nav nav-sub">
+                <a href="{% url 'bank_interest_list' %}" class="nav-sub-link">View Bank Interests</a>
+                <a href="{% url 'add_bank_interest' %}" class="nav-sub-link">Add Bank Interest</a>
+                <a href="#" class="nav-sub-link">Generate Report</a>
+              </nav>
+            </li>
+            <li class="nav-item">
               <a href="#" class="nav-link has-sub"><i class="ri-account-circle-line"></i> <span>Members</span></a>
               <nav class="nav nav-sub">
                 <a href="{% url 'member_list' %}" class="nav-sub-link">Active PF Members</a>
@@ -90,6 +106,23 @@
                 <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Provident Fund</span></a>
                 <nav class="nav nav-sub">
                   <a href="{% url 'staff_member_list' %}" class="nav-sub-link">View Contributions</a>
+                </nav>
+              </li>
+  
+            </ul>
+          </div><!-- nav-group -->
+
+          
+          <div class="nav-group show">
+            <a href="#" class="nav-label">Admin Panel</a>
+            <ul class="nav nav-sidebar">
+              <li class="nav-item">
+                <a href="#" class="nav-link has-sub"><i class="ri-user-star-line fs-32 lh-1 me-3"></i> <span>User Management</span></a>
+                <nav class="nav nav-sub">
+                  <a href="{% url 'assign_roles' %}" class="nav-sub-link">Assign Roles</a>
+                  <a href="{% url 'add_user' %}" class="nav-sub-link">Add User</a>
+                  <a href="{% url 'manage_users' %}" class="nav-sub-link">Manage Users</a>
+                  
                 </nav>
               </li>
   

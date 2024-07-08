@@ -1,0 +1,9 @@
+<!-- Admin/templates/admin_panel/assign_roles.html -->
+
+<h1>Assign Roles</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+</form>
+

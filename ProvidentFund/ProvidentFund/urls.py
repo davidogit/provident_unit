@@ -18,13 +18,16 @@ from django.contrib import admin
 from django.urls import path,include
 
 from Member import views
+from Fund import views as v
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # path('', views.loginView, name=''),
+    path('', v.Invest.as_view(),),
     path('fund/', include('Fund.urls')),
     path('contributions/', include('contributions.urls')),
     path('members/', include('Member.urls')),
-    path('login/', views.loginView, name='login')
-
+    path('login/', views.loginView, name='login'),
+    path('admin_panel/', include('Admin.urls')),
 ]
