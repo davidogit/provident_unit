@@ -1,0 +1,9 @@
+<!-- Admin/templates/admin_panel/add_user.html -->
+
+<h1>Add User</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add User</button>
+</form>
+

@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'Fund',
     'contributions',
     'Member',
+    'Admin',
 
     'django_celery_beat',
     'django_celery_results',

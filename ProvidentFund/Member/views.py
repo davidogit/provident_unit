@@ -61,7 +61,7 @@ def loginView(request):
             request.session['username'] = username
             request.session['password'] = password
 
-            return redirect('verify_otp')
+            return redirect('finance_page')
         else:
             return HttpResponse('Invalid login details')
 
