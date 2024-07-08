@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.core.mail import send_mail
-from django.conf import settings
+from ProvidentFund.settings import EMAIL_HOST_USER
 from django.contrib.auth.decorators import login_required
 from Member.forms import UserForm, MemberForm
 from .models import Member
@@ -35,10 +35,10 @@ def registrationView(request):
 
 def loginView(request):
     if request.method == 'POST':
-        email = request.POST.get('email')
+        username = request.POST.get('username')
         password = request.POST.get('password')
 
-        user = authenticate(request, username=email, password=password)
+        user = authenticate(request, username=username, password=password)
 
         if user:
             # Generate OTP
@@ -46,16 +46,16 @@ def loginView(request):
 
             # Send OTP to user via email
             send_mail(
-                subject='Your PF OTP',
+                subject='PF CODE',
                 message=f'Your OTP code is {otp}',
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[email],
+                from_email=EMAIL_HOST_USER,
+                recipient_list=[user.email],
                 fail_silently=False,
             )
 
             # Save OTP in session for later verification
             request.session['otp_token'] = otp
-            request.session['email'] = email
+            request.session['username'] = username
             request.session['password'] = password
 
             return redirect('verify_otp')
@@ -70,16 +70,16 @@ def verifyOtpView(request):
  
         # Retrieve OTP from session
         session_otp = request.session.get('otp_token')
-        email = request.session.get('email')
+        username = request.session.get('username')
         password = request.session.get('password')
 
         if otp == session_otp:
-            user = authenticate(request, username=email, password=password)
+            user = authenticate(request, username=username, password=password)
             if user:
                 login(request, user)
                 # Clear session data after successful login
                 del request.session['otp_token']
-                del request.session['email']
+                del request.session['username']
                 del request.session['password']
                 return redirect('finance_page')
             else:

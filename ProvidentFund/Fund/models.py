@@ -151,6 +151,7 @@ class BankInterest(models.Model):
         (ABSA,'ABSA'),
     ]
     bank_name = models.CharField(max_length=20, choices=names, default=GCB)
+    branch = models.CharField(max_length=50)
     from_date = models.DateField()
     to_date = models.DateField()
     amount = models.FloatField()

@@ -24,7 +24,7 @@ class Invest(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Queryset to calculate total interest
-        interest_query = InvestmentDetail.objects.all().filter(_status = 'Pending')
+        interest_query = InvestmentDetail.objects.all().filter(_status = 'Active')
         context['total_interest'] = sum(inv.interest_amount for inv in interest_query)
 
         # Queryset to calsulate total number of active investments
@@ -39,6 +39,8 @@ class Invest(TemplateView):
         
         print(context)
         return context
+
+
 
 
 
@@ -184,7 +186,7 @@ from django.utils import timezone
 from datetime import datetime
 
 # Query For Investment View
-# @method_decorator(login_required, name='dispatch')
+@method_decorator(login_required, name='dispatch')
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail

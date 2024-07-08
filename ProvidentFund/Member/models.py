@@ -8,7 +8,6 @@ class Member(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     staff_id = models.PositiveIntegerField(unique=True, null=False, blank=False)
     tel_number = models.PositiveIntegerField()
-    otp_secret = models.CharField(max_length=16, default=random_hex)
 
 
     def __str__(self):
