@@ -17,15 +17,10 @@ urlpatterns =[
     path('deleteInvestment/<int:pk>/', views.InvestmentDeleteView.as_view(), name='delete_investment'),
     path('investmentRollover/<int:pk>/', views.RolloverPercentage.as_view(), name='rollover_percentage'),
     path('investment_query/', views.InvestmentQuery.as_view(), name='query'),
-<<<<<<< HEAD
-  
-   
-=======
 
     path('add_bank_interest/', views.BankInterestCreateView.as_view(), name='add_bank_interest'),
     path('bank_interest_list/', views.BankInterestListView.as_view(), name='bank_interest_list'),
 
     path('add_delayed_interest/', views.DelayedInterestCreateView.as_view(), name='add_delayed_interest'),
     path('delayed_interst_list/', views.DelayedInterestListView.as_view(), name='delayed_interest_list'),
->>>>>>> a61d16d331a2003fdc43674ca74048345e57b54c
 ]
