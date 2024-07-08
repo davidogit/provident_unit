@@ -13,13 +13,9 @@ class StaffAPIAdmin(admin.ModelAdmin):
         'EmployerAmount',
         'RetroEmployeeAmount',
         'RetroEmployerAmount',
-        'Employee55Amount',
-        'Employer55Amount',
-        'RetroEmployee55Amount',
-        'RetroEmployer55Amount',
         'ContributionDate',
         'ExitedDate',
-        'ExitedFlag',
+        # 'ExitedFlag',
     )
 
 

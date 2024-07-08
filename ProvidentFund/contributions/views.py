@@ -13,13 +13,17 @@ from django.http import HttpResponseRedirect
 from collections import defaultdict
 from datetime import datetime
 from django.shortcuts import redirect
+from django.core.mail import send_mail
+from django.conf import settings
+from django.core.mail import EmailMessage
+from ProvidentFund.settings import EMAIL_HOST_USER
+import traceback
+from django.core.mail import send_mail
+from django.template import loader
+from django.template.loader import render_to_string
 
 
 # Create your views here.
-@method_decorator(login_required,name = "dispatch")
-class Invest(TemplateView):
-    template_name='dashboard/finance.html'
-
 
 @method_decorator(login_required,name = "dispatch")
 class StaffMemberListView(ListView):
@@ -38,13 +42,25 @@ class StaffMemberListView(ListView):
         memberships = response.json()
 
         for membership in memberships:
-            ExitedFlag = membership.get('ExitedFlag', False)
+            incoming_exited_flag = membership.get('ExitedFlag', False)
+            api_id = membership.get('Id')
+
+            # Fetch the existing staff member if exists
+            existing_staff_member = StaffAPI.objects.filter(Id=api_id).first()
+
+            # Check if the existing or incoming ExitedFlag is True
+            if existing_staff_member and existing_staff_member.ExitedFlag:
+                continue  # Skip update or create if existing ExitedFlag is True
+
+            if incoming_exited_flag:
+                continue  # Skip update or create if incoming ExitedFlag is True
+
+            # Proceed to update or create if checks pass
             ExitedDate = membership.get('ExitedDate', None)
-            if ExitedFlag and ExitedDate:
+            if incoming_exited_flag and ExitedDate:
                 ExitedDate = timezone.now() if not ExitedDate else ExitedDate
             else:
                 ExitedDate = None
-            api_id = membership.get('Id')
             staff_member, created = StaffAPI.objects.update_or_create(
                 Id=api_id,
                 defaults={
@@ -57,14 +73,9 @@ class StaffMemberListView(ListView):
                     'EmployerAmount': membership.get('EmployerAmount', 0.0),
                     'RetroEmployeeAmount': membership.get('RetroEmployeeAmount', 0.0),
                     'RetroEmployerAmount': membership.get('RetroEmployerAmount', 0.0),
-                    'Employee55Amount': membership.get('Employee55Amount', 0.0),
-                    'Employer55Amount': membership.get('Employer55Amount', 0.0),
-                    'RetroEmployee55Amount': membership.get('RetroEmployee55Amount', 0.0),
-                    'RetroEmployer55Amount': membership.get('RetroEmployer55Amount', 0.0),
                     'ContributionDate': membership.get('ContributionDate', ''),
-                    'ExitedDate': membership.get('ExitedDate', ''),
-                    'ExitedFlag': membership.get('ExitedFlag', False),
-                    # 'month': membership.get('month', '')
+                    'ExitedDate': ExitedDate,
+                    'ExitedFlag': incoming_exited_flag,
                  }
             )
 
@@ -80,10 +91,6 @@ class StaffMemberListView(ListView):
                             'EmployerAmount': contrib['EmployerAmount'],
                             'RetroEmployeeAmount': contrib['RetroEmployeeAmount'],
                             'RetroEmployerAmount': contrib['RetroEmployerAmount'],
-                            'Employee55Amount': contrib['Employee55Amount'],
-                            'Employer55Amount': contrib['Employer55Amount'],
-                            'RetroEmployee55Amount': contrib['RetroEmployee55Amount'],
-                            'RetroEmployer55Amount': contrib['RetroEmployer55Amount'],
                             'ContributionDate': contrib['ContributionDate'],
                         }
                     )
@@ -91,8 +98,7 @@ class StaffMemberListView(ListView):
     
 
     
-    
-@method_decorator(login_required, name="dispatch")
+@method_decorator(login_required, name='dispatch')   
 class OptOutMemberView(View):
     def post(self, request, *args, **kwargs):
         member_id = kwargs.get('pk')
@@ -100,40 +106,37 @@ class OptOutMemberView(View):
         member.ExitedDate = timezone.now()
         member.ExitedFlag = True
         member.save()
+        
+        # Send email to admin
+        self.send_opt_out_email(member)
+        
         return JsonResponse({'status': 'success'}, status=200)
-    
 
-
-
+    def send_opt_out_email(self, member):
+        # Inject the respective values in HTML template
+        html_message = loader.render_to_string(
+            'contributions/message.html',
+            {
+                'name': 'Eben',  # TODO: Enter the recipient name
+                'body': 'This email is to verify whether we can send email in Django from Gmail account.',
+                'sign': 'Sender',  # TODO: Update the signature
+            }
+        )
+        send_mail(
+            'Congratulations!',
+            'You are lucky to receive this mail.',
+            'osahdav@gmail.com',  # TODO: Update this with your mail id
+            ['dave21620@gmail.com'],  # TODO: Update this with the recipients mail id
+            html_message=html_message,
+            fail_silently=False,
+        )
 @method_decorator(login_required, name='dispatch')
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
     context_object_name = 'membership'
 
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-    #     selected_year = self.request.GET.get('year')
-        
-    #     years = list(range(2020, datetime.now().year + 1))
-    #     context['years'] = years
-    #     context['selected_year'] = int(selected_year) if selected_year else None
-
-    #     if selected_year:
-    #         contributions = Contribution.objects.filter(
-    #             member=self.object,
-    #             year=selected_year
-    #         ).order_by('ContributionDate')
-
-    #         monthly_contributions = defaultdict(list)
-    #         for contribution in contributions:
-    #             month_name = contribution.ContributionDate.strftime('%B')
-    #             monthly_contributions[month_name].append(contribution)
-            
-    #         context['monthly_contributions'] = monthly_contributions
-
-    #     return context
-
+    
 
 
 @method_decorator(login_required, name="dispatch")
@@ -141,7 +144,7 @@ class Contributed(ListView):
     model = Contribution
     template_name = 'contributions/contributed.html'
     context_object_name = 'contributions'
-    paginate_by = 10
+    paginate_by = 12
 
     def get_queryset(self):
         user_id = self.kwargs.get('membership_id')

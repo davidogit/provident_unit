@@ -25,10 +25,6 @@ class Command(BaseCommand):
                             'EmployerAmount': 0,
                             'RetroEmployeeAmount': 0,
                             'RetroEmployerAmount': 0,
-                            'Employee55Amount': 0,
-                            'Employer55Amount': 0,
-                            'RetroEmployee55Amount': 0,
-                            'RetroEmployer55Amount': 0,
                             'ContributionDate': datetime.strptime(f'01 {month} {year}', '%d %B %Y')
                         }
                     )
