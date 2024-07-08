@@ -5,8 +5,9 @@ from django.core.mail import send_mail
 from ProvidentFund.settings import EMAIL_HOST_USER
 from django.contrib.auth.decorators import login_required
 from Member.forms import UserForm, MemberForm
-from .models import Member
 from .generate_otp import generate_unique_code
+from smtplib import SMTPConnectError
+
 
 def registrationView(request):
     if request.method == 'POST':
@@ -43,15 +44,17 @@ def loginView(request):
         if user:
             # Generate OTP
             otp = generate_unique_code()
-
-            # Send OTP to user via email
-            send_mail(
-                subject='PF CODE',
-                message=f'Your OTP code is {otp}',
-                from_email=EMAIL_HOST_USER,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
+            try:
+                # Send OTP to user via email
+                send_mail(
+                    subject='PF CODE',
+                    message=f'Your OTP code is {otp}',
+                    from_email=EMAIL_HOST_USER,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+            except SMTPConnectError as e:
+                print(f'SMTPConnectError: {e}')
 
             # Save OTP in session for later verification
             request.session['otp_token'] = otp
@@ -64,16 +67,25 @@ def loginView(request):
 
     return render(request, 'login.html')
 
+
 def verifyOtpView(request):
     if request.method == 'POST':
-        otp = request.POST.get('otp')
- 
+        otp_1 = request.POST.get('otp-1')
+        otp_2 = request.POST.get('otp-2')
+        otp_3 = request.POST.get('otp-3')
+        otp_4 = request.POST.get('otp-4')
+
+        # concantenate otp
+        otp_combined = otp_1+otp_2+otp_3+otp_4
+        # convert otp from string to integer
+        otp = int(otp_combined)
+
         # Retrieve OTP from session
         session_otp = request.session.get('otp_token')
         username = request.session.get('username')
         password = request.session.get('password')
 
-        if otp == session_otp:
+        if otp == int(session_otp):
             user = authenticate(request, username=username, password=password)
             if user:
                 login(request, user)
@@ -88,6 +100,7 @@ def verifyOtpView(request):
             return HttpResponse('Invalid OTP')
 
     return render(request, 'verify_otp.html')
+
 
 @login_required
 def logoutView(request):

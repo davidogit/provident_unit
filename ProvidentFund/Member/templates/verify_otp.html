@@ -35,21 +35,18 @@
       <p class="card-text">Please enter one-time-pin to continue.</p>
     </div><!-- card-header -->
 
-    <form action="" method="POST">
+    <form action="" method="POST" id="otpForm">
       {% csrf_token %}
       <div class="card-body">
-        <div class="mb-4">
-            <label for="otp" class="form-label">OTP:</label>
-            <input class="form-control" type="text" id="otp" name="otp" required>
+        <div class="d-flex mb-4">
+            <!-- <label for="otp" class="form-label">OTP:</label> -->
+            <input class="form-control otp-input me-1 text-center" type="text" id="otp-1" name="otp-1" required maxlength="1">
+            <input class="form-control otp-input me-1 text-center" type="text" id="otp-2" name="otp-2" required maxlength="1">
+            <input class="form-control otp-input me-1 text-center" type="text" id="otp-3" name="otp-3" required maxlength="1">
+            <input class="form-control otp-input text-center" type="text" id="otp-4" name="otp-4" required maxlength="1">
         </div>
 
-        <!-- <button>OTP</button> -->
         <input type="submit" class="btn btn-primary btn-sign" value="Verify">
-
-        <!--<div class="row gx-2">
-          <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div>
-          <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div>
-        </div><!- row -->
       </div><!-- card-body -->
   </div><!-- card -->
   </form>
@@ -65,9 +62,19 @@
     if (skinMode) {
       $('html').attr('data-skin', 'dark');
     }
+
+    $(document).ready(function() {
+      $('.otp-input').on('keyup', function(e) {
+        if (e.key >= '0' && e.key <= '9') {
+          $(this).next('.otp-input').focus();
+        } else if (e.key === 'Backspace') {
+          $(this).prev('.otp-input').focus();
+        }
+      });
+    });
+
   </script>
 </body>
-
-<!-- Mirrored from themepixels.me/demo/dashbyte/pages/verify-account.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:21:30 GMT -->
-
 </html>
+
+

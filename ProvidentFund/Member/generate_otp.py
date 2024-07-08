@@ -3,9 +3,9 @@ import string
 # from .models import Member
 
 def generate_unique_code():
-    length = 7
+    length = 4 
     while True:
-        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+        code = ''.join(random.choices(string.digits, k=length))
         # if not Member.objects.filter(otp_secret=code).exists():
         return code
 
