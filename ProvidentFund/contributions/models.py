@@ -16,10 +16,6 @@ class StaffAPI(models.Model):
     EmployerAmount = models.DecimalField(max_digits=10, decimal_places=2)
     RetroEmployeeAmount = models.DecimalField(max_digits=10, decimal_places=2)
     RetroEmployerAmount = models.DecimalField(max_digits=10, decimal_places=2)
-    Employee55Amount = models.DecimalField(max_digits=10, decimal_places=2)
-    Employer55Amount = models.DecimalField(max_digits=10, decimal_places=2)
-    RetroEmployee55Amount = models.DecimalField(max_digits=10, decimal_places=2)
-    RetroEmployer55Amount = models.DecimalField(max_digits=10, decimal_places=2)
     ContributionDate = models.DateTimeField(auto_now=True)
     ExitedDate = models.DateTimeField(null=True, blank=True)
     ExitedFlag = models.BooleanField(default=False)
@@ -39,10 +35,6 @@ class Contribution(models.Model):
     EmployerAmount = models.DecimalField(max_digits=10, decimal_places=2)
     RetroEmployeeAmount = models.DecimalField(max_digits=10, decimal_places=2)
     RetroEmployerAmount = models.DecimalField(max_digits=10, decimal_places=2)
-    Employee55Amount = models.DecimalField(max_digits=10, decimal_places=2)
-    Employer55Amount = models.DecimalField(max_digits=10, decimal_places=2)
-    RetroEmployee55Amount = models.DecimalField(max_digits=10, decimal_places=2)
-    RetroEmployer55Amount = models.DecimalField(max_digits=10, decimal_places=2)
     ContributionDate = models.DateTimeField()
 
 
@@ -51,12 +43,8 @@ class Contribution(models.Model):
         b = self.EmployerAmount 
         c = self.RetroEmployeeAmount
         d = self.RetroEmployerAmount
-        e = self.RetroEmployee55Amount
-        f = self.RetroEmployer55Amount
-        g = self.Employee55Amount
-        h = self.Employer55Amount
         
-        results = a+b+c+d+e+f+g+h
+        results = a+b+c+d
         
         return results
 
