@@ -22,16 +22,23 @@
 
     <form method="GET">
         <div class="form-search d-flex align-items-center justify-content-between">
+            <span>Sort_by:</span>
+            <select class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="sort" id="sort">
+                <!-- <option class="dropdown-item" value="">All</option> -->
+                <option class="dropdown-item" value="">--</option>
+                <option class="dropdown-item" value="start_date">Start Date</option>
+                <option class="dropdown-item" value="created_date">Created Date</option>
+            </select>
             From:
-            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="from-date" placeholder="From">
+            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="from-date">
             To:
-            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="to-date" placeholder="To">
+            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="to-date">
             Type:
             <select class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="inv_type" id="investmentType">
                 <option class="dropdown-item" value="">--</option>
                 <option class="dropdown-item" value="T-bills">Treasury Bill</option>
                 <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
-                <option class="dropdown-item" value="D-interest">Delayed Interest</option>
+                <!-- <option class="dropdown-item" value="D-interest">Delayed Interest</option> -->
             </select>
             Status:
             <select class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="status" id="status">
@@ -52,25 +59,7 @@
     <div class="row g-3 justify-content-center">
 
         <div class="col-md-12 col-xl-10">
-            <!-- <div class="card card-one">
-                <div class="card-body">
-                    <form method="GET" action="">
-                        <div id="search-bar" class="me-auto">
-                            <div class="form-search d-flex align-items-center justify-content-between bg-secondary rounded-pill">
-                                <input type="date" class="form-control m-2 bg-light rounded-pill fst-italic" name="date" placeholder="Date">
-                                <select class="form-control m-2 bg-light rounded-pill fst-italic" name="inv_type" id="investmentType">
-                                    <option class="dropdown-item" value="">All</option>
-                                    <option class="dropdown-item" value="T-bills">Treasury Bill</option>
-                                    <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
-                                    <option class="dropdown-item" value="D-interest">Delayed Interest</option>
-                                </select>
-                                <button type="submit" class="btn btn-primary rounded-pill fst-italic"><i class="ri-search-line"></i></button>
-                            </div>
-                    
-                        </div>
-                    </form>
-                </div>
-            </div> -->
+
         </div>
 <!-- Form for query --> 
 
@@ -88,6 +77,8 @@
                                     <th scope="col">Maturity Date</th>
                                     <th scope="col">Investment Type</th>
                                     <th scope="col">Interest Rate</th>
+                                    <th scope="col">Principal</th>
+                                    <th scope="col">Interest</th>
                                     <th scope="col">Status</th>
                                 </tr>
                             </thead>
@@ -100,13 +91,15 @@
                                             <td>{{ inv.interest_end_date }}</td>
                                             <td>{{ inv.investment_type }}</td>
                                             <td>{{ inv.interest_percentage }}</td>
+                                            <td>{{ inv.principal_amount }}</td>
+                                            <td>{{ inv.interest_amount }}</td>
                                             <td>{{ inv.status }}</td>
 
                                         </tr>
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td class="text-center text-danger " colspan="6">No records match your search</td>
+                                        <td class="text-center text-danger " colspan="8">No records match your search</td>
                                     </tr>
                                 {% endif %}
                                 

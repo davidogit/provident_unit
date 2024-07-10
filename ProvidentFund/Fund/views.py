@@ -190,51 +190,89 @@ from datetime import datetime
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
-    # paginate_by = 5
+    paginate_by = 5
     # context_object_name = 'results'
 
     # Using get_queryset so that we can paginate seperate queries based on filter
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        sort = self.request.GET.get('sort','')
         from_date = self.request.GET.get('from-date','')
         to_date = self.request.GET.get('to-date','')
         inv_type = self.request.GET.get('inv_type','')
         status = self.request.GET.get('status','')
+    
 
-        # convert 'date' to date
-        from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
-        to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if from_date else None
-
+        
         # Get current date
-        current_date = timezone.now().date()
+        # current_date = timezone.now().date()
+
+        # convert 'date' to date format
+        from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
+        to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
 
         # get all investments
         queryset = InvestmentDetail.objects.all()
+
+        # A list to accumulate all related search before passing it as a context
         query=[]
-        if (from_date and to_date) or (inv_type or status):
-            
+        
+        # If no date is specified
+        if from_date == None and to_date == None:
+            print('None date')
             for inv in queryset:
+                # Filters investment based on 'Expired' and investment type
+                if inv.status == 'Expired' and status=='matured' and (inv.investment_type==inv_type):
+                    query.append(inv)
+
+                # Filters investment based on 'Active' and investment type
+                elif inv.status == 'Active' and status=='active' and (inv.investment_type==inv_type):
+                    query.append(inv)
+
+                # Filters investment based on 'Not start' and investment type
+                elif inv.status == 'Not Start' and status =='Not started' and (inv.investment_type==inv_type):
+                    query.append(inv)
+
+                # Returns investment created on a specific date
+                # elif from_date and to_date:
+                #     if (inv.created_date == from_date) and (inv.created_date == to_date):
+                #         query.append(inv)
+                                
+            # Returns the list of results 
+            context['results'] = query
+
+        # If dates are specified
+        elif (from_date and to_date) or (inv_type or status):
+            print('Date')
+            for inv in queryset:
+
+                if sort == 'start_date':
+                    search_criteria = inv.interest_start_date
+                elif sort == 'created_date':
+                    search_criteria = inv.created_date
+                else:
+                    search_criteria = inv.interest_start_date
+                    
+                # print(sort)
+                # print(search_criteria)
+                if from_date <= search_criteria <= to_date:
                 # queries matured investments within the given dates
-                if inv.status == 'Expired' and status=='matured' or (inv.investment_type==inv_type):
-                    if from_date==to_date:
-                        query.append(inv)
-                    elif (from_date<= inv.interest_end_date <= to_date):
-                        query.append(inv)
-                elif inv.status == 'Active' and status=='active' or inv.investment_type==inv_type:
-                    if from_date==to_date:
-                        query.append(inv)
-                    elif (inv.interest_start_date <= current_date <= inv.interest_end_date):
-                        query.append(inv)
-                elif inv.status == 'Not Start' and status =='Not started' or inv.investment_type==inv_type:
-                    if from_date==to_date:
-                        query.append(inv)
-                    elif (current_date < inv.interest_start_date):
-                        query.append(inv)
-                elif from_date and to_date:
-                    if (inv.created_date == from_date) and (inv.created_date == to_date):
+                    if inv.status == 'Expired' and status=='matured' and (inv.investment_type==inv_type):
                         query.append(inv)
 
+                    elif inv.status == 'Active' and status=='active' and (inv.investment_type==inv_type):
+                        query.append(inv)
+
+                    elif inv.status == 'Not Start' and status =='Not started' and (inv.investment_type==inv_type):
+                        query.append(inv)
+
+                    # Returns investment created on a specific date
+                    # elif from_date and to_date:
+                    #     if (inv.created_date == from_date) and (inv.created_date == to_date):
+                    #         query.append(inv)
+
+            # Returns the list of results
             context['results'] = query
 
         return context
