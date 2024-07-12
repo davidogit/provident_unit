@@ -5,12 +5,12 @@
       <div class="col-md-8">
         <div class="card shadow-sm">
           <div class="card-body">
-            <h5 class="card-title">Name: {{ membership.Fullname }}</h5>
+            <h5 class="card-title">Name: {{ membership.first_name }}</h5>
             <p class="card-text">
               <strong>Status:</strong> {{ membership.status }}
             </p>
             <p class="card-text">
-              <strong>Fund Type:</strong> {{ membership.Fundtype }}
+              <strong>Fund Type:</strong> {{ membership.fund_type }}
             </p>
             <form
               method="post"

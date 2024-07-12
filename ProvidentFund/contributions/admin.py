@@ -4,18 +4,23 @@ from .models import  StaffAPI, Contribution
 class StaffAPIAdmin(admin.ModelAdmin):
     readonly_fields = (
         'Id',
-        'Fullname',
-        'Staffnumber',
-        'Datejoined',
+        'first_name',
+        'last_name',
+        'staff_number',
+        'date_joined',
         'status',
-        'Fundtype',
-        'EmployeeAmount',
-        'EmployerAmount',
-        'RetroEmployeeAmount',
-        'RetroEmployerAmount',
-        'ContributionDate',
-        'ExitedDate',
-        # 'ExitedFlag',
+        'fund_type',
+        'employee_amount',
+        'employer_amount',
+        'retro_employee_amount',
+        'retro_employer_amount',
+        'contribution_date',
+        'exited_date',
+        'exited_flag',
+        'profit',
+        # 'subscription_date',
+        'updated_date',
+
     )
 
 

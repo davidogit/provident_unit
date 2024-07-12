@@ -1,65 +1,66 @@
 from django.db import models
-from django.urls import reverse
 from django.utils import timezone
 
-# Create your models here.
 class StaffAPI(models.Model):
     Id = models.BigIntegerField(primary_key=True, unique=True)
-    Fullname = models.CharField(max_length=255)
-    Staffnumber = models.IntegerField()
-    Datejoined = models.DateTimeField(auto_now=True)
-    status = models.IntegerField()
-    Fundtype = models.CharField(max_length=50)
-    EmployeeAmount = models.FloatField()
-    EmployerAmount = models.FloatField()
-    RetroEmployeeAmount = models.FloatField()
-    RetroEmployerAmount = models.FloatField()
-    ContributionDate = models.DateTimeField(auto_now=True)
-    ExitedDate = models.DateTimeField(null=True, blank=True)
-    ExitedFlag = models.BooleanField(default=False)
+    first_name = models.CharField(max_length=255, null=True, blank=True)
+    last_name = models.CharField(max_length=255, null=True, blank=True)
+    staff_number = models.IntegerField()
+    date_joined = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=20, blank=True, null=True, default='active')
+    fund_type = models.CharField(max_length=50)
+    employee_amount = models.FloatField()
+    employer_amount = models.FloatField()
+    retro_employee_amount = models.FloatField()
+    retro_employer_amount = models.FloatField()
+    contribution_date = models.DateTimeField()
+    exited_date = models.DateTimeField(null=True, blank=True)
+    exited_flag = models.BooleanField(default=False)
+    profit = models.FloatField(null=True, blank=True)
+    subscription_date = models.DateTimeField()
+    updated_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.Fullname
+        return self.last_name
 
     @property
     def contributions(self):
         return self.contribution_set.all()
 
-    @property
-    def total_contributions(self):
-        total = self.contributions.aggregate(
-            total=models.Sum(
-                models.F('EmployeeAmount') + 
-                models.F('EmployerAmount') + 
-                models.F('RetroEmployeeAmount') + 
-                models.F('RetroEmployerAmount')
-            )
-        )['total'] or 0
-        return total
+    # Uncomment and adjust the below property if needed
+    # @property
+    # def total_contributions(self):
+    #     total = self.contributions.aggregate(
+    #         total=models.Sum(
+    #             models.F('employee_amount') + 
+    #             models.F('employer_amount') + 
+    #             models.F('retro_employee_amount') + 
+    #             models.F('retro_employer_amount')
+    #         )
+    #     )['total'] or 0
+    #     return total
 
 class Contribution(models.Model):
     member = models.ForeignKey(StaffAPI, on_delete=models.CASCADE, related_name='contributions')
     month = models.CharField(max_length=20)
     year = models.CharField(max_length=4)
-    EmployeeAmount = models.FloatField()
-    EmployerAmount = models.FloatField()
-    RetroEmployeeAmount = models.FloatField()
-    RetroEmployerAmount = models.FloatField()
-    ContributionDate = models.DateTimeField()
+    employee_amount = models.FloatField()
+    employer_amount = models.FloatField()
+    retro_employee_amount = models.FloatField()
+    retro_employer_amount = models.FloatField()
+    contribution_date = models.DateTimeField(default=timezone.now)
 
     def calculated_total_contributions(self):
-        a = self.EmployeeAmount
-        b = self.EmployerAmount 
-        c = self.RetroEmployeeAmount
-        d = self.RetroEmployerAmount
+        a = self.employee_amount
+        b = self.employer_amount
+        c = self.retro_employee_amount
+        d = self.retro_employer_amount
         
-        results = a+b+c+d
-        
-        return results
+        return a + b + c + d
 
     @property
     def total_contributions(self):
         return self.calculated_total_contributions()
 
     def __str__(self):
-        return f'{self.member.Fullname} - {self.month} {self.year}'
+        return f"{self.member.last_name}'s - {self.month} {self.year}"

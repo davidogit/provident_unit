@@ -18,14 +18,12 @@ from django.conf import settings
 from django.core.mail import EmailMessage
 from ProvidentFund.settings import EMAIL_HOST_USER
 import traceback
-from django.core.mail import send_mail
 from django.template import loader
 from django.template.loader import render_to_string
 
-
 # Create your views here.
 
-@method_decorator(login_required,name = "dispatch")
+@method_decorator(login_required, name="dispatch")
 class StaffMemberListView(ListView):
     model = StaffAPI
     template_name = 'contributions/staffmember_list.html'
@@ -33,110 +31,108 @@ class StaffMemberListView(ListView):
     paginate_by = 5
 
     def get_queryset(self):
-        return StaffAPI.objects.filter(ExitedFlag=False)
+        return StaffAPI.objects.filter(exited_flag=False)
 
-    
     @method_decorator(login_required, name="dispatch")
     def get(self, request, *args, **kwargs):
         response = requests.get('https://66718737e083e62ee43bf829.mockapi.io/api/v1/addmembership')
         memberships = response.json()
 
         for membership in memberships:
-            incoming_exited_flag = membership.get('ExitedFlag', False)
+            incoming_exited_flag = membership.get('exited_flag', False)
             api_id = membership.get('Id')
 
-            # Fetch the existing staff member if exists
             existing_staff_member = StaffAPI.objects.filter(Id=api_id).first()
 
-            # Check if the existing or incoming ExitedFlag is True
-            if existing_staff_member and existing_staff_member.ExitedFlag:
-                continue  # Skip update or create if existing ExitedFlag is True
+            if existing_staff_member and existing_staff_member.exited_flag:
+                continue
 
             if incoming_exited_flag:
-                continue  # Skip update or create if incoming ExitedFlag is True
+                continue
 
-            # Proceed to update or create if checks pass
-            ExitedDate = membership.get('ExitedDate', None)
-            if incoming_exited_flag and ExitedDate:
-                ExitedDate = timezone.now() if not ExitedDate else ExitedDate
+            exited_date = membership.get('exited_date', None)
+            if incoming_exited_flag and exited_date:
+                exited_date = timezone.now() if not exited_date else exited_date
             else:
-                ExitedDate = None
+                exited_date = None
             staff_member, created = StaffAPI.objects.update_or_create(
                 Id=api_id,
                 defaults={
-                    'Fullname': membership.get('Fullname', ''),
-                    'Staffnumber': membership.get('Staffnumber', ''),
-                    'Datejoined': membership.get('Datejoined', ''),
+                    'first_name': membership.get('first_name', ''),
+                    'last_name': membership.get('last_name', ''),
+                    'staff_number': membership.get('staff_number', ''),
+                    'date_joined': membership.get('date_joined', ''),
                     'status': membership.get('status', ''),
-                    'Fundtype': membership.get('Fundtype', ''),
-                    'EmployeeAmount': membership.get('EmployeeAmount', 0.0),
-                    'EmployerAmount': membership.get('EmployerAmount', 0.0),
-                    'RetroEmployeeAmount': membership.get('RetroEmployeeAmount', 0.0),
-                    'RetroEmployerAmount': membership.get('RetroEmployerAmount', 0.0),
-                    'ContributionDate': membership.get('ContributionDate', ''),
-                    'ExitedDate': ExitedDate,
-                    'ExitedFlag': incoming_exited_flag,
+                    'fund_type': membership.get('fund_type', ''),
+                    'employee_amount': membership.get('employee_amount', 0),
+                    'employer_amount': membership.get('employer_amount', 0),
+                    'retro_employee_amount': membership.get('retro_employee_amount', 0),
+                    'retro_employer_amount': membership.get('retro_employer_amount', 0),
+                    'contribution_date': membership.get('contribution_date', ''),
+                    'exited_date': exited_date,
+                    'exited_flag': incoming_exited_flag,
+                    'profit': membership.get('profit', 0),
+                    'subscription_date': membership.get('subscription_date', ''),
+                    'updated_date': membership.get('updated_date', ''),
                  }
             )
 
-            # Update the contribution details
             if 'contributions' in membership:
                 for contrib in membership['contributions']:
-                    Contribution.objects.update_or_create(
-                        member=staff_member,
-                        month=contrib['month'],
-                        year=contrib['year'],
-                        defaults={
-                            'EmployeeAmount': contrib['EmployeeAmount'],
-                            'EmployerAmount': contrib['EmployerAmount'],
-                            'RetroEmployeeAmount': contrib['RetroEmployeeAmount'],
-                            'RetroEmployerAmount': contrib['RetroEmployerAmount'],
-                            'ContributionDate': contrib['ContributionDate'],
-                        }
-                    )
+                  Contribution.objects.update_or_create(
+                    member=staff_member,
+                    month=membership['month'],
+                    year=membership['year'],
+                    defaults={
+                        'employee_amount': membership['employee_amount'],
+                        'employer_amount': membership['employer_amount'],
+                        'retro_employee_amount': membership['retro_employee_amount'],
+                        'retro_employer_amount': membership['retro_employer_amount'],
+                        'contribution_date': membership['contribution_date'],
+                    }
+                )
         return super().get(request, *args, **kwargs)
-    
+
 
     
+
+
+
 @method_decorator(login_required, name='dispatch')   
 class OptOutMemberView(View):
     def post(self, request, *args, **kwargs):
         member_id = kwargs.get('pk')
         member = get_object_or_404(StaffAPI, pk=member_id)
-        member.ExitedDate = timezone.now()
-        member.ExitedFlag = True
+        member.exited_date = timezone.now()
+        member.exited_flag = True
         member.save()
         
-        # Send email to admin
         self.send_opt_out_email(member)
         
         return JsonResponse({'status': 'success'}, status=200)
 
     def send_opt_out_email(self, member):
-        # Inject the respective values in HTML template
         html_message = loader.render_to_string(
             'contributions/message.html',
             {
-                'name': 'Eben',  # TODO: Enter the recipient name
-                'body': 'This email is to verify whether we can send email in Django from Gmail account.',
-                'sign': 'Sender',  # TODO: Update the signature
+                'name': 'Admin',
+                'body': f'This email is to confirm that {member.first_name} {member.last_name} has opted out of the pension fund system.',
             }
         )
         send_mail(
-            'Congratulations!',
-            'You are lucky to receive this mail.',
-            'osahdav@gmail.com',  # TODO: Update this with your mail id
-            ['dave21620@gmail.com'],  # TODO: Update this with the recipients mail id
+            'Notification Mail!',
+            'osahdav@gmail.com',
+            ['dave21620@gmail.com'],
             html_message=html_message,
             fail_silently=False,
         )
+
+
 @method_decorator(login_required, name='dispatch')
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
     context_object_name = 'membership'
-
-    
 
 
 @method_decorator(login_required, name="dispatch")
@@ -153,7 +149,7 @@ class Contributed(ListView):
         selected_year = self.request.GET.get('year')
         if not selected_year:
             selected_year = datetime.now().year
-        queryset = queryset.filter(ContributionDate__year=selected_year)
+        queryset = queryset.filter(contribution_date__year=selected_year)
         
         return queryset
     
@@ -169,11 +165,11 @@ class Contributed(ListView):
         context['years'] = years
         context['selected_year'] = int(selected_year)
         
-        contributions = self.get_queryset().order_by('ContributionDate')
+        contributions = self.get_queryset().order_by('contribution_date')
 
         monthly_contributions = defaultdict(list)
         for contribution in contributions:
-            month_name = contribution.ContributionDate.strftime('%B')
+            month_name = contribution.contribution_date.strftime('%B')
             monthly_contributions[month_name].append(contribution)
         
         context['monthly_contributions'] = dict(monthly_contributions)
