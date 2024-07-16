@@ -21,11 +21,11 @@ class Command(BaseCommand):
                         month=month,
                         year=str(year),
                         defaults={
-                            'EmployeeAmount': 0,
-                            'EmployerAmount': 0,
-                            'RetroEmployeeAmount': 0,
-                            'RetroEmployerAmount': 0,
-                            'ContributionDate': datetime.strptime(f'01 {month} {year}', '%d %B %Y')
+                            'employee_amount': 0,
+                            'employer_amount': 0,
+                            'retro_employee_amount': 0,
+                            'retro_employer_amount': 0,
+                            'contribution_date': datetime.strptime(f'01 {month} {year}', '%d %B %Y')
                         }
                     )
         self.stdout.write(self.style.SUCCESS('Successfully populated contributions for each member'))
