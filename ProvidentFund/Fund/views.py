@@ -1,22 +1,9 @@
-# from django.db.models.query import QuerySet
-# from django.forms import BaseModelForm
-# from django.http import HttpResponse
-from django.db.models.query import QuerySet
-from django.forms import BaseModelForm
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import render, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
 # Create your views here.
-from Fund.models import InvestmentDetail, Member,DelayedInterest,BankInterest
-
+from Fund.models import InvestmentDetail,DelayedInterest,BankInterest
 from contributions.models import StaffAPI
-
 from django.urls import reverse_lazy
-# from Fund.forms import InvestmentUpdateForm
-from django.db.models import Sum, FloatField
-from django.db.models.functions import Cast
 from django.core.paginator import Paginator
-
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 
@@ -158,21 +145,6 @@ class MemberDetailView(DetailView):
     template_name = 'dashboard/member_details.html'
 
 
-# Member creating View
-# @method_decorator(login_required, name='dispatch')
-# class AddMemberView(CreateView):
-#     # model = Member
-#     model = StaffAPI
-#     # fields = ('first_name','last_name','staff_id')
-#     fields = ('first_name','last_name','staff_id')
-#     template_name = 'dashboard/member_form.html'
-#     success_url = reverse_lazy('member_list')
-
-#     def form_invalid(self, form):
-#         print(form.errors)  # Add this line to log the form errors
-#         return super().form_invalid(form)
-
-
 # Updating an member's details
 @method_decorator(login_required, name='dispatch')
 class MemberUpdateView(UpdateView):
@@ -243,10 +215,6 @@ class InvestmentQuery(ListView):
                 elif inv.status == 'Not Start' and status =='Not started' and (inv.investment_type==inv_type):
                     query.append(inv)
 
-                # Returns investment created on a specific date
-                # elif from_date and to_date:
-                #     if (inv.created_date == from_date) and (inv.created_date == to_date):
-                #         query.append(inv)
                                 
             # Returns the list of results 
             context['results'] = query
@@ -276,10 +244,6 @@ class InvestmentQuery(ListView):
                     elif inv.status == 'Not Start' and status =='Not started' and (inv.investment_type==inv_type):
                         query.append(inv)
 
-                    # Returns investment created on a specific date
-                    # elif from_date and to_date:
-                    #     if (inv.created_date == from_date) and (inv.created_date == to_date):
-                    #         query.append(inv)
 
             # Returns the list of results
             context['results'] = query
@@ -312,10 +276,56 @@ class BankInterestListView(ListView):
 class BankInterestCreateView(CreateView):
     template_name = 'dashboard/bank_interest_form.html'
     model = BankInterest
-    fields = ('bank_name','from_date','to_date','amount','remarks')
+    fields = ('bank_name','from_date','to_date','amount','remarks','branch','account_number')
     success_url = reverse_lazy('bank_interest_list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['banks'] = BankInterest.names
+        return context
+
+
+
+
+# Bank Interest Query
+
+class BankInterestQuery(ListView):
+    model = BankInterest
+    template_name = 'dashboard/bank_interest_query.html'
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['banks'] = BankInterest.names
+
+        from_date = self.request.GET.get('from-date')
+        to_date = self.request.GET.get('to-date')
+        bank = self.request.GET.get('bank_name')
+
+        # convert 'date' to date format
+        from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
+
+        to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
+
+        # get all bank interest data
+        queryset = BankInterest.objects.all()
+
+        query =[]
+        if from_date and to_date:
+            # Lookup all bank interest within a specified period
+            for interest in queryset:
+                if bank == 'all':
+                    if from_date <= (interest.from_date and interest.to_date) <= to_date:
+                        query.append(interest)
+
+                    # Returns an empty list
+                    # else:
+                    #     query.append('')
+                elif interest.bank_name == bank:
+                    if from_date <= (interest.from_date and interest.to_date) <= to_date:
+                        query.append(interest)
+                
+            context['results'] = query
+
         return context
