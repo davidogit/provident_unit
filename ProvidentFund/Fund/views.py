@@ -8,6 +8,9 @@ from django.shortcuts import render, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
 # Create your views here.
 from Fund.models import InvestmentDetail, Member,DelayedInterest,BankInterest
+
+from contributions.models import StaffAPI
+
 from django.urls import reverse_lazy
 # from Fund.forms import InvestmentUpdateForm
 from django.db.models import Sum, FloatField
@@ -32,7 +35,7 @@ class Invest(TemplateView):
         context['active_inv'] = active_inv.count()
 
         # Queryset to calsulate total number of Active Members
-        active_members = Member.objects.all()
+        active_members = StaffAPI.objects.all()
         context['active_members'] = active_members.count()
 
         # Sum up all investments interest field
@@ -134,7 +137,8 @@ class InvestmentDeleteView(DeleteView):
 # Member List View
 @method_decorator(login_required, name='dispatch')
 class MemberListView(ListView):
-    model = Member
+    # model = Member
+    model = StaffAPI
     template_name = 'dashboard/member_list.html'
     context_object_name = 'member_list'
 
@@ -149,35 +153,40 @@ class MemberListView(ListView):
 # Memeber detailed View
 @method_decorator(login_required, name='dispatch')
 class MemberDetailView(DetailView):
-    model = Member
+    # model = Member
+    model = StaffAPI
     template_name = 'dashboard/member_details.html'
 
 
 # Member creating View
-@method_decorator(login_required, name='dispatch')
-class AddMemberView(CreateView):
-    model = Member
-    fields = ('first_name','last_name','staff_id')
-    template_name = 'dashboard/member_form.html'
-    success_url = reverse_lazy('member_list')
+# @method_decorator(login_required, name='dispatch')
+# class AddMemberView(CreateView):
+#     # model = Member
+#     model = StaffAPI
+#     # fields = ('first_name','last_name','staff_id')
+#     fields = ('first_name','last_name','staff_id')
+#     template_name = 'dashboard/member_form.html'
+#     success_url = reverse_lazy('member_list')
 
-    def form_invalid(self, form):
-        print(form.errors)  # Add this line to log the form errors
-        return super().form_invalid(form)
+#     def form_invalid(self, form):
+#         print(form.errors)  # Add this line to log the form errors
+#         return super().form_invalid(form)
 
 
 # Updating an member's details
 @method_decorator(login_required, name='dispatch')
 class MemberUpdateView(UpdateView):
-    model = Member
-    fields = ('first_name','last_name','staff_id')
+    # model = Member
+    model = StaffAPI
+    fields = ('Staffnumber','status')
     template_name = 'dashboard/member_form.html'
     
 
 # Deleting a member from Database
 @method_decorator(login_required, name='dispatch')
 class MemberDeleteView(DeleteView):
-    model = Member
+    # model = Member
+    model = StaffAPI
     template_name = 'dashboard/delete_member.html'
     success_url = reverse_lazy('member_list')
 

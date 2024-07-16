@@ -2,6 +2,9 @@ from celery import shared_task
 from .models import Member,InvestmentDetail
 from django.utils import timezone
 
+# import contribution details from Contributions App
+from contributions.models import StaffAPI
+
 from django.db import transaction
 import logging
 
