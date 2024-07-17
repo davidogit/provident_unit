@@ -20,6 +20,7 @@ from ProvidentFund.settings import EMAIL_HOST_USER
 import traceback
 from django.template import loader
 from django.template.loader import render_to_string
+from django.db.models import Sum, F
 
 # Create your views here.
 
@@ -128,11 +129,28 @@ class OptOutMemberView(View):
         )
 
 
-@method_decorator(login_required, name='dispatch')
+@method_decorator(login_required, name="dispatch")
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
     context_object_name = 'membership'
+
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+        
+    #     # Get the total amount contributed for the member
+    #     member = self.get_object()
+    #     total_amount_contributed = Contribution.objects.filter(member=member).aggregate(
+    #         total=Sum(
+    #             F('employee_amount') +
+    #             F('employer_amount') +
+    #             F('retro_employee_amount') +
+    #             F('retro_employer_amount')
+    #         )
+    #     )['total'] or 0
+    #     context['total_amount_contributed'] = total_amount_contributed
+
+    #     return context
 
 
 @method_decorator(login_required, name="dispatch")
