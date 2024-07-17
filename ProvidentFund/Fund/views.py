@@ -121,20 +121,54 @@ class InvestmentDeleteView(DeleteView):
     success_url = reverse_lazy('investment_list')
 
 
-# Member List View
+# Active Members List
 @method_decorator(login_required, name='dispatch')
 class MemberListView(ListView):
     # model = Member
     model = StaffAPI
     template_name = 'dashboard/member_list.html'
-    context_object_name = 'member_list'
+    # context_object_name = 'member_list'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        queryset = self.get_queryset()
-        context['member_count'] = self.get_queryset().count()
+        queryset = self.get_queryset().filter(exited_flag = False)
+
+        # Active members
+        context['member_list'] = queryset
+
+        # Count all active members
+        context['member_count'] = queryset.count()
+
+        # All member count
+        context['total_members'] = self.get_queryset().count()
 
         return context
+    
+
+
+
+# Exited Members List
+
+class ExitedMembers(ListView):
+    model = StaffAPI
+    template_name ='dashboard/exited_members.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Filtering members based on their exit_flags
+        queryset = self.get_queryset().filter(exited_flag = True)
+        context['results'] = queryset
+
+        context['exited_members'] = queryset.count()
+
+        context['total_members'] = self.get_queryset().count()
+
+        return context
+
+
+
+
     
 
 # Memeber detailed View
@@ -329,3 +363,42 @@ class BankInterestQuery(ListView):
             context['results'] = query
 
         return context
+    
+
+# Delayed Interest Query
+
+class DelayedInterestQuery(ListView):
+    model = DelayedInterest
+    template_name = 'dashboard/delayed_interest_query.html'
+    paginate_by = 20
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Get search elements from user
+
+        from_date = self.request.GET.get('from-date')
+        to_date = self.request.GET.get('to-date')
+
+        # convert 'date' to date format
+        from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
+
+        to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
+
+        # Fetch all Delayed Interest
+        queryset = DelayedInterest.objects.all()
+
+        # List to append related search results
+        query = []
+        if from_date and to_date:
+            for d_interest in queryset:
+                if from_date <= d_interest.from_date and d_interest.to_date <= to_date:
+                    query.append(d_interest)
+
+            context['results'] = query
+
+        else:
+            context['results'] = query
+        return context
+    
