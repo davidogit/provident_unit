@@ -4,12 +4,12 @@
 <div class="container mt-4">
     <h2 class="mb-4 text-2xl font-bold text-center">Add Roles</h2>
 
-    <!-- Search and Filter -->
+ 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <input type="text" class="form-control me-2" id="searchUser" placeholder="Search user...">
     </div>
 
-    <!-- Role Management Table -->
+    
     <table class="table table-striped">
         <thead>
             <tr>
@@ -20,7 +20,7 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Example row, replace with dynamic data -->
+         
             <tr>
                 <td>JohnDoe</td>
                 <td>john.doe@example.com</td>
@@ -30,7 +30,7 @@
                     <button class="btn btn-sm btn-danger" onclick="deleteUser(this)">Delete</button>
                 </td>
             </tr>
-            <!-- More rows as needed -->
+           
         </tbody>
     </table>
 
@@ -39,12 +39,12 @@
         <h3>Recent Activities</h3>
         <ul class="list-group">
             <li class="list-group-item">Admin assigned 'JohnDoe' as 'Admin' on 2024-07-17</li>
-            <!-- More activities -->
+      
         </ul>
     </div>
 </div>
 
-<!-- Edit Modal -->
+
 <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -64,7 +64,7 @@
                             <option>Permission 1</option>
                             <option>Permission 2</option>
                             <option>Permission 3</option>
-                            <!-- Add more permissions as needed -->
+                          
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -76,7 +76,7 @@
 
 <script>
     function deleteUser(button) {
-        // Remove the row from the table
+      
         const row = button.closest('tr');
         row.remove();
         

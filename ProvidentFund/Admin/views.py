@@ -43,19 +43,19 @@ def delete_group(request, group_id):
     return redirect('admin_panel')
 
 def profile_view(request):
-    # Logic for handling the profile page
+   
     return render(request, 'path/to/profile_template.html')
 
 def edit_user_view(request, id):
     user = get_object_or_404(User, id=id)
     if request.method == 'POST':
-        # Handle form submission, update user details
-        pass  # Add your logic here
+     
+        pass  
     return render(request, 'admin_panel/edit_user.html', {'user': user})
 
 def delete_user_view(request, id):
     user = get_object_or_404(User, id=id)
     if request.method == 'POST':
         user.delete()
-        return redirect('manage_users')  # Redirect to the manage users page
+        return redirect('manage_users')  
     return render(request, 'admin_panel/delete_user_confirm.html', {'user': user})
