@@ -16,7 +16,7 @@ class StaffAPIAdmin(admin.ModelAdmin):
         'retro_employer_amount',
         'contribution_date',
         'exited_date',
-        'exited_flag',
+        # 'exited_flag',
         'profit',
         # 'subscription_date',
         'updated_date',
