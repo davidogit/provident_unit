@@ -6,7 +6,7 @@ from django.db import models
 class User(AbstractUser):
     groups = models.ManyToManyField(
         Group,
-        related_name='admin_user_set',  # Changed related_name
+        related_name='admin_user_set', 
         blank=True,
         help_text='The groups this user belongs to.',
         verbose_name='groups',
@@ -14,8 +14,7 @@ class User(AbstractUser):
     )
     user_permissions = models.ManyToManyField(
         Permission,
-        related_name='admin_user_permissions_set',  # Changed related_name
-        blank=True,
+        related_name='admin_user_permissions_set',  
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
         related_query_name='user',

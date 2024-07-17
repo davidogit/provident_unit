@@ -1,9 +1,42 @@
-<!-- Admin/templates/admin_panel/add_user.html -->
+{% extends 'admin_panel/base_admin.html' %}
 
-<h1>Add User</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Add User</button>
-</form>
-
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4 text-2xl font-bold text-center">Add User</h2>
+    <form method="POST" class="bg-white p-6 rounded-lg shadow-md">
+        {% csrf_token %}
+        <div class="mb-4">
+            <label for="first_name" class="form-label">First Name</label>
+            <input type="text" class="form-control" id="first_name" name="first_name" placeholder="Enter first name">
+        </div>
+        <div class="mb-4">
+            <label for="last_name" class="form-label">Last Name</label>
+            <input type="text" class="form-control" id="last_name" name="last_name" placeholder="Enter last name">
+        </div>
+        <div class="mb-4">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email">
+        </div>
+        <div class="mb-4">
+            <label for="staff_id" class="form-label">Staff ID</label>
+            <input type="text" class="form-control" id="staff_id" name="staff_id" placeholder="Enter staff ID">
+        </div>
+        <div class="mb-4">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" placeholder="Enter password">
+        </div>
+        <div class="mb-4">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm password">
+        </div>
+        <div class="mb-4">
+            <label for="group" class="form-label">Group</label>
+            <select class="form-select" id="group" name="group">
+                <option value="">Select group</option>
+                <!-- Options for groups -->
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Add User</button>
+    </form>
+</div>
+{% endblock %}
