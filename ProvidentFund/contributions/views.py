@@ -172,7 +172,7 @@ class Contributed(ListView):
 
     # Using get_object to retrieve the user pk from url
     def get_object(self):
-        user_id = self.kwargs.get('pk')
+        user_id = self.kwargs.get('membership_id')
 
         return get_object_or_404(StaffAPI, Id=user_id)
 
@@ -194,8 +194,8 @@ class Contributed(ListView):
 
 
         # Get user ID
-        user_id = 6
-        # user_id = self.request.GET.get('membership_id')
+        # user_id = 6
+        user_id = self.kwargs.get('membership_id')
 
         print(user_id)
         try:
@@ -206,7 +206,7 @@ class Contributed(ListView):
             user = None
         
 
-        contributions = Contribution.objects.all().filter(member = user)
+        contributions = Contribution.objects.all().filter(member = user).order_by('contribution_date')
         context['contributions'] = contributions
         
         # print(contributions)
