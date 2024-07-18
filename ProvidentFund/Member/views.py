@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from Member.forms import UserForm, MemberForm
 from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
+from django.views.generic import TemplateView
 
 
 def registrationView(request):
@@ -63,9 +64,16 @@ def loginView(request):
 
             return redirect('verify_otp')
         else:
-            return HttpResponse('Invalid login details')
+            return redirect('invalid_login_details')
 
     return render(request, 'login.html')
+
+
+class InvalidLoginDetails(TemplateView):
+    template_name = 'login_error.html'
+
+
+
 
 
 def verifyOtpView(request):

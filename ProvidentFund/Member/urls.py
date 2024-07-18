@@ -12,4 +12,6 @@ urlpatterns=[
     path('logout/',views.logoutView, name='logout'),
     path('terms/', views.terms_and_conditions_view, name='terms_and_conditions'),
 
+    path('invalid-login-details/', views.InvalidLoginDetails.as_view(), name='invalid_login_details'),
+
 ]

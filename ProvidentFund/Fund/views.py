@@ -148,7 +148,7 @@ class MemberListView(ListView):
 
 
 # Exited Members List
-
+@method_decorator(login_required, name='dispatch')
 class ExitedMembers(ListView):
     model = StaffAPI
     template_name ='dashboard/exited_members.html'
@@ -285,6 +285,7 @@ class InvestmentQuery(ListView):
         return context
 
 
+@method_decorator(login_required, name='dispatch')
 class DelayedInterestListView(ListView):
     template_name = 'dashboard/delayed_interest_list.html'
     model = DelayedInterest
@@ -292,21 +293,21 @@ class DelayedInterestListView(ListView):
     context_object_name = 'delayed_interest'
 
 
-
+@method_decorator(login_required, name='dispatch')
 class DelayedInterestCreateView(CreateView):
     template_name = 'dashboard/delayed_interest_form.html'
     model = DelayedInterest
     fields = ('from_date','to_date','amount','remarks')
     success_url = reverse_lazy('delayed_interest_list')
 
-
+@method_decorator(login_required, name='dispatch')
 class BankInterestListView(ListView):
     template_name = 'dashboard/bank_interest_list.html'
     model = BankInterest
     paginate_by = 10
     context_object_name = 'bank_interest'
 
-
+@method_decorator(login_required, name='dispatch')
 class BankInterestCreateView(CreateView):
     template_name = 'dashboard/bank_interest_form.html'
     model = BankInterest
@@ -322,7 +323,7 @@ class BankInterestCreateView(CreateView):
 
 
 # Bank Interest Query
-
+@method_decorator(login_required, name='dispatch')
 class BankInterestQuery(ListView):
     model = BankInterest
     template_name = 'dashboard/bank_interest_query.html'
@@ -366,7 +367,7 @@ class BankInterestQuery(ListView):
     
 
 # Delayed Interest Query
-
+@method_decorator(login_required, name='dispatch')
 class DelayedInterestQuery(ListView):
     model = DelayedInterest
     template_name = 'dashboard/delayed_interest_query.html'

@@ -9,11 +9,11 @@ class StaffAPI(models.Model):
     date_joined = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, blank=True, null=True, default='active')
     fund_type = models.CharField(max_length=50)
-    employee_amount = models.FloatField()
-    employer_amount = models.FloatField()
-    retro_employee_amount = models.FloatField()
-    retro_employer_amount = models.FloatField()
-    contribution_date = models.DateTimeField()
+    # employee_amount = models.FloatField()
+    # employer_amount = models.FloatField()
+    # retro_employee_amount = models.FloatField()
+    # retro_employer_amount = models.FloatField()
+    # contribution_date = models.DateTimeField()
     exited_date = models.DateTimeField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
     profit = models.FloatField(null=True, blank=True)
@@ -56,7 +56,7 @@ class Contribution(models.Model):
         c = self.retro_employee_amount
         d = self.retro_employer_amount
         
-        return a + b + c + d
+        return (a + b + c + d)
 
     @property
     def total_contributions(self):

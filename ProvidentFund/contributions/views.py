@@ -21,6 +21,7 @@ import traceback
 from django.template import loader
 from django.template.loader import render_to_string
 from django.db.models import Sum, F
+from dateutil import parser
 
 # Create your views here.
 
@@ -56,6 +57,8 @@ class StaffMemberListView(ListView):
                 exited_date = timezone.now() if not exited_date else exited_date
             else:
                 exited_date = None
+
+            # Create or Update staff details
             staff_member, created = StaffAPI.objects.update_or_create(
                 Id=api_id,
                 defaults={
@@ -65,33 +68,44 @@ class StaffMemberListView(ListView):
                     'date_joined': membership.get('date_joined', ''),
                     'status': membership.get('status', ''),
                     'fund_type': membership.get('fund_type', ''),
-                    'employee_amount': membership.get('employee_amount', 0),
-                    'employer_amount': membership.get('employer_amount', 0),
-                    'retro_employee_amount': membership.get('retro_employee_amount', 0),
-                    'retro_employer_amount': membership.get('retro_employer_amount', 0),
-                    'contribution_date': membership.get('contribution_date', ''),
                     'exited_date': exited_date,
                     'exited_flag': incoming_exited_flag,
-                    'profit': membership.get('profit', 0),
                     'subscription_date': membership.get('subscription_date', ''),
-                    'updated_date': membership.get('updated_date', ''),
-                 }
+                    # 'profit': membership.get('profit', 0),
+                    # 'updated_date': membership.get('updated_date', ''),
+                }
+            )
+                
+
+        # Save every contribution from API 
+        contrib_response = requests.get('https://6697f43902f3150fb66f9865.mockapi.io/api/v1/contribution')
+        contributions = contrib_response.json()
+
+        for contrib in contributions:
+            date_str = contrib['contribution_date']
+            # date_obj = datetime.strptime(date,"%Y-%m-%d").date() if date else None
+            date_obj = parser.parse(date_str) if date_str else None
+
+            # Get month and year from date
+            month = date_obj.month if date_obj else None
+            year = date_obj.year if date_obj else None
+
+            # Fetch corresponding member
+            member = StaffAPI.objects.get(Id = contrib['id'])
+
+            Contribution.objects.update_or_create(
+                member=member,
+                month=month,
+                year=year,
+                defaults={
+                    'employee_amount': contrib['employee_amount'],
+                    'employer_amount': contrib['employer_amount'],
+                    'retro_employee_amount': contrib['retro_employee_amount'],
+                    'retro_employer_amount': contrib['retro_employer_amount'],
+                    'contribution_date': contrib['contribution_date'],
+                }              
             )
 
-            if 'contributions' in membership:
-                for contrib in membership['contributions']:
-                  Contribution.objects.update_or_create(
-                    member=staff_member,
-                    month=membership['month'],
-                    year=membership['year'],
-                    defaults={
-                        'employee_amount': membership['employee_amount'],
-                        'employer_amount': membership['employer_amount'],
-                        'retro_employee_amount': membership['retro_employee_amount'],
-                        'retro_employer_amount': membership['retro_employer_amount'],
-                        'contribution_date': membership['contribution_date'],
-                    }
-                )
         return super().get(request, *args, **kwargs)
 
 
@@ -135,34 +149,18 @@ class StaffMemberDetailView(DetailView):
     template_name = 'contributions/staffmember_detail.html'
     context_object_name = 'membership'
 
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-        
-    #     # Get the total amount contributed for the member
-    #     member = self.get_object()
-    #     total_amount_contributed = Contribution.objects.filter(member=member).aggregate(
-    #         total=Sum(
-    #             F('employee_amount') +
-    #             F('employer_amount') +
-    #             F('retro_employee_amount') +
-    #             F('retro_employer_amount')
-    #         )
-    #     )['total'] or 0
-    #     context['total_amount_contributed'] = total_amount_contributed
-
-    #     return context
-
 
 @method_decorator(login_required, name="dispatch")
 class Contributed(ListView):
     model = Contribution
     template_name = 'contributions/contributed.html'
-    context_object_name = 'contributions'
+    # context_object_name = 'contributions'
     paginate_by = 12
 
     def get_queryset(self):
         user_id = self.kwargs.get('membership_id')
-        queryset = super().get_queryset().filter(member_id=user_id)
+        queryset = super().get_queryset().filter(member_id=user_id).order_by('contribution_date')
+        # member_id
         
         selected_year = self.request.GET.get('year')
         if not selected_year:
@@ -182,14 +180,27 @@ class Contributed(ListView):
         
         context['years'] = years
         context['selected_year'] = int(selected_year)
-        
-        contributions = self.get_queryset().order_by('contribution_date')
+
+
+        # Get user ID
+        user_id = self.kwargs.get('membership')
+        try:
+            user = StaffAPI.objects.get(Id= user_id)
+        except StaffAPI.DoesNotExist:
+            user = None
+
+        contributions = self.get_queryset()
 
         monthly_contributions = defaultdict(list)
+        
+        lists = []
         for contribution in contributions:
             month_name = contribution.contribution_date.strftime('%B')
             monthly_contributions[month_name].append(contribution)
-        
+            # context['amount'] = contribution.total_contributions
+            # print(contribution.total_contributions)
+            lists.append(contribution)
+        context['contributions'] = lists
         context['monthly_contributions'] = dict(monthly_contributions)
 
         return context
