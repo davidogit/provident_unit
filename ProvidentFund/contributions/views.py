@@ -169,6 +169,17 @@ class Contributed(ListView):
         
         return queryset
     
+
+    # Using get_object to retrieve the user pk from url
+    def get_object(self):
+        user_id = self.kwargs.get('pk')
+
+        return get_object_or_404(StaffAPI, Id=user_id)
+
+
+
+
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
@@ -179,28 +190,34 @@ class Contributed(ListView):
         years = list(range(2020, datetime.now().year + 1))
         
         context['years'] = years
-        context['selected_year'] = int(selected_year)
+        context['selected_year'] = str(selected_year)
 
 
         # Get user ID
-        user_id = self.kwargs.get('membership')
+        user_id = 6
+        # user_id = self.request.GET.get('membership_id')
+
+        print(user_id)
         try:
             user = StaffAPI.objects.get(Id= user_id)
+
+
         except StaffAPI.DoesNotExist:
             user = None
+        
 
-        contributions = self.get_queryset()
+        contributions = Contribution.objects.all().filter(member = user)
+        context['contributions'] = contributions
+        
+        # print(contributions)
 
         monthly_contributions = defaultdict(list)
-        
-        lists = []
+
+
         for contribution in contributions:
             month_name = contribution.contribution_date.strftime('%B')
             monthly_contributions[month_name].append(contribution)
-            # context['amount'] = contribution.total_contributions
-            # print(contribution.total_contributions)
-            lists.append(contribution)
-        context['contributions'] = lists
+      
         context['monthly_contributions'] = dict(monthly_contributions)
 
         return context

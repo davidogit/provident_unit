@@ -36,13 +36,20 @@
                   </tr>
                 </thead>
                 <tbody>
+
                   {% for contribution in contributions %}
-                    <tr>
+                  {% if contribution.contribution_date|date:"Y" == selected_year %}
+                  <tr>
+                    
                       <td>{{ contribution.contribution_date|date:"F" }}</td>
                       <td>{{ contribution.total_contributions }}</td>
                       <td>{{ contribution.contribution_date|date:"Y-m-d" }}</td>
-                    </tr>
+                    
+                  </tr>
+                  {% endif %}
                   {% endfor %}
+
+
                 </tbody>
                 <h5 class="card-title">Name: {{ membership.first_name }}</h5>
               </table>

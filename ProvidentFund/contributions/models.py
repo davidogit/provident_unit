@@ -1,5 +1,5 @@
 from django.db import models
-from django.utils import timezone
+# from django.utils import timezone
 
 class StaffAPI(models.Model):
     Id = models.BigIntegerField(primary_key=True, unique=True)
@@ -9,11 +9,7 @@ class StaffAPI(models.Model):
     date_joined = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, blank=True, null=True, default='active')
     fund_type = models.CharField(max_length=50)
-    # employee_amount = models.FloatField()
-    # employer_amount = models.FloatField()
-    # retro_employee_amount = models.FloatField()
-    # retro_employer_amount = models.FloatField()
-    # contribution_date = models.DateTimeField()
+    _amount = models.FloatField()
     exited_date = models.DateTimeField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
     profit = models.FloatField(null=True, blank=True)
@@ -23,22 +19,18 @@ class StaffAPI(models.Model):
     def __str__(self):
         return self.last_name
 
-    @property
-    def contributions(self):
-        return self.contribution_set.all()
-
-    # Uncomment and adjust the below property if needed
     # @property
-    # def total_contributions(self):
-    #     total = self.contributions.aggregate(
-    #         total=models.Sum(
-    #             models.F('employee_amount') + 
-    #             models.F('employer_amount') + 
-    #             models.F('retro_employee_amount') + 
-    #             models.F('retro_employer_amount')
-    #         )
-    #     )['total'] or 0
-    #     return total
+    # def contributions(self):
+    #     return self.contribution_set.all()
+    
+    @property
+    def amount(self):
+        return self._amount
+    
+    @amount.setter
+    def amount(self,value):
+        self._amount += value
+
 
 class Contribution(models.Model):
     member = models.ForeignKey(StaffAPI, on_delete=models.CASCADE, related_name='contributions')
@@ -48,7 +40,7 @@ class Contribution(models.Model):
     employer_amount = models.FloatField()
     retro_employee_amount = models.FloatField()
     retro_employer_amount = models.FloatField()
-    contribution_date = models.DateTimeField(default=timezone.now)
+    contribution_date = models.DateTimeField()
 
     def calculated_total_contributions(self):
         a = self.employee_amount
@@ -64,3 +56,13 @@ class Contribution(models.Model):
 
     def __str__(self):
         return f"{self.member.last_name}'s - {self.month} {self.year}"
+    
+
+    # Saving every contribution for user whenever a contribution is made
+    def save(self, *args, **kwargs):
+
+        super().save(*args,**kwargs)
+
+        # update member.amount field
+        self.member.amount = self.total_contributions
+        self.member.save()

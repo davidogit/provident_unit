@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 # Task to calculate profit for members daily
 @shared_task(bind=True)
 def member_interest(self):
-    members = Member.objects.all()
+    members = StaffAPI.objects.all()
     investments = InvestmentDetail.objects.filter(_remaining_days__gt=0)
 
     for member in members:
-        contribution = member.total_amount_to_date
+        contribution = member.amount
 
         for inv in investments:
             days_left = inv.remaining_days
