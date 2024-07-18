@@ -1,8 +1,13 @@
-<!-- Admin/templates/admin_panel/admin_panel.html -->
+{% extends 'admin_panel/base_admin.html' %}
 
-<h1>Admin Panel</h1>
-<ul>
-    <li><a href="{% url 'assign_roles' %}">Assign Roles</a></li>
-    <li><a href="{% url 'add_user' %}">Add User</a></li>
-    <li><a href="{% url 'manage_users' %}">Manage Users</a></li>
-</ul>
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
+   
+</body>
+</html>
+{%endblock%}

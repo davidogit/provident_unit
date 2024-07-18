@@ -29,5 +29,5 @@ urlpatterns = [
     path('contributions/', include('contributions.urls')),
     path('members/', include('Member.urls')),
     path('login/', views.loginView, name='login'),
-    path('admin_panel/', include('Admin.urls')),
+    path('pfund_admin/', include('Admin.urls')),
 ]

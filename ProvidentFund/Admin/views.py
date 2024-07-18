@@ -1,9 +1,9 @@
 # Admin/views.py
-
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .forms import UserForm, RoleForm
-from .models import User, Role
+from django.contrib.auth.models import User, Group
+from .models import Role
 
 @login_required
 def admin_panel(request):
@@ -35,3 +35,27 @@ def add_user(request):
 def manage_users(request):
     users = User.objects.all()
     return render(request, 'admin_panel/manage_users.html', {'users': users})
+
+@login_required
+def delete_group(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    group.delete()
+    return redirect('admin_panel')
+
+def profile_view(request):
+   
+    return render(request, 'path/to/profile_template.html')
+
+def edit_user_view(request, id):
+    user = get_object_or_404(User, id=id)
+    if request.method == 'POST':
+     
+        pass  
+    return render(request, 'admin_panel/edit_user.html', {'user': user})
+
+def delete_user_view(request, id):
+    user = get_object_or_404(User, id=id)
+    if request.method == 'POST':
+        user.delete()
+        return redirect('manage_users')  
+    return render(request, 'admin_panel/delete_user_confirm.html', {'user': user})
