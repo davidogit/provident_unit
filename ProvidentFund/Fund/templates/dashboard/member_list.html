@@ -69,7 +69,8 @@
                   <td><a href="{% url 'member_detail' member.pk %}">{{ member.Id }}</a></td>
                   <td>{{ member.first_name }}</td>
                   <td>{{ member.last_name }}</td>
-                  <td>{{ member.total_amount_to_date }}</td>
+                  <td>{{ member.amount }}</td>
+                  <!-- <td>{{ member.profit|floatformat:"2" }}</td> -->
                   <td>{{ member.profit|floatformat:"2" }}</td>
                   <td>{{ member.status }}</td>
                   <td>{{ member.subscription_date }}</td>

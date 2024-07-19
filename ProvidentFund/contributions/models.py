@@ -12,8 +12,8 @@ class StaffAPI(models.Model):
     _amount = models.FloatField()
     exited_date = models.DateTimeField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
-    profit = models.FloatField(null=True, blank=True)
-    subscription_date = models.DateTimeField()
+    profit = models.FloatField(default=0.0)
+    subscription_date = models.DateField()
     updated_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):

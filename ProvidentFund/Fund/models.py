@@ -38,7 +38,7 @@ class InvestmentDetail(models.Model):
     def calculate_inv_interest(self):
         principal = self.principal_amount or 0.0
         rate = self.interest_percentage or 0.0
-        interest = (((rate / 100.0) * principal)+principal)
+        interest = ((rate / 100.0) * principal)
         return interest
     
     @property

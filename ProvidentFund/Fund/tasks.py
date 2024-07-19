@@ -14,11 +14,15 @@ logger = logging.getLogger(__name__)
 # Task to calculate profit for members daily
 @shared_task(bind=True)
 def member_interest(self):
-    members = StaffAPI.objects.all()
+    members = StaffAPI.objects.filter(exited_flag = False)
     investments = InvestmentDetail.objects.filter(_remaining_days__gt=0)
 
     for member in members:
         contribution = member.amount
+
+        # Ensure member profit is not none before calculation
+        if member.profit is None:
+            member.profit = 0.0
 
         for inv in investments:
             days_left = inv.remaining_days
@@ -27,7 +31,7 @@ def member_interest(self):
             tenure = inv.tenure
 
             # Check if member is elidgible for profit based on the time he/she joined the PF
-            if member.subscription_date < inv.interest_start_date:
+            if (member.subscription_date < inv.interest_start_date):
 
                 # checks if tenure is not expired
                 if days_left>0:
@@ -38,9 +42,8 @@ def member_interest(self):
                     member.profit +=0.0
             # Else if member joined after a particular investment is bought he/she do not get any profit
             else:
-                member.profit += 0.0
-        
-    member.save()
+                member.profit += 0.0      
+        member.save()
 
     return f'Profit success calculated for {timezone.now()}'
 
