@@ -152,6 +152,7 @@ class MemberListView(ListView):
 class ExitedMembers(ListView):
     model = StaffAPI
     template_name ='dashboard/exited_members.html'
+    paginate_by=20
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -205,7 +206,7 @@ from datetime import datetime
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
-    paginate_by = 5
+    paginate_by = 10
     # context_object_name = 'results'
 
     # Using get_queryset so that we can paginate seperate queries based on filter

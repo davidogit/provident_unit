@@ -1,11 +1,12 @@
 from celery import shared_task
-from .models import Member,InvestmentDetail
+from .models import Member,InvestmentDetail,BankInterest,DelayedInterest
 from django.utils import timezone
 
 # import contribution details from Contributions App
 from contributions.models import StaffAPI
 
 from django.db import transaction
+from django.db.models import Sum
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,8 +15,28 @@ logger = logging.getLogger(__name__)
 # Task to calculate profit for members daily
 @shared_task(bind=True)
 def member_interest(self):
+    # Get all active members
     members = StaffAPI.objects.filter(exited_flag = False)
-    investments = InvestmentDetail.objects.filter(_remaining_days__gt=0)
+
+    # Sum up every members contribution into one single value as total_contribution
+
+    total_contribution = StaffAPI.objects.filter(exited_flag = False).aggregate(total=Sum('_amount'))['total']
+
+    # Making sure total_contribution is not None
+    if total_contribution is None:
+        total_contribution = 0.0
+
+    print(f'Total contribution = {total_contribution}')
+
+    # Get investments with remaining_days >0 and status == 'Active'
+    investments = InvestmentDetail.objects.filter(_remaining_days__gt=0, _status = 'Active')
+    print(investments)
+
+    # Get delayed interest if theres any
+    delayed_interest = DelayedInterest.objects.filter(_status = 'Not used')
+
+    # Get bank interest if theres any
+    bank_interest = BankInterest.objects.filter(_status = 'Not used')
 
     for member in members:
         contribution = member.amount
@@ -23,6 +44,29 @@ def member_interest(self):
         # Ensure member profit is not none before calculation
         if member.profit is None:
             member.profit = 0.0
+        
+        # Distribute Delayed Interest based on members contribution
+        for d_int in delayed_interest:
+            # Update member profit
+            member.profit += ((contribution/total_contribution)*d_int.amount)
+            
+            # change the status of delayed interest after it has been used
+
+            d_int.status = 'Used'
+
+            # Save the new status for delayed interest
+            d_int.save()
+
+        # Distribute Bank Interest based on members contribution
+        for b_int in bank_interest:
+            # Update member profit
+            member.profit += ((contribution/total_contribution)*b_int.amount)
+
+            # change the status of Bank interest
+            b_int.status = 'Used'
+
+            # Save the new status of bank interest
+            b_int.save()
 
         for inv in investments:
             days_left = inv.remaining_days
@@ -45,7 +89,7 @@ def member_interest(self):
                 member.profit += 0.0      
         member.save()
 
-    return f'Profit success calculated for {timezone.now()}'
+    return f'Profit successfully calculated for {timezone.now().date()}'
 
 
 # Task to reduce remaining days by 1 every midnight 12:00 am
