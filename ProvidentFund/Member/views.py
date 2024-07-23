@@ -62,6 +62,9 @@ def loginView(request):
             request.session['username'] = username
             request.session['password'] = password
 
+            # send user email to verify_otp view
+            request.session['email'] = user.email
+
             return redirect('verify_otp')
         else:
             return redirect('invalid_login_details')
@@ -77,6 +80,8 @@ class InvalidLoginDetails(TemplateView):
 
 
 def verifyOtpView(request):
+    # Get user email from session
+    user_email = request.session.get('email')
     if request.method == 'POST':
         otp_1 = request.POST.get('otp-1')
         otp_2 = request.POST.get('otp-2')
@@ -107,7 +112,7 @@ def verifyOtpView(request):
         else:
             return HttpResponse('Invalid OTP')
 
-    return render(request, 'verify_otp.html')
+    return render(request, 'verify_otp.html',{'email':user_email})
 
 
 @login_required

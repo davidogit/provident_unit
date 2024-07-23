@@ -38,7 +38,7 @@ class InvestmentDetail(models.Model):
     def calculate_inv_interest(self):
         principal = self.principal_amount or 0.0
         rate = self.interest_percentage or 0.0
-        interest = (((rate / 100.0) * principal)+principal)
+        interest = ((rate / 100.0) * principal)
         return interest
     
     @property
@@ -131,6 +131,16 @@ class DelayedInterest(models.Model):
     amount = models.FloatField()
     created_date = models.DateField(auto_now_add=True)
     remarks = models.CharField(max_length=50)
+    _status = models.CharField(max_length=20, default='Not used')
+
+
+    @property
+    def status(self):
+        return self._status
+    
+    @status.setter
+    def status(self,value):
+        self._status = value
 
 
 
@@ -158,3 +168,13 @@ class BankInterest(models.Model):
     amount = models.FloatField()
     created_date = models.DateField(auto_now_add=True)
     remarks = models.CharField(max_length=50)
+    _status = models.CharField(max_length=20, default='Not used')
+
+    
+    @property
+    def status(self):
+        return self._status
+    
+    @status.setter
+    def status(self,value):
+        self._status = value

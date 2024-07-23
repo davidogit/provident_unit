@@ -16,7 +16,7 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.conf.beat_schedule = {
     'daily_calculation':{
         'task':'Fund.tasks.member_interest',
-        'schedule': crontab(hour=0, minute=0, day_of_week='*', day_of_month='*', month_of_year='*'),
+        'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*'),
     },
     'reduce_day_by_1':{
         'task': 'Fund.tasks.reduce_date',
