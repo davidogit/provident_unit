@@ -5,7 +5,7 @@ from django.utils import timezone
 from .models import StaffAPI, Contribution
 
 @shared_task(bind=True)
-def fetch_memberships():
+def fetch_memberships(self):
     response = requests.get('https://66718737e083e62ee43bf829.mockapi.io/api/v1/addmembership')
     memberships = response.json()
 
@@ -46,7 +46,7 @@ def fetch_memberships():
         )
 
 @shared_task(bind=True)
-def fetch_contributions():
+def fetch_contributions(self):
     response = requests.get('https://6697f43902f3150fb66f9865.mockapi.io/api/v1/contribution')
     contributions = response.json()
 
@@ -61,15 +61,17 @@ def fetch_contributions():
         # Fetch corresponding member
         member = StaffAPI.objects.get(Id=contrib['id'])
 
-        Contribution.objects.update_or_create(
-            member=member,
-            month=month,
-            year=year,
-            defaults={
-                'employee_amount': contrib['employee_amount'],
-                'employer_amount': contrib['employer_amount'],
-                'retro_employee_amount': contrib['retro_employee_amount'],
-                'retro_employer_amount': contrib['retro_employer_amount'],
-                'contribution_date': contrib['contribution_date'],
-            }
-        )
+        # Only take active members contribution
+        if member.exited_flag == False:        
+            Contribution.objects.update_or_create(
+                member=member,
+                month=month,
+                year=year,
+                defaults={
+                    'employee_amount': contrib['employee_amount'],
+                    'employer_amount': contrib['employer_amount'],
+                    'retro_employee_amount': contrib['retro_employee_amount'],
+                    'retro_employer_amount': contrib['retro_employer_amount'],
+                    'contribution_date': contrib['contribution_date'],
+                }
+            )

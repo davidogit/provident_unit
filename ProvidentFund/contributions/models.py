@@ -6,7 +6,7 @@ class StaffAPI(models.Model):
     first_name = models.CharField(max_length=255, null=True, blank=True)
     last_name = models.CharField(max_length=255, null=True, blank=True)
     staff_number = models.IntegerField()
-    date_joined = models.DateTimeField(auto_now=True)
+    date_joined = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, blank=True, null=True, default='active')
     fund_type = models.CharField(max_length=50)
     _amount = models.FloatField(null=True,blank=True,default=0.00)

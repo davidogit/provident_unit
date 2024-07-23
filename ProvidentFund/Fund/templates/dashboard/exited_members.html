@@ -47,6 +47,8 @@
               <th>Staff ID</th>
               <th>First Name</th>
               <th>Last Name</th>
+              <th>Amount</th>
+
               <!-- <th>Amount</th> -->
               <!-- <th>Revenue</th> -->
               <th>Status</th>
@@ -61,6 +63,7 @@
                   <td><a href="{% url 'member_detail' member.pk %}">{{ member.Id }}</a></td>
                   <td>{{ member.first_name }}</td>
                   <td>{{ member.last_name }}</td>
+                  <td>{{ member.amount }}</td>
                   <td>{{ member.status }}</td>
                   <td>{{ member.subscription_date }}</td>
                   <td>{{ member.exited_date }}</td>
