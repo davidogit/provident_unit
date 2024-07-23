@@ -21,7 +21,15 @@ app.conf.beat_schedule = {
     'reduce_day_by_1':{
         'task': 'Fund.tasks.reduce_date',
         'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
-    }
+    },
+    'fetch_memberships_every_month': {
+        'task': 'contributions.tasks.fetch_memberships',
+        'schedule': crontab(day_of_month=1,hour=0,minute=0,month_of_year='*'),  # Run on the first day of every month
+    },
+    'fetch_contributions_every_month': {
+        'task': 'contributions.tasks.fetch_contributions',
+        'schedule': crontab(day_of_month=1,hour=0,minute=5,month_of_year='*'),  # Run on the first day of every month
+    },
 }
 
 

@@ -1,89 +1,75 @@
-# # tasks.py
-# from celery import shared_task
-# import requests
-# from django.utils import timezone
-# from django.db.models import Sum, F
-# from .models import StaffAPI, Contribution
+from celery import shared_task
+import requests
+from dateutil import parser
+from django.utils import timezone
+from .models import StaffAPI, Contribution
 
-# @shared_task
-# def update_total_contributions():
-#     staff_members = StaffAPI.objects.all()
+@shared_task(bind=True)
+def fetch_memberships():
+    response = requests.get('https://66718737e083e62ee43bf829.mockapi.io/api/v1/addmembership')
+    memberships = response.json()
 
-#     for staff_member in staff_members:
-#         total_contributions = staff_member.contributions.aggregate(
-#             total=Sum(
-#                 F('EmployeeAmount') + 
-#                 F('EmployerAmount') + 
-#                 F('RetroEmployeeAmount') + 
-#                 F('RetroEmployerAmount')
-#             )
-#         )['total'] or 0
-        
-#         # If StaffAPI model doesn't have the total_contributions field, compute dynamically
-#         # No need to save it to the database
-#         staff_member.total_contributions = total_contributions
-#         # Uncomment the line below if you need to save it to the database
-#         # staff_member.save()
+    for membership in memberships:
+        incoming_exited_flag = membership.get('exited_flag', False)
+        api_id = membership.get('Id')
 
-#     return "Total contributions updated for all staff members."
+        existing_staff_member = StaffAPI.objects.filter(Id=api_id).first()
 
-# @shared_task
-# def update_staffapi_members():
-#     response = requests.get('https://66718737e083e62ee43bf829.mockapi.io/api/v1/addmembership')
-#     memberships = response.json()
+        if existing_staff_member and existing_staff_member.exited_flag:
+            continue
 
-#     for membership in memberships:
-#         incoming_exited_flag = membership.get('ExitedFlag', False)
-#         api_id = membership.get('Id')
+        if incoming_exited_flag:
+            continue
 
-#         # Fetch the existing staff member if exists
-#         existing_staff_member = StaffAPI.objects.filter(Id=api_id).first()
+        exited_date = membership.get('exited_date', None)
+        if incoming_exited_flag and exited_date:
+            exited_date = timezone.now() if not exited_date else exited_date
+        else:
+            exited_date = None
 
-#         # Check if the existing or incoming ExitedFlag is True
-#         if existing_staff_member and existing_staff_member.ExitedFlag:
-#             continue  # Skip update or create if existing ExitedFlag is True
+        # Create or Update staff details
+        staff_member, created = StaffAPI.objects.update_or_create(
+            Id=api_id,
+            defaults={
+                'first_name': membership.get('first_name', ''),
+                'last_name': membership.get('last_name', ''),
+                'staff_number': membership.get('staff_number', ''),
+                'date_joined': membership.get('date_joined', ''),
+                'status': membership.get('status', ''),
+                'fund_type': membership.get('fund_type', ''),
+                'exited_date': exited_date,
+                'exited_flag': incoming_exited_flag,
+                'subscription_date': membership.get('subscription_date', ''),
+                # 'profit': membership.get('profit', 0),
+                # 'updated_date': membership.get('updated_date', ''),
+            }
+        )
 
-#         if incoming_exited_flag:
-#             continue  # Skip update or create if incoming ExitedFlag is True
+@shared_task(bind=True)
+def fetch_contributions():
+    response = requests.get('https://6697f43902f3150fb66f9865.mockapi.io/api/v1/contribution')
+    contributions = response.json()
 
-#         # Proceed to update or create if checks pass
-#         ExitedDate = membership.get('ExitedDate', None)
-#         if incoming_exited_flag and ExitedDate:
-#             ExitedDate = timezone.now() if not ExitedDate else ExitedDate
-#         else:
-#             ExitedDate = None
-#         staff_member, created = StaffAPI.objects.update_or_create(
-#             Id=api_id,
-#             defaults={
-#                 'Fullname': membership.get('Fullname', ''),
-#                 'Staffnumber': membership.get('Staffnumber', ''),
-#                 'Datejoined': membership.get('Datejoined', ''),
-#                 'status': membership.get('status', ''),
-#                 'Fundtype': membership.get('Fundtype', ''),
-#                 'EmployeeAmount': membership.get('EmployeeAmount', 0.0),
-#                 'EmployerAmount': membership.get('EmployerAmount', 0.0),
-#                 'RetroEmployeeAmount': membership.get('RetroEmployeeAmount', 0.0),
-#                 'RetroEmployerAmount': membership.get('RetroEmployerAmount', 0.0),
-#                 'ContributionDate': membership.get('ContributionDate', ''),
-#                 'ExitedDate': ExitedDate,
-#                 'ExitedFlag': incoming_exited_flag,
-#              }
-#         )
+    for contrib in contributions:
+        date_str = contrib['contribution_date']
+        date_obj = parser.parse(date_str) if date_str else None
 
-#         # Update the contribution details
-#         if 'contributions' in membership:
-#             for contrib in membership['contributions']:
-#                 Contribution.objects.update_or_create(
-#                     member=staff_member,
-#                     month=contrib['month'],
-#                     year=contrib['year'],
-#                     defaults={
-#                         'EmployeeAmount': contrib['EmployeeAmount'],
-#                         'EmployerAmount': contrib['EmployerAmount'],
-#                         'RetroEmployeeAmount': contrib['RetroEmployeeAmount'],
-#                         'RetroEmployerAmount': contrib['RetroEmployerAmount'],
-#                         'ContributionDate': contrib['ContributionDate'],
-#                     }
-#                 )
+        # Get month and year from date
+        month = date_obj.month if date_obj else None
+        year = date_obj.year if date_obj else None
 
-#     return "StaffAPI members updated from external API."
+        # Fetch corresponding member
+        member = StaffAPI.objects.get(Id=contrib['id'])
+
+        Contribution.objects.update_or_create(
+            member=member,
+            month=month,
+            year=year,
+            defaults={
+                'employee_amount': contrib['employee_amount'],
+                'employer_amount': contrib['employer_amount'],
+                'retro_employee_amount': contrib['retro_employee_amount'],
+                'retro_employer_amount': contrib['retro_employer_amount'],
+                'contribution_date': contrib['contribution_date'],
+            }
+        )

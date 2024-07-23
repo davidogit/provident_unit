@@ -135,9 +135,10 @@ class OptOutMemberView(View):
             }
         )
         send_mail(
-            'Notification Mail!',
-            'osahdav@gmail.com',
-            ['dave21620@gmail.com'],
+             subject='Notification Mail!',
+            message='',  # Empty because we are sending html_message
+            from_email=EMAIL_HOST_USER,
+            recipient_list=['dave21620@gmail.com'],
             html_message=html_message,
             fail_silently=False,
         )

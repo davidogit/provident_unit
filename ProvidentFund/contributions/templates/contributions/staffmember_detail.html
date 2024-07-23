@@ -10,19 +10,23 @@
               <strong>Status:</strong> {{ membership.status }}
             </p>
             <p class="card-text">
-              <strong>Employee Amount:</strong> {{ membership.employee_amount }}
+              <strong>Fund Type:</strong> {{ membership.fund_type }}
             </p>
-            <p class="card-text">
-              <strong>Total Amount Contributed:</strong> {{
-              total_amount_contributed }}
-            </p>
+
             <form
               method="post"
               action="{% url 'opt_out_member' membership.pk %}"
               class="mb-3"
+              id="opt-out-form"
             >
               {% csrf_token %}
-              <button type="submit" class="btn btn-danger">Opt Out</button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                onclick="confirmOptOut()"
+              >
+                Opt Out
+              </button>
             </form>
             <a
               href="{% url 'contribution-history' membership.pk %}"
@@ -35,4 +39,13 @@
     </div>
   </div>
 </div>
+
+<script>
+  function confirmOptOut() {
+    const confirmation = confirm("Are you sure you want to opt out?");
+    if (confirmation) {
+      document.getElementById("opt-out-form").submit();
+    }
+  }
+</script>
 {% endblock %}

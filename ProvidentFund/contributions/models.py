@@ -9,7 +9,7 @@ class StaffAPI(models.Model):
     date_joined = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, blank=True, null=True, default='active')
     fund_type = models.CharField(max_length=50)
-    _amount = models.FloatField()
+    _amount = models.FloatField(null=True,blank=True,default=0.00)
     exited_date = models.DateTimeField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
     profit = models.FloatField(null=True, blank=True)
