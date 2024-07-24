@@ -50,17 +50,21 @@
         <!-- <button>OTP</button> -->
         <input type="submit" class="btn btn-primary btn-sign" value="Login">
 
-        <div class="divider"><span>or sign in with</span></div>
+        <div class="divider">Dont have an account?</div>
 
-        <!--<div class="row gx-2">
-          <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div>
-          <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div>
-        </div><!- row -->
+        <div class="row gx-2">
+          <!-- <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div> -->
+          <div class="col text-center"><span><a href="{% url 'register' %}">Sign up here</a></span></div>
+          
+          <!-- <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div> -->
+        </div><!- row
       </div><!-- card-body -->
-      <div class="card-footer">
-      </div><!-- card-footer -->
+      <!-- <div class="card-footer">
+      </div>
+      card-footer -->
+    </form>
   </div><!-- card -->
-  </form>
+  
 
   <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
   <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
