@@ -360,10 +360,7 @@ class ExitedMembers(ListView):
 
         return context
 
-
-
-
-    
+  
 
 # Memeber detailed View
 @method_decorator(login_required, name='dispatch')
