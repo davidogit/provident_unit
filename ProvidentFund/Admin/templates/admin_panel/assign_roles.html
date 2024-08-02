@@ -2,49 +2,73 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4 text-2xl font-bold text-center">Add Roles</h2>
+    <h2 class="mb-4 text-2xl font-bold text-center">Assign Roles</h2>
 
- 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <input type="text" class="form-control me-2" id="searchUser" placeholder="Search user...">
-    </div>
+    <!-- Assign Role Form -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <select class="form-select" id="username" name="username" required>
+                {% for user in users %}
+                    <option value="{{ user.username }}">{{ user.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="role" class="form-label">Role</label>
+            <select class="form-select" id="role" name="role" required>
+                {% for role in roles %}
+                    <option value="{{ role.name }}">{{ role.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Assign Role</button>
+    </form>
 
-    
-    <table class="table table-striped">
+    <!-- Users Table -->
+    <table class="table table-striped mt-4">
         <thead>
             <tr>
                 <th>Username</th>
                 <th>Email</th>
-                <th>Permissions</th>
+                <th>Roles</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-         
+            {% for user in users %}
             <tr>
-                <td>JohnDoe</td>
-                <td>john.doe@example.com</td>
-                <td><span class="badge bg-primary">Admin</span></td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
                 <td>
-                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editModal">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteUser(this)">Delete</button>
+                    {% for group in user.groups.all %}
+                    <span class="badge bg-primary">{{ group.name }}</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editModal" data-username="{{ user.username }}" data-roles="{{ user.groups.all|join:', ' }}">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteUser('{{ user.id }}')">Delete</button>
                 </td>
             </tr>
-           
+            {% endfor %}
         </tbody>
     </table>
 
-    <!-- Activity Log -->
+    <!-- Recent Activities -->
     <div class="mt-4">
         <h3>Recent Activities</h3>
         <ul class="list-group">
-            <li class="list-group-item">Admin assigned 'JohnDoe' as 'Admin' on 2024-07-17</li>
-      
+            {% for activity in recent_activities %}
+                <li class="list-group-item">{{ activity }}</li>
+            {% empty %}
+                <li class="list-group-item">No recent activities.</li>
+            {% endfor %}
         </ul>
     </div>
 </div>
 
-
+<!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -53,7 +77,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="editForm">
+                <form id="editForm" method="post">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label for="editUser" class="form-label">User</label>
                         <input type="text" class="form-control" id="editUser" disabled>
@@ -61,10 +86,9 @@
                     <div class="mb-3">
                         <label for="editPermissions" class="form-label">Permissions</label>
                         <select multiple class="form-select" id="editPermissions">
-                            <option>Permission 1</option>
-                            <option>Permission 2</option>
-                            <option>Permission 3</option>
-                          
+                            {% for role in roles %}
+                                <option value="{{ role.name }}">{{ role.name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -75,33 +99,30 @@
 </div>
 
 <script>
-    function deleteUser(button) {
-      
-        const row = button.closest('tr');
-        row.remove();
-        
-        // Perform additional delete operations (e.g., send a request to the server to delete the user)
+    function deleteUser(userId) {
+        // Send a request to the server to delete the user
+        // For simplicity, we're just removing the row from the table
+        document.querySelector('tr[data-user-id="' + userId + '"]').remove();
     }
 
-    // Add event listener to handle form submission
     document.getElementById('editForm').addEventListener('submit', function(event) {
         event.preventDefault();
-        // Save changes (e.g., send a request to the server to update user permissions)
+        // Save changes to the server
         // Close the modal
         var editModal = new bootstrap.Modal(document.getElementById('editModal'));
         editModal.hide();
     });
 
-    // Add event listener to populate the modal with user data when the Edit button is clicked
     document.querySelectorAll('.btn-info').forEach(button => {
         button.addEventListener('click', function() {
-            const row = button.closest('tr');
-            const username = row.querySelector('td:first-child').textContent;
-            const permissions = row.querySelector('td:nth-child(3)').textContent;
+            const username = this.getAttribute('data-username');
+            const roles = this.getAttribute('data-roles').split(', ');
 
             document.getElementById('editUser').value = username;
-            // Populate the permissions select box based on the user's current permissions
-            // (additional logic needed to select the correct options)
+            const editPermissions = document.getElementById('editPermissions');
+            Array.from(editPermissions.options).forEach(option => {
+                option.selected = roles.includes(option.value);
+            });
         });
     });
 </script>
