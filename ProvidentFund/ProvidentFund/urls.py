@@ -16,17 +16,42 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
+from django.conf import settings
 
 from Member import views
 from Fund import views as v
 
 
+
+# urlpatterns = [
+#     path('admin/', admin.site.urls),
+#     path('login/', views.loginView, name='login'),
+#     # path('<str:tenant_id>/', v.Invest.as_view(),),
+#     path('fund/', include('Fund.urls')),
+#     path('contributions/', include('contributions.urls')),
+#     path('members/', include('Member.urls')),
+#     path('pfund_admin/', include('Admin.urls')),
+# ]
+# urlpatterns = [
+#     path('admin/', admin.site.urls),
+#     path('login/', views.loginView, name='login'),
+#     # path('<str:tenant_id>/', v.Invest.as_view(),),
+#     path('<str:tenant_id>/fund/', include('Fund.urls')),
+#     path('<str:tenant_id>/contributions/', include('contributions.urls')),
+#     path('<str:tenant_id>/members/', include('Member.urls')),
+#     path('<str:tenant_id>/pfund_admin/', include('Admin.urls')),
+# ]
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', views.loginView, name='login'),
-    # path('<str:tenant_id>/', v.Invest.as_view(),),
-    path('<str:tenant_id>/fund/', include('Fund.urls')),
-    path('<str:tenant_id>/contributions/', include('contributions.urls')),
-    path('<str:tenant_id>/members/', include('Member.urls')),
-    path('<str:tenant_id>/pfund_admin/', include('Admin.urls')),
+    path('fund/', include('Fund.urls')),
+    path('contributions/', include('contributions.urls')),
+    path('members/', include('Member.urls')),
+    path('pfund_admin/', include('Admin.urls')),
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns = [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns
