@@ -53,19 +53,22 @@
           <a href="#" class="nav-label">Dashboard</a>
           <ul class="nav nav-sidebar">
             <li class="nav-item">
-              <a href="{% url 'finance_page' %}" class="nav-link active"><i class="ri-pie-chart-2-fill"></i> <span>Finance Monitoring</span></a>
+              <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="nav-link active"><i class="ri-pie-chart-2-fill"></i> <span>Finance Monitoring</span></a>
             </li>
 
         </div><!--nav-group -->
+
+        <!-- Loop through every scheme  -->
+        {% for scheme in schemes %}
         <div class="nav-group show">
-          <a href="#" class="nav-label">Fund Management</a>
+          <a href="#" class="nav-label">{{ scheme.id }}</a>
           <ul class="nav nav-sidebar">
             <li class="nav-item">
               <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Investments</span></a>
               <nav class="nav nav-sub">
-                <a href="{% url 'investment_list' %}" class="nav-sub-link">View Current Investments</a>
-                <a href="{% url 'add_investment' %}" class="nav-sub-link">Add New Investments</a>
-                <a href="{% url 'query' %}" class="nav-sub-link">Generate Report</a>
+                <a href="{% url 'investment_list' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">View Current Investments</a>
+                <a href="{% url 'add_investment' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Add New Investments</a>
+                <a href="{% url 'query' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Generate Report</a>
                 
 
               </nav>
@@ -73,24 +76,24 @@
             <li class="nav-item">
               <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Delayed Interest</span></a>
               <nav class="nav nav-sub">
-                <a href="{% url 'delayed_interest_list' %}" class="nav-sub-link">View Delayed Interests</a>
-                <a href="{% url 'add_delayed_interest' %}" class="nav-sub-link">Add Delayed Interest</a>
-                <a href="{% url 'delayed_interest_query' %}" class="nav-sub-link">Generate Report</a>
+                <a href="{% url 'delayed_interest_list' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">View Delayed Interests</a>
+                <a href="{% url 'add_delayed_interest' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Add Delayed Interest</a>
+                <a href="{% url 'delayed_interest_query' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Generate Report</a>
               </nav>
             </li>
             <li class="nav-item">
               <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Bank Interest</span></a>
               <nav class="nav nav-sub">
-                <a href="{% url 'bank_interest_list' %}" class="nav-sub-link">View Bank Interests</a>
-                <a href="{% url 'add_bank_interest' %}" class="nav-sub-link">Add Bank Interest</a>
-                <a href="{% url 'bank_interest_query' %}" class="nav-sub-link">Generate Report</a>
+                <a href="{% url 'bank_interest_list' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">View Bank Interests</a>
+                <a href="{% url 'add_bank_interest' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Add Bank Interest</a>
+                <a href="{% url 'bank_interest_query' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Generate Report</a>
               </nav>
             </li>
             <li class="nav-item">
               <a href="#" class="nav-link has-sub"><i class="ri-account-circle-line"></i> <span>Members</span></a>
               <nav class="nav nav-sub">
-                <a href="{% url 'member_list' %}" class="nav-sub-link">Active PF Members</a>
-                <a href="{% url 'exited_members' %}" class="nav-sub-link">Exited Members</a>
+                <a href="{% url 'member_list' tenant_id=request.tenant.id %}" class="nav-sub-link">Active PF Members</a>
+                <a href="{% url 'exited_members' tenant_id=request.tenant.id %}" class="nav-sub-link">Exited Members</a>
                 <!-- <a href="#" class="nav-sub-link">Add Member</a> -->
               </nav>
             </li>   
@@ -98,19 +101,24 @@
               
           </ul>
         </div><!-- nav-group -->
+
+        <div class="nav-group show">
+          <a href="#" class="nav-label">Contributions Management</a>
+          <ul class="nav nav-sidebar">
+            <li class="nav-item">
+              <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Provident Fund</span></a>
+              <nav class="nav nav-sub">
+                <a href="{% url 'staff_member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">View Contributions</a>
+              </nav>
+            </li>
+
+          </ul>
+        </div><!-- nav-group -->
+        {% endfor %}
+
+
         
-          <div class="nav-group show">
-            <a href="#" class="nav-label">Contributions Management</a>
-            <ul class="nav nav-sidebar">
-              <li class="nav-item">
-                <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Provident Fund</span></a>
-                <nav class="nav nav-sub">
-                  <a href="{% url 'staff_member_list' %}" class="nav-sub-link">View Contributions</a>
-                </nav>
-              </li>
-  
-            </ul>
-          </div><!-- nav-group -->
+
 
           
           <div class="nav-group show">
@@ -144,7 +152,7 @@
             <a href="#"><i class="ri-question-line"></i> Help Center</a>
             <a href="#"><i class="ri-lock-line"></i> Privacy Settings</a>
             <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
-            <a href="{% url 'logout' %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
+            <a href="{% url 'logout' tenant_id=request.tenant.id %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
           </nav>
         </div><!-- sidebar-footer-menu -->
       </div><!-- sidebar-footer -->

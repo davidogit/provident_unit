@@ -23,6 +23,12 @@ def registrationView(request):
 
             member = form2.save(commit=False)
             member.user = user
+
+            # Associate registering member with a tenant before saving
+            tenant = request.tenant
+            if tenant:
+                member.tenant = tenant
+
             member.save()
 
             return redirect('login')
@@ -60,7 +66,7 @@ def loginView(request):
             # Save OTP in session for later verification
             request.session['otp_token'] = otp
             request.session['username'] = username
-            request.session['password'] = password
+
 
             # send user email to verify_otp view
             request.session['email'] = user.email
@@ -96,16 +102,16 @@ def verifyOtpView(request):
         # Retrieve OTP from session
         session_otp = request.session.get('otp_token')
         username = request.session.get('username')
-        password = request.session.get('password')
+
 
         if otp == int(session_otp):
-            user = authenticate(request, username=username, password=password)
+            user = authenticate(request, username=username)
             if user:
                 login(request, user)
                 # Clear session data after successful login
                 del request.session['otp_token']
                 del request.session['username']
-                del request.session['password']
+    
                 return redirect('finance_page')
             else:
                 return HttpResponse('Invalid login details')

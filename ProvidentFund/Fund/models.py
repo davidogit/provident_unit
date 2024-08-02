@@ -1,7 +1,9 @@
 from django.db import models
 from django.urls import reverse
+from MultiScheme.models import InvestmentScheme
 
 class InvestmentDetail(models.Model):
+    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
     investment_type = models.CharField(max_length=50)
 
     current = 'Current'
@@ -103,29 +105,13 @@ class InvestmentDetail(models.Model):
         return f"{self.account_name}'s account"
     
     def get_absolute_url(self):
-        return reverse('investment_detail', kwargs={'pk': self.pk}) 
+        return reverse('investment_detail', kwargs={'pk': self.pk},) 
 
 
-
-
-class Member(models.Model):
-    first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=30)
-    staff_id = models.PositiveIntegerField(unique=True)
-    total_amount_to_date = models.FloatField(blank=True, null=False)
-    profit = models.FloatField(blank=True, null=True, default=0)
-    status = models.CharField(max_length=20, blank=True, null=True, default='active')
-    subscription_date = models.DateTimeField(auto_now_add=True)
-    updated_date = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}'s account"
-    
-    def get_absolute_url(self):
-        return reverse('member_detail', kwargs={'pk': self.pk})
 
 
 class DelayedInterest(models.Model):
+    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
     from_date = models.DateField()
     to_date = models.DateField()
     amount = models.FloatField()
@@ -146,6 +132,7 @@ class DelayedInterest(models.Model):
 
 
 class BankInterest(models.Model):
+    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
     GCB ='GCB'
     ADB ='ADB'
     CBG = 'CBG'

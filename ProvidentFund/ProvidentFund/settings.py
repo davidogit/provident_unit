@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'contributions',
     'Member',
     'Admin',
+    'MultiScheme',
 
     'django_celery_beat',
     'django_celery_results',
@@ -57,6 +58,14 @@ INSTALLED_APPS = [
 
 ]
 
+AUTHENTICATION_BACKENDS = [
+    # 
+    # custom authentication backend for tenant's members
+    'Member.backends.TenantAwareBackend',
+    # 
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -65,6 +74,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # Tenant ID middleware
+    'Fund.middleware.URLTenantMiddleware',
 ]
 
 ROOT_URLCONF = 'ProvidentFund.urls'
@@ -80,6 +92,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+
+                # Custom template processor
+                'Fund.context_processors.schemes_processor',
             ],
         },
     },

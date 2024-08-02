@@ -1,5 +1,5 @@
 from django.contrib import admin
-from Fund.models import InvestmentDetail,Member,BankInterest,DelayedInterest
+from Fund.models import InvestmentDetail,BankInterest,DelayedInterest
 
 # Register your models here.
 
@@ -14,11 +14,11 @@ class InvestmentDetailAdmin(admin.ModelAdmin):
 
 admin.site.register(InvestmentDetail, InvestmentDetailAdmin)
 
-class MemberAdmin(admin.ModelAdmin):
-    readonly_fields = ('profit',)
-    list_display = ('first_name','last_name','total_amount_to_date','profit','status')
+# class MemberAdmin(admin.ModelAdmin):
+#     readonly_fields = ('profit',)
+#     list_display = ('first_name','last_name','total_amount_to_date','profit','status')
 
-admin.site.register(Member,MemberAdmin)
+# admin.site.register(Member,MemberAdmin)
 
 admin.site.register(BankInterest)
 admin.site.register(DelayedInterest)
