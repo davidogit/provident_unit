@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def assign_roles(request):
-    users = User.objects.all()
+    # tenant_id = 
+    users = User.objects.filter()
     roles = Group.objects.all()
     recent_activities = []
 
