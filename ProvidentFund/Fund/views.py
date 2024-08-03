@@ -3,6 +3,7 @@ from django.views.generic import TemplateView, ListView,DetailView,UpdateView,Cr
 # Create your views here.
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest
 from MultiScheme.models import InvestmentScheme,Tenant
+from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI
 from django.urls import reverse, reverse_lazy
 from django.core.paginator import Paginator
@@ -86,6 +87,7 @@ class InvestmentListView(ListView):
             return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
         else:
             return InvestmentDetail.objects.none()
+        
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -175,7 +177,7 @@ class AddInvestment(CreateView):
         scheme_name = self.request.scheme_name
         int(scheme_name)
         scheme = get_object_or_404(InvestmentScheme.objects.filter(id=scheme_name))
-        print(scheme_name)
+        # print(scheme_name)
         if scheme:
             # form.instance.tenant = tenant
             form.instance.investment_scheme = scheme
@@ -369,10 +371,7 @@ class ExitedMembers(ListView):
 
         return context
 
-
-
-
-    
+  
 
 # Memeber detailed View
 @method_decorator(login_required, name='dispatch')

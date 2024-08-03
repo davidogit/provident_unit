@@ -17,9 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 
+
 from Member import views
 from Fund import views as v
-
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,3 +30,4 @@ urlpatterns = [
     path('<str:tenant_id>/members/', include('Member.urls')),
     path('<str:tenant_id>/pfund_admin/', include('Admin.urls')),
 ]
+

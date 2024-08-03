@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'django_otp',
     'django_otp.plugins.otp_static',
     'django_otp.plugins.otp_totp',
+    
 
 ]
 
@@ -74,10 +75,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+   
 
     # Tenant ID middleware
     'Fund.middleware.URLTenantMiddleware',
 ]
+
 
 ROOT_URLCONF = 'ProvidentFund.urls'
 
@@ -107,21 +110,21 @@ WSGI_APPLICATION = 'ProvidentFund.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'OPTIONS': {
-            'init_command': 'SET default_storage_engine=INNODB',
-        },
-        'NAME': 'provident_fund',
-        'USER': 'root',
-        'PASSWORD': 'collinsxzibit1?',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'OPTIONS': {
+    #         'init_command': 'SET default_storage_engine=INNODB',
+    #     },
+    #     'NAME': 'provident_fund',
+    #     'USER': 'root',
+    #     'PASSWORD': 'collinsxzibit1?',
+    #     'HOST': 'localhost',
+    #     'PORT': '3306',
+    # }
 }
 
 
@@ -142,6 +145,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+# AUTH_USER_MODEL = 'Admin.CustomUser'
 
 
 # Internationalization

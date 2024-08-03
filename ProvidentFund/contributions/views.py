@@ -45,6 +45,7 @@ class StaffMemberListView(ListView):
 
         if tenant and scheme_name:
             return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant, investment_scheme=scheme)
+            return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant, investment_scheme=scheme)
         else:
             return StaffAPI.objects.none()
 

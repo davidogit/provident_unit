@@ -1,9 +1,10 @@
-# Admin/models.py
 
+from MultiScheme.models import Tenant
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
 
 class User(AbstractUser):
+    tenant = models.models.ForeignKey(Tenant, default = "", on_delete=models.CASCADE)
     groups = models.ManyToManyField(
         Group,
         related_name='admin_user_set', 
