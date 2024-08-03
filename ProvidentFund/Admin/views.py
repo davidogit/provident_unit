@@ -1,5 +1,3 @@
-# ProvidentFund/Admin/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
@@ -7,7 +5,9 @@ from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from datetime import datetime
 from .decorators import role_required
-# import logging
+import logging
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def assign_roles(request):
@@ -56,7 +56,7 @@ def manage_users(request):
 
 @login_required
 def delete_group(request, group_id):
-    group = get_object_or_404(Group, id=group_id)
+    group = get_object_or_404(Group)
     group.delete()
     return redirect('admin_panel')
 
@@ -64,56 +64,56 @@ def profile_view(request):
     return render(request, 'path/to/profile_template.html')
 
 @login_required
-# @role_required('Admin')
+@role_required('Admin')
 def admin_panel(request):
     return render(request, 'admin_panel.html')
 
-# @login_required
-# @role_required('HR')
-# def hr_page(request):
-#     return render(request, 'Member/member.html')
+@login_required
+@role_required('HR')
+def hr_page(request):
+    return render(request, 'Member/member.html')
 
-# @login_required
-# @role_required('Finance')
-# def finance_page(request):
-#     return render(request, 'finance_page.html')
+@login_required
+@role_required('Finance')
+def finance_page(request):
+    return render(request, 'finance_page.html')
 
-def edit_user_view(request, id):
-    user = get_object_or_404(User, id=id)
+
+def edit_user_view(request, user_id):
+    user = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
+        # handle POST request
         pass  
     return render(request, 'admin_panel/edit_user.html', {'user': user})
 
-def delete_user_view(request, id):
-    user = get_object_or_404(User, id=id)
+def delete_user_view(request, user_id):
+    user = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
         user.delete()
         return redirect('manage_users')  
     return render(request, 'admin_panel/delete_user_confirm.html', {'user': user})
 
-# logger = logging.getLogger(__name__)
-
-# def custom_login(request):
-#     if request.method == 'POST':
-#         username = request.POST['username']
-#         password = request.POST['password']
-#         user = authenticate(request, username=username, password=password)
-#         if user is not None:
-#             login(request, user)
-#             logger.info(f'User {user.username} authenticated successfully.')
-#             if user.groups.filter(name='Admin').exists():
-#                 logger.info(f'User {user.username} redirected to admin_panel.')
-#                 return redirect('admin_panel')
-#             elif user.groups.filter(name='HR').exists():
-#                 logger.info(f'User {user.username} redirected to hr_page.')
-#                 return redirect('hr_page')
-#             elif user.groups.filter(name='Finance').exists():
-#                 logger.info(f'User {user.username} redirected to finance_page.')
-#                 return redirect('finance_page')
-#             else:
-#                 logger.info(f'User {user.username} redirected to fund.')
-#                 return redirect('fund')
-#         else:
-#             messages.error(request, 'Invalid credentials')
-#             logger.error(f'Authentication failed for username {username}.')
-#     return render(request, 'login.html')
+def custom_login(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            logger.info(f'User {user.username} authenticated successfully.')
+            if user.groups.filter(name='Admin').exists():
+                logger.info(f'User {user.username} redirected to admin_panel.')
+                return redirect('admin_panel')
+            elif user.groups.filter(name='HR').exists():
+                logger.info(f'User {user.username} redirected to hr_page.')
+                return redirect('hr_page')
+            elif user.groups.filter(name='Finance').exists():
+                logger.info(f'User {user.username} redirected to finance_page.')
+                return redirect('finance_page')
+            else:
+                logger.info(f'User {user.username} redirected to fund.')
+                return redirect('fund')
+        else:
+            messages.error(request, 'Invalid credentials')
+            logger.error(f'Authentication failed for username {username}.')
+    return render(request, 'login.html')
