@@ -17,8 +17,8 @@ class Invest(TemplateView):
     def get_context_data(self, **kwargs):
         
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant_i = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_i)
 
         # Get scheme name
         # scheme_name = self.request.scheme_name

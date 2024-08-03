@@ -9,31 +9,39 @@ class URLTenantMiddleware(MiddlewareMixin):
         path_parts = request.path.split('/')
         # Ensure admin is not affected by tenant_id
         if len(path_parts)>1:
-            if isinstance(int(path_parts[1]), int):
-                # Get Tenant from url
-                tenant_id = int(path_parts[1])
-                try:
-                    request.tenant = Tenant.objects.get(id=tenant_id)
-                except Tenant.DoesNotExist:
+            if isinstance((path_parts[1]), int):
+
+                if isinstance(int(path_parts[1]), int):
+                    # Get Tenant from url
+                    tenant_id = int(path_parts[1])
+                    try:
+                        request.tenant = Tenant.objects.get(id=tenant_id)
+                    except Tenant.DoesNotExist:
+                        request.tenant = None
+                else:
                     request.tenant = None
-            else:
-                 request.tenant = None
+            else: 
+                request.scheme_name = None 
         else: 
-            request.scheme_name = None 
+                request.scheme_name = None 
 
         # Get Scheme name from url
         if len(path_parts)>3:
-            if isinstance(int(path_parts[3]),int):
-                if not path_parts[3] =='':
-                    scheme_name = int(path_parts[3])
-                    request.scheme_name = scheme_name
+            
+            if isinstance((path_parts[3]), int):
+                if isinstance(int(path_parts[3]),int):
+                    if not path_parts[3] =='':
+                        scheme_name = int(path_parts[3])
+                        request.scheme_name = scheme_name
+                    else:
+                        request.scheme_name = None 
                 else:
-                    request.scheme_name = None 
+                    request.scheme_name = None
             else:
-                 request.scheme_name = None
-        else:
+                request.scheme_name = None
+        else: 
             request.scheme_name = None
-        
+            
 
 
 

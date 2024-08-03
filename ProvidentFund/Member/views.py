@@ -41,7 +41,8 @@ def registrationView(request):
 
     return render(request, 'register.html', {'form1': form1, 'form2': form2})
 
-def loginView(request):
+def loginView(request, tenant_id):
+    request.tenant = tenant_id 
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -71,9 +72,9 @@ def loginView(request):
             # send user email to verify_otp view
             request.session['email'] = user.email
 
-            return redirect('verify_otp')
+            return redirect('verify_otp', tenant_id=tenant_id)
         else:
-            return redirect('invalid_login_details')
+            return redirect('invalid_login_details', tenant_id=tenant_id)
 
     return render(request, 'login.html')
 
@@ -85,7 +86,8 @@ class InvalidLoginDetails(TemplateView):
 
 
 
-def verifyOtpView(request):
+def verifyOtpView(request, tenant_id):
+    request.tenant = tenant_id
     # Get user email from session
     user_email = request.session.get('email')
     if request.method == 'POST':
@@ -112,7 +114,7 @@ def verifyOtpView(request):
                 del request.session['otp_token']
                 del request.session['username']
     
-                return redirect('finance_page')
+                return redirect('finance_page', tenant_id)
             else:
                 return HttpResponse('Invalid login details')
         else:

@@ -101,7 +101,8 @@ def delete_user_view(request, user_id):
         return redirect('manage_users')  
     return render(request, 'admin_panel/delete_user_confirm.html', {'user': user})
 
-def custom_login(request):
+def custom_login(request, tenant_id):
+    request.tenant = tenant_id
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
@@ -111,17 +112,17 @@ def custom_login(request):
             logger.info(f'User {user.username} authenticated successfully.')
             if user.groups.filter(name='Admin').exists():
                 logger.info(f'User {user.username} redirected to admin_panel.')
-                return redirect('admin_panel')
+                return redirect('admin_panel', tenant_id=tenant_id)
             elif user.groups.filter(name='HR').exists():
                 logger.info(f'User {user.username} redirected to member_list.')
-                return redirect('member_list', 'member_detail', 'member_update', 'delete_member', 'exited_members')
+                return redirect('member_list', tenant_id=tenant_id)
             elif user.groups.filter(name='Finance').exists():
                 logger.info(f'User {user.username} redirected to finance_page.')
-                return redirect('finance_page')
+                return redirect('finance_page', tenant_id=tenant_id)
             else:
-                logger.info(f'User {user.username} redirected to fund.')
-                return redirect('fund')
+                logger.info(f'User {user.username} redirected to finance_page.')
+                return redirect('finance_page', tenant_id=tenant_id)
         else:
             messages.error(request, 'Invalid credentials')
             logger.error(f'Authentication failed for username {username}.')
-    return render(request, 'login.html')
+    return render(request, 'admin_panel/admin_login.html')

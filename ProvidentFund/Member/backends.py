@@ -21,7 +21,7 @@ class TenantAwareBackend(ModelBackend):
                 if user_profile.user.check_password(password):
                     return user_profile.user
 
-            except user_profile.DoesNotExist:
+            except Member.DoesNotExist:
                 return None
         
 
