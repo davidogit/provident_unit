@@ -7,8 +7,8 @@ urlpatterns =[
     path('', views.Invest.as_view(), name='finance_page'),
     path('<int:scheme_name>/addInvestment/', views.AddInvestment.as_view(), name='add_investment'),
     path('<int:scheme_name>/investmentList/', views.InvestmentListView.as_view(), name='investment_list'),
-    path('memberList/', views.MemberListView.as_view(), name='member_list'),
-    path('<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
+    path('<int:scheme_name>/memberList/', views.MemberListView.as_view(), name='member_list'),
+    path('<int:scheme_name>/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('<str:scheme_name>/investmentDetail/<int:pk>/', views.InvestmentDetailView.as_view(), name='investment_detail'),
     
     path('<int:scheme_name>/update/<int:pk>', views.InvestmentUpdateView.as_view(), name='investment_update'),
@@ -17,9 +17,9 @@ urlpatterns =[
     path('<int:scheme_name>/investment_query/', views.InvestmentQuery.as_view(), name='query'),
 
     # Member URLS
-    path('memberUpdate/<int:pk>/', views.MemberUpdateView.as_view(), name='member_update'),
-    path('deleteMember/<int:pk>/', views.MemberDeleteView.as_view(), name='delete_member'),
-    path('exited-members/', views.ExitedMembers.as_view(), name='exited_members'),
+    path('<int:scheme_name>/memberUpdate/<int:pk>/', views.MemberUpdateView.as_view(), name='member_update'),
+    path('<int:scheme_name>/deleteMember/<int:pk>/', views.MemberDeleteView.as_view(), name='delete_member'),
+    path('<int:scheme_name>/exited-members/', views.ExitedMembers.as_view(), name='exited_members'),
 
     # Bank Interest Related URLS
     path('<int:scheme_name>/add_bank_interest/', views.BankInterestCreateView.as_view(), name='add_bank_interest'),

@@ -316,7 +316,7 @@ class MemberListView(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return StaffAPI.objects.filter(tenant=tenant)
+            return StaffAPI.objects.filter(investment_scheme__tenant=tenant)
         else:
             return StaffAPI.objects.none()
 
