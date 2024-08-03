@@ -86,14 +86,16 @@ def finance_page(request):
 
 
 def edit_user_view(request, user_id):
-    user = get_object_or_404(User, id=user_id)
+    tenant = request.tenant
+    user = get_object_or_404(User, id=user_id, tenant = tenant)
     if request.method == 'POST':
         # handle POST request
         pass  
     return render(request, 'admin_panel/edit_user.html', {'user': user})
 
 def delete_user_view(request, user_id):
-    user = get_object_or_404(User, id=user_id)
+    tenant = request.tenant
+    user = get_object_or_404(User, id=user_id, tenant = tenant)
     if request.method == 'POST':
         user.delete()
         return redirect('manage_users')  
@@ -111,8 +113,8 @@ def custom_login(request):
                 logger.info(f'User {user.username} redirected to admin_panel.')
                 return redirect('admin_panel')
             elif user.groups.filter(name='HR').exists():
-                logger.info(f'User {user.username} redirected to hr_page.')
-                return redirect('hr_page')
+                logger.info(f'User {user.username} redirected to member_list.')
+                return redirect('member_list', 'member_detail', 'member_update', 'delete_member', 'exited_members')
             elif user.groups.filter(name='Finance').exists():
                 logger.info(f'User {user.username} redirected to finance_page.')
                 return redirect('finance_page')
