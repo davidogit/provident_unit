@@ -6,13 +6,12 @@ from .models import Member
 
 
 # create a backend to make sure users are mapped to their tenants views
-
 class TenantAwareBackend(ModelBackend):
 
     def authenticate(self, request: HttpRequest, username: str | None = ..., password: str | None = ..., **kwargs: Any) -> AbstractBaseUser | None:
 
         # Get tenant from request
-        tenant = request.tenant
+        tenant = getattr(request, 'tenant', None)
 
         if tenant:
             try:
@@ -20,10 +19,7 @@ class TenantAwareBackend(ModelBackend):
                 user_profile = Member.objects.get(user__username=username, tenant=tenant)
                 if user_profile.user.check_password(password):
                     return user_profile.user
-
             except Member.DoesNotExist:
                 return None
-        
 
         return None
-

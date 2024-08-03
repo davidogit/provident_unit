@@ -1,48 +1,36 @@
 from django.utils.deprecation import MiddlewareMixin
 from MultiScheme.models import Tenant
-import uuid
+from django.http import HttpRequest
 
 # middleware to retrieve Tenant ID
 
 class URLTenantMiddleware(MiddlewareMixin):
-    def process_request(self, request):
+    def process_request(self, request: HttpRequest):
         path_parts = request.path.split('/')
-        # Ensure admin is not affected by tenant_id
-        if len(path_parts)>1:
-            if isinstance((path_parts[1]), int):
 
-                if isinstance(int(path_parts[1]), int):
-                    # Get Tenant from url
-                    tenant_id = int(path_parts[1])
-                    try:
-                        request.tenant = Tenant.objects.get(id=tenant_id)
-                    except Tenant.DoesNotExist:
-                        request.tenant = None
-                else:
+        # Ensure admin is not affected by tenant_id
+        if len(path_parts) > 1:
+            try:
+                tenant_id = int(path_parts[1])
+                try:
+                    request.tenant = Tenant.objects.get(id=tenant_id)
+                    print(request.tenant)
+                except Tenant.DoesNotExist:
                     request.tenant = None
-            else: 
-                request.scheme_name = None 
-        else: 
-                request.scheme_name = None 
+            except ValueError:
+                request.tenant = None
+        else:
+            request.tenant = None
 
         # Get Scheme name from url
-        if len(path_parts)>3:
-            
-            if isinstance((path_parts[3]), int):
-                if isinstance(int(path_parts[3]),int):
-                    if not path_parts[3] =='':
-                        scheme_name = int(path_parts[3])
-                        request.scheme_name = scheme_name
-                    else:
-                        request.scheme_name = None 
-                else:
-                    request.scheme_name = None
-            else:
+        if len(path_parts) > 3:
+            try:
+                scheme_name = int(path_parts[3])
+                request.scheme_name = scheme_name
+            except ValueError:
                 request.scheme_name = None
-        else: 
+        else:
             request.scheme_name = None
-            
-
 
 
 
