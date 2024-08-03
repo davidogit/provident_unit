@@ -18,8 +18,8 @@ class URLTenantMiddleware(MiddlewareMixin):
                     request.tenant_id = (Tenant.objects.get(id=tenant_id)).id
                     # Get Scheme name from url
                     if len(path_parts)>3:
-                        scheme_name = path_parts[3]
-                        if not scheme_name =='':
+                        if not path_parts[3] =='':
+                            scheme_name = int(path_parts[3])
                             request.scheme_name = scheme_name
                         else:
                             request.scheme_name = None
