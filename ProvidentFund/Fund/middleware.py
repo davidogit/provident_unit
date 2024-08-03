@@ -13,27 +13,23 @@ class URLTenantMiddleware(MiddlewareMixin):
 
                 if len(path_parts)>1:
                     # Get Tenant from url
-                    tenant_id = path_parts[1]
+                    tenant_id = int(path_parts[1])
 
-                    request.tenant_id = (Tenant.objects.get(id=tenant_id)).id
                     # Get Scheme name from url
                     if len(path_parts)>3:
-                        scheme_name = path_parts[3]
-                        if not scheme_name =='':
+                        if not path_parts[3] == '':
+                            scheme_name = int(path_parts[3])
                             request.scheme_name = scheme_name
                         else:
                             request.scheme_name = None
+                            
                     else:
                         request.scheme_name = None
+
                     try:
                         request.tenant = Tenant.objects.get(id=tenant_id)
-                        
-
                     except Tenant.DoesNotExist:
-                        request.tenant = None
-
-
-  
+                        request.tenant = None 
                 else:
                     request.tenant = None
                     request.scheme_name = None

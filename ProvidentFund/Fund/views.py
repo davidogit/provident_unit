@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
 # Create your views here.
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest
-from MultiScheme.models import InvestmentScheme
+from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI
 from django.urls import reverse, reverse_lazy
 from django.core.paginator import Paginator
@@ -69,22 +69,22 @@ class InvestmentListView(ListView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant = self.request.tenant
+        tenant_id = self.request.tenant.id
+
+        tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme name
         scheme_name = self.request.scheme_name
+    
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
 
-        print(tenant)
+
         # Filtering Queryset by Tenant
-        if tenant:
-
-            print(InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme__name = scheme_name))
-
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme__name = scheme_name)
-
-
+        if tenant and scheme_name:
+            return InvestmentDetail.objects.filter(investment_scheme =scheme, investment_scheme__tenant=tenant )
         else:
             return InvestmentDetail.objects.none()
+        
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -132,14 +132,19 @@ class InvestmentDetailView(DetailView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant = self.request.tenant
+        tenant_id = self.request.tenant.id
+
+        tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme name
         scheme_name = self.request.scheme_name
+    
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
 
         # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme__name = scheme_name)
+        if tenant and scheme_name:
+            return InvestmentDetail.objects.filter(investment_scheme =scheme, investment_scheme__tenant=tenant )
         else:
             return InvestmentDetail.objects.none()
 
@@ -172,7 +177,7 @@ class AddInvestment(CreateView):
         scheme_name = self.request.scheme_name
         int(scheme_name)
         scheme = get_object_or_404(InvestmentScheme.objects.filter(id=scheme_name))
-        print(scheme_name)
+        # print(scheme_name)
         if scheme:
             # form.instance.tenant = tenant
             form.instance.investment_scheme = scheme
@@ -201,14 +206,19 @@ class InvestmentUpdateView(UpdateView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant = self.request.tenant
+        tenant_id = self.request.tenant.id
+
+        tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme name
         scheme_name = self.request.scheme_name
+    
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
 
         # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__name = scheme_name)
+        if tenant and scheme_name:
+            return InvestmentDetail.objects.filter(investment_scheme =scheme, investment_scheme__tenant=tenant )
         else:
             return InvestmentDetail.objects.none()
     
@@ -239,14 +249,19 @@ class RolloverPercentage(UpdateView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant = self.request.tenant
+        tenant_id = self.request.tenant.id
+
+        tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme name
         scheme_name = self.request.scheme_name
+    
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
 
         # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__name = scheme_name)
+        if tenant and scheme_name:
+            return InvestmentDetail.objects.filter(investment_scheme =scheme, investment_scheme__tenant=tenant )
         else:
             return InvestmentDetail.objects.none()
 
@@ -275,14 +290,19 @@ class InvestmentDeleteView(DeleteView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant = self.request.tenant
+        tenant_id = self.request.tenant.id
+
+        tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme name
         scheme_name = self.request.scheme_name
+    
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
 
         # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__name = scheme_name)
+        if tenant and scheme_name:
+            return InvestmentDetail.objects.filter(investment_scheme =scheme, investment_scheme__tenant=tenant )
         else:
             return InvestmentDetail.objects.none()
 
@@ -449,14 +469,19 @@ class InvestmentQuery(ListView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant = self.request.tenant
+        tenant_id = self.request.tenant.id
+
+        tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme name
         scheme_name = self.request.scheme_name
+    
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
 
         # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__name = scheme_name)
+        if tenant and scheme_name:
+            return InvestmentDetail.objects.filter(investment_scheme =scheme, investment_scheme__tenant=tenant )
         else:
             return InvestmentDetail.objects.none()
 
@@ -595,14 +620,19 @@ class BankInterestListView(ListView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant = self.request.tenant
+        tenant_id = self.request.tenant.id
+
+        tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme name
         scheme_name = self.request.scheme_name
+    
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
 
         # Filtering Queryset by Tenant
-        if tenant:
-            return BankInterest.objects.filter(investment_scheme__tenant=tenant, investment_scheme__name = scheme_name)
+        if tenant and scheme_name:
+            return BankInterest.objects.filter(investment_scheme =scheme, investment_scheme__tenant=tenant )
         else:
             return BankInterest.objects.none()
         

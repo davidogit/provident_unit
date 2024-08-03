@@ -22,7 +22,7 @@ from django.template import loader
 from django.template.loader import render_to_string
 from django.db.models import Sum, F
 from dateutil import parser
-
+from MultiScheme.models import Tenant,InvestmentScheme
 # Create your views here.
 
 @method_decorator(login_required, name="dispatch")
@@ -34,12 +34,18 @@ class StaffMemberListView(ListView):
 
     def get_queryset(self):
 
-        # Get tenant from middleware
-        tenant = self.request.tenant
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+
+        tenant = Tenant.objects.get(id=tenant_id)
+
         # Get scheme name
         scheme_name = self.request.scheme_name
+    
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
         if tenant and scheme_name:
-            return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant, investment_scheme__name=scheme_name)
+            return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant, investment_scheme=scheme)
         else:
             return None
 
