@@ -5,14 +5,15 @@ from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from datetime import datetime
 from .decorators import role_required
+from .forms import UserForm
 import logging
 
 logger = logging.getLogger(__name__)
 
 @login_required
 def assign_roles(request):
-    # tenant_id = 
-    users = User.objects.filter()
+    tenant = request.tenant
+    users = User.objects.filter(tenant = tenant)
     roles = Group.objects.all()
     recent_activities = []
 
@@ -20,7 +21,8 @@ def assign_roles(request):
         username = request.POST.get('username')
         role_name = request.POST.get('role')
         try:
-            user = User.objects.get(username=username)
+            # filterng the user based on the tenant they belong to
+            user = User.objects.get(username=username, tenant = tenant)
             role = Group.objects.get(name=role_name)
             user.groups.add(role)
             user.save()
@@ -30,29 +32,31 @@ def assign_roles(request):
             activity = f'Admin assigned "{username}" as "{role_name}" on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
             recent_activities.append(activity)
 
-        except User.DoesNotExist:
-            messages.error(request, 'User does not exist.')
-        except Group.DoesNotExist:
-            messages.error(request, 'Role does not exist.')
+        except User.DoesNotExist and Group.DoesNotExist:
+            messages.error(request, 'User does not exist and group does not exist')
         
         return render(request, 'admin_panel/assign_roles.html', {'users': users, 'roles': roles, 'recent_activities': recent_activities})
 
     return render(request, 'admin_panel/assign_roles.html', {'users': users, 'roles': roles, 'recent_activities': recent_activities})
 
+# Adding User 
 @login_required
 def add_user(request):
+    tenant = request.tenant
     if request.method == 'POST':
         form = UserForm(request.POST)
+        form.instance.tenant = tenant
         if form.is_valid():
             form.save()
             return redirect('admin_panel')
     else:
         form = UserForm()
-    return render(request, 'admin_panel/add_user.html', {'form': form})
+    return render(request, 'admin_panel/add_user.html')
 
 @login_required
 def manage_users(request):
-    users = User.objects.all()
+    tenant = request.tenant
+    users = User.objects.filter(tenant = tenant)
     return render(request, 'admin_panel/manage_users.html', {'users': users})
 
 @login_required
@@ -61,9 +65,10 @@ def delete_group(request, group_id):
     group.delete()
     return redirect('admin_panel')
 
-def profile_view(request):
-    return render(request, 'path/to/profile_template.html')
+# def profile_view(request):
+#     return render(request, 'path/to/profile_template.html')
 
+# Grouped 
 @login_required
 @role_required('Admin')
 def admin_panel(request):
@@ -72,7 +77,7 @@ def admin_panel(request):
 @login_required
 @role_required('HR')
 def hr_page(request):
-    return render(request, 'Member/member.html')
+    return render(request, 'member.html')
 
 @login_required
 @role_required('Finance')
