@@ -17,17 +17,17 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 
+
 from Member import views
 from Fund import views as v
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('', views.loginView, name=''),
-    path('', v.Invest.as_view(),),
-    path('fund/', include('Fund.urls')),
-    path('contributions/', include('contributions.urls')),
-    path('members/', include('Member.urls')),
     path('login/', views.loginView, name='login'),
-    path('pfund_admin/', include('Admin.urls')),
+    # path('<str:tenant_id>/', v.Invest.as_view(),),
+    path('<str:tenant_id>/fund/', include('Fund.urls')),
+    path('<str:tenant_id>/contributions/', include('contributions.urls')),
+    path('<str:tenant_id>/members/', include('Member.urls')),
+    path('<str:tenant_id>/pfund_admin/', include('Admin.urls')),
 ]
+

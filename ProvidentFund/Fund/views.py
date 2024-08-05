@@ -1,8 +1,11 @@
+from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
 # Create your views here.
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest
+from MultiScheme.models import InvestmentScheme,Tenant
+from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -12,14 +15,40 @@ class Invest(TemplateView):
     template_name='dashboard/finance.html'
 
     def get_context_data(self, **kwargs):
+        
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        # scheme_name = self.request.scheme_name
+        # scheme = InvestmentScheme.objects.get(id=scheme_name)
+
         context = super().get_context_data(**kwargs)
         # Queryset to calculate total interest
-        interest_query = InvestmentDetail.objects.all().filter(_status = 'Active')
+        try: 
+            interest_query = InvestmentDetail.objects.all().filter(_status = 'Active', investment_scheme__tenant = tenant)
+        except:
+            interest_query = []
+
         context['total_interest'] = sum(inv.interest_amount for inv in interest_query)
 
         # Queryset to calsulate total number of active investments
-        active_inv = InvestmentDetail.objects.all().filter(_status = 'Active')
-        context['active_inv'] = active_inv.count()
+        try:
+            active_inv = InvestmentDetail.objects.all().filter(_status = 'Active', investment_scheme__tenant = tenant)
+            context['active_inv'] = active_inv.count()
+        except:
+            active_inv = []
+        
+        # Get schemes
+        try:
+            scheme = InvestmentScheme.objects.filter(tenant = tenant)
+            context['schemes'] = scheme
+        except:
+            scheme = []
+
+           
+        
 
         # Queryset to calsulate total number of Active Members
         active_members = StaffAPI.objects.all()
@@ -40,6 +69,25 @@ class InvestmentListView(ListView):
     context_object_name = 'investment_list'
     model = InvestmentDetail
     template_name = 'dashboard/investment_list.html'
+
+
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return InvestmentDetail.objects.none()
+        
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -83,18 +131,68 @@ class InvestmentDetailView(DetailView):
     template_name = 'dashboard/investment_details.html'
     context_object_name = 'investment_detail'
 
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return InvestmentDetail.objects.none()
+
+
+
 # Adding an investment
 @method_decorator(login_required, name='dispatch')
 class AddInvestment(CreateView):
     model=InvestmentDetail
     fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
     template_name = 'dashboard/investment_form.html'
-    success_url = reverse_lazy('investment_list')
+    # success_url = reverse_lazy('investment_list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['account_type'] = InvestmentDetail.account
+
+        # Get tenant from request
+        tenant = self.request.tenant
+
+        if tenant:
+            context['account_type'] = InvestmentDetail.account
+        else:
+            context['account_type'] = []
+
         return context
+    
+    # Make sure we are updating details under the right tenant
+    def form_valid(self, form):
+
+        scheme_name = self.request.scheme_name
+        int(scheme_name)
+        scheme = get_object_or_404(InvestmentScheme.objects.filter(id=scheme_name))
+        # print(scheme_name)
+        if scheme:
+            # form.instance.tenant = tenant
+            form.instance.investment_scheme = scheme
+
+        return super().form_valid(form)
+    
+
+    def get_success_url(self):
+
+        scheme = self.request.scheme_name
+        tenant =  self.request.tenant
+
+        return reverse('investment_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id}) 
+
+
 
 # Updating an Investement's details
 @method_decorator(login_required, name='dispatch')
@@ -104,6 +202,38 @@ class InvestmentUpdateView(UpdateView):
     # form_class = InvestmentUpdateForm
     template_name = 'dashboard/investment_form.html'
 
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return InvestmentDetail.objects.none()
+    
+    # Make sure we are updating details under the right tenant
+    def form_valid(self, form):
+
+        tenant = self.request.tenant
+        scheme_name = self.request.scheme_name
+
+        if tenant and scheme_name:
+            form.instance.tenant = tenant
+            form.instance.scheme_name = scheme_name
+
+        return super().form_valid(form)
+
+
+
+
 # Updating rollover interest percentage field only
 @method_decorator(login_required, name='dispatch')
 class RolloverPercentage(UpdateView):
@@ -111,6 +241,36 @@ class RolloverPercentage(UpdateView):
     fields =('rollover_interest_percentage',)
     context_object_name = 'rollover'
     template_name = 'dashboard/rollover_percentage.html'
+
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return InvestmentDetail.objects.none()
+
+    # Make sure we are updating details under the right tenant
+    def form_valid(self, form):
+
+        tenant = self.request.tenant
+        scheme_name = self.request.scheme_name
+
+        if tenant and scheme_name:
+            form.instance.tenant = tenant
+            form.instance.scheme_name = scheme_name
+
+        return super().form_valid(form)
+
 
 # Deleting an Investment from Database
 @method_decorator(login_required, name='dispatch')
@@ -120,6 +280,24 @@ class InvestmentDeleteView(DeleteView):
     template_name = 'dashboard/delete_investment.html'
     success_url = reverse_lazy('investment_list')
 
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return InvestmentDetail.objects.none()
+
+
 
 # Active Members List
 @method_decorator(login_required, name='dispatch')
@@ -128,6 +306,19 @@ class MemberListView(ListView):
     model = StaffAPI
     template_name = 'dashboard/member_list.html'
     # context_object_name = 'member_list'
+
+
+    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant = self.request.tenant
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return StaffAPI.objects.filter(investment_scheme__tenant=tenant)
+        else:
+            return StaffAPI.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -154,6 +345,19 @@ class ExitedMembers(ListView):
     template_name ='dashboard/exited_members.html'
     paginate_by=20
 
+
+    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant = self.request.tenant
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return StaffAPI.objects.filter(tenant=tenant)
+        else:
+            return StaffAPI.objects.none()
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -167,10 +371,7 @@ class ExitedMembers(ListView):
 
         return context
 
-
-
-
-    
+  
 
 # Memeber detailed View
 @method_decorator(login_required, name='dispatch')
@@ -178,6 +379,18 @@ class MemberDetailView(DetailView):
     # model = Member
     model = StaffAPI
     template_name = 'dashboard/member_details.html'
+
+    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant = self.request.tenant
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return StaffAPI.objects.filter(tenant=tenant)
+        else:
+            return StaffAPI.objects.none()
 
 
 # Updating an member's details
@@ -187,6 +400,28 @@ class MemberUpdateView(UpdateView):
     model = StaffAPI
     fields = ('Staffnumber','status')
     template_name = 'dashboard/member_form.html'
+
+    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant = self.request.tenant
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return StaffAPI.objects.filter(tenant=tenant)
+        else:
+            return StaffAPI.objects.none()
+        
+    # Making sure we are updating details of a specific member related to a specific tenant   
+    def form_valid(self, form):
+
+        tenant = self.request.tenant
+
+        if tenant:
+            form.instance.tenant = tenant
+
+        return super().form_valid(form)
     
 
 # Deleting a member from Database
@@ -196,6 +431,18 @@ class MemberDeleteView(DeleteView):
     model = StaffAPI
     template_name = 'dashboard/delete_member.html'
     success_url = reverse_lazy('member_list')
+
+    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant = self.request.tenant
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return StaffAPI.objects.filter(tenant=tenant)
+        else:
+            return StaffAPI.objects.none()
 
 
 from django.utils import timezone
@@ -208,6 +455,23 @@ class InvestmentQuery(ListView):
     model = InvestmentDetail
     paginate_by = 10
     # context_object_name = 'results'
+
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return InvestmentDetail.objects.none()
 
     # Using get_queryset so that we can paginate seperate queries based on filter
     def get_context_data(self, **kwargs):
@@ -229,7 +493,8 @@ class InvestmentQuery(ListView):
         to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
 
         # get all investments
-        queryset = InvestmentDetail.objects.all()
+        # queryset = InvestmentDetail.objects.all()
+        queryset = self.get_queryset()
 
         # A list to accumulate all related search before passing it as a context
         query=[]
@@ -293,6 +558,23 @@ class DelayedInterestListView(ListView):
     paginate_by = 10
     context_object_name = 'delayed_interest'
 
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return DelayedInterest.objects.none()
+
 
 @method_decorator(login_required, name='dispatch')
 class DelayedInterestCreateView(CreateView):
@@ -301,12 +583,49 @@ class DelayedInterestCreateView(CreateView):
     fields = ('from_date','to_date','amount','remarks')
     success_url = reverse_lazy('delayed_interest_list')
 
+    def form_valid(self, form):
+
+        tenant = self.request.tenant
+        scheme_name = self.request.scheme_name
+
+        if tenant and scheme_name:
+            form.instance.tenant = tenant
+            form.instance.scheme_name = scheme_name
+
+        return super().form_valid(form)
+
+
+
+
+
 @method_decorator(login_required, name='dispatch')
 class BankInterestListView(ListView):
     template_name = 'dashboard/bank_interest_list.html'
     model = BankInterest
     paginate_by = 10
     context_object_name = 'bank_interest'
+
+
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return BankInterest.objects.none()
+        
+
+
+
 
 @method_decorator(login_required, name='dispatch')
 class BankInterestCreateView(CreateView):
@@ -315,9 +634,30 @@ class BankInterestCreateView(CreateView):
     fields = ('bank_name','from_date','to_date','amount','remarks','branch','account_number')
     success_url = reverse_lazy('bank_interest_list')
 
+    # We set the form to be saved to a particular tenant
+    def form_valid(self, form):
+
+        tenant = self.request.tenant
+        scheme_name = self.request.scheme_name
+
+        if tenant and scheme_name:
+            form.instance.tenant = tenant
+            form.instance.scheme_name = scheme_name
+
+        return super().form_valid(form)
+    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['banks'] = BankInterest.names
+
+        # Get tenant
+        tenant = self.request.tenant
+
+        if tenant:
+            context['banks'] = BankInterest.names
+        else:
+            context['banks'] = []
+
         return context
 
 
@@ -330,10 +670,37 @@ class BankInterestQuery(ListView):
     template_name = 'dashboard/bank_interest_query.html'
     paginate_by = 20
 
+
+
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return BankInterest.objects.none()
+        
+
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['banks'] = BankInterest.names
+        # Get tenant
+        tenant = self.request.tenant
+
+        if tenant:
+            context['banks'] = BankInterest.bank_name
+        else:
+            context['banks'] = []
 
         from_date = self.request.GET.get('from-date')
         to_date = self.request.GET.get('to-date')
@@ -345,7 +712,7 @@ class BankInterestQuery(ListView):
         to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
 
         # get all bank interest data
-        queryset = BankInterest.objects.all()
+        queryset = self.get_queryset()
 
         query =[]
         if from_date and to_date:
@@ -375,6 +742,25 @@ class DelayedInterestQuery(ListView):
     paginate_by = 20
 
 
+
+    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    def get_queryset(self):
+         
+        # Get Tenant
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
+
+        # Get scheme name
+        scheme_name = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_name)
+
+        # Filtering Queryset by Tenant
+        if tenant:
+            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+        else:
+            return DelayedInterest.objects.none()
+        
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -389,7 +775,7 @@ class DelayedInterestQuery(ListView):
         to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
 
         # Fetch all Delayed Interest
-        queryset = DelayedInterest.objects.all()
+        queryset = self.get_queryset()
 
         # List to append related search results
         query = []
