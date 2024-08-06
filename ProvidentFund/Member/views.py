@@ -9,7 +9,10 @@ from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView
 
+# Importing custom decorators
+from .decorators import unauthenticated_user
 
+@unauthenticated_user
 def registrationView(request):
     if request.method == 'POST':
         form1 = UserForm(request.POST)
@@ -41,6 +44,8 @@ def registrationView(request):
 
     return render(request, 'register.html', {'form1': form1, 'form2': form2})
 
+
+@unauthenticated_user
 def loginView(request, tenant_id):
     request.tenant = tenant_id 
     if request.method == 'POST':

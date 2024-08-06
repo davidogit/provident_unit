@@ -9,7 +9,7 @@ urlpatterns =[
     path('<int:scheme_name>/investmentList/', views.InvestmentListView.as_view(), name='investment_list'),
     path('<int:scheme_name>/memberList/', views.MemberListView.as_view(), name='member_list'),
     path('<int:scheme_name>/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
-    path('<str:scheme_name>/investmentDetail/<int:pk>/', views.InvestmentDetailView.as_view(), name='investment_detail'),
+    path('<int:scheme_name>/investmentDetail/<int:pk>/', views.InvestmentDetailView.as_view(), name='investment_detail'),
     
     path('<int:scheme_name>/update/<int:pk>', views.InvestmentUpdateView.as_view(), name='investment_update'),
     path('<int:scheme_name>/deleteInvestment/<int:pk>/', views.InvestmentDeleteView.as_view(), name='delete_investment'),
@@ -28,7 +28,7 @@ urlpatterns =[
 
     #Delayed Interest Related URLS 
     path('<int:scheme_name>/add_delayed_interest/', views.DelayedInterestCreateView.as_view(), name='add_delayed_interest'),
-    path('<int:scheme_name>/delayed_interst_list/', views.DelayedInterestListView.as_view(), name='delayed_interest_list'),
+    path('<int:scheme_name>/delayed_interest_list/', views.DelayedInterestListView.as_view(), name='delayed_interest_list'),
     path('<int:scheme_name>/delayed-interest-query/', views.DelayedInterestQuery.as_view(), name='delayed_interest_query'),
     
 ]
