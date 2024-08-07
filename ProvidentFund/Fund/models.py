@@ -4,7 +4,13 @@ from MultiScheme.models import InvestmentScheme
 
 class InvestmentDetail(models.Model):
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
-    investment_type = models.CharField(max_length=50)
+    T_bill = 'Treasury Bill'
+    F_dep = 'Fixed Deposit'
+    inv_type = [
+        (T_bill,'Treasury Bill'),
+        (F_dep, 'Fixed Deposit')
+    ]
+    investment_type = models.CharField(max_length=50, choices=inv_type, default=T_bill)
 
     current = 'Current'
     checking ='Checking'
@@ -40,7 +46,7 @@ class InvestmentDetail(models.Model):
     def calculate_inv_interest(self):
         principal = self.principal_amount or 0.0
         rate = self.interest_percentage or 0.0
-        interest = ((rate / 100.0) * principal)
+        interest = (((rate / 100.0) * principal)+(principal))
         return interest
     
     @property
@@ -55,7 +61,7 @@ class InvestmentDetail(models.Model):
         return self.calculate_tenure()
 
     def calculate_rollover_principal(self):
-        return self.interest_amount  # Simplified to directly return interest_amount
+        return (self.interest_amount + self.principal_amount)  # Simplified to directly return interest_amount
     
 
 

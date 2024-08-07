@@ -14,7 +14,7 @@ class URLTenantMiddleware(MiddlewareMixin):
                 tenant_id = int(path_parts[1])
                 try:
                     request.tenant = Tenant.objects.get(id=tenant_id)
-                    print(request.tenant)
+                    # print(request.tenant)
                 except Tenant.DoesNotExist:
                     request.tenant = None
             except ValueError:
@@ -31,40 +31,3 @@ class URLTenantMiddleware(MiddlewareMixin):
                 request.scheme_name = None
         else:
             request.scheme_name = None
-
-
-
-# if 'favicon.ico' not in path_parts:
-#             if 'admin' not in path_parts:
-#                 if 'admin_panel' not in path_parts:
-
-#                     if len(path_parts)>1:
-#                         # Get Tenant from url
-#                         tenant_id = int(path_parts[1])
-
-#                         # Get Scheme name from url
-#                         if len(path_parts)>3:
-#                             if not path_parts[3] =='':
-#                                 scheme_name = int(path_parts[3])
-#                                 request.scheme_name = scheme_name
-#                             else:
-#                                 request.scheme_name = None
-                                
-#                         else:
-#                             request.scheme_name = None
-
-#                         try:
-#                             request.tenant = Tenant.objects.get(id=tenant_id)
-#                         except Tenant.DoesNotExist:
-#                             request.tenant = None 
-#                     else: 
-#                         request.scheme_name = None 
-#                 else:
-#                     request.tenant = None
-#                     request.scheme_name = None
-#             else:
-#                 request.tenant = None
-#                 request.scheme_name = None
-#         else:
-#             request.tenant = None
-#             request.scheme_name = None

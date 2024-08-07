@@ -1,0 +1,76 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="row row-cols-auto g-4 g-xxl-5">
+      <div class="col-xl">
+          <div class="container">
+            <h2 class="mb-5">Update Investment Detail</h2>
+
+            <form method="POST">
+              {% csrf_token %}
+
+              <div class="row g-5">
+                <div class="col-md-4">
+                  <!-- Investment Type -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.investment_type.id_for_label }}" class="form-label">Investment Type</label>
+                    {{ form.investment_type }}
+                  </div>
+
+                  <!-- Account Name -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.account_name.id_for_label }}" class="form-label">Account Name</label>
+                    {{ form.account_name }}
+                  </div>
+
+                  <!-- Account Type -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.account_type.id_for_label }}" class="form-label">Account Type</label>
+                    {{ form.account_type }}
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <!-- Principal Amount -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.principal_amount.id_for_label }}" class="form-label">Principal Amount</label>
+                    {{ form.principal_amount }}
+                  </div>
+
+                  <!-- Account Number -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.account_number.id_for_label }}" class="form-label">Account Number</label>
+                    {{ form.account_number }}
+                  </div>
+
+                  <!-- Percentage Interest -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.interest_percentage.id_for_label }}" class="form-label">Percentage Interest</label>
+                    {{ form.interest_percentage }}
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <!-- Investment Start Date -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.interest_start_date.id_for_label }}" class="form-label">Investment Start Date</label>
+                    {{ form.interest_start_date }}
+                  </div>
+
+                  <!-- Investment End Date -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.interest_end_date.id_for_label }}" class="form-label">Investment End Date</label>
+                    {{ form.interest_end_date }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <input type="submit" class="btn btn-primary" value="Save changes">
+            </form>
+          </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

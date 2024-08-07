@@ -153,28 +153,14 @@
                     </tr> -->
                     
                     <tr>
+                      <th></th>
                       <th>Investment Name</th>
                       <th>Investment Type</th>
                       <th>Account Type</th>
                       <th>Account Number</th>
                       <th>Principal Amount</th>
-
-                      <!-- {% if investment.roll_over == 'ROLLOVER' %}
-                      <th>Principal Rollover</th>
-                      {% endif %} -->
-
                       <th>Percentage Interest (%)</th>
-
-                      <!-- {% if investment.roll_over == 'ROLLOVER' %}
-                      <th>Interest Rollover</th>
-                      {% endif %} -->
-
                       <th>Accumulated Interest</th>
-
-                      <!-- {% if investment.roll_over == 'ROLLOVER' %}
-                      <th>Rollover Accumulated Interest</th>
-                      {% endif %} -->
-
                       <th>Investment start Date</th>
                       <th>Maturity Date</th>
                       <th>Tenure</th>
@@ -191,7 +177,8 @@
                   <tbody>
                     {% for investment in inv_type_t_bill %}
                     <tr>
-                      <td><a href="">{{ investment.account_name }}</a></td>
+                      <td>{{ forloop.counter }}</td>
+                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
@@ -288,6 +275,7 @@
                     </tr> -->
                     
                     <tr>
+                      <th></th>
                       <th>Investment Name</th>
                       <th>Investment Type</th>
                       <th>Account Type</th>
@@ -311,7 +299,8 @@
                   <tbody>
                     {% for investment in inv_type_f_dep %}
                     <tr>
-                      <td><a href="{% url 'investment_detail' investment.pk %}">{{ investment.account_name }}</a></td>
+                      <td>{{ forloop.counter }}</td>
+                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>

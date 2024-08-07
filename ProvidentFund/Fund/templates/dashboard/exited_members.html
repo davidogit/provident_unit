@@ -60,7 +60,7 @@
             <tbody>
               {% for member in results %}
                 <tr>
-                  <td><a href="{% url 'member_detail' member.pk %}">{{ member.Id }}</a></td>
+                  <td><a href="{% url 'member_detail' member.pk %}">{{ forloop.counter }}</a></td>
                   <td>{{ member.first_name }}</td>
                   <td>{{ member.last_name }}</td>
                   <td>{{ member.amount }}</td>
