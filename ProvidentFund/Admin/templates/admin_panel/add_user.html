@@ -6,36 +6,36 @@
     <form method="POST" class="bg-white p-6 rounded-lg shadow-md">
         {% csrf_token %}
         <div class="mb-4">
-            <label for="first_name" class="form-label">First Name</label>
-            <input type="text" class="form-control" id="first_name" name="first_name" placeholder="Enter first name">
+            <label for="first_name" class="form-label">Username</label>
+            <input type="text" class="form-control" id="first_name" name="username" placeholder="Enter Username name">
         </div>
-        <div class="mb-4">
+        {% comment %} <div class="mb-4">
             <label for="last_name" class="form-label">Last Name</label>
             <input type="text" class="form-control" id="last_name" name="last_name" placeholder="Enter last name">
-        </div>
-        <div class="mb-4">
+        </div> {% endcomment %}
+        {% comment %} <div class="mb-4">
             <label for="email" class="form-label">Email</label>
             <input type="email" class="form-control" id="email" name="email" placeholder="Enter email">
-        </div>
-        <div class="mb-4">
+        </div> {% endcomment %}
+        {% comment %} <div class="mb-4">
             <label for="staff_id" class="form-label">Staff ID</label>
             <input type="text" class="form-control" id="staff_id" name="staff_id" placeholder="Enter staff ID">
-        </div>
+        </div> {% endcomment %}
         <div class="mb-4">
             <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password" placeholder="Enter password">
+            <input type="password" class="form-control" id="password" name="password1" placeholder="Enter password">
         </div>
         <div class="mb-4">
             <label for="confirm_password" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm password">
+            <input type="password" class="form-control" id="confirm_password" name="password2" placeholder="Confirm password">
         </div>
-        <div class="mb-4">
+        {% comment %} <div class="mb-4">
             <label for="group" class="form-label">Group</label>
             <select class="form-select" id="group" name="group">
                 <option value="">Select group</option>
               
             </select>
-        </div>
+        </div> {% endcomment %}
         <button type="submit" class="btn btn-primary w-full">Add User</button>
     </form>
 </div>

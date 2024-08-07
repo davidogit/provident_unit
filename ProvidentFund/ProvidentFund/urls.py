@@ -23,7 +23,7 @@ from Fund import views as v
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('login/', views.loginView, name='login'),
+    path('<str:tenant_id>/login/', views.loginView, name='login'),
     # path('<str:tenant_id>/', v.Invest.as_view(),),
     path('<str:tenant_id>/fund/', include('Fund.urls')),
     path('<str:tenant_id>/contributions/', include('contributions.urls')),

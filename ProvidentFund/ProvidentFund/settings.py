@@ -88,7 +88,7 @@ ROOT_URLCONF = 'ProvidentFund.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATES_DIR, ],
+        'DIRS': [TEMPLATES_DIR],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -208,3 +208,9 @@ EMAIL_PORT = 465
 EMAIL_HOST_PASSWORD = 'xkagqobjiyykrlej'  # TODO: Give APP Password here
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True
+
+
+
+
+# Settings for Auth User Model
+AUTH_USER_MODEL = 'Admin.User'

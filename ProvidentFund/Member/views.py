@@ -10,7 +10,7 @@ from smtplib import SMTPConnectError
 from django.views.generic import TemplateView
 
 
-def registrationView(request):
+def registrationView(request, tenant_id):
     if request.method == 'POST':
         form1 = UserForm(request.POST)
         form2 = MemberForm(request.POST)
@@ -76,7 +76,7 @@ def loginView(request, tenant_id):
         else:
             return redirect('invalid_login_details', tenant_id=tenant_id)
 
-    return render(request, 'login.html')
+    return render(request, 'login.html', tenant_id=tenant_id)
 
 
 class InvalidLoginDetails(TemplateView):
@@ -124,7 +124,7 @@ def verifyOtpView(request, tenant_id):
 
 
 @login_required
-def logoutView(request):
+def logoutView(request, tenant_id):
     logout(request)
     return redirect('login')
 
