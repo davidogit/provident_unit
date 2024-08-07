@@ -81,7 +81,7 @@ def loginView(request, tenant_id):
         else:
             return redirect('invalid_login_details', tenant_id=tenant_id)
 
-    return render(request, 'login.html')
+    return render(request, 'login.html', tenant_id=tenant_id)
 
 
 class InvalidLoginDetails(TemplateView):
@@ -129,7 +129,7 @@ def verifyOtpView(request, tenant_id):
 
 
 @login_required
-def logoutView(request):
+def logoutView(request, tenant_id):
     logout(request)
     return redirect('login')
 

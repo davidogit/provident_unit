@@ -69,19 +69,19 @@
                 <a href="#" class="nav-label">Access Management</a>
                 <ul class="nav nav-sidebar">
                     <li class="nav-item">
-                        <a href="{% url 'assign_roles' %}" class="nav-link has-sub">
+                        <a href="{% url 'assign_roles' tenant_id=request.tenant.id %}" class="nav-link has-sub">
                             <i class="ri-user-star-line fs-32 lh-1 me-3"></i>
                             <span>Assign Roles</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'add_user' %}" class="nav-link has-sub">
+                        <a href="{% url 'add_user' tenant_id=request.tenant.id %}" class="nav-link has-sub">
                             <i class="ri-user-add-line fs-32 lh-1 me-3"></i>
                             <span>Add User</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'manage_users' %}" class="nav-link has-sub">
+                        <a href="{% url 'manage_users' tenant_id=request.tenant.id %}" class="nav-link has-sub">
                             <i class="ri-user-settings-line fs-32 lh-1 me-3"></i>
                             <span>Manage Users</span>
                         </a>
@@ -98,8 +98,8 @@
             </div>
             <div class="navbar-links" style="display: flex; align-items: center;">
                 <span>Welcome, (user's name)</span>
-                <a href="{% url 'logout' %}" class="nav-link" style="margin-left: 20px;">Logout</a>
-                <a href="{% url 'profile' %}" class="nav-link" style="margin-left: 20px;">
+                <a href="{% url 'logout' tenant_id=request.tenant.id %}" class="nav-link" style="margin-left: 20px;">Logout</a>
+                {% comment %} <a href="{% url 'profile' tenant_id=request.tenant.id %}" class="nav-link" style="margin-left: 20px;"> {% endcomment %}
                     <i class="ri-user-line"></i> Profile
                 </a>
                 <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside" style="margin-left: 20px;">
