@@ -103,7 +103,7 @@ TEMPLATES = [
         },
     },
 ]
-
+\
 WSGI_APPLICATION = 'ProvidentFund.wsgi.application'
 
 
