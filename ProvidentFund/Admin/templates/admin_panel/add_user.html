@@ -9,18 +9,7 @@
             <label for="first_name" class="form-label">Username</label>
             <input type="text" class="form-control" id="first_name" name="username" placeholder="Enter Username name">
         </div>
-        {% comment %} <div class="mb-4">
-            <label for="last_name" class="form-label">Last Name</label>
-            <input type="text" class="form-control" id="last_name" name="last_name" placeholder="Enter last name">
-        </div> {% endcomment %}
-        {% comment %} <div class="mb-4">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email">
-        </div> {% endcomment %}
-        {% comment %} <div class="mb-4">
-            <label for="staff_id" class="form-label">Staff ID</label>
-            <input type="text" class="form-control" id="staff_id" name="staff_id" placeholder="Enter staff ID">
-        </div> {% endcomment %}
+      
         <div class="mb-4">
             <label for="password" class="form-label">Password</label>
             <input type="password" class="form-control" id="password" name="password1" placeholder="Enter password">
@@ -29,14 +18,14 @@
             <label for="confirm_password" class="form-label">Confirm Password</label>
             <input type="password" class="form-control" id="confirm_password" name="password2" placeholder="Confirm password">
         </div>
-        {% comment %} <div class="mb-4">
-            <label for="group" class="form-label">Group</label>
-            <select class="form-select" id="group" name="group">
-                <option value="">Select group</option>
-              
-            </select>
-        </div> {% endcomment %}
+       
         <button type="submit" class="btn btn-primary w-full">Add User</button>
     </form>
 </div>
+{% if form.errors %}
+    <div class="alert alert-danger">
+        {{ form.errors }}
+    </div>
+{% endif %}
+
 {% endblock %}
