@@ -2,13 +2,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
     <title>Admin - Provident Fund</title>
-
-  
     <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
     <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
     <style>
@@ -56,6 +52,75 @@
             top: 20px;
             z-index: 1000;
         }
+
+        .dropdown-menu {
+            min-width: 200px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 1px solid black; /* Added black border */
+        }
+
+        .avatar img {
+            width: 100%;
+            height: auto;
+        }
+
+        .dropdown-menu-body {
+            text-align: center;
+            padding: 10px;
+        }
+
+        .dropdown-menu-body .avatar-xl {
+            width: 80px;
+            height: 80px;
+        }
+
+        /* Light Mode */
+        body.light-mode {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        .sidebar.light-mode {
+            background-color: #f8f9fa;
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            background-color: #333333;
+            color: #ffffff;
+        }
+
+        .sidebar.dark-mode {
+            background-color: #222222;
+        }
+
+        /* Sidebar Skins */
+        .sidebar.default-skin {
+            background-color: #f8f9fa; /* Default color */
+        }
+
+        .sidebar.prime-skin {
+            background-color: #007bff; /* Prime color */
+        }
+
+        .sidebar.dark-skin {
+            background-color: #343a40; /* Dark color */
+        }
+
+        /* Layout Directions */
+        body.ltr {
+            direction: ltr;
+        }
+
+        body.rtl {
+            direction: rtl;
+        }
     </style>
 </head>
 <body>
@@ -69,19 +134,19 @@
                 <a href="#" class="nav-label">Access Management</a>
                 <ul class="nav nav-sidebar">
                     <li class="nav-item">
-                        <a href="{% url 'assign_roles' %}" class="nav-link has-sub">
+                        <a href="{% url 'assign_roles' tenant_id=request.tenant.id %}" class="nav-link has-sub">
                             <i class="ri-user-star-line fs-32 lh-1 me-3"></i>
                             <span>Assign Roles</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'add_user' %}" class="nav-link has-sub">
+                        <a href="{% url 'add_user' tenant_id=request.tenant.id %}" class="nav-link has-sub">
                             <i class="ri-user-add-line fs-32 lh-1 me-3"></i>
                             <span>Add User</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'manage_users' %}" class="nav-link has-sub">
+                        <a href="{% url 'manage_users' tenant_id=request.tenant.id %}" class="nav-link has-sub">
                             <i class="ri-user-settings-line fs-32 lh-1 me-3"></i>
                             <span>Manage Users</span>
                         </a>
@@ -97,15 +162,38 @@
                 <h2>Administrator Dashboard</h2>
             </div>
             <div class="navbar-links" style="display: flex; align-items: center;">
-                <span>Welcome, (user's name)</span>
-                <a href="{% url 'logout' %}" class="nav-link" style="margin-left: 20px;">Logout</a>
-                <a href="{% url 'profile' %}" class="nav-link" style="margin-left: 20px;">
-                    <i class="ri-user-line"></i> Profile
-                </a>
+                <span>Welcome, {{ user.username }}</span>
+                <a href="{% url 'logout' tenant_id=request.tenant.id %}" class="nav-link" style="margin-left: 20px;">Logout</a>
+                
+                <!-- Profile Dropdown -->
+                <div class="dropdown dropdown-profile ms-3 ms-xl-4">
+                    <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside" style="margin-left: 30px;">
+                        <div class="avatar online"><img src="{% static 'assets/img/user-avatar.jpg' %}" alt=""></div>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end mt-10-f">
+                        <div class="dropdown-menu-body">
+                            <div class="avatar avatar-xl online mb-3"><img src="{% static 'assets/img/user-avatar.jpg' %}" alt=""></div>
+                            <h5 class="mb-1 text-dark fw-semibold">{{ user.username }}</h5>
+                            <p class="fs-sm text-secondary">Administrator</p>
+                            <nav class="nav">
+                                <a href=""><i class="ri-edit-2-line"></i> Edit Profile</a>
+                                <a href=""><i class="ri-profile-line"></i> View Profile</a>
+                            </nav>
+                            <hr>
+                            <nav class="nav">
+                                <a href=""><i class="ri-question-line"></i> Help Center</a>
+                                <a href=""><i class="ri-lock-line"></i> Privacy Settings</a>
+                                <a href=""><i class="ri-user-settings-line"></i> Account Settings</a>
+                                <a href=""><i class="ri-logout-box-r-line"></i> Log Out</a>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Dropdown -->
                 <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside" style="margin-left: 20px;">
                     <i class="ri-settings-3-line" style="font-size: 24px;"></i>
                 </a>
-                
                 <div class="dropdown-menu dropdown-menu-end mt-10-f">
                     <label>Skin Mode</label>
                     <nav id="skinMode" class="nav nav-skin">
@@ -135,10 +223,8 @@
         </main>
 
         <footer class="footer">
-         
         </footer>
     </div>
-
 
     <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
     <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
@@ -157,6 +243,48 @@
                 this.style.top = '';
                 this.style.zIndex = '';
             }
+        });
+
+        // JavaScript for skin mode, sidebar skin, and layout direction
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get elements
+            const skinModeLinks = document.querySelectorAll('#skinMode .nav-link');
+            const sidebarSkinLinks = document.querySelectorAll('#sidebarSkin .nav-link');
+            const layoutDirectionLinks = document.querySelectorAll('#layoutDirection .nav-link');
+            const sidebar = document.querySelector('.sidebar');
+
+            // Handle skin mode changes
+            skinModeLinks.forEach(link => {
+                link.addEventListener('click', function () {
+                    const mode = this.textContent.trim().toLowerCase() + '-mode';
+                    document.body.classList.remove('light-mode', 'dark-mode');
+                    document.body.classList.add(mode);
+                    skinModeLinks.forEach(link => link.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Handle sidebar skin changes
+            sidebarSkinLinks.forEach(link => {
+                link.addEventListener('click', function () {
+                    const skin = this.textContent.trim().toLowerCase() + '-skin';
+                    sidebar.classList.remove('default-skin', 'prime-skin', 'dark-skin');
+                    sidebar.classList.add(skin);
+                    sidebarSkinLinks.forEach(link => link.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Handle layout direction changes
+            layoutDirectionLinks.forEach(link => {
+                link.addEventListener('click', function () {
+                    const direction = this.textContent.trim().toLowerCase();
+                    document.body.classList.remove('ltr', 'rtl');
+                    document.body.classList.add(direction);
+                    layoutDirectionLinks.forEach(link => link.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
         });
     </script>
 </body>

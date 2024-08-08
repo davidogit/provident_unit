@@ -21,7 +21,7 @@
                             
                         </form>
                         <div>
-                            <a class="btn btn-primary" href="{% url 'investment_list' %}">Cancel</a>
+                            <a class="btn btn-primary" href="{% url 'investment_list' scheme_name=request.scheme_name tenant_id=request.tenant.id %}">Cancel</a>
                         </div>
                     </div>
                    

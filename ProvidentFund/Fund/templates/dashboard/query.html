@@ -72,6 +72,7 @@
                         <table id="data-table" class="table table-hover table-striped table-borderless">
                             <thead>
                                 <tr>
+                                    <th scope="col"></th>
                                     <th scope="col">Add Date</th>
                                     <th scope="col">Start Date</th>
                                     <th scope="col">Maturity Date</th>
@@ -86,6 +87,7 @@
                                 {% if results %}
                                     {% for inv in results %}
                                         <tr>
+                                            <td>{{ forloop.counter }}</td>
                                             <td>{{ inv.created_date }}</td>
                                             <td>{{ inv.interest_start_date }}</td>
                                             <td>{{ inv.interest_end_date }}</td>
@@ -99,7 +101,7 @@
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td class="text-center text-danger " colspan="8">No records match your search</td>
+                                        <td class="text-center text-danger " colspan="9">No records match your search</td>
                                     </tr>
                                 {% endif %}
                                 

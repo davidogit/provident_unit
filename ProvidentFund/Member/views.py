@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse
 from django.core.mail import send_mail
 from ProvidentFund.settings import EMAIL_HOST_USER
@@ -9,8 +9,17 @@ from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView
 
+# Importing the user model 
+from django.contrib.auth import get_user_model
 
-def registrationView(request):
+# Importing  backends
+from django.contrib.auth import get_backends
+
+# Importing custom decorators
+from .decorators import unauthenticated_user
+
+@unauthenticated_user
+def registrationView(request,tenant_id):
     if request.method == 'POST':
         form1 = UserForm(request.POST)
         form2 = MemberForm(request.POST)
@@ -31,7 +40,7 @@ def registrationView(request):
 
             member.save()
 
-            return redirect('login')
+            return redirect('login', tenant_id = tenant_id)
         else:
             errors = form1.errors.as_json() + form2.errors.as_json()
             return HttpResponse(f'Some fields are invalid: {errors}')
@@ -41,6 +50,8 @@ def registrationView(request):
 
     return render(request, 'register.html', {'form1': form1, 'form2': form2})
 
+
+@unauthenticated_user
 def loginView(request, tenant_id):
     request.tenant = tenant_id 
     if request.method == 'POST':
@@ -72,7 +83,7 @@ def loginView(request, tenant_id):
             # send user email to verify_otp view
             request.session['email'] = user.email
 
-            return redirect('verify_otp', tenant_id=tenant_id)
+            return redirect('verify_otp',user_id=user.id, tenant_id=tenant_id)
         else:
             return redirect('invalid_login_details', tenant_id=tenant_id)
 
@@ -86,8 +97,12 @@ class InvalidLoginDetails(TemplateView):
 
 
 
-def verifyOtpView(request, tenant_id):
+def verifyOtpView(request,user_id, tenant_id):
     request.tenant = tenant_id
+
+    # Get user object
+    user = get_object_or_404(get_user_model(), id=user_id)
+
     # Get user email from session
     user_email = request.session.get('email')
     if request.method == 'POST':
@@ -103,20 +118,18 @@ def verifyOtpView(request, tenant_id):
 
         # Retrieve OTP from session
         session_otp = request.session.get('otp_token')
-        username = request.session.get('username')
+        # username = request.session.get('username')
 
 
         if otp == int(session_otp):
-            user = authenticate(request, username=username)
-            if user:
-                login(request, user)
-                # Clear session data after successful login
-                del request.session['otp_token']
-                del request.session['username']
-    
-                return redirect('finance_page', tenant_id)
-            else:
-                return HttpResponse('Invalid login details')
+            # we manually set the auth backend to our backend so it can authenticate based on the tenant
+            user.backend = 'Member.backends.TenantAwareBackend'
+            login(request, user)
+            # Clear session data after successful login
+            del request.session['otp_token']
+            # del request.session['username']
+
+            return redirect('finance_page', tenant_id)
         else:
             return HttpResponse('Invalid OTP')
 
@@ -124,9 +137,9 @@ def verifyOtpView(request, tenant_id):
 
 
 @login_required
-def logoutView(request):
+def logoutView(request, tenant_id):
     logout(request)
-    return redirect('login')
+    return redirect('login',tenant_id=tenant_id)
 
 
 def terms_and_conditions_view(request):

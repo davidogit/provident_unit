@@ -10,7 +10,14 @@ from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 
+from .forms import InvestmentUpdateForm
+
+# Importing custom decorators
+from Member.decorators import allowed_user
+
+# the name=dispatch means the decorators will work for POST,GET,PUT etc
 @method_decorator(login_required, name='dispatch')
+# @method_decorator(allowed_user(allowed_groups=['admin']), name='dispatch')
 class Invest(TemplateView):
     template_name='dashboard/finance.html'
 
@@ -51,12 +58,9 @@ class Invest(TemplateView):
         
 
         # Queryset to calsulate total number of Active Members
-        active_members = StaffAPI.objects.all()
+        active_members = StaffAPI.objects.filter(investment_scheme__tenant=tenant)
         context['active_members'] = active_members.count()
 
-        # Sum up all investments interest field
-        
-        print(context)
         return context
 
 
@@ -84,7 +88,7 @@ class InvestmentListView(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme).order_by('-created_date')
         else:
             return InvestmentDetail.objects.none()
         
@@ -94,32 +98,32 @@ class InvestmentListView(ListView):
         queryset = self.get_queryset()
 
         # Grouping Investment based on Types
-        context['inv_type_t_bill'] = queryset.filter(investment_type='T-bills')
-        context['inv_type_f_dep'] = queryset.filter(investment_type='F-deposit')
-        context['inv_type_d_int'] = queryset.filter(investment_type='D-interest')
+        context['inv_type_t_bill'] = queryset.filter(investment_type='Treasury Bill')
+        context['inv_type_f_dep'] = queryset.filter(investment_type='Fixed Deposit')
+        # context['inv_type_d_int'] = queryset.filter(investment_type='D-interest')
 
         # Getting queryset for each investment type
-        t_bill_queryset = queryset.filter(investment_type='T-bills')
-        f_deposit_queryset = queryset.filter(investment_type='F-deposit')
-        d_interest_queryset = queryset.filter(investment_type='D-interest')
+        t_bill_queryset = queryset.filter(investment_type='Treasury Bill')
+        f_deposit_queryset = queryset.filter(investment_type='Fixed Deposit')
+        # d_interest_queryset = queryset.filter(investment_type='D-interest')
 
         # Paginating for each Tab-Pane
         t_bill_page = self.request.GET.get('t_bill_page',1)
         f_deposit_page = self.request.GET.get('f_deposit_page',1)
-        d_interest_page = self.request.GET.get('d_interest_page',1)
+        # d_interest_page = self.request.GET.get('d_interest_page',1)
 
 
         # Returning context keys for each page and applying pagination
         context['t_bill_page'] = Paginator(t_bill_queryset, per_page=2).get_page(t_bill_page)
         context['f_deposit_page'] = Paginator(f_deposit_queryset,2).get_page(f_deposit_page)
-        context['d_interest_page'] = Paginator(d_interest_queryset,10).get_page(d_interest_page)
+        # context['d_interest_page'] = Paginator(d_interest_queryset,10).get_page(d_interest_page)
 
 
         # Counting Number of individual Investments
         context['investment_count']= queryset.count()
-        context['T_bills_count'] = queryset.filter(investment_type='T-bills').count()
-        context['F_deposit_count'] = queryset.filter(investment_type='F-deposit').count()
-        context['D_interest_count'] = queryset.filter(investment_type='D-interest').count()
+        context['T_bills_count'] = queryset.filter(investment_type='Treasury Bill').count()
+        context['F_deposit_count'] = queryset.filter(investment_type='Fixed Deposit').count()
+        # context['D_interest_count'] = queryset.filter(investment_type='D-interest').count()
         
         return context
     
@@ -139,8 +143,8 @@ class InvestmentDetailView(DetailView):
         tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        scheme_id = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_id)
 
         # Filtering Queryset by Tenant
         if tenant:
@@ -166,20 +170,22 @@ class AddInvestment(CreateView):
 
         if tenant:
             context['account_type'] = InvestmentDetail.account
+            context['inv_type'] = InvestmentDetail.inv_type
         else:
             context['account_type'] = []
+            context['inv_type'] = []
 
         return context
     
     # Make sure we are updating details under the right tenant
     def form_valid(self, form):
-
+        
+        tenant = self.request.tenant
         scheme_name = self.request.scheme_name
-        int(scheme_name)
-        scheme = get_object_or_404(InvestmentScheme.objects.filter(id=scheme_name))
+        # int(scheme_name)
+        scheme = get_object_or_404(InvestmentScheme.objects.filter(id=scheme_name, tenant=tenant))
         # print(scheme_name)
         if scheme:
-            # form.instance.tenant = tenant
             form.instance.investment_scheme = scheme
 
         return super().form_valid(form)
@@ -198,9 +204,9 @@ class AddInvestment(CreateView):
 @method_decorator(login_required, name='dispatch')
 class InvestmentUpdateView(UpdateView):
     model = InvestmentDetail
-    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
-    # form_class = InvestmentUpdateForm
-    template_name = 'dashboard/investment_form.html'
+    # fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
+    form_class = InvestmentUpdateForm
+    template_name = 'dashboard/investment_update_form.html'
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
     def get_queryset(self):
@@ -223,13 +229,35 @@ class InvestmentUpdateView(UpdateView):
     def form_valid(self, form):
 
         tenant = self.request.tenant
-        scheme_name = self.request.scheme_name
+        scheme_id = self.request.scheme_name
 
-        if tenant and scheme_name:
-            form.instance.tenant = tenant
-            form.instance.scheme_name = scheme_name
+        scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
+
+        if scheme:
+            form.instance.investment_scheme = scheme
 
         return super().form_valid(form)
+    
+    # Form instance
+    def get_context_data(self, **kwargs):
+        context= super().get_context_data(**kwargs)
+
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+
+        inv = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id = scheme_id).first()
+        form = InvestmentUpdateForm(instance=inv)
+
+        context['form'] = form
+
+        return context
+    
+    def get_success_url(self):
+
+        scheme_id = self.request.scheme_name
+        tenant =  self.request.tenant
+
+        return reverse('investment_list', kwargs={'scheme_name':scheme_id, 'tenant_id':tenant.id})
 
 
 
@@ -263,13 +291,21 @@ class RolloverPercentage(UpdateView):
     def form_valid(self, form):
 
         tenant = self.request.tenant
-        scheme_name = self.request.scheme_name
+        scheme_id = self.request.scheme_name
 
-        if tenant and scheme_name:
-            form.instance.tenant = tenant
-            form.instance.scheme_name = scheme_name
+        scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
+
+        if scheme:
+            form.instance.investment_scheme = scheme
 
         return super().form_valid(form)
+    
+    def get_success_url(self):
+
+        scheme_id = self.request.scheme_name
+        tenant =  self.request.tenant
+
+        return reverse('investment_list', kwargs={'scheme_name':scheme_id, 'tenant_id':tenant.id})
 
 
 # Deleting an Investment from Database
@@ -278,7 +314,6 @@ class InvestmentDeleteView(DeleteView):
     model = InvestmentDetail
     context_object_name = 'investment'
     template_name = 'dashboard/delete_investment.html'
-    success_url = reverse_lazy('investment_list')
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
     def get_queryset(self):
@@ -296,6 +331,13 @@ class InvestmentDeleteView(DeleteView):
             return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
         else:
             return InvestmentDetail.objects.none()
+    
+    def get_success_url(self):
+
+        scheme = self.request.scheme_name
+        tenant =  self.request.tenant
+
+        return reverse('investment_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id}) 
 
 
 
@@ -313,10 +355,11 @@ class MemberListView(ListView):
          
         # Get Tenant
         tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
 
         # Filtering Queryset by Tenant
         if tenant:
-            return StaffAPI.objects.filter(investment_scheme__tenant=tenant)
+            return StaffAPI.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id=scheme_id)
         else:
             return StaffAPI.objects.none()
 
@@ -501,7 +544,6 @@ class InvestmentQuery(ListView):
         
         # If no date is specified
         if from_date == None and to_date == None:
-            print('None date')
             for inv in queryset:
                 # Filters investment based on 'Expired' and investment type
                 if inv.status == 'Expired' and status=='matured' and (inv.investment_type==inv_type):
@@ -521,7 +563,6 @@ class InvestmentQuery(ListView):
 
         # If dates are specified
         elif (from_date and to_date) or (inv_type or status):
-            print('Date')
             for inv in queryset:
 
                 if sort == 'start_date':
@@ -581,18 +622,26 @@ class DelayedInterestCreateView(CreateView):
     template_name = 'dashboard/delayed_interest_form.html'
     model = DelayedInterest
     fields = ('from_date','to_date','amount','remarks')
-    success_url = reverse_lazy('delayed_interest_list')
 
+    # Make sure we are updating details under the right tenant
     def form_valid(self, form):
 
         tenant = self.request.tenant
-        scheme_name = self.request.scheme_name
+        scheme_id = self.request.scheme_name
 
-        if tenant and scheme_name:
-            form.instance.tenant = tenant
-            form.instance.scheme_name = scheme_name
+        scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
+
+        if scheme:
+            form.instance.investment_scheme = scheme
 
         return super().form_valid(form)
+    
+
+    def get_success_url(self):
+
+        scheme = self.request.scheme_name
+        tenant = self.request.tenant
+        return reverse('delayed_interest_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id})
 
 
 
@@ -632,17 +681,17 @@ class BankInterestCreateView(CreateView):
     template_name = 'dashboard/bank_interest_form.html'
     model = BankInterest
     fields = ('bank_name','from_date','to_date','amount','remarks','branch','account_number')
-    success_url = reverse_lazy('bank_interest_list')
 
-    # We set the form to be saved to a particular tenant
+    # Make sure we are updating details under the right tenant
     def form_valid(self, form):
 
         tenant = self.request.tenant
-        scheme_name = self.request.scheme_name
+        scheme_id = self.request.scheme_name
 
-        if tenant and scheme_name:
-            form.instance.tenant = tenant
-            form.instance.scheme_name = scheme_name
+        scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
+
+        if scheme:
+            form.instance.investment_scheme = scheme
 
         return super().form_valid(form)
     
@@ -659,6 +708,12 @@ class BankInterestCreateView(CreateView):
             context['banks'] = []
 
         return context
+    
+    def get_success_url(self):
+
+        scheme = self.request.scheme_name
+        tenant = self.request.tenant
+        return reverse('bank_interest_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id})
 
 
 

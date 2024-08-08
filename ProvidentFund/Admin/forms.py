@@ -4,9 +4,9 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import User, Role
 
 class UserForm(UserCreationForm):
-    class Meta:
+    class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'email', 'groups', 'user_permissions')
+        fields = ('username', 'password1', 'password2', 'tenant')
 
 class RoleForm(forms.ModelForm):
     class Meta:
