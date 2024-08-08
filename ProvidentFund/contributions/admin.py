@@ -17,7 +17,7 @@ class StaffAPIAdmin(admin.ModelAdmin):
         # 'contribution_date',
         'exited_date',
         # 'exited_flag',
-        # 'profit',
+        'profit',
         # 'subscription_date',
         'updated_date',
 
