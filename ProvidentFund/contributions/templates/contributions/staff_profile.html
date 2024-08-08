@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ staff_member.first_name }} {{ staff_member.last_name }}'s Profile</title>
+</head>
+<body>
+    <h1>{{ staff_member.first_name }} {{ staff_member.last_name }}'s Profile</h1>
+    <p><strong>Staff Number:</strong> {{ staff_member.staff_number }}</p>
+    <p><strong>Date Joined:</strong> {{ staff_member.date_joined }}</p>
+    <p><strong>Status:</strong> {{ staff_member.status }}</p>
+    <p><strong>Fund Type:</strong> {{ staff_member.fund_type }}</p>
+    <p><strong>Amount:</strong> {{ staff_member.amount }}</p>
+    <p><strong>Exited Date:</strong> {{ staff_member.exited_date }}</p>
+    <p><strong>Exited Flag:</strong> {{ staff_member.exited_flag }}</p>
+    <p><strong>Profit:</strong> {{ staff_member.profit }}</p>
+    <p><strong>Subscription Date:</strong> {{ staff_member.subscription_date }}</p>
+    <p><strong>Updated Date:</strong> {{ staff_member.updated_date }}</p>
+
+    <h2>Contributions</h2>
+    <ul>
+        {% for contribution in staff_member.contributions.all %}
+        <li>{{ contribution.month }} {{ contribution.year }} - Total: {{ contribution.total_contributions }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
