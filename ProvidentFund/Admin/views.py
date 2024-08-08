@@ -9,8 +9,8 @@ from datetime import datetime
 from .decorators import role_required
 from .forms import UserForm
 import logging
-# from .forms import EditProfileForm
-# from .models import UserProfile 
+from django.shortcuts import redirect
+
 
 # Set up logging for debugging and tracking purposes
 logger = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ def add_user(request, tenant_id):
             # Print form errors for debugging (typically, this should be removed in production)
             print(form.errors)
             # Redirect to the 'admin_roles' view with the tenant_id as a parameter
-            return redirect('admin_roles', tenant_id=tenant_id)
+            return redirect('assign_roles', tenant_id=tenant_id)
     else:
         # Instantiate an empty UserForm for GET requests (form display)
         form = UserForm()
@@ -116,19 +116,23 @@ def manage_users(request, tenant_id):
             group = Group.objects.get(name=role_name)
             user.groups.add(group)
         
-        # Redirect to the same page or another page after updating
+        # Redirect to the same page after updating
         return redirect('manage_users', tenant_id=tenant_id)
     
     return render(request, 'admin_panel/manage_users.html', {
+        'tenant': tenant,
         'users': users,
         'roles': roles,
     })
-# @login_required
-# @role_required(role = ['Admin', ])
-# def delete_user(request, user_id):
-#     user = get_object_or_404(User, id=user_id)
-#     user.delete()
-#     return HttpResponse(status=204) 
+
+@login_required
+@role_required(role = ['Admin', ])
+def delete_user(request, tenant_id, user_id):
+    user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
+    if request.method == 'POST':
+        user.delete()
+        return redirect('manage_users', tenant_id=tenant_id)  
+    
 
 # View to delete a group
 @login_required
@@ -146,51 +150,21 @@ def admin_panel(request, *args, **kwargs):
     return render(request, 'admin_panel/admin_panel.html')
 
 # View to edit user details
-@login_required
-@role_required(role = ['Admin',])
+@role_required(role=['Admin'])
 def edit_user_view(request, user_id):
     tenant = request.tenant
     user = get_object_or_404(User, id=user_id, tenant=tenant)
     if request.method == 'POST':
-        # Handle the POST request to update user details
-        pass
+        # Update user roles
+        if 'roles' in request.POST:
+            selected_roles = request.POST.getlist('roles')
+            user.groups.set(Group.objects.filter(name__in=selected_roles))
+            user.save()
+        # Handle user deletion
+        if 'delete_user' in request.POST:
+            user.delete()
+            return redirect('user_list')  # Redirect to user list or another appropriate page
     return render(request, 'admin_panel/edit_user.html', {'user': user})
-
-
-# @login_required
-# def view_profile(request):
-#     # Retrieve the user's profile information
-#     user_profile = UserProfile.objects.get(user=request.user)
-#     return render(request, 'profile/view_profile.html', {'user_profile': user_profile})
-
-# @login_required
-# def edit_profile(request):
-#     if request.method == 'POST':
-#         form = UserForm(request.POST, instance=request.user)
-#         if form.is_valid():
-#             form.save()
-#             return redirect('view_profile')  # Redirect to the profile view
-#     else:
-#         form = UserForm(instance=request.user)
-#     return render(request, 'profile/edit_profile.html', {'form': form})
-
-# @login_required
-# def help_center(request):
-#     return render(request, 'profile/help_center.html')
-
-# @login_required
-# def privacy_settings(request):
-#     return render(request, 'profile/privacy_settings.html')
-
-# @login_required
-# def account_settings(request):
-#     return render(request, 'profile/account_settings.html')
-
-# def user_logout(request):
-#     logout(request)
-#     return redirect('admin_login') 
-
-
 
 # Custom login view that sets the tenant context and redirects based on user roles
 def custom_login(request, tenant_id):
