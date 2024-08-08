@@ -58,7 +58,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Member Login</h5>
                     <p class="card-text">Access your account, view your contributions and more.</p>
-                    <a href="member-login.html" class="btn btn-primary">Member Login</a>
+                    <a href="{% url 'member_login' tenant_id=request.tenant.id %}" class="btn btn-primary">Member Login</a>
                 </div>
             </div>
         </div>
@@ -67,7 +67,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Admin Login</h5>
                     <p class="card-text">Manage members, view reports and more.</p>
-                    <a href="admin-login.html" class="btn btn-secondary">Admin Login</a>
+                    <a href="{% url 'admin_login' tenant_id=request.tenant.id %}" class="btn btn-secondary">Admin Login</a>
                 </div>
             </div>
         </div>

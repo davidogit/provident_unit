@@ -9,15 +9,20 @@ from django.urls import reverse, reverse_lazy
 from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
-
+from Admin.decorators import role_required
 from .forms import InvestmentUpdateForm
 
 # Importing custom decorators
 from Member.decorators import allowed_user
 
+class LandingPage(TemplateView):
+    template_name = 'dashboard/landing_page.html'
+
+
 # the name=dispatch means the decorators will work for POST,GET,PUT etc
 @method_decorator(login_required, name='dispatch')
 # @method_decorator(allowed_user(allowed_groups=['admin']), name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class Invest(TemplateView):
     template_name='dashboard/finance.html'
 
@@ -69,6 +74,7 @@ class Invest(TemplateView):
 
 # Creating List View for model
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class InvestmentListView(ListView):
     context_object_name = 'investment_list'
     model = InvestmentDetail
@@ -130,6 +136,7 @@ class InvestmentListView(ListView):
 
 # Investment Detail View
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class InvestmentDetailView(DetailView):
     model = InvestmentDetail
     template_name = 'dashboard/investment_details.html'
@@ -156,6 +163,7 @@ class InvestmentDetailView(DetailView):
 
 # Adding an investment
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class AddInvestment(CreateView):
     model=InvestmentDetail
     fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
@@ -202,6 +210,7 @@ class AddInvestment(CreateView):
 
 # Updating an Investement's details
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class InvestmentUpdateView(UpdateView):
     model = InvestmentDetail
     # fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
@@ -264,6 +273,7 @@ class InvestmentUpdateView(UpdateView):
 
 # Updating rollover interest percentage field only
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class RolloverPercentage(UpdateView):
     model = InvestmentDetail
     fields =('rollover_interest_percentage',)
@@ -310,6 +320,7 @@ class RolloverPercentage(UpdateView):
 
 # Deleting an Investment from Database
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class InvestmentDeleteView(DeleteView):
     model = InvestmentDetail
     context_object_name = 'investment'
@@ -343,6 +354,7 @@ class InvestmentDeleteView(DeleteView):
 
 # Active Members List
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class MemberListView(ListView):
     # model = Member
     model = StaffAPI
@@ -383,6 +395,7 @@ class MemberListView(ListView):
 
 # Exited Members List
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class ExitedMembers(ListView):
     model = StaffAPI
     template_name ='dashboard/exited_members.html'
@@ -418,6 +431,7 @@ class ExitedMembers(ListView):
 
 # Memeber detailed View
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class MemberDetailView(DetailView):
     # model = Member
     model = StaffAPI
@@ -438,6 +452,7 @@ class MemberDetailView(DetailView):
 
 # Updating an member's details
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class MemberUpdateView(UpdateView):
     # model = Member
     model = StaffAPI
@@ -469,6 +484,7 @@ class MemberUpdateView(UpdateView):
 
 # Deleting a member from Database
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class MemberDeleteView(DeleteView):
     # model = Member
     model = StaffAPI
@@ -493,6 +509,7 @@ from datetime import datetime
 
 # Query For Investment View
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
@@ -593,6 +610,7 @@ class InvestmentQuery(ListView):
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class DelayedInterestListView(ListView):
     template_name = 'dashboard/delayed_interest_list.html'
     model = DelayedInterest
@@ -618,6 +636,7 @@ class DelayedInterestListView(ListView):
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class DelayedInterestCreateView(CreateView):
     template_name = 'dashboard/delayed_interest_form.html'
     model = DelayedInterest
@@ -648,6 +667,7 @@ class DelayedInterestCreateView(CreateView):
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class BankInterestListView(ListView):
     template_name = 'dashboard/bank_interest_list.html'
     model = BankInterest
@@ -677,6 +697,7 @@ class BankInterestListView(ListView):
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class BankInterestCreateView(CreateView):
     template_name = 'dashboard/bank_interest_form.html'
     model = BankInterest
@@ -720,6 +741,7 @@ class BankInterestCreateView(CreateView):
 
 # Bank Interest Query
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class BankInterestQuery(ListView):
     model = BankInterest
     template_name = 'dashboard/bank_interest_query.html'
@@ -791,6 +813,7 @@ class BankInterestQuery(ListView):
 
 # Delayed Interest Query
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(role=['Admin']), name='dispatch')
 class DelayedInterestQuery(ListView):
     model = DelayedInterest
     template_name = 'dashboard/delayed_interest_query.html'

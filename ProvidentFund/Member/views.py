@@ -139,7 +139,7 @@ def verifyOtpView(request,user_id, tenant_id):
 @login_required
 def logoutView(request, tenant_id):
     logout(request)
-    return redirect('login',tenant_id=tenant_id)
+    return redirect('landing_page',tenant_id=tenant_id)
 
 
 def terms_and_conditions_view(request):
