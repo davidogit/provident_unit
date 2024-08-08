@@ -1,5 +1,6 @@
 from celery import shared_task
-from .models import Member,InvestmentDetail,BankInterest,DelayedInterest
+from .models import InvestmentDetail,BankInterest,DelayedInterest
+# from Member.models import Member
 from django.utils import timezone
 
 # import contribution details from Contributions App
