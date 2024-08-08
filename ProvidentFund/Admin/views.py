@@ -231,4 +231,4 @@ def custom_login(request, tenant_id):
 @login_required
 def logoutView(request, tenant_id):
     logout(request)
-    return redirect('admin_login', tenant_id=tenant_id)
+    return redirect('landing_page', tenant_id=tenant_id)

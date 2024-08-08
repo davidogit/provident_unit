@@ -23,6 +23,7 @@ from django.template.loader import render_to_string
 from django.db.models import Sum, F
 from dateutil import parser
 from MultiScheme.models import Tenant,InvestmentScheme
+from django.shortcuts import render, get_object_or_404
 
 # Create your views here.
 
@@ -44,7 +45,6 @@ class StaffMemberListView(ListView):
         scheme = InvestmentScheme.objects.get(id=scheme_name)
 
         if tenant and scheme_name:
-            return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant, investment_scheme=scheme)
             return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant, investment_scheme=scheme)
         else:
             return StaffAPI.objects.none()
@@ -174,3 +174,8 @@ class Contributed(ListView):
         context['monthly_contributions'] = dict(monthly_contributions)
 
         return context
+
+
+def staff_profile(request, staff_id):
+    staff_member = get_object_or_404(StaffAPI, Id=staff_id)
+    return render(request, 'staff_profile.html', {'staff_member': staff_member})

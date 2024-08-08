@@ -4,7 +4,8 @@ from . import views
 from django.contrib.auth.decorators import login_required
 
 urlpatterns =[
-    path('', views.Invest.as_view(), name='finance_page'),
+    path('', views.LandingPage.as_view(), name='landing_page'),
+    path('dashboard', views.Invest.as_view(), name='finance_page'),
     path('<int:scheme_name>/addInvestment/', views.AddInvestment.as_view(), name='add_investment'),
     path('<int:scheme_name>/investmentList/', views.InvestmentListView.as_view(), name='investment_list'),
     path('<int:scheme_name>/memberList/', views.MemberListView.as_view(), name='member_list'),
