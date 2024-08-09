@@ -99,6 +99,7 @@ TEMPLATES = [
 
                 # Custom template processor
                 'Fund.context_processors.schemes_processor',
+                'Fund.context_processors.user_groups_and_permissions'
             ],
         },
     },
@@ -176,7 +177,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # LOGIN
 
-LOGIN_URL = '/login/'
+LOGIN_URL = '/<str:tenant_id>/login/'
 
 
 # CELERY SETTINGS
