@@ -17,12 +17,12 @@ def role_required(role = []):
             # print(f"Checking role for user: {user.username}")  # Debug print statement
 
             if not user.groups.exists():
-                print(f"User {user.username} does not belong to any group.")
+                # print(f"User {user.username} does not belong to any group.")
                 return render(request, 'dashboard/access_denied.html')
 
             group = user.groups.first().name  # Get the first group name
-            print(f"User group: {group}")
-            print(f"Required role: {role}")
+            # print(f"User group: {group}")
+            # print(f"Required role: {role}")
 
             if group in role:
                 return view_func(request, *args, **kwargs)  # Call the view function if the role matches

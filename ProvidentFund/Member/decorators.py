@@ -2,6 +2,8 @@ from django.http import HttpResponseRedirect,HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 
+from MultiScheme.models import Tenant
+
 # This decorator is to prevent users from accessing login and register views while alredy logged in 
 def unauthenticated_user(view_func):
     def wrapper_func(request,*args,**kwargs):
@@ -13,6 +15,32 @@ def unauthenticated_user(view_func):
         else:
             return view_func(request,*args,**kwargs)
     return wrapper_func
+
+
+# Ensures the user trying to access a view belongs to the tenant of that view
+from functools import wraps
+from django.http import HttpResponseForbidden
+
+def tenant_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        tenant_id = kwargs.get('tenant_id')
+        tenant = Tenant.objects.get(id=tenant_id)
+        print(request.user.tenant)
+        if request.user.is_authenticated and request.user.tenant == tenant:
+            return view_func(request, *args, **kwargs)
+        return HttpResponseForbidden("You do not have permission to access this page 11.")
+
+    return _wrapped_view
+
+
+
+
+
+
+
+
+
 
 
 # This decorator is to check the group of the user and give access accordingly

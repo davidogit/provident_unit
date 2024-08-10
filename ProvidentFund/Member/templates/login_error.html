@@ -34,7 +34,7 @@
       <h3 class="card-title">OOPS!!!</h3>
       
       <i class="ri-error-warning-line fs-48 lh-1 me-3" style="color: red;" title="Oops! Incorrect login details."></i>
-      <p class="card-text">Incorrect login details. <span><a href="{% url 'login' %}">Try again</a></span></p>
+      <p class="card-text">Incorrect login details. <span><a href="{% url 'login' tenant_id=request.tenant.id %}">Try again</a></span></p>
 
     </div><!-- card-header -->
 
