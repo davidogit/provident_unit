@@ -30,7 +30,7 @@ def user_groups_and_permissions(request):
             # | Permission.objects.filter(group__user=user_instance).distinct()
 
                 is_manager_or_treasury_user = groups.filter(name__in=['Manager','Treasury User'])
-                is_manager_or_hr = groups.filter(name__in=['Manager','Treasury User','HR'])
+                is_manager_or_hr = groups.filter(name__in=['Manager','HR'])
                 is_treasury_user = groups.filter(name__in=['Treasury User'])
                 is_hr_user = groups.filter(name__in=['HR'])
 
@@ -38,7 +38,8 @@ def user_groups_and_permissions(request):
                     'is_manager_or_treasury_user':is_manager_or_treasury_user,
                     'is_manager_or_hr':is_manager_or_hr,
                     'is_treasury_user':is_treasury_user,
-                    'is_hr_user': is_hr_user
+                    'is_hr_user': is_hr_user,
+                    'user':user,
                 }
         else:
             return {}

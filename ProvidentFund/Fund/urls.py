@@ -31,5 +31,8 @@ urlpatterns =[
     path('<int:scheme_name>/add_delayed_interest/', views.DelayedInterestCreateView.as_view(), name='add_delayed_interest'),
     path('<int:scheme_name>/delayed_interest_list/', views.DelayedInterestListView.as_view(), name='delayed_interest_list'),
     path('<int:scheme_name>/delayed-interest-query/', views.DelayedInterestQuery.as_view(), name='delayed_interest_query'),
+
+    # OTHERS
+    path('access_denied/', views.AccessDenied.as_view(), name='access_denied'),
     
 ]

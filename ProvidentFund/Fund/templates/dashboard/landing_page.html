@@ -1,3 +1,4 @@
+<!-- {% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,11 +47,132 @@
 <body>
 
 <nav class="navbar navbar-expand-lg">
-    <a class="navbar-brand" href="#">Provident Fund</a>
+    <a href="{% url 'landing_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
 </nav>
 
-<div class="container text-center content">
-    <h1 class="mt-5">Welcome to the Provident Fund Portal</h1>
+
+<footer class="footer">
+    <div class="container text-center">
+        <span>© 2024 Provident Fund. All rights reserved.</span>
+    </div>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html> -->
+
+
+
+
+
+
+
+
+
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:16:10 GMT -->
+
+<head>
+
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <!-- Meta -->
+  <meta name="description" content="">
+  <meta name="author" content="Themepixels">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
+
+  <title>Provident Fund</title>
+
+  <!-- Vendor CSS -->
+  <!-- <link rel="stylesheet" href="../lib/remixicon/fonts/remixicon.css">
+    <link rel="stylesheet" href="../lib/apexcharts/apexcharts.css"> -->
+
+  <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
+  <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
+
+  <!-- Template CSS -->
+  <!-- <link rel="stylesheet" href="../assets/css/style.min.css"> -->
+
+  <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
+
+  <!-- Hiding Serch Results -->
+  <style>
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        margin: 0;
+    }
+    .sidebar-header{
+        border-bottom: 2px #D3D3D3 solid;
+    }
+    .content {
+        flex: 1;
+    }
+    .navbar {
+        background-color: #007bff;
+    }
+    .navbar-brand {
+        color: white !important;
+    }
+    .footer {
+        background-color: none;
+        color: black;
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        height: 56px;
+    }
+    .card{
+        border: none;
+        background: none;
+    }
+    .card-title {
+        color: #007bff;
+    }
+    .btn-primary, .btn-secondary {
+        border-color: #007bff;
+    }
+    .btn-primary {
+        background-color: #007bff;
+    }
+    .btn-secondary {
+        background-color: #0056b3;
+    }
+</style>
+  <!-- Hiding Serch Results -->
+  <!-- JQuery for Serch implementation -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- JQuery for Serch implementation -->
+
+</head>
+
+<body>
+
+    <div class="header px-3 px-lg-4">
+        <div class="sidebar-header">
+            <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
+          </div><!-- sidebar-header -->
+    </div><!-- header-main -->
+
+
+
+  
+
+
+  <!--main-->
+  <div class="container text-center content">
+    <h1 class="mt-5">Welcome to the {{ request.tenant.name }} Fund Portal</h1>
     <p class="lead">Please select your login type</p>
     <div class="row mt-4">
         <div class="col-md-6">
@@ -74,14 +196,30 @@
     </div>
 </div>
 
-<footer class="footer">
+
+
+  <!-- main -->
+
+
+  <footer class="footer">
     <div class="container text-center">
         <span>© 2024 Provident Fund. All rights reserved.</span>
     </div>
 </footer>
 
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
+  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'lib/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
+  <script src="{% static 'lib/apexcharts/apexcharts.min.js' %}"></script>
+  <script src="{% static 'lib/jqvmap/jquery.vmap.min.js' %}"></script>
+  <script src="{% static 'lib/jqvmap/maps/jquery.vmap.world.js' %}"></script>
+
+  <script src="{% static 'assets/js/script.js' %}"></script>
+  <script src="{% static 'assets/js/db.data.js' %}"></script>
+  <script src="{% static 'assets/js/db.finance.js' %}"></script>
 </body>
+
+<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:17:10 GMT -->
+
 </html>

@@ -20,49 +20,62 @@
     </div>
 
 
-    <form method="GET">
-        <div class="form-search d-flex align-items-center justify-content-between">
-            <span>Sort_by:</span>
-            <select class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="sort" id="sort">
-                <!-- <option class="dropdown-item" value="">All</option> -->
-                <option class="dropdown-item" value="">--</option>
-                <option class="dropdown-item" value="start_date">Start Date</option>
-                <option class="dropdown-item" value="created_date">Created Date</option>
+    <!--Search Form -->
+    <form class="form-search d-flex flex-wrap align-items-center justify-content-between" method="GET">
+        <div class="d-flex align-items-center mb-2 mb-md-0">
+            <label for="sort" class="me-2">Sort by:</label>
+            <select class="form-control rounded-pill fst-italic bg-secondary text-light" name="sort" id="sort">
+                <option value="">--Select--</option>
+                <option value="start_date">Start Date</option>
+                <option value="created_date">Created Date</option>
             </select>
-            From:
-            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="from-date">
-            To:
-            <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="to-date">
-            Type:
-            <select class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="inv_type" id="investmentType">
-                <option class="dropdown-item" value="">--</option>
-                <option class="dropdown-item" value="T-bills">Treasury Bill</option>
-                <option class="dropdown-item" value="F-deposit">Fixed Deposit</option>
-                <!-- <option class="dropdown-item" value="D-interest">Delayed Interest</option> -->
+        </div>
+    
+        <div class="d-flex align-items-center mb-2 mb-md-0">
+            <label for="from-date" class="me-2">From:</label>
+            <input type="date" class="form-control rounded-pill fst-italic bg-secondary text-light" name="from-date" id="from-date">
+        </div>
+    
+        <div class="d-flex align-items-center mb-2 mb-md-0">
+            <label for="to-date" class="me-2">To:</label>
+            <input type="date" class="form-control rounded-pill fst-italic bg-secondary text-light" name="to-date" id="to-date">
+        </div>
+    
+        <div class="d-flex align-items-center mb-2 mb-md-0">
+            <label for="investmentType" class="me-2">Type:</label>
+            <select class="form-control rounded-pill fst-italic bg-secondary text-light" name="inv_type" id="investmentType">
+                <option value="">--Select--</option>
+                <option value="Treasury Bill">Treasury Bill</option>
+                <option value="Fixed Deposit">Fixed Deposit</option>
             </select>
-            Status:
-            <select class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="status" id="status">
-                <!-- <option class="dropdown-item" value="">All</option> -->
-                <option class="dropdown-item" value="">--</option>
-                <option class="dropdown-item" value="Not started">Not started</option>
-                <option class="dropdown-item" value="active">Active</option>
-                <option class="dropdown-item" value="F-deposit">Maturing</option>
-                <option class="dropdown-item" value="matured">Matured/Expired</option>
+        </div>
+    
+        <div class="d-flex align-items-center mb-2 mb-md-0">
+            <label for="status" class="me-2">Status:</label>
+            <select class="form-control rounded-pill fst-italic bg-secondary text-light" name="status" id="status">
+                <option value="">--Select--</option>
+                <option value="Not started">Not started</option>
+                <option value="active">Active</option>
+                <option value="F-deposit">Maturing</option>
+                <option value="matured">Matured/Expired</option>
             </select>
-            <button type="submit" class="btn btn-primary rounded-pill fst-italic"><i class="ri-search-line"></i></button>
+        </div>
+    
+        <div class="mb-2 mb-md-0">
+            <button type="submit" class="btn btn-primary rounded-pill fst-italic w-100 w-md-auto">
+                <i class="ri-search-line"></i> Search
+            </button>
         </div>
     </form>
 
 
-
 <!-- Form for query -->
-    <div class="row g-3 justify-content-center">
+<div class="row g-3 justify-content-center">
 
-        <div class="col-md-12 col-xl-10">
+    <div class="col-md-12 col-xl-10">
 
-        </div>
-<!-- Form for query --> 
-
+    </div>
+<!-- Form for query -->
 
         <!--Search Results Table -->
         <div class="col-md-12 col-xl-10">

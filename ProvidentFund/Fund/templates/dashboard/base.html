@@ -48,7 +48,7 @@
 
   <div class="sidebar">
     <div class="sidebar-header">
-      <a href="../index.html" class="sidebar-logo">Provident Fund</a>
+      <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
     </div><!-- sidebar-header -->
     <div id="sidebarMenu" class="sidebar-body">
       <div class="nav-group show">
@@ -285,7 +285,7 @@
       <div class="dropdown-menu dropdown-menu-end mt-10-f">
         <div class="dropdown-menu-body">
           <div class="avatar avatar-xl online mb-3"><img src="../assets/img/img1.jpg" alt=""></div>
-          <h5 class="mb-1 text-dark fw-semibold">Shaira Diaz</h5>
+          <h5 class="mb-1 text-dark fw-semibold">{{ user.username }}</h5>
           <p class="fs-sm text-secondary">Premium Member</p>
 
           <nav class="nav">

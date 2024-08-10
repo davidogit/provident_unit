@@ -11,23 +11,16 @@ def role_required(role = []):
             user = request.user  # Get the current user from the request
 
             if not user.is_authenticated:
-                # print(f"User is not authenticated.")
+                # User is not authenticated
                 return render(request, 'dashboard/access_denied.html')
 
-            # print(f"Checking role for user: {user.username}")  # Debug print statement
+            # Checks if the user belongs to any of the required roles
+            if not any(group.name in role for group in user.groups.all()):
+                # User does not have the required role
+                return redirect('access_denied', tenant_id=request.tenant.id)
 
-            if not user.groups.exists():
-                # print(f"User {user.username} does not belong to any group.")
-                return render(request, 'dashboard/access_denied.html')
-
-            group = user.groups.first().name  # Get the first group name
-            # print(f"User group: {group}")
-            # print(f"Required role: {role}")
-
-            if group in role:
-                return view_func(request, *args, **kwargs)  # Call the view function if the role matches
-            else:
-                return render(request, 'dashboard/access_denied.html')
+            # User has the required role, proceed to the view
+            return view_func(request, *args, **kwargs)
 
         return _wrapped_view
     return decorator

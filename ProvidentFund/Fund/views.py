@@ -19,6 +19,10 @@ class LandingPage(TemplateView):
     template_name = 'dashboard/landing_page.html'
 
 
+class AccessDenied(TemplateView):
+    template_name = 'dashboard/access_denied.html'
+
+
 # the name=dispatch means the decorators will work for POST,GET,PUT etc
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
@@ -536,9 +540,9 @@ class InvestmentQuery(ListView):
         tenant_id = self.request.tenant.id
         tenant = Tenant.objects.get(id=tenant_id)
 
-        # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        # Get scheme id
+        scheme_id = self.request.scheme_name
+        scheme = InvestmentScheme.objects.get(id=scheme_id,tenant=tenant)
 
         # Filtering Queryset by Tenant
         if tenant:
@@ -640,7 +644,7 @@ class DelayedInterestListView(ListView):
 
         # Get scheme name
         scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        scheme = InvestmentScheme.objects.get(id=scheme_name,tenant=tenant)
 
         # Filtering Queryset by Tenant
         if tenant:
@@ -700,7 +704,7 @@ class BankInterestListView(ListView):
 
         # Get scheme name
         scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        scheme = InvestmentScheme.objects.get(id=scheme_name,tenant=tenant)
 
         # Filtering Queryset by Tenant
         if tenant:
@@ -776,7 +780,7 @@ class BankInterestQuery(ListView):
 
         # Get scheme name
         scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        scheme = InvestmentScheme.objects.get(id=scheme_name,tenant=tenant)
 
         # Filtering Queryset by Tenant
         if tenant:
@@ -849,7 +853,7 @@ class DelayedInterestQuery(ListView):
 
         # Get scheme name
         scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        scheme = InvestmentScheme.objects.get(id=scheme_name,tenant=tenant)
 
         # Filtering Queryset by Tenant
         if tenant:
