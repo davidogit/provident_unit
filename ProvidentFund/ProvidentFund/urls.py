@@ -29,5 +29,6 @@ urlpatterns = [
     path('<str:tenant_id>/contributions/', include('contributions.urls')),
     path('<str:tenant_id>/members/', include('Member.urls')),
     path('<str:tenant_id>/pfund_admin/', include('Admin.urls')),
+    path('<str:tenant_id>/schemes/', include('MultiScheme.urls')),
 ]
 

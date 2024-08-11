@@ -1,0 +1,78 @@
+{% extends 'dashboard/base.html' %}
+
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="row row-cols-auto g-4 g-xxl-5">
+      <div class="col-xl">
+          <div class="container">
+            <h2 class="mb-5">Scheme Configuration</h2>
+
+            <form method="POST">
+              {% csrf_token %}
+                <div class="row g-5">
+                  <div class="col-md-4">
+
+                    <div class="form-group mb-3">
+                      <label for="scheme_name" class="form-label">Scheme Name</label>
+                      <input class="form-control" type="text" name="name" id="scheme_name">
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label for="cont_freq" class="form-label">Contribution Frequency</label>
+                      <select class="form-control" name="contribution_frequency" id="cont_freq">
+                        {% for freq,label in frequency %}
+                        <option value="{{freq}}">{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label for="dist_freq" class="form-label">Distribution Frequency</label>
+                      <select class="form-control" name="distribution_frequency" id="dist_freq">
+                        {% for freq,label in frequency %}
+                        <option value="{{freq}}">{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+          
+                  <div class="col-md-4">
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="dist_perc">Distribution Percentage</label>
+                      <input type="number" step="0.01" min="1" class="form-control" id="dist_perc" name="distribution_percentage">
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label for="eligbility" class="form-label">Eligibility Criteria: Number of Months</label>
+                      <input type="number" class="form-control" id="eligbility" name="eligibility_criteria_months">
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label for="pay_freq" class="form-label">Payout Frequency</label>
+                      <select class="form-control" name="payout_frequency" id="pay_freq">
+                        {% for freq,label in payout_frequency %}
+                        <option value="{{freq}}">{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+          
+                  <div class="col-md-4">
+                    <div class="form-group mb-3">
+                      <label for="desc" class="form-label">Description</label>
+                        <textarea class="form-control" id="desc" name="description" cols="9" rows="9"></textarea>
+                    </div>
+
+                  </div>
+              </div>
+              <input type="submit" class="btn btn-primary" value="Submit">
+            </form>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- main -->
+{% endblock %}
+

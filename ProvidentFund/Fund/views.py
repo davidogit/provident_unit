@@ -197,9 +197,9 @@ class AddInvestment(CreateView):
         
         tenant = self.request.tenant
         scheme_name = self.request.scheme_name
-        # int(scheme_name)
+
         scheme = get_object_or_404(InvestmentScheme.objects.filter(id=scheme_name, tenant=tenant))
-        # print(scheme_name)
+
         if scheme:
             form.instance.investment_scheme = scheme
 
