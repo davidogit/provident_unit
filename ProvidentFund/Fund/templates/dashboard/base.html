@@ -59,9 +59,9 @@
                 class="ri-pie-chart-2-fill"></i> <span>Finance Monitoring</span></a>
           </li>
 
-          {% if is_manager_or_treasury_user %}
+          {% if is_manager %}
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Schemes</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Scheme Configuration</span></a>
             <nav class="nav nav-sub">
               <a href="{% url 'scheme_list' tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Active Schemes

@@ -71,12 +71,16 @@ AUTHENTICATION_BACKENDS = [
 
 MIDDLEWARE = [
     # Tenant ID middleware
+    
     'Fund.middleware.URLTenantMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # custom middleware
+    # 'Fund.middleware.TenantLoginMiddleware',
+
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',  
     
@@ -177,7 +181,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # LOGIN
 
-LOGIN_URL = '/<str:tenant_id>/login/'
+LOGIN_URL = '/login/'
 
 
 # CELERY SETTINGS

@@ -19,7 +19,7 @@ def unauthenticated_user(view_func):
 
 # Ensures the user trying to access a view belongs to the tenant of that view
 from functools import wraps
-from django.http import HttpResponseForbidden
+# from django.http import HttpResponseForbidden
 
 def tenant_required(view_func):
     @wraps(view_func)
@@ -29,7 +29,8 @@ def tenant_required(view_func):
         print(request.user.tenant)
         if request.user.is_authenticated and request.user.tenant == tenant:
             return view_func(request, *args, **kwargs)
-        return HttpResponseForbidden("You do not have permission to access this page 11.")
+        return redirect('invalid_login_details', tenant_id=request.user.tenant.id)
+    # HttpResponseForbidden("You do not have permission to access this page 11.")
 
     return _wrapped_view
 

@@ -1,3 +1,4 @@
+from django.shortcuts import redirect
 from django.utils.deprecation import MiddlewareMixin
 from MultiScheme.models import Tenant
 from django.http import HttpRequest
@@ -31,3 +32,13 @@ class URLTenantMiddleware(MiddlewareMixin):
                 request.scheme_name = None
         else:
             request.scheme_name = None
+
+
+
+# class TenantLoginMiddleware(MiddlewareMixin):
+#     def process_request(self,request):
+#         if not request.user.is_authenticated:
+#             tenant = request.tenant
+#             if tenant:
+#                 login_url = f'/{tenant.id}/login'
+#                 return redirect(login_url)

@@ -6,10 +6,15 @@ from django.contrib.auth.models import Group
 # from .models import User
 from django.contrib import messages
 from datetime import datetime
+# Custom Decorators
 from .decorators import role_required
+from Member.decorators import unauthenticated_user,tenant_required
+
 from .forms import UserForm
 import logging
 from django.shortcuts import redirect
+
+from MultiScheme.models import Tenant
 
 
 # Set up logging for debugging and tracking purposes
@@ -19,6 +24,7 @@ User = get_user_model()
 
 # View to assign roles to users
 @login_required
+@tenant_required
 @role_required(role=['Admin'])
 def assign_roles(request, tenant_id):
     # Retrieve the tenant associated with the request
@@ -66,6 +72,7 @@ def assign_roles(request, tenant_id):
 
 # View to add a new user
 @login_required
+@tenant_required
 @role_required(role=['Admin'])
 def add_user(request, tenant_id):
     # Retrieve the tenant associated with the request
@@ -96,6 +103,7 @@ def add_user(request, tenant_id):
 
 # View to manage users
 @login_required
+@tenant_required
 @role_required(role=['Admin'])
 def manage_users(request, tenant_id):
     tenant = request.tenant
@@ -126,6 +134,7 @@ def manage_users(request, tenant_id):
     })
 
 @login_required
+@tenant_required
 @role_required(role = ['Admin', ])
 def delete_user(request, tenant_id, user_id):
     user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
@@ -136,6 +145,7 @@ def delete_user(request, tenant_id, user_id):
 
 # View to delete a group
 @login_required
+@tenant_required
 @role_required(role = ['Admin', ])
 def delete_group(request, group_id):
     # Retrieve and delete the group based on ID
@@ -145,11 +155,14 @@ def delete_group(request, group_id):
 
 # View for the admin panel, accessible only by users with the 'Admin' role
 @login_required
+@tenant_required
 @role_required(role = ['Admin', 'Customer'])
 def admin_panel(request, *args, **kwargs):
     return render(request, 'admin_panel/admin_panel.html')
 
 # View to edit user details
+@login_required
+@tenant_required
 @role_required(role=['Admin'])
 def edit_user_view(request, user_id):
     tenant = request.tenant
@@ -166,39 +179,36 @@ def edit_user_view(request, user_id):
             return redirect('user_list')  # Redirect to user list or another appropriate page
     return render(request, 'admin_panel/edit_user.html', {'user': user})
 
-# Custom login view that sets the tenant context and redirects based on user roles
+# Admin only login view
+@unauthenticated_user
 def custom_login(request, tenant_id):
-    request.tenant = tenant_id
 
+    tenant = Tenant.objects.get(id=tenant_id)
 
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
+
+        user = authenticate(request, username=username, password=password,tenant=tenant)
+
+        # Redirect everyone who is not an admin
+        if not user.groups.filter(name='Admin'):
+            return redirect('invalid_login_details', tenant_id=tenant_id)
         
-
-
         if user is not None:
-            login(request, user)
-            logger.info(f'User {user.username} authenticated successfully.')
-            # Redirect based on user roles
-            if user.groups.filter(name='Admin').exists():  # Check if the user belongs to 'Admin' group
-                logger.info(f'User {user.username} redirected to admin_panel.')
+            # Check if the user belongs to 'Admin' group
+            if user.groups.filter(name='Admin').exists() and user.tenant==tenant:  
+                login(request, user)
+
                 return redirect('admin_panel', tenant_id=tenant_id)
-            
-            # elif user.groups.filter(name='HR').exists():  # Check if the user belongs to 'HR' group
-            #     logger.info(f'User {user.username} redirected to hr_page.')
-            #     return redirect('hr_page', tenant_id=tenant_id)
-            # elif user.groups.filter(name='Finance').exists():  # Check if the user belongs to 'Finance' group
-            #     logger.info(f'User {user.username} redirected to finance_page.')
-            #     return redirect('finance_page', tenant_id=tenant_id)
 
             else:
-                logger.info(f'User {user.username} redirected to finance_page.') # redirect to main/general page
-                return redirect('finance_page', tenant_id=tenant_id)
+                #  Redirect to invalid_login_details view
+                return redirect('access_denied', tenant_id=tenant_id)
         else:
-            messages.error(request, 'Invalid credentials')
-            logger.error(f'Authentication failed for username {username}.')
+            # Redirect to invalid_login_details view
+            return redirect('invalid_login_details', tenant_id=tenant_id)
+        
     return render(request, 'admin_panel/admin_login.html')
 
 

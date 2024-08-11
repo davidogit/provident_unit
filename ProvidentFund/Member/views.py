@@ -62,14 +62,18 @@ def registrationView(request,tenant_id):
 
 @unauthenticated_user
 def loginView(request, tenant_id):
-    # print(tenant_id)
+
     tenant = Tenant.objects.get(id=tenant_id)
-    # request.tenant = tenant_id 
+
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
 
         user = authenticate(request, username=username, password=password,tenant=tenant)
+
+        # Redirect anyone with admin proviledge
+        if user.groups.filter(name='Admin'):
+            return redirect('invalid_login_details', tenant_id=tenant_id)
 
         if user is not None:
             if user.tenant == tenant:

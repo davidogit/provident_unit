@@ -5,13 +5,24 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.generic import ListView,CreateView,DeleteView,UpdateView
-from MultiScheme.models import InvestmentScheme,Tenant
+from MultiScheme.models import InvestmentScheme
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
+# Custom Decorators
+
+from Member.decorators import tenant_required
+from Admin.decorators import role_required
+
 
 
 # Scheme List View
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Manager']), name='dispatch')
 class SchemeList(ListView):
     template_name ='multischeme/scheme_list.html'
     model = InvestmentScheme
+    paginate_by=10
 
     def get_queryset(self):
         tenant = self.request.tenant
@@ -22,15 +33,18 @@ class SchemeList(ListView):
         else:
             return InvestmentScheme.objects.none()
     
-    def get_context_data(self, **kwargs: Any):
-        context = super().get_context_data(**kwargs)
-        queryset = self.get_queryset()
+    # def get_context_data(self, **kwargs: Any):
+    #     context = super().get_context_data(**kwargs)
+    #     queryset = self.get_queryset()
 
-        context['schemes'] = queryset
+    #     context['schemes'] = queryset
 
-        return context
-    
+    #     return context
 
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Manager']), name='dispatch')
 class AddScheme(CreateView):
     template_name = 'multischeme/add_scheme.html'
     model = InvestmentScheme
