@@ -143,12 +143,6 @@ def delete_group(request, group_id):
     group.delete()
     return redirect('admin_panel')
 
-# View for the admin panel, accessible only by users with the 'Admin' role
-@login_required
-@role_required(role = ['Admin', 'Customer'])
-def admin_panel(request, *args, **kwargs):
-    return render(request, 'admin_panel/admin_panel.html')
-
 # View to edit user details
 @role_required(role=['Admin'])
 def edit_user_view(request, user_id):
@@ -166,39 +160,70 @@ def edit_user_view(request, user_id):
             return redirect('user_list')  # Redirect to user list or another appropriate page
     return render(request, 'admin_panel/edit_user.html', {'user': user})
 
-# Custom login view that sets the tenant context and redirects based on user roles
+# View accessible by both Admin and Customer roles
+@login_required
+@role_required(role=['Admin'])
+def admin_panel(request, *args, **kwargs):
+    # Render the admin panel template
+    return render(request, 'admin_panel/admin_panel.html')
+
+# View accessible by Customer role only
+# @login_required
+# @role_required(role='Customer')
+# def customer_view(request, *args, **kwargs):
+#     # Render the customer-specific finance page
+#     return render(request, 'Fund/templates/dashboard/finance_page.html')
+
+# # View accessible by HR role only
+# @login_required
+# @role_required(role='HR')
+# def finance(request, *args, **kwargs):
+#     # Render the HR-specific finance page
+#     return render(request, 'Fund/templates/dashboard/finance_page.html')
+
+# Custom login view to authenticate users and redirect them based on their roles
 def custom_login(request, tenant_id):
+    # Set the tenant context for multi-tenancy
     request.tenant = tenant_id
 
-
     if request.method == 'POST':
+        # Retrieve the username and password from the POST request
         username = request.POST['username']
         password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        
 
+        # Authenticate the user with the provided credentials
+        user = authenticate(request, username=username, password=password)
 
         if user is not None:
+            # If authentication is successful, log the user in
             login(request, user)
             logger.info(f'User {user.username} authenticated successfully.')
-            # Redirect based on user roles
-            if user.groups.filter(name='Admin').exists():  # Check if the user belongs to 'Admin' group
+
+            # Determine the user's group memberships for role-based redirection
+            user_groups = user.groups.values_list('name', flat=True)
+
+            if 'Admin' in user_groups:
+                # Redirect Admin users to the admin panel
                 logger.info(f'User {user.username} redirected to admin_panel.')
                 return redirect('admin_panel', tenant_id=tenant_id)
-            
-            # elif user.groups.filter(name='HR').exists():  # Check if the user belongs to 'HR' group
-            #     logger.info(f'User {user.username} redirected to hr_page.')
-            #     return redirect('hr_page', tenant_id=tenant_id)
-            # elif user.groups.filter(name='Finance').exists():  # Check if the user belongs to 'Finance' group
+            # elif 'HR' in user_groups:
+            #     # Redirect HR users to their dashboard
             #     logger.info(f'User {user.username} redirected to finance_page.')
             #     return redirect('finance_page', tenant_id=tenant_id)
-
+            # elif 'Customer' in user_groups:
+            #     # Redirect Customer users to their dashboard
+            #     logger.info(f'User {user.username} redirected to customer_view.')
+            #     return redirect('customer_view', tenant_id=tenant_id)
             else:
-                logger.info(f'User {user.username} redirected to finance_page.') # redirect to main/general page
+                # If the user doesn't belong to a specific group, redirect to a default page
+                logger.info(f'User {user.username} does not belong to a specific group, redirecting to a default page.')
                 return redirect('finance_page', tenant_id=tenant_id)
         else:
+            # If authentication fails, display an error message
             messages.error(request, 'Invalid credentials')
             logger.error(f'Authentication failed for username {username}.')
+
+    # Render the login page if the request method is GET
     return render(request, 'admin_panel/admin_login.html')
 
 
