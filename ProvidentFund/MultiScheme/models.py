@@ -26,12 +26,21 @@ class InvestmentScheme(models.Model):
     id = models.AutoField(primary_key=True, editable=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='investment_schemes',null=True)
     name = models.CharField(max_length=50,null=True)
+    Yes = 'Yes'
+    No = 'No'
+    options = [
+        (Yes,'Yes'),
+        (No, 'No')
+    ]
+    delayed_int = models.CharField(max_length=3, choices=options,default=No)
+    bank_int = models.CharField(max_length=3, choices=options, default=No)
+
     Daily = 'Daily'
     Weekly = 'Weekly'
     Monthly = 'Monthly'
     frequency = [
         (Daily,'Daiily'),
-        (Weekly,'weekly'),
+        (Weekly,'Weekly'),
         (Monthly,'Monthly')
     ]
     contribution_frequency = models.CharField(max_length=20,choices=frequency,default='',null=True)

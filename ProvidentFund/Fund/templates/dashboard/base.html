@@ -103,43 +103,47 @@
           </li>
           {% endif %}
 
-          {% if is_manager_or_treasury_user %}
-          <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Delayed
-                Interest</span></a>
-            <nav class="nav nav-sub">
-              <a href="{% url 'delayed_interest_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">View Delayed Interests
-              </a>
-              {% if is_treasury_user %}
-              <a href="{% url 'add_delayed_interest' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">Add Delayed Interest
-              </a>
-              {% endif %}
-              <a href="{% url 'delayed_interest_query' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">Generate Report
-              </a>
-            </nav>
-          </li>
+          {% if scheme.delayed_int == 'Yes' %}
+            {% if is_manager_or_treasury_user %}
+            <li class="nav-item">
+              <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Delayed
+                  Interest</span></a>
+              <nav class="nav nav-sub">
+                <a href="{% url 'delayed_interest_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                  class="nav-sub-link">View Delayed Interests
+                </a>
+                {% if is_treasury_user %}
+                <a href="{% url 'add_delayed_interest' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                  class="nav-sub-link">Add Delayed Interest
+                </a>
+                {% endif %}
+                <a href="{% url 'delayed_interest_query' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                  class="nav-sub-link">Generate Report
+                </a>
+              </nav>
+            </li>
+            {% endif %}
           {% endif %}
 
-          {% if is_manager_or_treasury_user %}
-          <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Bank
-                Interest</span></a>
-            <nav class="nav nav-sub">
-              <a href="{% url 'bank_interest_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">View Bank Interests
-              </a>
-              {% if is_treasury_user %}
-              <a href="{% url 'add_bank_interest' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">Add Bank Interest
-              </a>
-              {% endif %}
-              <a href="{% url 'bank_interest_query' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">Generate Report</a>
-            </nav>
-          </li>
+          {% if scheme.bank_int == 'Yes' %}
+            {% if is_manager_or_treasury_user %}
+            <li class="nav-item">
+              <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Bank
+                  Interest</span></a>
+              <nav class="nav nav-sub">
+                <a href="{% url 'bank_interest_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                  class="nav-sub-link">View Bank Interests
+                </a>
+                {% if is_treasury_user %}
+                <a href="{% url 'add_bank_interest' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                  class="nav-sub-link">Add Bank Interest
+                </a>
+                {% endif %}
+                <a href="{% url 'bank_interest_query' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                  class="nav-sub-link">Generate Report</a>
+              </nav>
+            </li>
+            {% endif %}
           {% endif %}
 
           {% if is_manager_or_hr %}
@@ -155,7 +159,7 @@
           </li>
           {% endif %}
 
-          {% if is_manager_or_treasury_user_or_hr %}
+          {% if is_manager_or_treasury_user %}
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Member
                 Contributions</span></a>

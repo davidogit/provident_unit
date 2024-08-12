@@ -32,14 +32,6 @@ class SchemeList(ListView):
             return InvestmentScheme.objects.filter(tenant=tenant)
         else:
             return InvestmentScheme.objects.none()
-    
-    # def get_context_data(self, **kwargs: Any):
-    #     context = super().get_context_data(**kwargs)
-    #     queryset = self.get_queryset()
-
-    #     context['schemes'] = queryset
-
-    #     return context
 
 
 @method_decorator(login_required, name='dispatch')
@@ -57,9 +49,11 @@ class AddScheme(CreateView):
         if tenant:
             context['frequency'] = InvestmentScheme.frequency
             context['payout_frequency'] = InvestmentScheme.choices
+            context['options'] = InvestmentScheme.options
         else:
             context['frequency'] = []
             context['payout_frequency'] = []
+            context['options'] = []
 
         return context
     
