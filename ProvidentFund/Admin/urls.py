@@ -17,6 +17,9 @@ urlpatterns = [
     path('edit_user/<int:id>/', views.edit_user_view, name='edit_user'),
     
     # path('profile/', views.profile_view, name='profile'),
+
+    # path('customer_view/', views.customer_view, name='finance_page'),
+    # path('finance/', views.finance, name='finance_page'),
     
    
 ]

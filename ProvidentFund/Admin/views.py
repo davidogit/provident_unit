@@ -179,15 +179,44 @@ def edit_user_view(request, user_id):
             return redirect('user_list')  # Redirect to user list or another appropriate page
     return render(request, 'admin_panel/edit_user.html', {'user': user})
 
+# View accessible by both Admin and Customer roles
+@login_required
+@role_required(role=['Admin'])
+def admin_panel(request, *args, **kwargs):
+    # Render the admin panel template
+    return render(request, 'admin_panel/admin_panel.html')
+
+# View accessible by Customer role only
+# @login_required
+# @role_required(role='Customer')
+# def customer_view(request, *args, **kwargs):
+#     # Render the customer-specific finance page
+#     return render(request, 'Fund/templates/dashboard/finance_page.html')
+
+# # View accessible by HR role only
+# @login_required
+# @role_required(role='HR')
+# def finance(request, *args, **kwargs):
+#     # Render the HR-specific finance page
+#     return render(request, 'Fund/templates/dashboard/finance_page.html')
+
+# Custom login view to authenticate users and redirect them based on their roles
 # Admin only login view
 @unauthenticated_user
 def custom_login(request, tenant_id):
+    # Set the tenant context for multi-tenancy
+    request.tenant = tenant_id
 
     tenant = Tenant.objects.get(id=tenant_id)
 
     if request.method == 'POST':
+        # Retrieve the username and password from the POST request
         username = request.POST['username']
         password = request.POST['password']
+
+        # Authenticate the user with the provided credentials
+        user = authenticate(request, username=username, password=password)
+
 
         user = authenticate(request, username=username, password=password,tenant=tenant)
 
@@ -196,16 +225,42 @@ def custom_login(request, tenant_id):
             return redirect('invalid_login_details', tenant_id=tenant_id)
         
         if user is not None:
+            # If authentication is successful, log the user in
+            login(request, user)
+            logger.info(f'User {user.username} authenticated successfully.')
+
+            # Determine the user's group memberships for role-based redirection
+            user_groups = user.groups.values_list('name', flat=True)
+
+            if 'Admin' in user_groups:
+                # Redirect Admin users to the admin panel
+                logger.info(f'User {user.username} redirected to admin_panel.')
             # Check if the user belongs to 'Admin' group
             if user.groups.filter(name='Admin').exists() and user.tenant==tenant:  
                 login(request, user)
 
                 return redirect('admin_panel', tenant_id=tenant_id)
+            # elif 'HR' in user_groups:
+            #     # Redirect HR users to their dashboard
+            #     logger.info(f'User {user.username} redirected to finance_page.')
+            #     return redirect('finance_page', tenant_id=tenant_id)
+            # elif 'Customer' in user_groups:
+            #     # Redirect Customer users to their dashboard
+            #     logger.info(f'User {user.username} redirected to customer_view.')
+            #     return redirect('customer_view', tenant_id=tenant_id)
 
             else:
+                # If the user doesn't belong to a specific group, redirect to a default page
+                logger.info(f'User {user.username} does not belong to a specific group, redirecting to a default page.')
+                return redirect('finance_page', tenant_id=tenant_id)
                 #  Redirect to invalid_login_details view
                 return redirect('access_denied', tenant_id=tenant_id)
         else:
+            # If authentication fails, display an error message
+            messages.error(request, 'Invalid credentials')
+            logger.error(f'Authentication failed for username {username}.')
+
+    # Render the login page if the request method is GET
             # Redirect to invalid_login_details view
             return redirect('invalid_login_details', tenant_id=tenant_id)
         
