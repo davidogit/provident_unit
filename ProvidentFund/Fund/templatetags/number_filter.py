@@ -2,7 +2,7 @@ from django import template
 
 register = template.Library()
 
-# Additiona Library to convert longer numbers into shorter form eg. 1000000 >> 1M
+# Additional Library to convert longer numbers into shorter form eg. 1000000 >> 1M
 
 @register.filter
 def abbreviate_number(value):

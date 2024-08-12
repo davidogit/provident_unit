@@ -1,33 +1,25 @@
-from typing import Any
-from django.db.models.query import QuerySet
-from django.views.generic import TemplateView, ListView, DetailView
+from django.views.generic import ListView, DetailView
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from .models import StaffAPI, Contribution
-import requests
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views import View
 from django.utils import timezone
-from django.http import HttpResponseRedirect
 from collections import defaultdict
 from datetime import datetime
-from django.shortcuts import redirect
 from django.core.mail import send_mail
-from django.conf import settings
-from django.core.mail import EmailMessage
 from ProvidentFund.settings import EMAIL_HOST_USER
-import traceback
 from django.template import loader
-from django.template.loader import render_to_string
-from django.db.models import Sum, F
-from dateutil import parser
 from MultiScheme.models import Tenant,InvestmentScheme
 from django.shortcuts import render, get_object_or_404
+
+from Member.decorators import tenant_required
 
 # Create your views here.
 
 @method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
 class StaffMemberListView(ListView):
     model = StaffAPI
     template_name = 'contributions/staffmember_list.html'
@@ -55,7 +47,8 @@ class StaffMemberListView(ListView):
 
 
 
-@method_decorator(login_required, name='dispatch')   
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')   
 class OptOutMemberView(View):
     def post(self, request, *args, **kwargs):
         member_id = kwargs.get('pk')
@@ -87,6 +80,7 @@ class OptOutMemberView(View):
 
 
 @method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
@@ -94,6 +88,7 @@ class StaffMemberDetailView(DetailView):
 
 
 @method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
 class Contributed(ListView):
     model = Contribution
     template_name = 'contributions/contributed.html'
@@ -175,7 +170,8 @@ class Contributed(ListView):
 
         return context
 
-
+@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
 def staff_profile(request, staff_id):
     staff_member = get_object_or_404(StaffAPI, Id=staff_id)
     return render(request, 'staff_profile.html', {'staff_member': staff_member})

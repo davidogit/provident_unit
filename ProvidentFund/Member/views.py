@@ -2,18 +2,18 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse
 from django.core.mail import send_mail
+from django.urls import reverse, reverse_lazy
 from ProvidentFund.settings import EMAIL_HOST_USER
 from django.contrib.auth.decorators import login_required
 from Member.forms import UserForm, MemberForm
 from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView,CreateView
+from django.contrib.auth.models import Group
 
+from MultiScheme.models import Tenant
 # Importing the user model 
 from django.contrib.auth import get_user_model
-
-# Importing  backends
-from django.contrib.auth import get_backends
 
 # Importing custom decorators
 from .decorators import unauthenticated_user
@@ -25,21 +25,30 @@ def registrationView(request,tenant_id):
         form2 = MemberForm(request.POST)
 
         if form1.is_valid() and form2.is_valid():
+
+            # Assign tenant to user upon registration
+            tenant = Tenant.objects.get(id=tenant_id)
+            form1.instance.tenant = tenant
+
             user = form1.save(commit=False)
             cleaned_password = form1.cleaned_data['password']
             user.set_password(cleaned_password)
             user.save()
 
+            # Assign group to user
+            group_name = 'Member'
+            group = Group.objects.get(name=group_name)
+            user.groups.add(group)
+
+            # Assign tenant to user upon registration
+            form2.instance.tenant = tenant
+
             member = form2.save(commit=False)
             member.user = user
 
-            # Associate registering member with a tenant before saving
-            tenant = request.tenant
-            if tenant:
-                member.tenant = tenant
-
             member.save()
 
+            # redirect to login page after successful registration
             return redirect('login', tenant_id = tenant_id)
         else:
             errors = form1.errors.as_json() + form2.errors.as_json()
@@ -53,41 +62,52 @@ def registrationView(request,tenant_id):
 
 @unauthenticated_user
 def loginView(request, tenant_id):
-    request.tenant = tenant_id 
+
+    tenant = Tenant.objects.get(id=tenant_id)
+
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
 
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(request, username=username, password=password,tenant=tenant)
 
-        if user:
-            # Generate OTP
-            otp = generate_unique_code()
-            try:
-                # Send OTP to user via email
-                send_mail(
-                    subject='PF CODE',
-                    message=f'Your OTP code is {otp}',
-                    from_email=EMAIL_HOST_USER,
-                    recipient_list=[user.email],
-                    fail_silently=False,
-                )
-            except SMTPConnectError as e:
-                print(f'SMTPConnectError: {e}')
+        # Redirect anyone with admin proviledge
+        if user.groups.filter(name='Admin'):
+            return redirect('invalid_login_details', tenant_id=tenant_id)
 
-            # Save OTP in session for later verification
-            request.session['otp_token'] = otp
-            request.session['username'] = username
+        if user is not None:
+            if user.tenant == tenant:
+                # Generate OTP
+                otp = generate_unique_code()
+                try:
+                    # Send OTP to user via email
+                    send_mail(
+                        subject='PF CODE',
+                        message=f'Your OTP code is {otp}',
+                        from_email=EMAIL_HOST_USER,
+                        recipient_list=[user.email],
+                        fail_silently=False,
+                    )
 
+                    # Save OTP in session for later verification
+                    request.session['otp_token'] = otp
+                    request.session['username'] = username
+                    request.session['email'] = user.email
+                except SMTPConnectError as e:
+                    print(f'SMTPConnectError: {e}')
+                    return render(request, 'login_error.html', {'error': 'Failed to send email'})
 
-            # send user email to verify_otp view
-            request.session['email'] = user.email
-
-            return redirect('verify_otp',user_id=user.id, tenant_id=tenant_id)
+                # Redirect to verify_otp view
+                return redirect('verify_otp', user_id=user.id, tenant_id=tenant_id)
+            else:
+                # Redirect to invalid_login_details view
+                return redirect('invalid_login_details', tenant_id=tenant_id)
         else:
+            # Redirect to invalid_login_details view
             return redirect('invalid_login_details', tenant_id=tenant_id)
 
     return render(request, 'login.html')
+
 
 
 class InvalidLoginDetails(TemplateView):

@@ -30,11 +30,11 @@
 
   <div class="card card-sign text-center">
     <div class="card-header mb-4">
-      <a href="../index.html" class="header-logo mb-4">Provident Fund</a>
+      <a href="../index.html" class="header-logo mb-4">{{request.tenant.name}}</a>
       <h3 class="card-title">OOPS!!!</h3>
       
       <i class="ri-error-warning-line fs-48 lh-1 me-3" style="color: red;" title="Oops! Incorrect login details."></i>
-      <p class="card-text">Incorrect login details. <span><a href="{% url 'login' %}">Try again</a></span></p>
+      <p class="card-text">Incorrect login details. <span><a href="{% url 'landing_page' tenant_id=request.tenant.id %}">Try again</a></span></p>
 
     </div><!-- card-header -->
 

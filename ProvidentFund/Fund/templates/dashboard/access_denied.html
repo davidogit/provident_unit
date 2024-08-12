@@ -1,0 +1,170 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restricted Access</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .card-body {
+            text-align: center;
+        }
+        .card-title {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+        .card-text {
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">Access Restricted</h1>
+                <p class="card-text">You do not have permission to view this page.</p>
+                <a href="/" class="btn btn-primary">Return to Homepage</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> -->
+
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:16:10 GMT -->
+
+<head>
+
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <!-- Meta -->
+  <meta name="description" content="">
+  <meta name="author" content="Themepixels">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
+
+  <title>Provident Fund</title>
+
+  <!-- Vendor CSS -->
+  <!-- <link rel="stylesheet" href="../lib/remixicon/fonts/remixicon.css">
+    <link rel="stylesheet" href="../lib/apexcharts/apexcharts.css"> -->
+
+  <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
+  <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
+
+  <!-- Template CSS -->
+  <!-- <link rel="stylesheet" href="../assets/css/style.min.css"> -->
+
+  <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
+
+  <!-- Hiding Serch Results -->
+  <style>
+    body {
+        background-color: #f8f9fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+    .card {
+        max-width: 500px;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    .card-body {
+        text-align: center;
+    }
+    .card-title {
+        font-size: 2rem;
+        margin-bottom: 20px;
+    }
+    .card-text {
+        font-size: 1.25rem;
+        margin-bottom: 20px;
+    }
+    .btn-primary {
+        margin-top: 10px;
+    }
+</style>
+
+  <!-- Hiding Serch Results -->
+  <!-- JQuery for Serch implementation -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- JQuery for Serch implementation -->
+
+
+
+</head>
+
+<body>
+
+  {% block content %}
+
+  <div class="container d-flex flex-column align-items-center justify-content-center">
+    <div class="card">
+        <div class="card-body text-center">
+            <h1 class="card-title">Access Restricted</h1>
+            <p class="card-text">You do not have permission to view this page.</p>
+            <a href="{% url 'landing_page' tenant_id=request.tenant.id %}" class="btn btn-primary">Return to Homepage</a>
+        </div>
+    </div>
+    <div class="main-footer mt-5">
+        <span>&copy; 2024. Vestrex Tech. All Rights Reserved.</span>
+        <br>
+        <span>Created by: <a href="http://vestrex.com/" target="_blank">Vestrex.com</a></span>
+    </div><!-- main-footer -->
+</div><!-- container -->
+
+
+  {% endblock %}
+
+
+  <!-- main -->
+
+
+
+
+
+  <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
+  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'lib/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
+  <script src="{% static 'lib/apexcharts/apexcharts.min.js' %}"></script>
+  <script src="{% static 'lib/jqvmap/jquery.vmap.min.js' %}"></script>
+  <script src="{% static 'lib/jqvmap/maps/jquery.vmap.world.js' %}"></script>
+
+  <script src="{% static 'assets/js/script.js' %}"></script>
+  <script src="{% static 'assets/js/db.data.js' %}"></script>
+  <script src="{% static 'assets/js/db.finance.js' %}"></script>
+</body>
+
+<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:17:10 GMT -->
+
+</html>
