@@ -28,12 +28,12 @@ app.conf.beat_schedule = {
         # Run on the first day of every month
         'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*'),  # Run on the first day of every month
     },
-    'fetch_contributions_every_month': {
-        'task': 'contributions.tasks.fetch_contributions',
-        # 'schedule': crontab(day_of_month=1,hour=0,minute=5,month_of_year='*'),  
-        'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*'),  
-        # Run on the first day of every month
-    },
+    # 'fetch_contributions_every_month': {
+    #     'task': 'contributions.tasks.fetch_contributions',
+    #     # 'schedule': crontab(day_of_month=1,hour=0,minute=5,month_of_year='*'),  
+    #     'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*'),  
+    #     # Run on the first day of every month
+    # },
 }
 
 

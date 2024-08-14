@@ -15,7 +15,7 @@ class StaffAPI(models.Model):
     exited_date = models.DateField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
     profit = models.FloatField(default=0.0)
-    subscription_date = models.DateField()
+    subscription_date = models.DateField(null=True)
     updated_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -44,7 +44,7 @@ class Contribution(models.Model):
     employer_amount = models.FloatField()
     retro_employee_amount = models.FloatField()
     retro_employer_amount = models.FloatField()
-    contribution_date = models.DateTimeField()
+    contribution_date = models.DateField()
 
     def calculated_total_contributions(self):
         a = self.employee_amount

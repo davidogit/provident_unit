@@ -50,3 +50,4 @@ def user_groups_and_permissions(request):
                 }
         else:
             return {}
+    return {}
