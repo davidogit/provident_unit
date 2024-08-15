@@ -37,7 +37,7 @@ class StaffMemberListView(ListView):
         scheme = InvestmentScheme.objects.get(id=scheme_name)
 
         if tenant and scheme_name:
-            return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant, investment_scheme=scheme)
+            return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant)
         else:
             return StaffAPI.objects.none()
 
@@ -103,16 +103,18 @@ class Contributed(ListView):
         # Get tenant from middleware
         tenant = self.request.tenant
         # Get scheme name
-        scheme_name = self.request.scheme_name
+        scheme_id = self.request.scheme_name
 
         if not selected_year:
             selected_year = datetime.now().year
         else:
             selected_year = selected_year
 
-        if tenant and scheme_name:
-            obj = Contribution.objects.filter(investment_scheme__tenant=tenant, investment_scheme__name=scheme_name)
-            queryset = obj.filter(member_id=user_id,contribution_date__year=selected_year).order_by('contribution_date')
+        if tenant and scheme_id:
+            obj = Contribution.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id=scheme_id)
+            queryset = obj.filter(member__Id=user_id,year=selected_year).order_by('contribution_date')
+
+            print(queryset)
             return queryset
         else:
             return Contribution.objects.none()
@@ -124,8 +126,6 @@ class Contributed(ListView):
         user_id = self.kwargs.get('membership_id')
 
         return get_object_or_404(StaffAPI, Id=user_id)
-
-
 
 
 
@@ -154,7 +154,7 @@ class Contributed(ListView):
             user = None
         
 
-        contributions = self.get_queryset().filter(member = user)
+        contributions = self.get_queryset()
         context['contributions'] = contributions
         
         # print(contributions)
@@ -169,6 +169,10 @@ class Contributed(ListView):
         context['monthly_contributions'] = dict(monthly_contributions)
 
         return context
+    
+
+
+    
 
 @method_decorator(login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')

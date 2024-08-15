@@ -43,7 +43,10 @@ class InvestmentScheme(models.Model):
         (Weekly,'Weekly'),
         (Monthly,'Monthly')
     ]
-    contribution_frequency = models.CharField(max_length=20,choices=frequency,default='',null=True)
+    # contribution_frequency = models.CharField(max_length=20,choices=frequency,default='',null=True)
+    contribution_time = models.TimeField(null=True)
+    contribution_date = models.IntegerField(null=True)
+
     distribution_frequency = models.CharField(max_length=20, choices=frequency,default='', null=True)
     distribution_percentage = models.FloatField(null=True)
     eligibility_criteria_months = models.IntegerField(null=True)
