@@ -16,7 +16,7 @@
         </thead>
         <tbody>
             {% for user in users %}
-            <tr data-user-id="{{ user.id }}">
+            <tr>
                 <td>{{ user.username }}</td>
                 <td>{{ user.email }}</td>
                 <td>
@@ -26,8 +26,9 @@
                 </td>
                 <td>
                     <div class="d-inline-flex">
-                        <button class="btn btn-sm btn-info me-2" data-bs-toggle="modal" data-bs-target="#editModal" data-username="{{ user.username }}" data-roles="{{ user.groups.all|join:', ' }}">Edit</button>
-                        
+                        <!-- Trigger button for each user's modal -->
+                        <button class="btn btn-sm btn-info me-2" data-bs-toggle="modal" data-bs-target="#editModal{{ user.id }}">Edit</button>
+
                         <!-- Form for deleting user -->
                         <form action="{% url 'delete_user' tenant_id=tenant.id user_id=user.id %}" method="post">
                             {% csrf_token %}
@@ -36,44 +37,42 @@
                     </div>
                 </td>
             </tr>
+
+            <!-- Edit Modal for each user -->
+            <div class="modal fade" id="editModal{{ user.id }}" tabindex="-1" aria-labelledby="editModalLabel{{ user.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editModalLabel{{ user.id }}">Edit User Permissions</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editForm{{ user.id }}" method="post" action="{% url 'manage_users' tenant_id=tenant.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <div class="mb-3">
+                                    <label for="editUser{{ user.id }}" class="form-label">User</label>
+                                    <input type="text" class="form-control" id="editUser{{ user.id }}" value="{{ user.username }}" disabled>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editPermissions{{ user.id }}" class="form-label">Roles</label>
+                                    <select multiple class="form-select" id="editPermissions{{ user.id }}" name="roles">
+                                        {% for role in roles %}
+                                            <option value="{{ role.name }}" {% if role in user.groups.all %} selected {% endif %}>{{ role.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                    <button type="button" name="delete_role" class="btn btn-sm btn-danger" value="{{ role.name }}">Delete</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {% endfor %}
         </tbody>
     </table>
-    
-    <!-- Edit Modal -->
-    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editModalLabel">Edit User Permissions</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editForm" method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="editUser" class="form-label">User</label>
-                            <input type="text" class="form-control" id="editUser" value="{{ user.username }}" disabled>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editPermissions" class="form-label">Permissions</label>
-                            <select multiple class="form-select" id="editPermissions" name="roles">
-                                {% for role in roles %}
-                                    <option value="{{ role.name }}" {% if role.name in user.groups.all|join:', ' %} selected {% endif %}>{{ role.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                            <form action="{% url 'delete_user' tenant_id=tenant.id user_id=user.id %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                            </form>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+</div>
 {% endblock %}

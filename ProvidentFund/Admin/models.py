@@ -3,7 +3,6 @@ from django.contrib.auth.models import AbstractUser, Permission, Group
 from django.db import models
 
 class User(AbstractUser):
-    # Adding a tenant field to the User model
     tenant = models.ForeignKey(Tenant, null=True, on_delete=models.CASCADE)
     
     # Use unique related_name to avoid conflict with the built-in User model
@@ -23,11 +22,17 @@ class User(AbstractUser):
     )
 
 class Role(models.Model):
-    # Role name with a maximum length of 50 characters
     name = models.CharField(max_length=50)
-    # Many-to-many relationship with permissions
     permissions = models.ManyToManyField(Permission, blank=True)
 
     def __str__(self):
-        # String representation of the Role object
         return self.name
+
+# Add the Activity model here
+class Activity(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # ForeignKey to your custom User model
+    description = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username}: {self.description} at {self.timestamp}"
