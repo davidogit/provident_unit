@@ -16,15 +16,21 @@
       <div class="col-lg-10">
         <div class="card shadow-sm">
           <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <h4 class="mb-0">Contributions</h4>
-              <select id="year-select" name="year" class="form-select w-auto">
-                <option value="">Select Year</option>
-                {% for year in years %}
-                  <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
-                {% endfor %}
-              </select>
-            </div>
+
+            <form method="GET" action="">
+
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">Contributions</h4>
+                <select id="year-select" name="year" class="form-select w-auto">
+                  <option value="">Select Year</option>
+                  {% for year in years %}
+                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+            </form>
+
 
             <div class="table-responsive">
               <table class="table table-striped" id="data-table">
@@ -42,7 +48,7 @@
                   <tr>
                     
                       <td>{{ contribution.contribution_date|date:"F" }}</td>
-                      <td>{{ contribution.total_contributions }}</td>
+                      <td>{{ contribution.total_contributions|floatformat:2 }}</td>
                       <td>{{ contribution.contribution_date|date:"Y-m-d" }}</td>
                     
                   </tr>

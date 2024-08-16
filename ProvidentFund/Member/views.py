@@ -71,37 +71,43 @@ def loginView(request, tenant_id):
 
         user = authenticate(request, username=username, password=password,tenant=tenant)
 
-        # Redirect anyone with admin proviledge
-        if user.groups.filter(name='Admin'):
-            return redirect('invalid_login_details', tenant_id=tenant_id)
-
         if user is not None:
-            if user.tenant == tenant:
-                # Generate OTP
-                otp = generate_unique_code()
-                try:
-                    # Send OTP to user via email
-                    send_mail(
-                        subject='PF CODE',
-                        message=f'Your OTP code is {otp}',
-                        from_email=EMAIL_HOST_USER,
-                        recipient_list=[user.email],
-                        fail_silently=False,
-                    )
 
-                    # Save OTP in session for later verification
-                    request.session['otp_token'] = otp
-                    request.session['username'] = username
-                    request.session['email'] = user.email
-                except SMTPConnectError as e:
-                    print(f'SMTPConnectError: {e}')
-                    return render(request, 'login_error.html', {'error': 'Failed to send email'})
+            # Redirect anyone with admin priviledge
+            if user.groups.filter(name='Admin'):
+                return redirect('invalid_login_details', tenant_id=tenant_id)
 
-                # Redirect to verify_otp view
-                return redirect('verify_otp', user_id=user.id, tenant_id=tenant_id)
+            if user is not None:
+                if user.tenant == tenant:
+                    # Generate OTP
+                    otp = generate_unique_code()
+                    try:
+                        # Send OTP to user via email
+                        send_mail(
+                            subject='PF CODE',
+                            message=f'Your OTP code is {otp}',
+                            from_email=EMAIL_HOST_USER,
+                            recipient_list=[user.email],
+                            fail_silently=False,
+                        )
+
+                        # Save OTP in session for later verification
+                        request.session['otp_token'] = otp
+                        request.session['username'] = username
+                        request.session['email'] = user.email
+                    except SMTPConnectError as e:
+                        print(f'SMTPConnectError: {e}')
+                        return render(request, 'login_error.html', {'error': 'Failed to send email'})
+
+                    # Redirect to verify_otp view
+                    return redirect('verify_otp', user_id=user.id, tenant_id=tenant_id)
+                else:
+                    # Redirect to invalid_login_details view
+                    return redirect('invalid_login_details', tenant_id=tenant_id)
             else:
                 # Redirect to invalid_login_details view
                 return redirect('invalid_login_details', tenant_id=tenant_id)
+        
         else:
             # Redirect to invalid_login_details view
             return redirect('invalid_login_details', tenant_id=tenant_id)

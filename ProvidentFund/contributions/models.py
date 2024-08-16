@@ -15,7 +15,7 @@ class StaffAPI(models.Model):
     exited_date = models.DateField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
     profit = models.FloatField(default=0.0)
-    subscription_date = models.DateField()
+    subscription_date = models.DateField(null=True)
     updated_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -37,14 +37,14 @@ class StaffAPI(models.Model):
 class Contribution(models.Model):
     # tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
-    member = models.ForeignKey(StaffAPI, on_delete=models.CASCADE, related_name='contributions')
+    member = models.ForeignKey(StaffAPI, on_delete=models.CASCADE)
     month = models.CharField(max_length=20)
     year = models.CharField(max_length=4)
     employee_amount = models.FloatField()
     employer_amount = models.FloatField()
     retro_employee_amount = models.FloatField()
     retro_employer_amount = models.FloatField()
-    contribution_date = models.DateTimeField()
+    contribution_date = models.DateField()
 
     def calculated_total_contributions(self):
         a = self.employee_amount

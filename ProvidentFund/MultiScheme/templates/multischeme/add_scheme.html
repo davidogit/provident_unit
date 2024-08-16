@@ -35,9 +35,40 @@
                         {% endfor %}
                       </select>
                     </div>
+
+
+                  </div>
+
+                  <div class="col-md-4">
+
+                    <div class="form-group mb-3">
+                      <label for="delayed_int" class="form-label">Include Delayed Interest Field? :</label>
+                      
+                      <select class="form-control" id="delayed_int" name="delayed_int">
+                        {% for opt,label in options %}
+                        <option value="{{ opt }}">{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label for="bank_int" class="form-label">Include Bank Interest & Charges Field? :</label>
+                      
+                      <select class="form-control" id="bank_int" name="bank_int">
+                        {% for opt,label in options %}
+                        <option value="{{ opt }}">{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      
+                    </div>
+
                   </div>
           
                   <div class="col-md-4">
+
+
+
                     <div class="form-group mb-3">
                       <label class="form-label" for="dist_perc">Distribution Percentage</label>
                       <input type="number" step="0.01" min="1" class="form-control" id="dist_perc" name="distribution_percentage">
@@ -61,7 +92,7 @@
                   <div class="col-md-4">
                     <div class="form-group mb-3">
                       <label for="desc" class="form-label">Description</label>
-                        <textarea class="form-control" id="desc" name="description" cols="9" rows="9"></textarea>
+                        <textarea class="form-control" id="desc" name="description" cols="9" rows="10"></textarea>
                     </div>
 
                   </div>

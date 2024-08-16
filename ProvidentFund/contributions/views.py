@@ -37,7 +37,7 @@ class StaffMemberListView(ListView):
         scheme = InvestmentScheme.objects.get(id=scheme_name)
 
         if tenant and scheme_name:
-            return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant, investment_scheme=scheme)
+            return StaffAPI.objects.filter(exited_flag=False,investment_scheme__tenant=tenant)
         else:
             return StaffAPI.objects.none()
 
@@ -52,7 +52,9 @@ class StaffMemberListView(ListView):
 class OptOutMemberView(View):
     def post(self, request, *args, **kwargs):
         member_id = kwargs.get('pk')
-        member = get_object_or_404(StaffAPI, pk=member_id)
+        tenant = self.request.tenant
+
+        member = get_object_or_404(StaffAPI, pk=member_id, investment_schene__tenant=tenant)
         member.exited_date = timezone.now()
         member.exited_flag = True
         member.save()
@@ -70,7 +72,7 @@ class OptOutMemberView(View):
             }
         )
         send_mail(
-             subject='Notification Mail!',
+            subject='Notification Mail!',
             message='',  # Empty because we are sending html_message
             from_email=EMAIL_HOST_USER,
             recipient_list=['dave21620@gmail.com'],
@@ -96,39 +98,38 @@ class Contributed(ListView):
     paginate_by = 12
 
     def get_queryset(self):
-        # Get user id
-        user_id = self.kwargs.get('membership_id')
+        # Get user id and year from Get request
+        user_id = self.kwargs.get('pk')
         selected_year = self.request.GET.get('year')
 
         # Get tenant from middleware
         tenant = self.request.tenant
-        # Get scheme name
-        scheme_name = self.request.scheme_name
+
+        # Get scheme id
+        scheme_id = self.request.scheme_name
+
+        # get staff instance using user_id and tenant
+        user = get_object_or_404(StaffAPI, Id=user_id,investment_scheme__tenant=tenant)
 
         if not selected_year:
             selected_year = datetime.now().year
         else:
-            selected_year = selected_year
+            selected_year = str(selected_year)
 
-        if tenant and scheme_name:
-            obj = Contribution.objects.filter(investment_scheme__tenant=tenant, investment_scheme__name=scheme_name)
-            queryset = obj.filter(member_id=user_id,contribution_date__year=selected_year).order_by('contribution_date')
-            return queryset
+        if tenant and scheme_id:
+            return Contribution.objects.filter(member = user,investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,year=selected_year)
         else:
             return Contribution.objects.none()
 
     
-
     # Using get_object to retrieve the user pk from url
     def get_object(self):
-        user_id = self.kwargs.get('membership_id')
+        user_id = self.kwargs.get('pk')
+        tenant = self.request.tenant
 
-        return get_object_or_404(StaffAPI, Id=user_id)
+        return get_object_or_404(StaffAPI, Id=user_id, investment_scheme__tenant=tenant)
 
-
-
-
-
+    # context data
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
@@ -141,26 +142,12 @@ class Contributed(ListView):
         context['years'] = years
         context['selected_year'] = str(selected_year)
 
-
-        # Get user ID
-        # user_id = 6
-        user_id = self.kwargs.get('membership_id')
-
-        try:
-            user = StaffAPI.objects.get(Id= user_id)
-
-
-        except StaffAPI.DoesNotExist:
-            user = None
         
-
-        contributions = self.get_queryset().filter(member = user)
+        contributions = self.get_queryset()
         context['contributions'] = contributions
-        
-        # print(contributions)
 
+        # Initialize monthly_contribution
         monthly_contributions = defaultdict(list)
-
 
         for contribution in contributions:
             month_name = contribution.contribution_date.strftime('%B')
@@ -169,9 +156,14 @@ class Contributed(ListView):
         context['monthly_contributions'] = dict(monthly_contributions)
 
         return context
+    
+
+
+    
 
 @method_decorator(login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 def staff_profile(request, staff_id):
-    staff_member = get_object_or_404(StaffAPI, Id=staff_id)
+    tenant = request.tenant
+    staff_member = get_object_or_404(StaffAPI, Id=staff_id, investment_scheme__tenant=tenant)
     return render(request, 'staff_profile.html', {'staff_member': staff_member})

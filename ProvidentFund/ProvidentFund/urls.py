@@ -20,6 +20,7 @@ from django.urls import path,include
 
 from Member import views
 from Fund import views as v
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,5 +31,10 @@ urlpatterns = [
     path('<str:tenant_id>/members/', include('Member.urls')),
     path('<str:tenant_id>/pfund_admin/', include('Admin.urls')),
     path('<str:tenant_id>/schemes/', include('MultiScheme.urls')),
+
+    path('password_reset/', auth_views.PasswordResetView.as_view(template_name='reset_password.html'), name='password_reset'),
+    path('password_reset_done/', auth_views.PasswordResetDoneView.as_view(template_name='reset_password_link_sent.html'), name='password_reset_done'),
+    path('password_reset_confirm/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='reset_password_details.html'), name='password_reset_confirm'),
+    path('password_reset_complete/', auth_views.PasswordResetCompleteView.as_view(template_name='password_reset_successful.html'), name='password_reset_complete'),
 ]
 

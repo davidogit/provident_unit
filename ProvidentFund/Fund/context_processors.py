@@ -56,9 +56,14 @@ from django.contrib.auth import get_user_model
 
 def schemes_processor(request):
     tenant = getattr(request, 'tenant', None)
-    schemes = InvestmentScheme.objects.filter(tenant=tenant) if tenant else []
+    schemes = InvestmentScheme.objects.filter(tenant=tenant) if tenant else InvestmentScheme.objects.none()
+
+    delayed_int_option = schemes.filter(delayed_int__in =['Yes',])
+    bank_int_option = schemes.filter(bank_int__in =['Yes',])
     return {
-        'schemes': schemes
+        'schemes' : schemes,
+        'delayed_int_option': delayed_int_option,
+        'bank_int_option' : bank_int_option,
     }
 
 
@@ -92,5 +97,6 @@ def user_groups_and_permissions(request):
                     'is_manager' : is_manager_user,
                     'user':user,
                 }
-        # Always return an empty dictionary if no conditions are met
+        else:
             return {}
+    return {}

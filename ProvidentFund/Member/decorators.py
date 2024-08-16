@@ -8,11 +8,13 @@ from MultiScheme.models import Tenant
 def unauthenticated_user(view_func):
     def wrapper_func(request,*args,**kwargs):
         # Checking if user is already logged in
-        if request.user.is_authenticated:
-            # We use reverse to get a url and then use HttpResponseRedirect to send us to that url
-            url = reverse('finance_page', kwargs={'tenant_id':request.tenant.id})
-            return HttpResponseRedirect(url)
-        else:
+        if request.user is not None:
+            if request.user.is_authenticated:
+                # We use reverse to get a url and then use HttpResponseRedirect to send us to that url
+                url = reverse('finance_page', kwargs={'tenant_id':request.tenant.id})
+                return HttpResponseRedirect(url)
+
+            # If user is not logged in then allow access to the view
             return view_func(request,*args,**kwargs)
     return wrapper_func
 
@@ -26,11 +28,10 @@ def tenant_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         tenant_id = kwargs.get('tenant_id')
         tenant = Tenant.objects.get(id=tenant_id)
-        print(request.user.tenant)
+
         if request.user.is_authenticated and request.user.tenant == tenant:
             return view_func(request, *args, **kwargs)
-        return redirect('invalid_login_details', tenant_id=request.user.tenant.id)
-    # HttpResponseForbidden("You do not have permission to access this page 11.")
+        return redirect('invalid_login_details', tenant_id=request.tenant.id)
 
     return _wrapped_view
 

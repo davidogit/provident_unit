@@ -15,7 +15,7 @@
 
             <form
               method="post"
-              action="{% url 'opt_out_member' tenant_id=request.tenant.id pk=membership.pk %}"
+              action="{% url 'opt_out_member' tenant_id=request.tenant.id scheme_name=request.scheme_name pk=membership.pk %}"
               class="mb-3"
               id="opt-out-form"
             >
