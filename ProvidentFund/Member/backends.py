@@ -13,10 +13,6 @@ class TenantAwareBackend(ModelBackend):
 
     def authenticate(self, request: HttpRequest, username: str | None = ..., password: str | None = ...,tenant=None,  **kwargs: Any) -> AbstractBaseUser | None:
 
-        # Get tenant from request
-        # tenant = getattr(request, 'tenant', None)
-        # tenant = request.tenant
-        # print(tenant)
         UserModel = get_user_model()
 
         try:

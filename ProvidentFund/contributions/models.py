@@ -37,7 +37,7 @@ class StaffAPI(models.Model):
 class Contribution(models.Model):
     # tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
-    member = models.ForeignKey(StaffAPI, on_delete=models.CASCADE, related_name='contributions')
+    member = models.ForeignKey(StaffAPI, on_delete=models.CASCADE)
     month = models.CharField(max_length=20)
     year = models.CharField(max_length=4)
     employee_amount = models.FloatField()

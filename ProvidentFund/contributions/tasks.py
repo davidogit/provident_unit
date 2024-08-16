@@ -82,7 +82,8 @@ def fetch_memberships(self):
                                         except ValueError:
                                             raise ValidationError(f"Invalid date format: {contribution_date}")
                                         
-                                    Contribution.objects.update_or_create(
+                                    # create a contribution 
+                                    Contribution.objects.create(
                                         investment_scheme = scheme,
                                         member = staff_member,
                                         month = contribution_data['month'],

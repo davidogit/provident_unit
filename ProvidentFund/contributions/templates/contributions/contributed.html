@@ -17,7 +17,7 @@
         <div class="card shadow-sm">
           <div class="card-body">
 
-            <form method="GET" action="{% url 'contribution-history' tenant_id=request.tenant.id scheme_name=request.scheme_name pk=26 %}">
+            <form method="GET" action="">
 
               <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4 class="mb-0">Contributions</h4>
@@ -48,7 +48,7 @@
                   <tr>
                     
                       <td>{{ contribution.contribution_date|date:"F" }}</td>
-                      <td>{{ contribution.total_contributions }}</td>
+                      <td>{{ contribution.total_contributions|floatformat:2 }}</td>
                       <td>{{ contribution.contribution_date|date:"Y-m-d" }}</td>
                     
                   </tr>
