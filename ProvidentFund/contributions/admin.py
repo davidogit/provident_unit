@@ -6,7 +6,7 @@ class StaffAPIAdmin(admin.ModelAdmin):
         'Id',
         'first_name',
         'last_name',
-        'staff_number',
+        # 'staff_number',
         'date_joined',
         'status',
         'fund_type',

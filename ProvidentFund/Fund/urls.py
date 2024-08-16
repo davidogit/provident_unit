@@ -11,6 +11,7 @@ urlpatterns =[
     path('<int:scheme_name>/memberList/', views.MemberListView.as_view(), name='member_list'),
     path('<int:scheme_name>/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('<int:scheme_name>/investmentDetail/<int:pk>/', views.InvestmentDetailView.as_view(), name='investment_detail'),
+    path('<int:scheme_name>/ivestment_approval/', views.InvestmentApproval.as_view(), name='investment_approval'),
     
     path('<int:scheme_name>/update/<int:pk>', views.InvestmentUpdateView.as_view(), name='investment_update'),
     path('<int:scheme_name>/deleteInvestment/<int:pk>/', views.InvestmentDeleteView.as_view(), name='delete_investment'),

@@ -10,7 +10,7 @@
     <p><strong>Date Joined:</strong> {{ staff_member.date_joined }}</p>
     <p><strong>Status:</strong> {{ staff_member.status }}</p>
     <p><strong>Fund Type:</strong> {{ staff_member.fund_type }}</p>
-    <p><strong>Amount:</strong> {{ staff_member.amount }}</p>
+    <p><strong>Amount:</strong> {{ staff_member.amount|floatformat:2 }}</p>
     <p><strong>Exited Date:</strong> {{ staff_member.exited_date }}</p>
     <p><strong>Exited Flag:</strong> {{ staff_member.exited_flag }}</p>
     <p><strong>Profit:</strong> {{ staff_member.profit }}</p>
@@ -23,5 +23,7 @@
         <li>{{ contribution.month }} {{ contribution.year }} - Total: {{ contribution.total_contributions }}</li>
         {% endfor %}
     </ul>
+
+    <a href="{% url 'logout' tenant_id=request.tenant.id %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
 </body>
 </html>

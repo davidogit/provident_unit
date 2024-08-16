@@ -10,6 +10,7 @@ from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView,CreateView
 from django.contrib.auth.models import Group
+from .models import Member
 
 from MultiScheme.models import Tenant
 # Importing the user model 
@@ -76,6 +77,15 @@ def loginView(request, tenant_id):
             # Redirect anyone with admin priviledge
             if user.groups.filter(name='Admin'):
                 return redirect('invalid_login_details', tenant_id=tenant_id)
+            
+            # # Redirect to memebers page if user is a Member
+            # if user.groups.filter(name='Member'):
+
+            #     # Get related member to user and extract staff_id from Member
+            #     member = Member.objects.get(user=user)
+            #     # ///////////
+            #     print(member)
+            #     return redirect('member_profile', tenant_id=tenant_id, member_id=member.staff_id)
 
             if user is not None:
                 if user.tenant == tenant:
@@ -132,10 +142,10 @@ def verifyOtpView(request,user_id, tenant_id):
     # Get user email from session
     user_email = request.session.get('email')
     if request.method == 'POST':
-        otp_1 = request.POST.get('otp-1')
-        otp_2 = request.POST.get('otp-2')
-        otp_3 = request.POST.get('otp-3')
-        otp_4 = request.POST.get('otp-4')
+        otp_1 = request.POST.get('otp-1','')
+        otp_2 = request.POST.get('otp-2','')
+        otp_3 = request.POST.get('otp-3','')
+        otp_4 = request.POST.get('otp-4','')
 
         # concantenate otp
         otp_combined = otp_1+otp_2+otp_3+otp_4
@@ -144,18 +154,27 @@ def verifyOtpView(request,user_id, tenant_id):
 
         # Retrieve OTP from session
         session_otp = request.session.get('otp_token')
-        # username = request.session.get('username')
 
+        # Check if theres session_otp for cases where there is no session_otp
+        if session_otp is None:
+            return HttpResponse('OTP has expired or is not set', status=400)
 
         if otp == int(session_otp):
             # we manually set the auth backend to our backend so it can authenticate based on the tenant
             user.backend = 'Member.backends.TenantAwareBackend'
+
             login(request, user)
+            
             # Clear session data after successful login
             del request.session['otp_token']
-            # del request.session['username']
 
-            return redirect('finance_page', tenant_id)
+
+            if user.groups.filter(name='Member'):
+                # Get related member to user and extract staff_id from Member
+                member = Member.objects.get(user=user)                
+                return redirect('member_profile', tenant_id=tenant_id, member_id=member.staff_id)
+            else:
+                return redirect('finance_page', tenant_id)
         else:
             return HttpResponse('Invalid OTP')
 

@@ -1,3 +1,5 @@
+from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
 # Create your views here.
@@ -10,7 +12,7 @@ from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
-from .forms import InvestmentUpdateForm
+from .forms import InvestmentUpdateForm,InvestmentApprovalForm
 
 # Importing custom decorators
 from Member.decorators import tenant_required
@@ -41,13 +43,24 @@ class Invest(TemplateView):
         # scheme = InvestmentScheme.objects.get(id=scheme_name)
 
         context = super().get_context_data(**kwargs)
-        # Queryset to calculate total interest
+        # Queryset to calculate total interest Actual and Estimated
+
+        # Estimated
         try: 
-            interest_query = InvestmentDetail.objects.all().filter(_status = 'Active', investment_scheme__tenant = tenant)
+            interest_query = InvestmentDetail.objects.all().filter(~Q(_status = 'Active'), investment_scheme__tenant = tenant)
         except:
             interest_query = []
-
+        
         context['total_interest'] = sum(inv.interest_amount for inv in interest_query)
+
+        # Actual
+        try: 
+            actual_revenue = InvestmentDetail.objects.all().filter(approval_status=True,_status = 'Expired', investment_scheme__tenant = tenant)
+        except:
+            actual_revenue = []
+
+        context['actual_revenue'] = sum(inv.interest_amount for inv in actual_revenue)
+
 
         # Queryset to calsulate total number of active investments
         try:
@@ -891,3 +904,39 @@ class DelayedInterestQuery(ListView):
             context['results'] = query
         return context
     
+
+
+
+class InvestmentApproval(ListView):
+    model = InvestmentDetail
+    template_name = 'dashboard/investment_approval.html'
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+
+        if tenant and scheme_id:
+            # Matured investments to be approved
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,approval_status=False, _status='Expired')
+        else:
+            return InvestmentDetail.objects.none()
+        
+    def post(self, request, *args, **kwargs):
+        form = InvestmentApprovalForm(request.POST)
+        inv_id = request.POST.get('investment_id')
+        tenant = request.tenant
+        scheme_id = request.scheme_name
+        if form.is_valid():
+            investment = InvestmentDetail.objects.get(id=inv_id,investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,approval_status=False, _status='Expired')
+            investment.approval_status = form.cleaned_data['approval_status']
+            investment.save()
+
+            return JsonResponse({'status':'success'})
+        return JsonResponse({'status':'error'}, status=400)
+
+
+    def get_context_data(self, **kwargs):
+        context=super().get_context_data(**kwargs)
+
+        context['approval_form']=InvestmentApprovalForm()
+        return context

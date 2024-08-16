@@ -18,3 +18,8 @@ class InvestmentUpdateForm(forms.ModelForm):
             'interest_end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'interest_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
+
+class InvestmentApprovalForm(forms.ModelForm):
+    class Meta:
+        model=InvestmentDetail
+        fields =['approval_status']

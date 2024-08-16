@@ -44,7 +44,7 @@
         </div>
 
         <div class="mb-4">
-          <label class="form-label d-flex justify-content-between">Password <a href="#">Forgot password?</a></label>
+          <label class="form-label d-flex justify-content-between">Password <a href="{% url 'password_reset' %}">Forgot password?</a></label>
           <input type="password" class="form-control" placeholder="Enter your password" name="password">
         </div>
         <!-- <button>OTP</button> -->
@@ -54,8 +54,8 @@
 
         <div class="row gx-2">
           <!-- <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div> -->
-          <div class="col text-center"><span><a href="">Sign up here</a></span></div>
-          <div class="col text-center"><span><a href="{% url 'password_reset' %}">Forgot password? click here to reset password</a></span></div>
+          <div class="col text-center"><span><a href="{% url 'register' tenant_id=request.tenant.id %}">Sign up here</a></span></div>
+          <!-- <div class="col text-center"><span><a href="{% url 'password_reset' %}">Forgot password? click here to reset password</a></span></div> -->
           
           <!-- <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div> -->
         </div><!- row
@@ -78,7 +78,4 @@
     }
   </script>
 </body>
-
-<!-- Mirrored from themepixels.me/demo/dashbyte/pages/verify-account.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:21:30 GMT -->
-
 </html>

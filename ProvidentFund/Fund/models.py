@@ -42,6 +42,8 @@ class InvestmentDetail(models.Model):
     _remaining_days = models.PositiveIntegerField(default=0)
     _status = models.CharField(max_length=20, default='Pending')
 
+    approval_status = models.BooleanField(default=False)
+
 
     def calculate_inv_interest(self):
         principal = self.principal_amount or 0.0
