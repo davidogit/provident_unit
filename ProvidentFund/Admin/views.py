@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, get_user_model, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
-# from .models import User
+from .models import Activity
 from django.contrib import messages
 from datetime import datetime
 # Custom Decorators
@@ -28,16 +28,12 @@ User = get_user_model()
 @role_required(role=['Admin'])
 def assign_roles(request, tenant_id):
     # Retrieve the tenant associated with the request
-    tenant = request.tenant
-
-    # Initialize an empty list to track recent activities
-    recent_activities = []
-
+    tenant = get_object_or_404(Tenant, id=tenant_id)
+    
     # Fetch users and roles based on the tenant
-    users = User.objects.filter(tenant=tenant)  # Get all users associated with the tenant
-    roles = Group.objects.all()  # Get all available roles
-
-    # Check if the request method is POST
+    users = User.objects.filter(tenant=tenant)
+    roles = Group.objects.all()
+    
     if request.method == 'POST':
         # Get the selected username and role from the POST data
         username = request.POST.get('username')
@@ -45,30 +41,39 @@ def assign_roles(request, tenant_id):
 
         try:
             # Retrieve the user and role from the database
-            person = User.objects.get(username=username)
+            person = User.objects.get(username=username, tenant=tenant)
             group = Group.objects.get(name=role_name)
 
             # Assign the selected role to the user
             person.groups.add(group)
             person.save()
 
+            # Record the activity
+            Activity.objects.create(
+                user=request.user,
+                description=f'Assigned "{role_name}" role to user "{username}".'
+            )
+            
             # Provide a success message
             messages.success(request, f'Role "{role_name}" assigned to user "{username}" successfully.')
 
-            # Record the activity
-            activity = f'Admin assigned "{username}" as "{role_name}" on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
-            recent_activities.append(activity)
+            # Redirect to avoid form resubmission
+            return redirect('assign_roles', tenant_id=tenant_id)
 
         except User.DoesNotExist:
-            # Handle the case where the user does not exist
-            messages.error(request, 'User does not exist')
+            messages.error(request, 'User does not exist or does not belong to the tenant.')
         except Group.DoesNotExist:
-            # Handle the case where the role does not exist
-            messages.error(request, 'Group does not exist')
+            messages.error(request, 'Role does not exist.')
+
+    # Fetch recent activities
+    recent_activities = Activity.objects.order_by('-timestamp')[:10]
 
     # Render the assign_roles page with users, roles, and recent activities
-    return render(request, 'admin_panel/assign_roles.html', {'users': users, 'roles': roles, 'recent_activities': recent_activities})
-
+    return render(request, 'admin_panel/assign_roles.html', {
+        'users': users,
+        'roles': roles,
+        'recent_activities': recent_activities
+    })
 
 # View to add a new user
 @login_required
@@ -106,32 +111,40 @@ def add_user(request, tenant_id):
 @tenant_required
 @role_required(role=['Admin'])
 def manage_users(request, tenant_id):
-    tenant = request.tenant
+    tenant = get_object_or_404(Tenant, id=tenant_id)
     users = User.objects.filter(tenant=tenant)
-    
-    # Fetch all roles for the dropdown
     roles = Group.objects.all()
-    
+
     if request.method == 'POST':
-        # Handle form submission for editing users
         user_id = request.POST.get('user_id')
-        roles = request.POST.getlist('roles')
-        user = get_object_or_404(User, id=user_id)
+        roles_to_add = request.POST.getlist('roles')
+        user = get_object_or_404(User, id=user_id, tenant=tenant)
         
-        # Clear current roles and add new roles
-        user.groups.clear()
-        for role_name in roles:
-            group = Group.objects.get(name=role_name)
-            user.groups.add(group)
-        
-        # Redirect to the same page after updating
+        if 'delete_role' in request.POST:
+            # Handle deleting a specific role from the user
+            role_to_delete = request.POST.get('delete_role')
+            group = Group.objects.filter(name=role_to_delete).first()
+            if group:
+                user.groups.remove(group)
+                user.save()
+        else:
+            # Handle updating roles
+            user.groups.clear()
+            for role_name in roles_to_add:
+                group = Group.objects.filter(name=role_name).first()
+                if group:
+                    user.groups.add(group)
+            user.save()
+
         return redirect('manage_users', tenant_id=tenant_id)
-    
+
     return render(request, 'admin_panel/manage_users.html', {
         'tenant': tenant,
         'users': users,
         'roles': roles,
     })
+
+
 
 @login_required
 @tenant_required
@@ -160,24 +173,36 @@ def delete_group(request, group_id):
 def admin_panel(request, *args, **kwargs):
     return render(request, 'admin_panel/admin_panel.html')
 
-# View to edit user details
 @login_required
 @tenant_required
 @role_required(role=['Admin'])
 def edit_user_view(request, user_id):
     tenant = request.tenant
     user = get_object_or_404(User, id=user_id, tenant=tenant)
+
     if request.method == 'POST':
+        # Check if the delete button was clicked
+        if 'delete' in request.POST:
+            role_to_delete = request.POST.get('roles')
+            group = Group.objects.filter(name=role_to_delete).first()
+            if group:
+                user.groups.remove(group)
+
         # Update user roles
-        if 'roles' in request.POST:
+        else:
             selected_roles = request.POST.getlist('roles')
             user.groups.set(Group.objects.filter(name__in=selected_roles))
             user.save()
-        # Handle user deletion
-        if 'delete_user' in request.POST:
-            user.delete()
-            return redirect('user_list')  # Redirect to user list or another appropriate page
-    return render(request, 'admin_panel/edit_user.html', {'user': user})
+
+        return redirect('manage_users', tenant_id=tenant.id)  # Redirect to the manage users page
+
+    return render(request, 'admin_panel/edit_user.html', {
+        'user': user,
+        'roles': Group.objects.all()
+    })
+
+
+
 
 # View accessible by both Admin and Customer roles
 @login_required
