@@ -907,7 +907,7 @@ class DelayedInterestQuery(ListView):
     
 
 
-
+# Approval of investments
 class InvestmentApproval(ListView):
     model = InvestmentDetail
     template_name = 'dashboard/investment_approval.html'
@@ -927,12 +927,34 @@ class InvestmentApproval(ListView):
         inv_id = request.POST.get('investment_id')
         tenant = request.tenant
         scheme_id = request.scheme_name
-        if form.is_valid():
-            investment = InvestmentDetail.objects.get(id=inv_id,investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,approval_status=False, _status='Expired')
-            investment.approval_status = form.cleaned_data['approval_status']
-            investment.save()
 
-            return JsonResponse({'status':'success'})
+        # Check if 'investment_id' is provided
+        if not inv_id:
+            return JsonResponse({'status': 'error', 'message': 'Investment ID is required.'}, status=400)
+
+        if form.is_valid():
+            investment = get_object_or_404(InvestmentDetail,id=inv_id,investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,approval_status=False, _status='Expired')
+
+            closing_amount = form.cleaned_data.get('closing_amount')
+            approval_status = form.cleaned_data.get('approval_status')
+
+            # Validate that 'closing_amount' and 'approval_status' are provided
+            if closing_amount is None or approval_status is None:
+                return JsonResponse({'status': 'error', 'message': 'Closing amount and approval status are required.'}, status=400)
+
+            # Check if closing amount == expected amount
+            if investment.interest_amount==closing_amount:
+                # Alter fields of approval
+                investment.approval_status = approval_status
+                investment.closing_amount = closing_amount
+                investment.save()
+
+                return JsonResponse({'status':'success'})
+            else:
+                # Gather the error message(s)
+                error_message = 'Closing amount does not match with expected amount'
+                return JsonResponse({'status':'error', 'message':error_message}, status=400)
+
         return JsonResponse({'status':'error'}, status=400)
 
 

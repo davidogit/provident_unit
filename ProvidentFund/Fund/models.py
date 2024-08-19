@@ -43,6 +43,7 @@ class InvestmentDetail(models.Model):
     _status = models.CharField(max_length=20, default='Pending')
 
     approval_status = models.BooleanField(default=False)
+    closing_amount = models.FloatField(default=0.0)
 
 
     def calculate_inv_interest(self):

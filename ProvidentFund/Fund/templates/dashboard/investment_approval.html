@@ -75,6 +75,15 @@
   .dark-mode .nav-tabs .nav-link::after {
     background-color: var(--dark-mode-tab-underline-color, #fff);
   }
+
+  
+  /* Hide the arrows in Chrome, Safari, Edge, and Opera */
+  input[type="number"].form-control::-webkit-outer-spin-button,
+  input[type="number"].form-control::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+  }
+
 </style>
   {% endblock %}
 
@@ -153,6 +162,8 @@
                     </tr> -->
                     
                     <tr>
+                      
+
                       <th></th>
                       <th>Approve</th>
                       <th>Investment Name</th>
@@ -161,8 +172,8 @@
                       <th>Account Number</th>
                       <th>Principal Amount</th>
                       <th>Percentage Interest (%)</th>
-                      <th>Accumulated Interest</th>
-                      <th>Investment start Date</th>
+                      <!-- <th>Accumulated Interest</th> -->
+                      <!-- <th>Investment start Date</th> -->
                       <th>Maturity Date</th>
                       <th>Tenure</th>
                       <th>Status</th>
@@ -173,29 +184,31 @@
                     {% for investment in investmentdetail_list %}
                     {% if investment.investment_type == 'Treasury Bill' %}
                     <tr>
+                        <td>{{ forloop.counter }}</td>
                         <td>
-                            <form class="approval-form" action="" method="post">
+                            <form class="approval-form d-flex" action="" method="post">
                                 {% csrf_token %}
                                 <input type="hidden" name="investment_id" value="{{ investment.id }}">
-                                <input type="checkbox" name="approval_status" id="approve-checkbox-{{ investment.id }}" 
+                                <input type="checkbox" class="form-check-input m-1" name="approval_status" id="approve-checkbox-{{ investment.id }}" 
                                        {% if investment.is_approved %}checked{% endif %}
                                        onchange="toggleApproveButton('{{ investment.id }}');">
+                                <input class="form-control m-1" style="width: 95px" type="number" step="0.01" name="closing_amount" required placeholder="closing bal.">
                                 <button type="submit" class="btn btn-success" id="approve-button-{{ investment.id }}" disabled>Approve</button>
                             </form>
                         </td>
-                      <td>{{ forloop.counter }}</td>
-                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
-                      <td>{{ investment.investment_type }}</td>
-                      <td>{{ investment.account_type }}</td>
-                      <td>{{ investment.account_number }}</td>
-                      <td>{{ investment.principal_amount }}</td>
-                      <td>{{ investment.interest_percentage }}</td>
-                      <td>{{ investment.interest_amount }}</td>
-                      <td>{{ investment.interest_start_date }}</td>
-                      <td>{{ investment.interest_end_date }}</td>
-                      <td>{{ investment.tenure }} days</td>
-                      <td>{{ investment.status }}</td>
-                      <td>{{ investment.approval_status }}</td>
+                        
+                        <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
+                        <td>{{ investment.investment_type }}</td>
+                        <td>{{ investment.account_type }}</td>
+                        <td>{{ investment.account_number }}</td>
+                        <td>{{ investment.principal_amount }}</td>
+                        <td>{{ investment.interest_percentage }}</td>
+                        <!-- <td>{{ investment.interest_amount }}</td> -->
+                        <!-- <td>{{ investment.interest_start_date }}</td> -->
+                        <td>{{ investment.interest_end_date }}</td>
+                        <td>{{ investment.tenure }} days</td>
+                        <td>{{ investment.status }}</td>
+                        <td>{{ investment.approval_status }}</td>
                     {% endif %}
                     {% endfor %}
                   </tbody>
@@ -265,45 +278,47 @@
                     </tr> -->
                     
                     <tr>
-                        <th></th>
-                        <th>Approve</th>
-                        <th>Investment Name</th>
-                        <th>Investment Type</th>
-                        <th>Account Type</th>
-                        <th>Account Number</th>
-                        <th>Principal Amount</th>
-                        <th>Percentage Interest (%)</th>
-                        <th>Accumulated Interest</th>
-                        <th>Investment start Date</th>
-                        <th>Maturity Date</th>
-                        <th>Tenure</th>
-                        <th>Status</th>
-                        <th>Approval Status</th>
+                      <th></th>
+                      <th>Approve</th>
+                      <th>Investment Name</th>
+                      <th>Investment Type</th>
+                      <th>Account Type</th>
+                      <th>Account Number</th>
+                      <th>Principal Amount</th>
+                      <th>Percentage Interest (%)</th>
+                      <!-- <th>Accumulated Interest</th> -->
+                      <!-- <th>Investment start Date</th> -->
+                      <th>Maturity Date</th>
+                      <th>Tenure</th>
+                      <th>Status</th>
+                      <th>Approval Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for investment in investmentdetail_list %}
                     {% if investment.investment_type == 'Fixed Deposit' %}
                     <tr>
-                      <td>
-                        <form class="approval-form" action="" method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="investment_id" value="{{ investment.id }}">
-                            <input type="checkbox" name="approval_status" id="approve-checkbox-{{ investment.id }}" 
-                                   {% if investment.is_approved %}checked{% endif %}
-                                   onchange="toggleApproveButton('{{ investment.id }}');">
-                            <button type="submit" class="btn btn-success" id="approve-button-{{ investment.id }}" disabled>Approve</button>
-                        </form>
-                      </td>
                       <td>{{ forloop.counter }}</td>
+                      <td>
+                        <form class="approval-form-2 d-flex" action="" method="post">
+                          {% csrf_token %}
+                          <input type="hidden" name="investment_id" value="{{ investment.id }}">
+                          <input type="checkbox" class="form-check-input m-1" name="approval_status" id="approve-checkbox-{{ investment.id }}" 
+                                 {% if investment.is_approved %}checked{% endif %}
+                                 onchange="toggleApproveButton2('{{ investment.id }}');">
+                          <input class="form-control m-1" style="width: 95px" type="number" step="0.01" name="closing_amount" required required placeholder="closing bal.">
+                          <button type="submit" class="btn btn-success" id="approve-button-2-{{ investment.id }}" disabled>Approve</button>
+                      </form>
+                      </td>
+                      
                       <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
                       <td>{{ investment.principal_amount }}</td>
                       <td>{{ investment.interest_percentage }}</td>
-                      <td>{{ investment.interest_amount }}</td>
-                      <td>{{ investment.interest_start_date }}</td>
+                      <!-- <td>{{ investment.interest_amount }}</td>
+                      <td>{{ investment.interest_start_date }}</td> -->
                       <td>{{ investment.interest_end_date }}</td>
                       <td>{{ investment.tenure }} days</td>
                       <td>{{ investment.status }}</td>
@@ -366,13 +381,21 @@
 <!--Tabs for investments-->
 <script></script>
 <script>
+    //For Treasury bills
     function toggleApproveButton(investmentId) {
         var checkbox = document.getElementById('approve-checkbox-' + investmentId);
         var button = document.getElementById('approve-button-' + investmentId);
         button.disabled = !checkbox.checked;
     }
 
+    //For delayed interest
+    function toggleApproveButton2(investmentId) {
+        var checkbox = document.getElementById('approve-checkbox-' + investmentId);
+        var button = document.getElementById('approve-button-2-' + investmentId);
+        button.disabled = !checkbox.checked;
+    }
 
+    // For Treasury Bills
     $(document).ready(function() {
         $('.approval-form').on('submit', function(event) {
             event.preventDefault();
@@ -390,8 +413,51 @@
                         
                     }
                 },
-                error: function() {
-                    alert('There was an error approving the investment.');
+                error: function(jqXHR,) {
+                    //alert('There was an error approving the investment.');
+                    var response = jqXHR.responseJSON; // Get the JSON response from the server
+                    var errorMessage = 'An error occurred. Please try again.';
+    
+                    // Check if the response contains a custom message
+                    if (response && response.message) {
+                        errorMessage = response.message;
+                    }
+    
+                    alert(errorMessage); // Display the error message
+                }
+            });
+        });
+    });
+
+    //For delayed interest
+    $(document).ready(function() {
+        $('.approval-form-2').on('submit', function(event) {
+            event.preventDefault();
+            var form = $(this);
+            $.ajax({
+                type: form.attr('method'),
+                url: form.attr('action'),
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert('Investment approved successfully.');
+                        //form.find('button').attr('disabled', true); // Disable the button after approval
+                        // Remove the investment from the list after approval
+                        form.closest('tr').remove();
+                        
+                    }
+                },
+                error: function(jqXHR,) {
+                    //alert('There was an error approving the investment.');
+                    var response = jqXHR.responseJSON; // Get the JSON response from the server
+                    var errorMessage = 'An error occurred. Please try again.';
+    
+                    // Check if the response contains a custom message
+                    if (response && response.message) {
+                        errorMessage = response.message;
+                    }
+    
+                    alert(errorMessage); // Display the error message
                 }
             });
         });

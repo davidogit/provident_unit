@@ -22,4 +22,4 @@ class InvestmentUpdateForm(forms.ModelForm):
 class InvestmentApprovalForm(forms.ModelForm):
     class Meta:
         model=InvestmentDetail
-        fields =['approval_status']
+        fields =['approval_status','closing_amount']
