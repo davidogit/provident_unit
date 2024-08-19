@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.db.models.query import QuerySet
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
@@ -940,3 +941,22 @@ class InvestmentApproval(ListView):
 
         context['approval_form']=InvestmentApprovalForm()
         return context
+
+
+# Approved Investments list
+
+class ApprovedInvestments(ListView):
+    model = InvestmentDetail
+    template_name = 'dashboard/approved_investments.html'
+    paginate_by = 10
+
+    def get_queryset(self):
+
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+
+        if tenant and scheme_id:
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id=scheme_id, approval_status=True)
+        else:
+            return InvestmentDetail.objects.none()
+    

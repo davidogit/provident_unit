@@ -40,7 +40,7 @@ class SchemeList(ListView):
 class AddScheme(CreateView):
     template_name = 'multischeme/add_scheme.html'
     model = InvestmentScheme
-    fields = ('name','contribution_frequency','distribution_frequency','distribution_percentage','eligibility_criteria_months','payout_frequency','description')
+    fields = ('name','distribution_frequency','distribution_percentage','eligibility_criteria_months','payout_frequency','description')
 
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)

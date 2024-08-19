@@ -2,20 +2,6 @@
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-  <!-- <div class="d-flex align-items-center justify-content-between mb-4">
-    <div>
-      <ol class="breadcrumb fs-sm mb-1">
-        <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Website Analytics</li>
-      </ol>
-      <h4 class="main-title mb-0">Welcome to Dashboard</h4>
-    </div>
-    <nav class="nav nav-icon nav-icon-lg">
-      <a href="#" class="nav-link" data-bs-toggle="tooltip" title="Share"><i class="ri-share-line"></i></a>
-      <a href="#" class="nav-link" data-bs-toggle="tooltip" title="Print"><i class="ri-printer-line"></i></a>
-      <a href="#" class="nav-link" data-bs-toggle="tooltip" title="Report"><i class="ri-bar-chart-2-line"></i></a>
-    </nav>
-  </div> -->
 
 {% block css %}
 <style>
@@ -154,7 +140,6 @@
                     
                     <tr>
                       <th></th>
-                      <th>Approve</th>
                       <th>Investment Name</th>
                       <th>Investment Type</th>
                       <th>Account Type</th>
@@ -173,16 +158,6 @@
                     {% for investment in investmentdetail_list %}
                     {% if investment.investment_type == 'Treasury Bill' %}
                     <tr>
-                        <td>
-                            <form class="approval-form" action="" method="post">
-                                {% csrf_token %}
-                                <input type="hidden" name="investment_id" value="{{ investment.id }}">
-                                <input type="checkbox" name="approval_status" id="approve-checkbox-{{ investment.id }}" 
-                                       {% if investment.is_approved %}checked{% endif %}
-                                       onchange="toggleApproveButton('{{ investment.id }}');">
-                                <button type="submit" class="btn btn-success" id="approve-button-{{ investment.id }}" disabled>Approve</button>
-                            </form>
-                        </td>
                       <td>{{ forloop.counter }}</td>
                       <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
                       <td>{{ investment.investment_type }}</td>
@@ -266,7 +241,6 @@
                     
                     <tr>
                         <th></th>
-                        <th>Approve</th>
                         <th>Investment Name</th>
                         <th>Investment Type</th>
                         <th>Account Type</th>
@@ -285,29 +259,19 @@
                     {% for investment in investmentdetail_list %}
                     {% if investment.investment_type == 'Fixed Deposit' %}
                     <tr>
-                      <td>
-                        <form class="approval-form" action="" method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="investment_id" value="{{ investment.id }}">
-                            <input type="checkbox" name="approval_status" id="approve-checkbox-{{ investment.id }}" 
-                                   {% if investment.is_approved %}checked{% endif %}
-                                   onchange="toggleApproveButton('{{ investment.id }}');">
-                            <button type="submit" class="btn btn-success" id="approve-button-{{ investment.id }}" disabled>Approve</button>
-                        </form>
-                      </td>
-                      <td>{{ forloop.counter }}</td>
-                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
-                      <td>{{ investment.investment_type }}</td>
-                      <td>{{ investment.account_type }}</td>
-                      <td>{{ investment.account_number }}</td>
-                      <td>{{ investment.principal_amount }}</td>
-                      <td>{{ investment.interest_percentage }}</td>
-                      <td>{{ investment.interest_amount }}</td>
-                      <td>{{ investment.interest_start_date }}</td>
-                      <td>{{ investment.interest_end_date }}</td>
-                      <td>{{ investment.tenure }} days</td>
-                      <td>{{ investment.status }}</td>
-                      <td>{{ investment.approval_status }}</td>
+                        <td>{{ forloop.counter }}</td>
+                        <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
+                        <td>{{ investment.investment_type }}</td>
+                        <td>{{ investment.account_type }}</td>
+                        <td>{{ investment.account_number }}</td>
+                        <td>{{ investment.principal_amount }}</td>
+                        <td>{{ investment.interest_percentage }}</td>
+                        <td>{{ investment.interest_amount }}</td>
+                        <td>{{ investment.interest_start_date }}</td>
+                        <td>{{ investment.interest_end_date }}</td>
+                        <td>{{ investment.tenure }} days</td>
+                        <td>{{ investment.status }}</td>
+                        <td>{{ investment.approval_status }}</td>
                     </tr>
                     {% endif %}
                     {% endfor %}

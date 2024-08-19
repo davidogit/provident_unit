@@ -51,7 +51,7 @@
       <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
     </div><!-- sidebar-header -->
     <div id="sidebarMenu" class="sidebar-body">
-      <div class="nav-group show">
+      <div class="nav-item">
         <a href="#" class="nav-label">Dashboard</a>
         <ul class="nav nav-sidebar">
           <li class="nav-item">
@@ -79,7 +79,7 @@
 
       <!-- Loop through every scheme  -->
       {% for scheme in schemes %}
-      <div class="nav-group show">
+      <div class="nav-item">
         <a href="#" class="nav-label">{{ scheme.name }}</a>
 
         <ul class="nav nav-sidebar">
@@ -169,8 +169,21 @@
             </nav>
           </li>
           {% endif %}
-
           
+          {% if is_manager %}
+          <li class="nav-item">
+            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Approvals</span></a>
+            <nav class="nav nav-sub">
+              <a href="{% url 'investment_approval' tenant_id=request.tenant.id scheme_name=scheme.id %}"
+                class="nav-sub-link">Pending Approvals
+              </a>
+
+              <a href="{% url 'approved_investments'  tenant_id=request.tenant.id scheme_name=scheme.id %}"
+                class="nav-sub-link">Approved Investments
+              </a>
+            </nav>
+          </li>
+          {% endif %}
         </ul>
       </div><!-- nav-group -->
       {% endfor %}

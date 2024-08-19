@@ -19,13 +19,10 @@
                     </div>
 
                     <div class="form-group mb-3">
-                      <label for="cont_freq" class="form-label">Contribution Frequency</label>
-                      <select class="form-control" name="contribution_frequency" id="cont_freq">
-                        {% for freq,label in frequency %}
-                        <option value="{{freq}}">{{ label }}</option>
-                        {% endfor %}
-                      </select>
+                      <label for="cont_time" class="form-label">Contribution Time</label>
+                      <input class="form-control" type="time" name="contribution_time" id="cont_time">
                     </div>
+
 
                     <div class="form-group mb-3">
                       <label for="dist_freq" class="form-label">Distribution Frequency</label>
@@ -40,6 +37,11 @@
                   </div>
 
                   <div class="col-md-4">
+
+                    <div class="form-group mb-3">
+                      <label for="cont_date" class="form-label">Contribution Date</label>
+                      <input class="form-control" type="date" name="contribution_date" id="cont_date">
+                    </div>
 
                     <div class="form-group mb-3">
                       <label for="delayed_int" class="form-label">Include Delayed Interest Field? :</label>

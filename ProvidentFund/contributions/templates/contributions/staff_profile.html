@@ -1,29 +1,243 @@
+
+
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>{{ staff_member.first_name }} {{ staff_member.last_name }}'s Profile</title>
+
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <!-- Meta -->
+  <meta name="description" content="">
+  <meta name="author" content="Themepixels">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
+
+  <title>{{ staff_member.first_name }} {{ staff_member.last_name }}'s Profile</title>
+
+
+  <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
+  <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
+
+  <!-- Template CSS -->
+  <!-- <link rel="stylesheet" href="../assets/css/style.min.css"> -->
+
+  <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
+
+  <!-- Hiding Serch Results -->
+  <style>
+    #serach-results {
+      display: none;
+    }
+  </style>
+  <!-- Hiding Serch Results -->
+  <!-- JQuery for Serch implementation -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- JQuery for Serch implementation -->
+
 </head>
+
 <body>
+
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
+    </div><!-- sidebar-header -->
+    <div id="sidebarMenu" class="sidebar-body">
+
+      <!-- Loop through every scheme  -->
+
+      <div class="nav-group show">
+      </div><!-- nav-group -->
+
+    </div><!-- sidebar-body -->
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-top">
+        <div class="sidebar-footer-thumb">
+          <img src="../assets/img/img1.jpg" alt="">
+        </div><!-- sidebar-footer-thumb -->
+        <div class="sidebar-footer-body">
+          <h6><a href="../pages/profile.html">{{ staff_member.first_name }} {{ staff_member.last_name }}</a></h6>
+          <p>Member</p>
+        </div><!-- sidebar-footer-body -->
+        <a id="sidebarFooterMenu" href="#" class="dropdown-link"><i class="ri-arrow-down-s-line"></i></a>
+      </div><!-- sidebar-footer-top -->
+      <div class="sidebar-footer-menu">
+        <nav class="nav">
+          <a href="#"><i class="ri-edit-2-line"></i> Edit Profile</a>
+          <a href="#"><i class="ri-profile-line"></i> View Profile</a>
+        </nav>
+        <hr>
+        <nav class="nav">
+          <a href="#"><i class="ri-question-line"></i> Help Center</a>
+          <a href="#"><i class="ri-lock-line"></i> Privacy Settings</a>
+          <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
+          <a href="{% url 'logout' tenant_id=request.tenant.id %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
+        </nav>
+      </div><!-- sidebar-footer-menu -->
+    </div><!-- sidebar-footer -->
+  </div><!-- sidebar -->
+
+  <div class="header-main px-3 px-lg-4">
+    <a id="menuSidebar" href="#" class="menu-link me-3 me-lg-4"><i class="ri-menu-2-fill"></i></a>
+    <div id="search-bar" class="me-auto">
+      {% block search %}
+
+      {% endblock %}
+    </div><!-- form-search -->
+
+
+    <div class="dropdown dropdown-skin">
+      <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i
+          class="ri-settings-3-line"></i></a>
+      <div class="dropdown-menu dropdown-menu-end mt-10-f">
+        <label>Skin Mode</label>
+        <nav id="skinMode" class="nav nav-skin">
+          <a href="#" class="nav-link active">Light</a>
+          <a href="#" class="nav-link">Dark</a>
+        </nav>
+        <hr>
+        <label>Sidebar Skin</label>
+        <nav id="sidebarSkin" class="nav nav-skin">
+          <a href="#" class="nav-link active">Default</a>
+          <a href="#" class="nav-link">Prime</a>
+          <a href="#" class="nav-link">Dark</a>
+        </nav>
+        <hr>
+        <label>Direction</label>
+        <nav id="layoutDirection" class="nav nav-skin">
+          <a href="#" class="nav-link active">LTR</a>
+          <a href="#" class="nav-link">RTL</a>
+        </nav>
+      </div><!-- dropdown-menu -->
+    </div><!-- dropdown -->
+
+    <div class="dropdown dropdown-notification ms-3 ms-xl-4">
+      <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><small>3</small><i
+          class="ri-notification-3-line"></i></a>
+      <div class="dropdown-menu dropdown-menu-end mt-10-f me--10-f">
+        <div class="dropdown-menu-header">
+          <h6 class="dropdown-menu-title">Notifications</h6>
+        </div><!-- dropdown-menu-header -->
+        <ul class="list-group">
+          <li class="list-group-item">
+            <div class="avatar online"><img src="../assets/img/img10.jpg" alt=""></div>
+            <div class="list-group-body">
+              <p><strong>Dominador Manuel</strong> and <strong>100 other people</strong> reacted to your comment "Tell
+                your partner that...</p>
+              <span>Aug 20 08:55am</span>
+            </div><!-- list-group-body -->
+          </li>
+          <li class="list-group-item">
+            <div class="avatar online"><img src="../assets/img/img11.jpg" alt=""></div>
+            <div class="list-group-body">
+              <p><strong>Angela Ighot</strong> tagged you and <strong>9 others</strong> in a post.</p>
+              <span>Aug 18 10:30am</span>
+            </div><!-- list-group-body -->
+          </li>
+          <li class="list-group-item">
+            <div class="avatar"><span class="avatar-initial bg-primary">a</span></div>
+            <div class="list-group-body">
+              <p>New listings were added that match your search alert <strong>house for rent</strong></p>
+              <span>Aug 15 08:10pm</span>
+            </div><!-- list-group-body -->
+          </li>
+          <li class="list-group-item">
+            <div class="avatar online"><img src="../assets/img/img14.jpg" alt=""></div>
+            <div class="list-group-body">
+              <p>Reminder: <strong>Jerry Cuares</strong> invited you to like <strong>Cuares Surveying Services</strong>.
+                <br><a href="#">Accept</a> or <a href="#">Decline</a></p>
+              <span>Aug 14 11:50pm</span>
+            </div><!-- list-group-body -->
+          </li>
+          <li class="list-group-item">
+            <div class="avatar online"><img src="../assets/img/img15.jpg" alt=""></div>
+            <div class="list-group-body">
+              <p><strong>Dyanne Aceron</strong> reacted to your post <strong>King of the Bed</strong>.</p>
+              <span>Aug 10 05:30am</span>
+            </div><!-- list-group-body -->
+          </li>
+        </ul>
+        <div class="dropdown-menu-footer"><a href="#">Show all Notifications</a></div>
+      </div><!-- dropdown-menu -->
+    </div><!-- dropdown -->
+    <div class="dropdown dropdown-profile ms-3 ms-xl-4">
+      <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+        <div class="avatar online"><img src="../assets/img/img1.jpg" alt=""></div>
+      </a>
+      <div class="dropdown-menu dropdown-menu-end mt-10-f">
+        <div class="dropdown-menu-body">
+          <div class="avatar avatar-xl online mb-3"><img src="../assets/img/img1.jpg" alt=""></div>
+          <h5 class="mb-1 text-dark fw-semibold">{{ user.username }}</h5>
+          <p class="fs-sm text-secondary">Premium Member</p>
+
+          <nav class="nav">
+            <a href="#"><i class="ri-edit-2-line"></i> Edit Profile</a>
+            <a href="#"><i class="ri-profile-line"></i> View Profile</a>
+          </nav>
+          <hr>
+          <nav class="nav">
+            <a href="#"><i class="ri-question-line"></i> Help Center</a>
+            <a href="#"><i class="ri-lock-line"></i> Privacy Settings</a>
+            <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
+            <a href="#"><i class="ri-logout-box-r-line"></i> Log Out</a>
+          </nav>
+        </div><!-- dropdown-menu-body -->
+      </div><!-- dropdown-menu -->
+    </div><!-- dropdown -->
+  </div><!-- header-main -->
+
+
+
+  <!--main-->
+
+  <div class="main main-app p-3 p-lg-4">
     <h1>{{ staff_member.first_name }} {{ staff_member.last_name }}'s Profile</h1>
-    <p><strong>Staff Number:</strong> {{ staff_member.staff_number }}</p>
-    <p><strong>Date Joined:</strong> {{ staff_member.date_joined }}</p>
-    <p><strong>Status:</strong> {{ staff_member.status }}</p>
-    <p><strong>Fund Type:</strong> {{ staff_member.fund_type }}</p>
-    <p><strong>Amount:</strong> {{ staff_member.amount|floatformat:2 }}</p>
-    <p><strong>Exited Date:</strong> {{ staff_member.exited_date }}</p>
-    <p><strong>Exited Flag:</strong> {{ staff_member.exited_flag }}</p>
-    <p><strong>Profit:</strong> {{ staff_member.profit }}</p>
-    <p><strong>Subscription Date:</strong> {{ staff_member.subscription_date }}</p>
-    <p><strong>Updated Date:</strong> {{ staff_member.updated_date }}</p>
+  <p><strong>Staff Number:</strong> {{ staff_member.staff_number }}</p>
+  <p><strong>Date Joined:</strong> {{ staff_member.date_joined }}</p>
+  <p><strong>Status:</strong> {{ staff_member.status }}</p>
+  <p><strong>Fund Type:</strong> {{ staff_member.fund_type }}</p>
+  <p><strong>Amount:</strong> {{ staff_member.amount|floatformat:2 }}</p>
+  <p><strong>Exited Date:</strong> {{ staff_member.exited_date }}</p>
+  <p><strong>Exited Flag:</strong> {{ staff_member.exited_flag }}</p>
+  <p><strong>Profit:</strong> {{ staff_member.profit }}</p>
+  <p><strong>Subscription Date:</strong> {{ staff_member.subscription_date }}</p>
+  <p><strong>Updated Date:</strong> {{ staff_member.updated_date }}</p>
 
-    <h2>Contributions</h2>
-    <ul>
-        {% for contribution in staff_member.contributions.all %}
-        <li>{{ contribution.month }} {{ contribution.year }} - Total: {{ contribution.total_contributions }}</li>
-        {% endfor %}
-    </ul>
+  <h2>Contributions</h2>
+  <ul>
+      {% for contribution in staff_member.contributions.all %}
+      <li>{{ contribution.month }} {{ contribution.year }} - Total: {{ contribution.total_contributions }}</li>
+      {% endfor %}
+  </ul>
 
-    <a href="{% url 'logout' tenant_id=request.tenant.id %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
+  </div>
+  
+  <!-- main -->
+
+
+  <div class="main-footer mt-5">
+    <span>&copy; 2024. Vestrex Tech. All Rights Reserved.</span>
+    <span>Created by: <a href="http://vestrex.com/" target="_blank">Vestrex.com</a></span>
+  </div><!-- main-footer -->
+  </div>
+
+
+  <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
+  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'lib/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
+  <script src="{% static 'lib/apexcharts/apexcharts.min.js' %}"></script>
+  <script src="{% static 'lib/jqvmap/jquery.vmap.min.js' %}"></script>
+  <script src="{% static 'lib/jqvmap/maps/jquery.vmap.world.js' %}"></script>
+
+  <script src="{% static 'assets/js/script.js' %}"></script>
+  <script src="{% static 'assets/js/db.data.js' %}"></script>
+  <script src="{% static 'assets/js/db.finance.js' %}"></script>
 </body>
+
+<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:17:10 GMT -->
+
 </html>
