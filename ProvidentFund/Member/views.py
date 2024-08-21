@@ -1,8 +1,11 @@
+from django.utils import timezone
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse
 from django.core.mail import send_mail
 from django.urls import reverse, reverse_lazy
+import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
 from django.contrib.auth.decorators import login_required
 from Member.forms import UserForm, MemberForm
@@ -12,7 +15,7 @@ from django.views.generic import TemplateView,CreateView
 from django.contrib.auth.models import Group
 from .models import Member
 
-from MultiScheme.models import Tenant
+from MultiScheme.models import Tenant,InvestmentScheme
 # Importing the user model 
 from django.contrib.auth import get_user_model
 
@@ -26,31 +29,50 @@ def registrationView(request,tenant_id):
         form2 = MemberForm(request.POST)
 
         if form1.is_valid() and form2.is_valid():
+            
+            # Making sure the person is a member of a tenant in our DB before registering them onto the system
+            try:
+                # Assign tenant to user upon registration
+                tenant = Tenant.objects.get(id=tenant_id)
+                form1.instance.tenant = tenant
 
-            # Assign tenant to user upon registration
-            tenant = Tenant.objects.get(id=tenant_id)
-            form1.instance.tenant = tenant
+                # Check from API to see if member is there
+                response = requests.get(tenant.api_endpoint_contribution)
+                response.raise_for_status() #if theres an error trying to get a response from endpoint
+                data = response.json()
 
-            user = form1.save(commit=False)
-            cleaned_password = form1.cleaned_data['password']
-            user.set_password(cleaned_password)
-            user.save()
+                # loops and stops when it gets a match of a user and returns None if theres no match
+                user_ = next((user_ for user_ in data if user_['staff_number'] == request.POST.get('staff_id')), None)
 
-            # Assign group to user
-            group_name = 'Member'
-            group = Group.objects.get(name=group_name)
-            user.groups.add(group)
+                # Checks if the differece between joined_date and current date is greter than eligibility criteria
+                if user_:
 
-            # Assign tenant to user upon registration
-            form2.instance.tenant = tenant
+                    user = form1.save(commit=False)
+                    cleaned_password = form1.cleaned_data['password']
+                    user.set_password(cleaned_password)
+                    user.save()
 
-            member = form2.save(commit=False)
-            member.user = user
+                    # Assign group to user
+                    group_name = 'Member'
+                    group = Group.objects.get(name=group_name)
+                    user.groups.add(group)
 
-            member.save()
+                    # Assign tenant to user upon registration
+                    form2.instance.tenant = tenant
 
-            # redirect to login page after successful registration
-            return redirect('login', tenant_id = tenant_id)
+                    member = form2.save(commit=False)
+                    member.user = user
+
+                    member.save()
+
+                    # redirect to login page after successful registration
+                    return redirect('login', tenant_id = tenant_id)
+                else:
+                    return HttpResponse('Your details do not match any of our records')
+
+            # Handle cases where there is no Scheme or Bad request
+            except requests.RequestException as e:
+                return HttpResponse(f'Error contacting external server:{e}')
         else:
             errors = form1.errors.as_json() + form2.errors.as_json()
             return HttpResponse(f'Some fields are invalid: {errors}')
@@ -77,15 +99,6 @@ def loginView(request, tenant_id):
             # Redirect anyone with admin priviledge
             if user.groups.filter(name='Admin'):
                 return redirect('invalid_login_details', tenant_id=tenant_id)
-            
-            # # Redirect to memebers page if user is a Member
-            # if user.groups.filter(name='Member'):
-
-            #     # Get related member to user and extract staff_id from Member
-            #     member = Member.objects.get(user=user)
-            #     # ///////////
-            #     print(member)
-            #     return redirect('member_profile', tenant_id=tenant_id, member_id=member.staff_id)
 
             if user is not None:
                 if user.tenant == tenant:
