@@ -43,38 +43,38 @@ def registrationView(request,tenant_id):
                 print(data)
 
                 # loops and stops when it gets a match of a user and returns None if theres no match
-                # user_a = next((user_a for user_a in data if user_a['staff_number'] == request.POST.get('staff_id')), None)
-                print(request.POST.get('staff_id'))
-                for api_user in data:
+                api_user = next((api_user for api_user in data if str(api_user.get('staff_number')) == str(request.POST.get('staff_id'))), None)
+                # print(request.POST.get('staff_id'))
+                # for api_user in data:
                     # print(api_user.get('staff_number'))
                     
                 # print(request.POST.get('staff_id'))
                 # Checks if the differece between joined_date and current date is greter than eligibility criteria
-                    if str(api_user.get('staff_number')) == str(request.POST.get('staff_id')):
-                
+                if api_user:
+            
 
-                        user = form1.save(commit=False)
-                        cleaned_password = form1.cleaned_data['password']
-                        user.set_password(cleaned_password)
-                        user.save()
+                    user = form1.save(commit=False)
+                    cleaned_password = form1.cleaned_data['password']
+                    user.set_password(cleaned_password)
+                    user.save()
 
-                        # Assign group to user
-                        group_name = 'Member'
-                        group = Group.objects.get(name=group_name)
-                        user.groups.add(group)
+                    # Assign group to user
+                    group_name = 'Member'
+                    group = Group.objects.get(name=group_name)
+                    user.groups.add(group)
 
-                        # Assign tenant to user upon registration
-                        form2.instance.tenant = tenant
+                    # Assign tenant to user upon registration
+                    form2.instance.tenant = tenant
 
-                        member = form2.save(commit=False)
-                        member.user = user
+                    member = form2.save(commit=False)
+                    member.user = user
 
-                        member.save()
+                    member.save()
 
-                        # redirect to login page after successful registration
-                        return redirect('login', tenant_id = tenant_id)
-                    # else:
-                    #     return HttpResponse('Your details do not match any of our records')
+                    # redirect to login page after successful registration
+                    return redirect('login', tenant_id = tenant_id)
+                else:
+                    return HttpResponse('Your details do not match any of our records')
 
             # Handle cases where there is no Scheme or Bad request
             except requests.RequestException as e:
