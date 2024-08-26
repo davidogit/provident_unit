@@ -25,6 +25,7 @@ class UserAdmin(BaseUserAdmin):
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
         (_('Tenant info'), {'fields': ('tenant',)}),
+        (_('Status info'), {'fields': ('inactive_status',)}),
     )
     
     # Fields to be used when creating a User via the admin interface.

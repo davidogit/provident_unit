@@ -9,6 +9,10 @@ from django.db import transaction
 from django.db.models import Sum
 import logging
 
+from django.core.mail import send_mail
+from ProvidentFund.settings import EMAIL_HOST_USER
+from smtplib import SMTPException
+
 logger = logging.getLogger(__name__)
 
 
@@ -122,7 +126,30 @@ def reduce_date(self):
             inv.remaining_days = 0
 
         updates.append(inv)
+
+        ###########################################################################
+        # Send Email to tenant
+        try:
+            if inv.remaining_days == 0:
+
+                # send email notification to tenant email
+                tenant_email = inv.investment_scheme.tenant.email
+
+                send_mail(
+                    subject='Investment Due',
+                    message= f'Investment with ID:{inv.id} and Acc No.: {inv.account_number} is due',
+                    from_email=EMAIL_HOST_USER,
+                    recipient_list=[tenant_email,],
+                    fail_silently=False
+                )
+
+        # Handling any error that might occur from sending the notification
+        except SMTPException as e:
+            logger.error(f'Unexpected error occured when trying to send due notification to tenant:{inv.investment_scheme.tenant.name} error:{e}')
     
+
+        ###########################################################################
+
     # Using bulk update to save every instance at once for efficiency
     # InvestmentDetail.objects.bulk_update(updates, ['_remaining_days','_status'])
     try:

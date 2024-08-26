@@ -34,6 +34,14 @@ app.conf.beat_schedule = {
     #     'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*'),  
     #     # Run on the first day of every month
     # },
+    'update_status_of_non_scheme_approved_users':{
+        'task': 'Member.tasks.check_active_status_for_user',
+        'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
+    },
+    'delete_users_without_schemes':{
+        'task': 'Member.tasks.delete_inactive_users',
+        'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
+    }
 }
 
 
