@@ -1,0 +1,109 @@
+{% extends 'contributions/staff_profile2.html' %}
+{% block content %}
+{% load static %}
+
+<body>
+  <div class="main main-app p-3 p-lg-4">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 mx-auto">
+          <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+              <h3 class="card-title mb-0">Edit Profile</h3>
+            </div>
+            <div class="card-body p-4">
+              <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="staff_id" class="form-label">Staff ID:</label>
+                    {{ form.staff_id }}
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="tel_number" class="form-label">Telephone Number:</label>
+                    {{ form.tel_number }}
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="address" class="form-label">Address:</label>
+                    {{ form.address }}
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="date_of_birth" class="form-label">Date of Birth:</label>
+                    {{ form.date_of_birth }}
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="nationality" class="form-label">Nationality:</label>
+                    {{ form.nationality }}
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="image" class="form-label">Profile Image:</label>
+                    {{ form.image }}
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="marital_status" class="form-label">Marital Status:</label>
+                    {{ form.marital_status }}
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="gender" class="form-label">Gender:</label>
+                    {{ form.gender }}
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="employment_date" class="form-label">Employment Date:</label>
+                    {{ form.employment_date }}
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="department" class="form-label">Department:</label>
+                    {{ form.department }}
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="job_title" class="form-label">Job Title:</label>
+                    {{ form.job_title }}
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="scheme_approval" class="form-label">Scheme Approval:</label>
+                    {{ form.scheme_approval }}
+                  </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
+                   {% comment %} <a href="{% url 'member_profile' tenant_id=request.tenant.id member_id=staff_member.staff_id %}" class="btn btn-secondary btn-lg">Cancel</a> {% endcomment %}
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-footer mt-5 text-center">
+    <span>&copy; 2024. Vestrex Tech. All Rights Reserved.</span>
+    <span>Created by: <a href="http://vestrex.com/" target="_blank">Vestrex.com</a></span>
+  </div>
+
+  <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
+  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'lib/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
+  <script src="{% static 'lib/apexcharts/apexcharts.min.js' %}"></script>
+  <script src="{% static 'lib/jqvmap/jquery.vmap.min.js' %}"></script>
+  <script src="{% static 'lib/jqvmap/maps/jquery.vmap.world.js' %}"></script>
+  <script src="{% static 'assets/js/script.js' %}"></script>
+</body>
+{% endblock %}

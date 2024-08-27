@@ -17,6 +17,11 @@ from django.shortcuts import render, get_object_or_404
 
 from Member.decorators import tenant_required
 from Admin.decorators import role_required
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.views.generic import TemplateView
+from .forms import MemberProfileForm
+from Member.models import Member
 
 # Create your views here.
 
@@ -163,48 +168,89 @@ class Contributed(ListView):
 
     
 
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
+from Member.models import Member 
+from .forms import MemberProfileForm
+
 @method_decorator(login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Member',]), name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
 class MemberPortal(TemplateView):
     template_name = 'contributions/staff_profile.html'
 
-    # Overridind dispatch to redirect users trying to access others portal
     def dispatch(self, request, *args, **kwargs):
         member_id = kwargs.get('member_id')
         tenant = request.tenant
-        
-        # Retrieve the currently logged-in user's associated member
         member = request.user.member
         
-        # Redirect if the user is trying to access someone else's profile
         if member.staff_id != member_id:
             return redirect('member_profile', tenant_id=tenant.id, member_id=member.staff_id)
         
-        # Proceed with rendering the template if authorized
         return super().dispatch(request, *args, **kwargs)
 
-
     def get_context_data(self, **kwargs):
-        context=super().get_context_data(**kwargs)
-
+        context = super().get_context_data(**kwargs)
         tenant = self.request.tenant
         member_id = kwargs.get('member_id')
-        print(f'{member_id} {tenant}')
-
-        # make sure members dont alter url in order to view other members portal
         member = self.request.user.member
 
         if member.staff_id == member_id:
-
-            user = get_object_or_404(StaffAPI,investment_scheme__tenant=tenant,staff_number=member_id)
+            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
             context['staff_member'] = user
-        
         else:
-            context['staff_member']=[]
+            context['staff_member'] = None
 
         return context
 
+@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
+class EditMemberProfileView(TemplateView):
+    template_name = 'contributions/edit_member_profile.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+
+        if member.staff_id != member_id:
+            return redirect('edit_member_profile', tenant_id=tenant.id, member_id=member.staff_id)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        member_id = kwargs.get('member_id')
+        member = self.request.user.member
+
+        if member.staff_id == member_id:
+            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
+            context['form'] = MemberProfileForm(instance=user)
+            
+            context['staff_member']= user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
+        else:
+            context['form'] = MemberProfileForm()
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = self.request.user.member
+
+        if member.staff_id == member_id:
+            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
+            form = MemberProfileForm(request.POST, request.FILES, instance=user)
+            if form.is_valid():
+                form.save()
+                return redirect('member_profile', tenant_id=tenant.id, member_id=member.staff_id)
+        else:
+            form = MemberProfileForm()
+
+        return render(request, self.template_name, {'form': form})
 
 
 # def staff_profile(request, staff_id):

@@ -28,5 +28,3 @@ admin.site.register(StaffAPI,StaffAPIAdmin)
 
 
 admin.site.register(Contribution)
-
-
