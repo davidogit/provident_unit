@@ -14,6 +14,13 @@ from smtplib import SMTPConnectError
 from django.views.generic import TemplateView,CreateView
 from django.contrib.auth.models import Group
 from .models import Member
+from Member.decorators import tenant_required
+from Admin.decorators import role_required
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.views.generic import TemplateView
+from .forms import MemberProfileForm
+from Member.models import Member
 
 from MultiScheme.models import Tenant,InvestmentScheme
 # Importing the user model 
@@ -209,3 +216,90 @@ def logoutView(request, tenant_id):
 def terms_and_conditions_view(request):
     # Render the terms and conditions template
     return render(request, 'terms_and_conditions.html')
+
+
+
+
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
+from .models import Member 
+from .forms import MemberProfileForm
+
+@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
+class MemberPortal(TemplateView):
+    template_name = 'staff_profile.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+        
+        if member.staff_id != member_id:
+            return redirect('member_profile', tenant_id=tenant.id, member_id=member.staff_id)
+        
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        member_id = kwargs.get('member_id')
+        member = self.request.user.member
+
+        if member.staff_id == member_id:
+            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
+            context['staff_member'] = user
+        else:
+            context['staff_member'] = None
+
+        return context
+
+@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
+class EditMemberProfileView(TemplateView):
+    template_name = 'edit_member_profile.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+
+        if member.staff_id != member_id:
+            return redirect('edit_member_profile', tenant_id=tenant.id, member_id=member.staff_id)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        member_id = kwargs.get('member_id')
+        member = self.request.user.member
+
+        if member.staff_id == member_id:
+            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
+            context['form'] = MemberProfileForm(instance=user)
+            
+            context['staff_member']= user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
+        else:
+            context['form'] = MemberProfileForm()
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = self.request.user.member
+
+        if member.staff_id == member_id:
+            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
+            form = MemberProfileForm(request.POST, request.FILES, instance=user)
+            if form.is_valid():
+                form.save()
+                return redirect('member_profile', tenant_id=tenant.id, member_id=member.staff_id)
+        else:
+            form = MemberProfileForm()
+
+        return render(request, self.template_name, {'form': form})

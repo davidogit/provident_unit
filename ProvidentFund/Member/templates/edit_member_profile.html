@@ -1,4 +1,4 @@
-{% extends 'contributions/staff_profile2.html' %}
+{% extends 'staff_profile2.html' %}
 {% block content %}
 {% load static %}
 
@@ -18,7 +18,7 @@
                 <div class="row">
                   <div class="col-md-6 mb-3">
                     <label for="staff_id" class="form-label">Staff ID:</label>
-                    {{ form.staff_id }}
+                    <input type="text" class="form-control" disabled placeholder='{{user.member.staff_id}}'>
                   </div>
                   <div class="col-md-6 mb-3">
                     <label for="tel_number" class="form-label">Telephone Number:</label>
