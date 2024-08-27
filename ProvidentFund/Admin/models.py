@@ -4,6 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     tenant = models.ForeignKey(Tenant, null=True, on_delete=models.CASCADE)
+    inactive_status = models.BooleanField(default=False)
     
     # Use unique related_name to avoid conflict with the built-in User model
     groups = models.ManyToManyField(

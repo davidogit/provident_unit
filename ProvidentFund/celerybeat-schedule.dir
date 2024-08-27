@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 'entries', (2048, 676)
+=======
+'entries', (2048, 1018)
+>>>>>>> e39efdbac55ae73cefe859bc0593c86d542de15c
 '__version__', (512, 20)
 'tz', (1024, 18)
 'utc_enabled', (1536, 4)

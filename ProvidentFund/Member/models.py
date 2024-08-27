@@ -30,7 +30,11 @@ class Member(models.Model):
     employment_date = models.DateField(auto_now=False,auto_now_add=False, null=True)
     department = models.CharField(max_length = 200,blank=True, null=True)
     job_title = models.CharField(max_length = 200,blank=True, null=True)
+
     scheme_approval = models.BooleanField(default=False)
+    registration_date = models.DateTimeField(auto_now_add=True, null=True)
+
+    
 
 
     def __str__(self):

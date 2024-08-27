@@ -1,8 +1,9 @@
 from django.db.models import Q
 from django.db.models.query import QuerySet
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
+from django.http.response import HttpResponse as HttpResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView
+from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 # Create your views here.
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest
 from MultiScheme.models import InvestmentScheme,Tenant
@@ -25,6 +26,11 @@ class LandingPage(TemplateView):
 class AccessDenied(TemplateView):
     template_name = 'dashboard/access_denied.html'
 
+    def get(self, request, *args, **kwargs):
+        # clear session data
+        request.session.flush()
+
+        return super().get(request, *args, **kwargs)
 
 # the name=dispatch means the decorators will work for POST,GET,PUT etc
 @method_decorator(login_required, name='dispatch')
