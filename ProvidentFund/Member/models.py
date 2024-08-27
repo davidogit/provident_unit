@@ -14,7 +14,7 @@ class Member(models.Model):
     address = models.CharField(max_length=50, blank=True,null=True)
     date_of_birth = models.DateField( auto_now=False, auto_now_add=False, null=True)
     nationality = models.CharField(max_length = 50,blank=True, null=True)
-    image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
+    image = models.ImageField(upload_to='profile_images/', blank=True, null=True,default='profile_images/default_profile_pic.png')
     marital_status = models.CharField(max_length =50,blank=True, null=True)
     select ='select'
     male='Male'
