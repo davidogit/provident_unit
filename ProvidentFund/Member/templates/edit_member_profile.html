@@ -1,8 +1,7 @@
-{% extends 'staff_profile2.html' %}
+{% extends 'member_base.html' %}
 {% block content %}
-{% load static %}
 
-<body>
+
   <div class="main main-app p-3 p-lg-4">
     <div class="container">
       <div class="row">
@@ -86,14 +85,14 @@
                     <label for="job_title" class="form-label">Job Title:</label>
                     {{ form.job_title }}
                   </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="scheme_approval" class="form-label">Scheme Approval:</label>
-                    {{ form.scheme_approval }}
-                  </div>
                 </div>
                 
                 <div class="d-grid gap-2">
                   <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
+<<<<<<< HEAD
+=======
+                  <a href="{% url 'member_profile' tenant_id=request.tenant.id member_id=user.member.staff_id.staff_id %}" class="btn btn-secondary btn-lg">Cancel</a>
+>>>>>>> 24a6b2bb4178a9a7d41c4510aeb1c1fb0a2a08f2
                 </div>
               </form>
             </div>
@@ -102,18 +101,4 @@
       </div>
     </div>
   </div>
-
-  <div class="main-footer mt-5 text-center">
-    <span>&copy; 2024. Vestrex Tech. All Rights Reserved.</span>
-    <span>Created by: <a href="http://vestrex.com/" target="_blank">Vestrex.com</a></span>
-  </div>
-
-  <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
-  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-  <script src="{% static 'lib/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
-  <script src="{% static 'lib/apexcharts/apexcharts.min.js' %}"></script>
-  <script src="{% static 'lib/jqvmap/jquery.vmap.min.js' %}"></script>
-  <script src="{% static 'lib/jqvmap/maps/jquery.vmap.world.js' %}"></script>
-  <script src="{% static 'assets/js/script.js' %}"></script>
-</body>
 {% endblock %}

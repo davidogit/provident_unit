@@ -957,7 +957,7 @@ class InvestmentApproval(ListView):
 
                 return JsonResponse({'status':'success'})
             else:
-                # Gather the error message(s)
+                # Gather the error message
                 error_message = 'Closing amount does not match with expected amount'
                 return JsonResponse({'status':'error', 'message':error_message}, status=400)
 
