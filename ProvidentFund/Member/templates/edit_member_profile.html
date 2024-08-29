@@ -17,8 +17,19 @@
                 
                 <div class="row">
                   <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username:</label>
+                    <input type="text" class="form-control" disabled placeholder="{{ user.username }}">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email:</label>
+                    <input type="text" class="form-control" disabled placeholder="{{ user.email }}">
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
                     <label for="staff_id" class="form-label">Staff ID:</label>
-                    <input type="text" class="form-control" disabled placeholder='{{user.member.staff_id}}'>
+                    <input type="text" class="form-control" disabled placeholder="{{ user.member.staff_id }}">
                   </div>
                   <div class="col-md-6 mb-3">
                     <label for="tel_number" class="form-label">Telephone Number:</label>
@@ -33,7 +44,7 @@
                   </div>
                   <div class="col-md-6 mb-3">
                     <label for="date_of_birth" class="form-label">Date of Birth:</label>
-                    {{ form.date_of_birth }}
+                    <input type="text" class="form-control" disabled placeholder="{{ user.member.date_of_birth }}">
                   </div>
                 </div>
                 
@@ -55,7 +66,7 @@
                   </div>
                   <div class="col-md-6 mb-3">
                     <label for="gender" class="form-label">Gender:</label>
-                    {{ form.gender }}
+                    <input type="text" class="form-control" disabled placeholder="{{ user.member.gender }}">
                   </div>
                 </div>
                 
@@ -83,7 +94,6 @@
                 
                 <div class="d-grid gap-2">
                   <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
-                   {% comment %} <a href="{% url 'member_profile' tenant_id=request.tenant.id member_id=staff_member.staff_id %}" class="btn btn-secondary btn-lg">Cancel</a> {% endcomment %}
                 </div>
               </form>
             </div>

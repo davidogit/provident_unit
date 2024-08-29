@@ -8,7 +8,7 @@ from django.urls import reverse, reverse_lazy
 import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
 from django.contrib.auth.decorators import login_required
-from Member.forms import UserForm, MemberForm
+from .forms import UserForm, MemberForm
 from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView,CreateView
@@ -19,8 +19,16 @@ from Admin.decorators import role_required
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.generic import TemplateView
-from .forms import MemberProfileForm
-from Member.models import Member
+from .forms import CombinedProfileForm
+from .models import Member
+from django.views.generic import UpdateView
+from django.shortcuts import redirect, get_object_or_404
+from .models import Member
+from .forms import CombinedProfileForm
+from .models import User
+
+
+
 
 from MultiScheme.models import Tenant,InvestmentScheme
 # Importing the user model 
@@ -224,7 +232,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from .models import Member 
-from .forms import MemberProfileForm
+
+
 
 @method_decorator(login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
@@ -256,50 +265,33 @@ class MemberPortal(TemplateView):
 
         return context
 
+
+
+from django.views.generic import UpdateView
+from django.shortcuts import redirect, get_object_or_404
+from .models import Member
+from .forms import CombinedProfileForm
+from .models import User
+
 @method_decorator(login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
-class EditMemberProfileView(TemplateView):
+class EditMemberProfileView(UpdateView):
+    model = Member
+    form_class = CombinedProfileForm
     template_name = 'edit_member_profile.html'
+    context_object_name = 'member'
 
-    def dispatch(self, request, *args, **kwargs):
-        member_id = kwargs.get('member_id')
-        tenant = request.tenant
-        member = request.user.member
+    def get_object(self, queryset=None):
+        member_id = self.kwargs.get('member_id')
+        return get_object_or_404(Member, staff_id=member_id)
 
-        if member.staff_id != member_id:
-            return redirect('edit_member_profile', tenant_id=tenant.id, member_id=member.staff_id)
+    # def get_form_kwargs(self):
+    #     kwargs = super().get_form_kwargs()
+    #     kwargs['instance'] = self.get_object()
+    #     kwargs['user_instance'] = self.request.user  # Passing user separately
+    #     return kwargs
 
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        tenant = self.request.tenant
-        member_id = kwargs.get('member_id')
-        member = self.request.user.member
-
-        if member.staff_id == member_id:
-            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
-            context['form'] = MemberProfileForm(instance=user)
-            
-            context['staff_member']= user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
-        else:
-            context['form'] = MemberProfileForm()
-
-        return context
-
-    def post(self, request, *args, **kwargs):
-        member_id = kwargs.get('member_id')
-        tenant = request.tenant
-        member = self.request.user.member
-
-        if member.staff_id == member_id:
-            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
-            form = MemberProfileForm(request.POST, request.FILES, instance=user)
-            if form.is_valid():
-                form.save()
-                return redirect('member_profile', tenant_id=tenant.id, member_id=member.staff_id)
-        else:
-            form = MemberProfileForm()
-
-        return render(request, self.template_name, {'form': form})
+    def form_valid(self, form):
+        form.save()
+        return redirect('member_profile', tenant_id=self.request.tenant.id, member_id=self.get_object().staff_id)

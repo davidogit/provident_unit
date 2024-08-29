@@ -1,6 +1,7 @@
 from django.urls import path
 from Member import views
 from . import views
+from .views import EditMemberProfileView
 
 
 urlpatterns=[
@@ -15,6 +16,8 @@ urlpatterns=[
 
     path('invalid-login-details/', views.InvalidLoginDetails.as_view(), name='invalid_login_details'),
     path('member_dashboard/<int:member_id>/', views.MemberPortal.as_view(), name='member_profile'),
+    # path('member_dashboard/<int:member_id>/edit/', views.EditMemberProfileView.as_view(), name='edit_member_profile'),
     path('member_dashboard/<int:member_id>/edit/', views.EditMemberProfileView.as_view(), name='edit_member_profile'),
+
 ]
 
