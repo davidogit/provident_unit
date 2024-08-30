@@ -29,24 +29,25 @@
 
       <!-- sidebar-header -->
       <div id="sidebarMenu" class="sidebar-body">
-        <div class="nav-group">
+        <!-- <div class="nav-group">
           <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="nav-label">Dashboard</a>
           <ul class="nav nav-sidebar"> 
           </ul>
-        </div>
+        </div> -->
         <!-- nav-group -->
+         <a href="{% url 'member_dashboard' tenant_id=request.tenant.id member_id=user.member.staff_id %}">here</a>
       </div>
       <!-- sidebar-body -->
 
       <div class="sidebar-footer">
         <div class="sidebar-footer-top">
           <div class="sidebar-footer-thumb">
-            <img src="{{ staff_member.image.url }}" class="img-fluid" alt="...">
+            <img src="{{ user.member.image.url }}" class="img-fluid" alt="...">
           </div>
           <!-- sidebar-footer-thumb -->
 
           <div class="sidebar-footer-body">
-            <h6><a href="../pages/profile.html">{{staff_member.user.username}}</a></h6>
+            <h6><a href="../pages/profile.html">{{ user.first_name }}</a></h6>
             <p>User Account</p>
           </div>
           <!-- sidebar-footer-body --> 
@@ -79,10 +80,10 @@
         <div class="col-xl">
           <div class="media-profile mb-5">
             <div class="media-img mb-3 mb-sm-0">
-              <img src="{{ staff_member.image.url }}" class="img-fluid" alt="...">
+              <img src="{{ user.member.image.url }}" class="img-fluid" alt="...">
             </div><!-- media-img -->
             <div class="media-body">
-              <h5 class="media-name">{{ staff_member.user.username }}</h5>
+              <h5 class="media-name">{{ user.first_name }} {{ user.last_name }}</h5>
               <p class="d-flex gap-2 mb-4"><i class="ri-map-pin-line"></i> San Francisco, California</p>
               <p class="mb-0">Redhead, Innovator, Saviour of Mankind, Hopeless Romantic, Attractive 20-something Yogurt Enthusiast. You can replace this with any content and adjust it as needed... <a href="#">Read more</a></p>
             </div><!-- media-body -->

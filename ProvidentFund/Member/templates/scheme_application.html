@@ -1,0 +1,44 @@
+{% extends 'member_base.html' %}
+{% block title %}
+<title>{{ user.username }}'s Profile</title>
+{% endblock %}
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    {% if available_scheme %}
+    <div class="col">
+        <!-- New Cards Column -->
+        <h3 class="mt-4 text-center">SCHEMES</h3>
+        <div class="row justify-content-center g-5 g-lg-5 pt-5">
+          {% for scheme in available_scheme %}
+            <div class="col-sm-5 col-lg-5">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Name: <strong>{{ scheme.name|upper }}</strong></h6>
+                        <p class="card-text">Description: <em>{{ scheme.description }}</em></p>
+                    </div>
+                    <form action="" class="form-control" method="POST">
+                      {% csrf_token %}
+                      <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
+                      <button class="btn btn-primary" type="submit">Apply Here</button>
+                    </form>
+                    
+                </div>
+            </div><!-- col -->
+          {% endfor %}
+        </div><!-- row -->
+        
+    </div><!-- col -->
+
+    {% else %}
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">No Scheme Available</h6>
+                <p class="card-text">There is no scheme available for you to join at the moment. Please check back later.</p>
+            </div>
+        </div>
+    {% endif %}
+      <!-- row -->
+    </div>
+</div>
+{% endblock %}

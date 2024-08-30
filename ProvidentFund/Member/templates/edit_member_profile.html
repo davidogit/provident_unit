@@ -1,4 +1,8 @@
 {% extends 'member_base.html' %}
+{% block title %}
+<title>{{ user.username }}'s Profile</title>
+{% endblock %}
+
 {% block content %}
 
 
@@ -89,10 +93,7 @@
                 
                 <div class="d-grid gap-2">
                   <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
-<<<<<<< HEAD
-=======
-                  <a href="{% url 'member_profile' tenant_id=request.tenant.id member_id=user.member.staff_id.staff_id %}" class="btn btn-secondary btn-lg">Cancel</a>
->>>>>>> 24a6b2bb4178a9a7d41c4510aeb1c1fb0a2a08f2
+                  <a href="{% url 'member_profile' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-secondary btn-lg">Cancel</a>
                 </div>
               </form>
             </div>

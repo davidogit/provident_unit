@@ -63,7 +63,7 @@
             <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="nav-link active"><i
                 class="ri-pie-chart-2-fill"></i> <span>Finance Monitoring</span></a>
           </li>
-          {% enfif %}
+          {% endif %}
 
           {% if is_manager %}
           <li class="nav-item">
@@ -75,6 +75,10 @@
 
               <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Add Scheme
+              </a>
+
+              <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
+                class="nav-sub-link">View Applications
               </a>
 
             </nav>

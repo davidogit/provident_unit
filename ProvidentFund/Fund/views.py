@@ -18,6 +18,7 @@ from .forms import InvestmentUpdateForm,InvestmentApprovalForm
 
 # Importing custom decorators
 from Member.decorators import tenant_required
+from Member.models import SchemeApproval
 
 class LandingPage(TemplateView):
     template_name = 'dashboard/landing_page.html'
@@ -987,4 +988,46 @@ class ApprovedInvestments(ListView):
             return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id=scheme_id, approval_status=True)
         else:
             return InvestmentDetail.objects.none()
+
+
+
+# LIST OF APPROVALS
+class ToBeApproved(ListView):
+    model = SchemeApproval
+    template_name = 'dashboard/scheme_approval.html'
+    context_object_name = 'schemeapproval_list'
+
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+
+        if tenant:
+            try:
+                # Filter where scheme hasnt been approved and tenant
+                return SchemeApproval.objects.filter(tenant=tenant,approved_by_hr=False)
+            except SchemeApproval.DoesNotExist:
+                return SchemeApproval.objects.none()
+        return super().get_queryset()
     
+    
+    # Using dispatch to be able to access the post method which is not directly in Listview
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'POST':
+            return self.handle_post(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
+    
+
+    # Method to handle the posted data
+    def handle_post(self,request, *args, **kwargs):
+        tenant = request.tenant
+        application_id = request.POST.get('application_id')
+        approved_by_hr = request.POST.get('approved_by_hr')
+
+
+        try:
+            application = SchemeApproval.objects.get(tenant=tenant, id=application_id)
+            # Now we can approve useing the approve method on the SchemeApproval Model
+            application.approve()
+            return JsonResponse({'status':'success', 'approved_by_hr':approved_by_hr})
+        except SchemeApproval.DoesNotExist:
+            return JsonResponse({'status':'error'},status=400)

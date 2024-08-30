@@ -1,9 +1,11 @@
 from django.db import models
-from MultiScheme.models import InvestmentScheme
+from MultiScheme.models import InvestmentScheme,Tenant
 # from django.utils import timezone
 
 class StaffAPI(models.Model):
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
+    # Using Many-to-Many relationship to allow users to have multiple schemes
+    investment_scheme = models.ManyToManyField(InvestmentScheme)
     Id = models.BigIntegerField(primary_key=True, unique=True)
     first_name = models.CharField(max_length=255, null=True, blank=True)
     last_name = models.CharField(max_length=255, null=True, blank=True)
@@ -19,7 +21,7 @@ class StaffAPI(models.Model):
     updated_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.last_name
+        return f'{self.last_name}, {self.investment_scheme}'
 
     # @property
     # def contributions(self):

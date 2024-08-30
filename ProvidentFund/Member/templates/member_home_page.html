@@ -1,92 +1,126 @@
 {% extends 'member_base.html' %}
+{% block title %}
+<title>{{ user.username }}'s Dashboard</title>
+{% endblock %}
+
 {% block content %}
-<div class="main main-app p-3 p-lg-4">
-    <div class="col">
-        <div class="card card-one">
-          <div class="card-body p-3 p-xl-4">
-            <div class="row justify-content-center g-3 mb-2 mb-xl-4">
-    
-              <div class="col-6 col-sm-4 col-md">
-                <div class="finance-item">
-                  <div class="finance-item-circle">
-                    <h1><span class="h6">GH₵</span>{{  }}</h1>
-                    <label>Estimated Revenue</label>
-                  </div><!-- finance-item-circle -->
-                </div><!-- finance-item -->
-              </div><!-- col -->
-    
-              <div class="col-6 col-sm-4 col-md">
-                <div class="finance-item">
-                  <div class="finance-item-circle">
-                    <h1><span class="h6">GH₵</span>{{  }}</h1>
-                    <label>Actual Revenue</label>
-                  </div><!-- finance-item-circle -->
-                </div><!-- finance-item -->
-              </div><!-- col -->
-    
-              <div class="col-6 col-sm-4 col-md">
-                <div class="finance-item">
-                  <div class="finance-item-circle">
-                    <h1>{{  }}</h1>
-                    <label>Total Members</label>
-                  </div><!-- finance-item-circle -->
-                </div><!-- finance-item -->
-              </div><!-- col -->
-    
-              <div class="col-6 col-sm-4 col-md">
-                <div class="finance-item">
-                  <div class="finance-item-circle bg-gray-400">
-                    <h1>{{  }}</h1>
-                    <label>Total Investments</label>
-                  </div><!-- finance-item-circle -->
-                </div><!-- finance-item -->
-              </div><!-- col -->
-              
-            </div><!-- row -->
-    
-            <div class="row g-4 g-lg-5 pt-3">
-              <div class="col-sm-6 col-xl-3">
-                <div class="d-flex">
-                  <i class="ri-wallet-2-line fs-32 lh-1 me-3"></i>
-                  <div>
-                    <h6 class="fw-semibold text-dark mb-2">Accounts Receivable</h6>
-                    <p class="fs-sm text-secondary mb-0">The proceeds or payment which the company will receive from its customers.</p>
-                  </div>
-                </div>
-              </div><!-- col -->
-              <div class="col-sm-6 col-xl-3">
-                <div class="d-flex">
-                  <i class="ri-refund-2-line fs-32 lh-1 me-3"></i>
-                  <div>
-                    <h6 class="fw-semibold text-dark mb-2">Accounts Payable</h6>
-                    <p class="fs-sm text-secondary mb-0">Money owed by a business to its suppliers shown as a liability.</p>
-                  </div>
-                </div>
-              </div><!-- col -->
-              <div class="col-sm-6 col-xl-3">
-                <div class="d-flex">
-                  <i class="ri-exchange-line fs-32 lh-1 me-3"></i>
-                  <div>
-                    <h6 class="fw-semibold text-dark mb-2">Quick Ratio</h6>
-                    <p class="fs-sm text-secondary mb-0">Measures the ability of a company to use its near cash or quick assets.</p>
-                  </div>
-                </div>
-              </div><!-- col -->
-              <div class="col-sm-6 col-xl-3">
-                <div class="d-flex">
-                  <i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i>
-                  <div>
-                    <h6 class="fw-semibold text-dark mb-2">Current Ratio</h6>
-                    <p class="fs-sm text-secondary mb-0">Measures whether a firm has enough resources to meet its short-term obligations.</p>
-                  </div>
-                </div>
-              </div><!-- col -->
-            </div><!-- row -->
-          </div><!-- card-body -->
-        </div><!-- card -->
-      </div><!-- col -->
-      
+
+
       <!-- row -->
-    </div>
-</div>
+
+      <div class="main main-app p-3 p-lg-4">
+        <div class="d-md-flex align-items-center justify-content-between mb-4">
+          <div>
+            <ol class="breadcrumb fs-sm mb-1">
+              <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Events Management</li>
+            </ol>
+            <h4 class="main-title mb-0">Welcome to Dashboard</h4>
+            <a type="btn btn-primary" href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}">Apply tp schemes here</a>
+          </div>
+          <div class="d-flex align-items-center gap-2 mt-3 mt-md-0">
+            <button type="button" class="btn btn-white btn-icon"><i class="ri-share-line fs-18 lh-1"></i></button>
+            <button type="button" class="btn btn-white btn-icon"><i class="ri-printer-line fs-18 lh-1"></i></button>
+            <button type="button" class="btn btn-primary btn-icon"><i class="ri-bar-chart-2-line fs-18 lh-1"></i></button>
+          </div>
+        </div>
+  
+        <div class="row g-3">
+          <div class="col-xl-6">
+            <div class="card card-one card-ticket-earnings">
+              <div class="card-body d-flex flex-column p-4">
+                <h1 class="card-value mb-3 fs-40 ls--2"><span>GH₵</span> {{ staff.profit }}</h1>
+                <label class="card-label fw-semibold text-dark mb-1">Total Earnings</label>
+                <p class="w-75 fs-sm text-secondary mb-4">Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui. Etiam rhoncus.</p>
+                <p class="mb-5"><a href="#" class="btn fs-sm btn-primary">View Statements</a></p>
+  
+                <div class="d-flex gap-4 fs-sm mt-auto text-primary-dark lh-1 opacity-75">
+                  <span><strong class="fw-semibold ff-numerals">11,716</strong> Estimated Earnings</span>
+                  <span><strong class="fw-semibold ff-numerals">12,864</strong> Actual Earnings</span>
+                </div>
+              </div><!-- card-body -->
+              <div id="apexChart1" class="apex-chart-two d-flex align-items-end"></div>
+            </div><!-- card -->
+          </div><!-- col -->
+          <div class="col-xl-6">
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="card card-one card-ticket-available">
+                  <div class="card-body p-4">
+                    <div class="d-flex justify-content-end">
+                      <div class="w-45">
+                        <h1 class="card-value fs-32 mb-2 ls--1">24,580</h1>
+                        <label class="card-label fw-semibold text-dark mb-1">Tickets Available</label>
+                        <p class="text-secondary fs-sm mb-0">Cura bitur ullam corper ultri cies nisi nam eget dui etiam rhoncus.</p>
+                      </div>
+                    </div>
+                  </div><!-- card-body -->
+                  <div id="apexChart2" class="apex-chart"></div>
+                </div><!-- card -->
+              </div><!-- col -->
+              <div class="col-sm-6">
+                <div class="card card-one card-ticket-sold">
+                  <div class="card-body p-4">
+                    <div class="d-flex flex-column align-items-center">
+                      <h1 class="card-value fs-32 mb-2 ls--1">GH₵ 11,716</h1>
+                      <label class="card-label fw-semibold text-dark mb-1">Estimated Earnings</label>
+                      <p class="text-secondary text-center fs-sm mb-0">Ullam corper ultricies cura bitur nisi nam eget dui etia.</p>
+                    </div>
+                  </div><!-- card-body -->
+                  <div id="apexChart3" class="apex-chart"></div>
+                </div><!-- card -->
+              </div><!-- col -->
+              <div class="col-sm-6">
+                <div class="card card-one card-ticket-sold">
+                  <div class="card-body p-4">
+                    <div class="d-flex flex-column align-items-center">
+                      <h1 class="card-value fs-32 mb-2 ls--1"><span class="">GH₵</span> 12,864</h1>
+                      <label class="card-label fw-semibold text-dark mb-1">Actual Earnings</label>
+                      <p class="text-secondary text-center fs-sm mb-0">Nam libero tempore, cum soluta nobis est eligendi.</p>
+                    </div>
+                  </div><!-- card-body -->
+                  <div id="apexChart4" class="apex-chart"></div>
+                </div><!-- card -->
+              </div><!-- col -->
+            </div>
+          </div><!-- col -->
+          <div class="col-xl-8">
+            <div class="row g-3">
+              <div class="col-6 col-sm">
+                <div class="card card-one">
+                  <div class="card-body p-3">
+                    <div class="d-block fs-40 lh-1 text-primary mb-1"><i class="ri-calendar-todo-line"></i></div>
+                    <h1 class="card-value mb-0 ls--1 fs-32">358</h1>
+                    <label class="d-block mb-1 fw-medium text-dark">Scheduled Events</label>
+                    <small><span class="d-inline-flex text-danger">0.7% <i class="ri-arrow-down-line"></i></span> than last week</small>
+                  </div><!-- card-body -->
+                </div><!-- card -->
+              </div><!-- col -->
+              <div class="col-6 col-sm">
+                <div class="card card-one">
+                  <div class="card-body p-3">
+                    <div class="d-block fs-40 lh-1 text-ui-02 mb-1"><i class="ri-calendar-check-line"></i></div>
+                    <h1 class="card-value mb-0 fs-32 ls--1">260</h1>
+                    <label class="d-block mb-1 fw-medium text-dark">Attended Events</label>
+                    <small><span class="d-inline-flex text-success">1.2% <i class="ri-arrow-up-line"></i></span> than last week</small>
+                  </div><!-- card-body -->
+                </div><!-- card -->
+              </div><!-- col -->
+              <div class="col-sm">
+                <div class="card card-one">
+                  <div class="card-body p-3">
+                    <div class="d-block fs-40 lh-1 text-secondary mb-1"><i class="ri-calendar-2-line"></i></div>
+                    <h1 class="card-value mb-0 fs-32 ls--1">38</h1>
+                    <label class="d-block mb-1 fw-medium text-dark">Cancelled Events</label>
+                    <small><span class="d-inline-flex text-success">0.6% <i class="ri-arrow-up-line"></i></span> than last week</small>
+                  </div><!-- card-body -->
+                </div><!-- card -->
+              </div><!-- col -->
+  
+            </div><!-- row -->
+          </div><!-- col -->
+        </div><!-- row -->
+  
+
+
 {% endblock %}

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def check_active_status_for_user(self):
     
     # loop throug each member and set the checkbox if required
-    cut_off_date = timezone.now() - timedelta(5) #this will subtract 90 days from current date and returns a DateTime value
+    cut_off_date = timezone.now() - timedelta(90) #this will subtract 90 days from current date and returns a DateTime value
     # filters members who are not yet scheme-approved and were registered more than 90 days ago.
     members_to_update = Member.objects.filter(scheme_approval=False, registration_date__lte=cut_off_date)
 

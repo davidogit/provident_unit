@@ -15,9 +15,14 @@ urlpatterns=[
     path('terms/', views.terms_and_conditions_view, name='terms_and_conditions'),
 
     path('invalid-login-details/', views.InvalidLoginDetails.as_view(), name='invalid_login_details'),
-    path('member_dashboard/<int:member_id>/', views.MemberPortal.as_view(), name='member_profile'),
+    path('profile/<int:member_id>/', views.MemberPortal.as_view(), name='member_profile'),
     # path('member_dashboard/<int:member_id>/edit/', views.EditMemberProfileView.as_view(), name='edit_member_profile'),
-    path('member_dashboard/<int:member_id>/edit/', views.EditMemberProfileView.as_view(), name='edit_member_profile'),
+    path('profile-edit/<int:member_id>/', views.EditMemberProfileView.as_view(), name='edit_member_profile'),
+
+    # Scheme Application
+
+    path('dashboard/<int:member_id>/', views.MemberDashboard.as_view(), name='member_dashboard'),
+    path('application/<int:member_id>/', views.Application.as_view(), name='application_view')
 
 ]
 

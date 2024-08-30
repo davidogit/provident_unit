@@ -1,41 +1,32 @@
-from django.utils import timezone
-from dateutil.relativedelta import relativedelta
+from typing import Any
 from django.contrib.auth import authenticate, login, logout
+from django.db.models.query import QuerySet
+from django.forms import BaseModelForm
 from django.shortcuts import get_object_or_404, render, redirect
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.core.mail import send_mail
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
 from django.contrib.auth.decorators import login_required
 from .forms import UserForm, MemberForm
 from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
-from django.views.generic import TemplateView,CreateView
+from django.views.generic import TemplateView,UpdateView,View,CreateView
 from django.contrib.auth.models import Group
-from .models import Member
+from .models import Member,SchemeApproval
+from django.utils.decorators import method_decorator
 from Member.decorators import tenant_required
 from Admin.decorators import role_required
-from django.shortcuts import render, redirect
-from django.urls import reverse
-from django.views.generic import TemplateView
 from .forms import CombinedProfileForm
-from .models import Member
-from django.views.generic import UpdateView
-from django.shortcuts import redirect, get_object_or_404
-from .models import Member
-from .forms import CombinedProfileForm
-from .models import User
-
-
-
-
 from MultiScheme.models import Tenant,InvestmentScheme
+from contributions.models import StaffAPI
 # Importing the user model 
 from django.contrib.auth import get_user_model
-
 # Importing custom decorators
 from .decorators import unauthenticated_user
+from django.utils import timezone
+
 
 @unauthenticated_user
 def registrationView(request,tenant_id):
@@ -206,7 +197,7 @@ def verifyOtpView(request,user_id, tenant_id):
             if user.groups.filter(name='Member'):
                 # Get related member to user and extract staff_id from Member
                 member = Member.objects.get(user=user)                
-                return redirect('member_profile', tenant_id=tenant_id, member_id=member.staff_id)
+                return redirect('member_dashboard', tenant_id=tenant_id, member_id=member.staff_id)
             else:
                 return redirect('finance_page', tenant_id)
         else:
@@ -225,13 +216,6 @@ def terms_and_conditions_view(request):
     # Render the terms and conditions template
     return render(request, 'terms_and_conditions.html')
 
-
-
-
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
-from .models import Member 
 
 
 
@@ -267,11 +251,6 @@ class MemberPortal(TemplateView):
 
 
 
-from django.views.generic import UpdateView
-from django.shortcuts import redirect, get_object_or_404
-from .models import Member
-from .forms import CombinedProfileForm
-from .models import User
 
 @method_decorator(login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
@@ -295,3 +274,108 @@ class EditMemberProfileView(UpdateView):
     def form_valid(self, form):
         form.save()
         return redirect('member_profile', tenant_id=self.request.tenant.id, member_id=self.get_object().staff_id)
+
+
+
+# Member Scheme Application View
+
+@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
+class MemberDashboard(TemplateView):
+    template_name = 'member_home_page.html'
+
+    def get_context_data(self, **kwargs: Any):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        staff_id = self.request.user.member.staff_id
+
+        try:
+            staff = get_object_or_404(StaffAPI,tenant=tenant, staff_number=staff_id)
+        except StaffAPI.DoesNotExist:
+            staff = None
+
+        if tenant and staff:
+            context['staff'] = staff
+
+        return context
+
+# View for Application
+
+@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
+class Application(CreateView):
+    model = SchemeApproval
+    fields = []
+    template_name = 'scheme_application.html'
+    
+    def get_context_data(self, **kwargs: Any):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        staff_id = self.request.user.member.staff_id
+
+        # Retrieve staff
+        try:
+            staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
+            
+            associated_schemes = staff.investment_scheme.all()
+            # Get staff's schemes
+            
+        except StaffAPI.DoesNotExist:
+            staff = None
+        
+
+        if tenant:
+            try:
+                schemes = InvestmentScheme.objects.filter(tenant=tenant)
+                filtered_scheme = schemes.exclude(id__in=associated_schemes)
+                context['available_scheme']=filtered_scheme
+                
+            except InvestmentScheme.DoesNotExist:
+                context['available_scheme']=[]
+
+        return context
+    
+    def form_invalid(self, form):
+        print(f"Form is invalid: {form.errors}")
+        return super().form_invalid(form)
+        
+    def form_valid(self, form):
+        tenant = self.request.tenant
+        member = self.request.user.member
+        scheme_id = self.request.POST.get('scheme_id')
+
+        # Get staff using member.staff_id
+        try:
+            staff = get_object_or_404(StaffAPI,tenant=tenant,staff_number=member.staff_id)
+        except StaffAPI.DoesNotExist:
+            print('Staff does not exist')
+            return self.form_invalid(form)
+        
+        print(f'{tenant},{member},{staff}')
+        scheme = get_object_or_404(InvestmentScheme,tenant=tenant,id=scheme_id)
+
+        if tenant and member and staff:
+            form.instance.tenant = tenant
+            form.instance.member = member
+            form.instance.staff = staff
+            form.instance.scheme = scheme
+            form.instance.application_date = timezone.now()
+        else:
+            print('some fields are missing')
+        # return super().form_valid(form)
+
+            # Add this line to check if the form is valid before saving
+        if form.is_valid():
+            print("Form is valid.")
+            return super().form_valid(form)
+        else:
+            print(f"Form errors: {form.errors}")
+            return self.form_invalid(form)
+    
+    def get_success_url(self):
+        tenant = self.request.tenant
+        user = self.request.user.member.staff_id
+        return reverse('member_dashboard', kwargs={'tenant_id':tenant.id, 'member_id':user})
+    

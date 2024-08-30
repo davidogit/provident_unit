@@ -3,6 +3,10 @@ from django.contrib.auth.models import User
 from MultiScheme.models import Tenant
 from django.conf import settings
 
+from contributions.models import StaffAPI
+from MultiScheme.models import InvestmentScheme
+from django.utils import timezone
+
 # Create your models here.
 
 class Member(models.Model):
@@ -39,3 +43,25 @@ class Member(models.Model):
 
     def __str__(self):
         return f'{self.user.username}\'s account'
+
+
+# Approval Model
+class SchemeApproval(models.Model):
+    
+    tenant = models.ForeignKey(Tenant,on_delete=models.CASCADE)
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    staff = models.ForeignKey(StaffAPI, on_delete=models.CASCADE)
+    scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE)
+    applied_date = models.DateTimeField(auto_now_add=True)
+    approval_date = models.DateTimeField(null=True,blank=True)
+    application_date = models.DateTimeField(null=True,blank=True)
+    approved_by_hr = models.BooleanField(default=False)
+
+    # method to approve scheme applications
+    def approve(self):
+        self.approved_by_hr = True
+        self.approval_date = timezone.now()
+        self.save()
+
+        # Add member to scheme(but in this case we have to set it on the StaffApi model)
+        self.staff.investment_scheme.add(self.scheme)
