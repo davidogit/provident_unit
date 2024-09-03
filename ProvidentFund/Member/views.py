@@ -1,9 +1,9 @@
+from datetime import timedelta
+import smtplib
 from typing import Any
 from django.contrib.auth import authenticate, login, logout
-from django.db.models.query import QuerySet
-from django.forms import BaseModelForm
 from django.shortcuts import get_object_or_404, render, redirect
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.mail import send_mail
 from django.urls import reverse
 import requests
@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import UserForm, MemberForm
 from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
-from django.views.generic import TemplateView,UpdateView,View,CreateView
+from django.views.generic import TemplateView,UpdateView,CreateView
 from django.contrib.auth.models import Group
 from .models import Member,SchemeApproval
 from django.utils.decorators import method_decorator
@@ -292,13 +292,46 @@ class MemberDashboard(TemplateView):
 
         try:
             staff = get_object_or_404(StaffAPI,tenant=tenant, staff_number=staff_id)
+
+            days_since_joined = (timezone.now().date()-staff.date_joined).days
+
+
+            # APPROVED SCHEMES
+            
+            ################################################
+            approved_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff,approved_by_hr=True).values_list('scheme_id', flat=True)
+
+            schemes = InvestmentScheme.objects.filter(tenant=tenant)
+            active_schemes = schemes.filter(id__in=approved_schemes)
+
+
+            #################################################
+
+            # PENDING SCHEMES
+
+            ################################################
+            pending_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff,approved_by_hr=False).values_list('scheme_id', flat=True)
+
+            schemes = InvestmentScheme.objects.filter(tenant=tenant)
+            pending_scheme = schemes.filter(id__in=pending_schemes)
+
+            #################################################
         except StaffAPI.DoesNotExist:
             staff = None
 
         if tenant and staff:
             context['staff'] = staff
+            context['active_schemes']=active_schemes
+            context['active_schemes_count']=active_schemes.count()
+            context['pending_schemes'] = pending_scheme
+            context['pending_schemes_count'] = pending_scheme.count()
+            context['days_since_joined']= days_since_joined
 
         return context
+
+
+
+
 
 # View for Application
 
@@ -318,9 +351,17 @@ class Application(CreateView):
         # Retrieve staff
         try:
             staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
-            
-            associated_schemes = staff.investment_scheme.all()
-            # Get staff's schemes
+
+            # Get staff's schemes both approved and unapproved
+            # associated_schemes = staff.investment_scheme.all()
+
+            associated_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff).values_list('scheme_id', flat=True)
+            # unapproved staff schemes: Omit schemes that are pending for a user
+
+            # Get Scheme approvals based on tenant and member
+            pending_schemes_approval = SchemeApproval.objects.filter(tenant=tenant,staff=staff,approved_by_hr=False)
+
+            context['pending_scheme_approvals'] = pending_schemes_approval
             
         except StaffAPI.DoesNotExist:
             staff = None
@@ -356,24 +397,58 @@ class Application(CreateView):
         print(f'{tenant},{member},{staff}')
         scheme = get_object_or_404(InvestmentScheme,tenant=tenant,id=scheme_id)
 
-        if tenant and member and staff:
-            form.instance.tenant = tenant
-            form.instance.member = member
-            form.instance.staff = staff
-            form.instance.scheme = scheme
-            form.instance.application_date = timezone.now()
-        else:
-            print('some fields are missing')
-        # return super().form_valid(form)
+        # Check for eligibility before submitting application
 
-            # Add this line to check if the form is valid before saving
-        if form.is_valid():
-            print("Form is valid.")
-            return super().form_valid(form)
+        eligibility_in_days = scheme.eligibility_criteria_months*30 #convert months to days for calculation
+        eligible_date = timezone.now().date() - timedelta(eligibility_in_days) # returns a date value
+
+        if staff.date_joined<eligible_date:
+
+            if tenant and member and staff:
+                form.instance.tenant = tenant
+                form.instance.member = member
+                form.instance.staff = staff
+                form.instance.scheme = scheme
+                form.instance.application_date = timezone.now()
+
+                # Save form
+                form.save()
+
+                # Send Application successful email to user and application email to Management
+                try:
+                    # Email to user
+                    send_mail(
+                        subject='Scheme Application Successful',
+                        message=f'Your application to join "{scheme}" is successfuly received, you will be notified when your application is approved by management',
+                        from_email=EMAIL_HOST_USER,
+                        recipient_list=[self.request.user.email],
+                        fail_silently=False
+                    )
+
+                    # Email to Management
+                    send_mail(
+                        subject='Scheme Application Received',
+                        message=f'{self.request.user.member.staff_id} has applied to join {scheme}. Review and approve application in due time',
+                        from_email=EMAIL_HOST_USER,
+                        recipient_list=[tenant.email],
+                        fail_silently=False
+                    )
+                except smtplib.SMTPException:
+                    email_error_message = 'There was an issue sending you a confirmation email, but your application was submitted successfuly and you will be notified when application is approved via email. Thank you'
+                    return JsonResponse({'status':'error', 'message':email_error_message}, status=400)
+
+                # Success prompt to user
+
+                return JsonResponse({'status':'success'}, status=200)
+            else:
+                message = 'Some required fields are missing'
+                return JsonResponse({'status':'error', 'message':message}, status=400)
         else:
-            print(f"Form errors: {form.errors}")
-            return self.form_invalid(form)
-    
+            message = 'You are not eligigble to apply for this scheme at this moment. Try again later'
+            return JsonResponse({'status':'error', 'message':message}, status=400)
+        
+        
+
     def get_success_url(self):
         tenant = self.request.tenant
         user = self.request.user.member.staff_id

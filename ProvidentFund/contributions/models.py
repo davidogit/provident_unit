@@ -16,12 +16,13 @@ class StaffAPI(models.Model):
     _amount = models.FloatField(null=True,blank=True,default=0.00)
     exited_date = models.DateField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
-    profit = models.FloatField(default=0.0)
+    profit = models.FloatField(default=0.00)
+    actual_profit = models.FloatField(default=0.00)
     subscription_date = models.DateField(null=True)
     updated_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f'{self.last_name}, {self.investment_scheme}'
+        return f'{self.last_name} {self.first_name}'
 
     # @property
     # def contributions(self):

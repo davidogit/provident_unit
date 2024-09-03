@@ -26,7 +26,7 @@
 
     <div class="sidebar">
       <div class="sidebar-header">
-        <a href="../index.html" class="sidebar-logo">{{ request.tenant.name }}</a>
+        <a href="{% url 'member_dashboard' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
       </div>
 
       <!-- sidebar-header -->
@@ -112,7 +112,7 @@
           </div><!-- dropdown-menu-header -->
           <ul class="list-group">
             <li class="list-group-item">
-              <div class="avatar online"><img src="../assets/img/img10.jpg" alt=""></div>
+              <div class="avatar online"><img src="{{ user.member.image.url }}" alt=""></div>
               <div class="list-group-body">
                 <p><strong>Dominador Manuel</strong> and <strong>100 other people</strong> reacted to your comment "Tell your partner that...</p>
                 <span>Aug 20 08:55am</span>
@@ -151,11 +151,11 @@
         </div><!-- dropdown-menu -->
       </div><!-- dropdown -->
       <div class="dropdown dropdown-profile ms-3 ms-xl-4">
-          <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><div class="avatar online"><img src="../assets/img/img1.jpg" alt=""></div></a>
+          <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><div class="avatar online"><img src="{{ user.member.image.url }}" alt=""></div></a>
           <div class="dropdown-menu dropdown-menu-end mt-10-f">
             <div class="dropdown-menu-body">
-              <div class="avatar avatar-xl online mb-3"><img src="../assets/img/img1.jpg" alt=""></div>
-              <h5 class="mb-1 text-dark fw-semibold">Shaira Diaz</h5>
+              <div class="avatar avatar-xl online mb-3"><img src="{{ user.member.image.url }}" alt=""></div>
+              <h5 class="mb-1 text-dark fw-semibold">{{ user.last_name }} {{ user.first_name }}</h5>
               <p class="fs-sm text-secondary">Premium Member</p>
 
               <nav class="nav">

@@ -1,6 +1,6 @@
 {% extends 'member_base.html' %}
 {% block title %}
-<title>{{ user.username }}'s Profile</title>
+<title>scheme application</title>
 {% endblock %}
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
@@ -13,32 +13,73 @@
             <div class="col-sm-5 col-lg-5">
                 <div class="card">
                     <div class="card-body">
+                        <div id="response-message-{{ scheme.id }}" class="response-message text-center" style="color: red;"></div>
                         <h6 class="card-title">Name: <strong>{{ scheme.name|upper }}</strong></h6>
                         <p class="card-text">Description: <em>{{ scheme.description }}</em></p>
                     </div>
-                    <form action="" class="form-control" method="POST">
+                    <form action="" class="form-control application-form" method="POST">
                       {% csrf_token %}
                       <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
                       <button class="btn btn-primary" type="submit">Apply Here</button>
                     </form>
-                    
                 </div>
             </div><!-- col -->
           {% endfor %}
         </div><!-- row -->
-        
     </div><!-- col -->
-
     {% else %}
     <div class="col">
         <div class="card">
-            <div class="card-body">
+            <div class="card-body text-center">
                 <h6 class="card-title">No Scheme Available</h6>
                 <p class="card-text">There is no scheme available for you to join at the moment. Please check back later.</p>
             </div>
         </div>
     {% endif %}
-      <!-- row -->
+    <!-- row -->
     </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+    $('.application-form').on('submit', function(event) {
+        event.preventDefault(); // Prevent the default form submission
+
+        var form = $(this);
+        var schemeId = form.find('input[name="scheme_id"]').val();
+        var responseMessageDiv = $('#response-message-' + schemeId);
+
+        $.ajax({
+            type: form.attr('method'),
+            url: form.attr('action'),
+            data: form.serialize(),
+            success: function(response) {
+                if (response.status === 'success') {
+                    alert('Application approved successfully.');
+                    form.closest('card').remove(); // Optionally, you might want to handle this differently depending on your HTML structure
+                } else {
+                    responseMessageDiv.html('Unexpected response status: ' + response.status);
+                }
+            },
+            error: function(jqXHR) {
+                var response = jqXHR.responseJSON; // Get the JSON response from the server
+                var errorMessage = 'An error occurred. Please try again.';
+
+                if (response && response.message) {
+                    errorMessage = response.message;
+                }
+
+                responseMessageDiv.html(errorMessage);
+            }
+        });
+    });
+});
+</script>
+
+
+
 {% endblock %}
