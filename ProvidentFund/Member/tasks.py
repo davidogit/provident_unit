@@ -2,7 +2,7 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 from .models import Member
-from Admin.models import User
+from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from ProvidentFund.settings import EMAIL_HOST_USER
 from smtplib import SMTPException
@@ -18,12 +18,23 @@ logger = logging.getLogger(__name__)
 def check_active_status_for_user(self):
     
     # loop throug each member and set the checkbox if required
-    cut_off_date = timezone.now() - timedelta(90) #this will subtract 90 days from current date and returns a DateTime value
+    cut_off_date = timezone.now() - timedelta(14) #this will subtract 90 days from current date and returns a DateTime value
     # filters members who are not yet scheme-approved and were registered more than 90 days ago.
     members_to_update = Member.objects.filter(scheme_approval=False, registration_date__lte=cut_off_date)
 
-    # Update the active_status of members who are to be deleted
-    members_to_update.update(user__inactive_status=True)
+    # Get user id from members
+    users_ids = [member.user.id for member in members_to_update]
+    # Fetch users
+    User = get_user_model()
+
+    # Fetch matching users using id
+    users_to_update = User.objects.filter(id__in=users_ids)
+
+    # looping users and changing status accordingly
+    for user in users_to_update:
+        user.inactive_status = True
+        user.save()
+
 
 
 
@@ -34,7 +45,7 @@ def delete_inactive_users(self):
 
     try:
         # Filter inactive members based on their status
-        inactive_users= User.objects.filter(inactive_status=True)
+        inactive_users= get_user_model().objects.filter(inactive_status=True)
 
         # For every member who is about to be deleted a message is sent to notify them on the deletion of their account
         for user in inactive_users:

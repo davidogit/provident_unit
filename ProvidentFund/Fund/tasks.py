@@ -1,105 +1,159 @@
 from celery import shared_task
 from .models import InvestmentDetail,BankInterest,DelayedInterest
 from django.utils import timezone
-
+from MultiScheme.models import Tenant, InvestmentScheme
 # import contribution details from Contributions App
-from contributions.models import StaffAPI
-
+from contributions.models import StaffAPI,Contribution
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum,F
 import logging
-
 from django.core.mail import send_mail
 from ProvidentFund.settings import EMAIL_HOST_USER
 from smtplib import SMTPException
+from Member.models import SchemeApproval
 
 logger = logging.getLogger(__name__)
 
-
-# Task to calculate profit for members daily
 @shared_task(bind=True)
 def member_interest(self):
-    # Get all active members
-    members = StaffAPI.objects.filter(exited_flag = False)
+    try:
+        tenants = Tenant.objects.all()
+        logger.info(f'Starting profit calculation for {tenants.count()} tenants.')
 
-    # Sum up every members contribution into one single value as total_contribution
+        for tenant in tenants:
+            schemes = InvestmentScheme.objects.filter(tenant=tenant)
 
-    total_contribution = StaffAPI.objects.filter(exited_flag = False).aggregate(total=Sum('_amount'))['total']
+            for scheme in schemes:
+                members = StaffAPI.objects.filter(
+                    tenant=tenant,
+                    investment_scheme=scheme,
+                    exited_flag=False
+                )
 
-    # Making sure total_contribution is not None
-    if total_contribution is None:
-        total_contribution = 0.0
+                total_contribution = members.aggregate(total=Sum('_amount'))['total'] or 0.0
+                logger.debug(f'Tenant: {tenant.id}, Scheme: {scheme.id}, Total Contribution: {total_contribution}')
 
-    print(f'Total contribution = {total_contribution}')
+                active_investments = InvestmentDetail.objects.filter(
+                    investment_scheme=scheme,
+                    _remaining_days__gt=0,
+                    _status='Active',
+                    approval_status=False
+                ).select_related('investment_scheme')
 
-    # Get investments with remaining_days >0 and status == 'Active'
-    investments = InvestmentDetail.objects.filter(_remaining_days__gt=0, _status = 'Active')
-    print(investments)
+                approved_investments = InvestmentDetail.objects.filter(
+                    investment_scheme=scheme,
+                    approval_status=True
+                ).select_related('investment_scheme')
 
-    # Get delayed interest if theres any
-    delayed_interest = DelayedInterest.objects.filter(_status = 'Not used')
+                delayed_interests = DelayedInterest.objects.filter(
+                    investment_scheme=scheme,
+                    _status='Not used'
+                )
 
-    # Get bank interest if theres any
-    bank_interest = BankInterest.objects.filter(_status = 'Not used')
+                bank_interests = BankInterest.objects.filter(
+                    investment_scheme=scheme,
+                    _status='Not used'
+                )
 
-    for member in members:
-        contribution = member.amount
 
-        # Ensure member profit is not none before calculation
-        if member.profit is None:
-            member.profit = 0.0
-        
-        # Distribute Delayed Interest based on members contribution
-        for d_int in delayed_interest:
-            # Update member profit
-            member.profit += ((contribution/total_contribution)*d_int.amount)
-            
-            # change the status of delayed interest after it has been used
 
-            d_int.status = 'Used'
+                with transaction.atomic():
+                    # Distribute Delayed Interests
+                    for d_int in delayed_interests:
+                        if total_contribution > 0:
+                            for member in members:
+                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+                                scheme_subscription = SchemeApproval.objects.get(
+                                    staff=member, scheme=scheme, tenant=tenant, 
+                                    approved_by_hr=True)
+                                subscription_date = scheme_subscription.approval_date
+                                if subscription_date.date() < d_int.created_date:
+                                    member.profit += (contribution['total'] / total_contribution) * d_int.amount
+                                else:
+                                    member.profit += 0.0
+                        d_int.status = 'Used'
+                        d_int.save()
 
-            # Save the new status for delayed interest
-            d_int.save()
+                    # Distribute Bank Interests
+                    for b_int in bank_interests:
+                        if total_contribution > 0:
+                            for member in members:
 
-        # Distribute Bank Interest based on members contribution
-        for b_int in bank_interest:
-            # Update member profit
-            member.profit += ((contribution/total_contribution)*b_int.amount)
+                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
 
-            # change the status of Bank interest
-            b_int.status = 'Used'
+                                scheme_subscription = SchemeApproval.objects.get(
+                                    staff=member, scheme=scheme, tenant=tenant, 
+                                    approved_by_hr=True)
+                                subscription_date = scheme_subscription.approval_date
 
-            # Save the new status of bank interest
-            b_int.save()
+                                if subscription_date.date() < b_int.created_date:
+                                    member.profit += (contribution['total'] / total_contribution) * b_int.amount
+                                else:
+                                    member.profit += 0.0
+                        b_int.status = 'Used'
+                        b_int.save()
 
-        for inv in investments:
-            days_left = inv.remaining_days
-            total_inv = inv.principal_amount
-            inv_interest = inv.interest_amount
-            tenure = inv.tenure
+                    # Estimated Revenue Distribution
+                    for inv in active_investments:
+                        if inv.tenure > 0:
+                            inv_daily_interest = inv.interest_amount / inv.tenure
+                        else:
+                            inv_daily_interest = 0.0
 
-            # Check if member is elidgible for profit based on the time he/she joined the PF
-            if (member.subscription_date < inv.interest_start_date):
+                        for member in members:
+                            contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
 
-                # checks if tenure is not expired
-                if days_left>0:
-                    inv_daily_interest = inv_interest/tenure
-                    member.profit += ((contribution/total_inv)*inv_daily_interest)
-                else:
-                    inv_daily_interest = 0.0
-                    member.profit +=0.0
-            # Else if member joined after a particular investment is bought he/she do not get any profit
-            else:
-                member.profit += 0.0      
-        member.save()
+                            logger.info(f'Test to see member contribution: {contribution} for {member.first_name}')
 
-    return f'Profit successfully calculated for {timezone.now().date()}'
+                            scheme_subscription = SchemeApproval.objects.get(
+                                    staff=member, scheme=scheme, tenant=tenant, 
+                                    approved_by_hr=True)
+                            subscription_date = scheme_subscription.approval_date                            
+
+                            if subscription_date.date() < inv.interest_start_date and inv._remaining_days > 0:
+                                member.profit += (contribution['total'] / inv.principal_amount) * inv_daily_interest
+                            else:
+                                member.profit += 0.0
+
+                        # Decrement remaining days
+                        # inv._remaining_days -= 1
+                        # inv.save()
+
+                    # Actual Revenue Distribution
+                    for inv in approved_investments:
+                        for member in members:
+
+                            contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+
+                            scheme_subscription = SchemeApproval.objects.get(
+                                    staff=member, scheme=scheme, tenant=tenant, 
+                                    approved_by_hr=True)
+                            subscription_date = scheme_subscription.approval_date
+
+                            if subscription_date.date() < inv.interest_start_date:
+                                member.actual_profit += (contribution['total'] / inv.principal_amount) * inv.interest_amount
+                            else:
+                                member.profit += 0.0
+                        
+
+                    # Bulk update members' profits
+                    # Since 'profit' was modified in Python, you need to iterate and save
+                    members.update(profit=F('profit'))
+
+        logger.info(f'Profit successfully calculated for {timezone.now().date()}')
+        return f'Profit successfully calculated for {timezone.now().date()}'
+    
+    except Exception as e:
+        logger.error(f'Error in member_interest task: {str(e)}', exc_info=True)
+        raise self.retry(exc=e, countdown=60, max_retries=3)
+    
 
 
 # Task to reduce remaining days by 1 every midnight 12:00 am
 @shared_task(bind=True)
 def reduce_date(self):
-    investments = InvestmentDetail.objects.all()
+    # Filter only unapproved investments
+    investments = InvestmentDetail.objects.filter(approval_status=False)
     current_date = timezone.now().date()
 
     # update[] will hold all potential updates and save them in bulk
@@ -160,3 +214,144 @@ def reduce_date(self):
         logger.error(f'Error trying to update Investment Details {e}')
 
     return 'day_reduced_by_1'
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # for member in members:
+    #     # Get member total contributions for a specific scheme
+    #     contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum('total_contributions'))['total']
+
+    #     # checks
+    #     print(f'{member.first_name}\'s total contribution for {scheme.name}: {contribution}')
+
+    #     # Ensure member profit is not none before calculation
+    #     if contribution is None:
+    #         contribution = 0.0
+
+
+
+
+# # Task to calculate profit for members daily
+# @shared_task(bind=True)
+# def member_interest(self):
+#     # Loop through tenants
+#     tenants = Tenant.objects.all()
+
+#     logger.info(f'Processing {tenants.count()} Tenants.')
+#     for tenant in tenants:
+
+#         # Fetch schemes
+#         schemes = InvestmentScheme.objects.filter(tenant=tenant)
+
+#         # loop through all schemes relating to a tenant
+#         for scheme in schemes:
+#             # Get all active members
+#             members = StaffAPI.objects.filter(tenant=tenant,investment_scheme=scheme, exited_flag = False)
+
+#             # Sum up every members contribution into one single value as total_contribution based on tenant and scheme
+#             total_contribution = StaffAPI.objects.filter(tenant=tenant,investment_scheme=scheme, exited_flag = False).aggregate(total=Sum('_amount'))['total']
+
+#             # Making sure total_contribution is not None
+#             if total_contribution is None:
+#                 total_contribution = 0.0
+
+#             # print(f'Total contribution = {total_contribution}')
+
+#             # Get investments with remaining_days >0 and status == 'Active' and unapproved for estimated revenue
+#             active_investments = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme, _remaining_days__gt=0, _status = 'Active',approval_status=False)
+#             print(active_investments)
+
+#             # Get investments with remaining_days >0 and status == 'Active' and unapproved for estimated revenue
+#             approved_investments = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approval_status=True)
+#             print(approved_investments)
+
+#             # Get delayed interest if theres any
+#             delayed_interest = DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,_status = 'Not used')
+
+#             # Get bank interest if theres any
+#             bank_interest = BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,_status = 'Not used')
+                
+#             # Distribute Delayed Interest based on members contribution
+#             for d_int in delayed_interest:
+#                 # Update member profit
+#                 for member in members:
+#                     # Get member total contributions for a specific scheme
+#                     contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum('total_contributions'))['total']
+                    
+#                     member.profit += ((contribution/total_contribution)*d_int.amount)
+                
+#                 # change the status of delayed interest after it has been used
+#                 d_int.status = 'Used'
+#                 # Save the new status for delayed interest
+#                 d_int.save()
+
+#             # Distribute Bank Interest based on members contribution
+#             for b_int in bank_interest:
+#                 # Update member profit
+#                 for member in members:
+#                     # Get member total contributions for a specific scheme
+#                     contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum('total_contributions'))['total']
+
+#                     member.profit += ((contribution/total_contribution)*b_int.amount)
+
+#                 # change the status of Bank interest
+#                 b_int.status = 'Used'
+#                 # Save the new status of bank interest
+#                 b_int.save()
+
+#             # Calculation for estimated revenue distributed daily
+#             for inv in active_investments:
+#                 days_left = inv.remaining_days
+#                 total_inv = inv.principal_amount
+#                 inv_interest = inv.interest_amount
+#                 tenure = inv.tenure
+
+#                 # loop through members
+#                 for member in members:
+
+#                     # Get member total contributions for a specific scheme
+#                     contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum('total_contributions'))['total']
+
+#                     # Check if member is elidgible for profit based on the time he/she joined the PF
+#                     if (member.subscription_date < inv.interest_start_date):
+
+#                         # checks if tenure is not expired
+#                         if days_left>0:
+#                             inv_daily_interest = inv_interest/tenure
+#                             member.profit += ((contribution/total_inv)*inv_daily_interest)
+#                         else:
+#                             inv_daily_interest = 0.0
+#                             member.profit +=0.0
+#                     # Else if member joined after a particular investment is bought he/she do not get any profit
+#                     else:
+#                         member.profit += 0.0
+            
+#             # Calculation for approved investments and actual revenue
+
+#             for inv in active_investments:
+#                 interest = inv.interest_amount
+#                 principal = inv.principal_amount
+
+#                 for member in members:
+#                     # Get member total contributions for a specific scheme
+#                     contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum('total_contributions'))['total']
+
+#                     # Check if member is elidgible for profit based on the time he/she joined the PF
+#                     if (member.subscription_date < inv.interest_start_date):
+#                         member.profit += ((contribution/principal)*interest)
+#                     else:
+#                         member.profit += 0.0
+
+#             member.save()
+
+#     return f'Profit successfully calculated for {timezone.now().date()}'

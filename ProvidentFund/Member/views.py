@@ -391,10 +391,10 @@ class Application(CreateView):
         try:
             staff = get_object_or_404(StaffAPI,tenant=tenant,staff_number=member.staff_id)
         except StaffAPI.DoesNotExist:
-            print('Staff does not exist')
+            # print('Staff does not exist')
             return self.form_invalid(form)
         
-        print(f'{tenant},{member},{staff}')
+        # print(f'{tenant},{member},{staff}')
         scheme = get_object_or_404(InvestmentScheme,tenant=tenant,id=scheme_id)
 
         # Check for eligibility before submitting application

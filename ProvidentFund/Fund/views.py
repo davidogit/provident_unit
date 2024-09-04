@@ -23,6 +23,12 @@ from Member.models import SchemeApproval
 class LandingPage(TemplateView):
     template_name = 'dashboard/landing_page.html'
 
+    def get(self,request,*args,**kwargs):
+        # clear session data ie. login credentials
+        request.session.flush()
+
+        return super().get(request, *args, **kwargs)
+
 
 class AccessDenied(TemplateView):
     template_name = 'dashboard/access_denied.html'

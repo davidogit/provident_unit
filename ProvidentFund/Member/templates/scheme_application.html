@@ -60,7 +60,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.status === 'success') {
                     alert('Application approved successfully.');
-                    form.closest('card').remove(); // Optionally, you might want to handle this differently depending on your HTML structure
+                    form.closest('card').remove(); //remove card 
                 } else {
                     responseMessageDiv.html('Unexpected response status: ' + response.status);
                 }
