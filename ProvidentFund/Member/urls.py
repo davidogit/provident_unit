@@ -22,7 +22,10 @@ urlpatterns=[
     # Scheme Application
 
     path('dashboard/<int:member_id>/', views.MemberDashboard.as_view(), name='member_dashboard'),
-    path('application/<int:member_id>/', views.Application.as_view(), name='application_view')
+    path('application/<int:member_id>/', views.Application.as_view(), name='application_view'),
+
+    path('active_schemes/<int:memeber_id>/', views.ActiveSchemes.as_view(), name='active_schemes'),
+    path('pending_schemes/<int:memeber_id>/', views.PendingSchemes.as_view(), name='pending_schemes'),
 
 ]
 

@@ -1,0 +1,51 @@
+{% extends 'member_base.html' %}
+{% block title %}
+<title>Active Schemes</title>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+   {% if active_schemes %}
+    <div class="col">
+        <!-- New Cards Column -->
+        <h3 class="mt-4 text-center">YOUR SCHEMES</h3>
+        <div class="row justify-content-center g-5 g-lg-5 pt-5">
+          {% for scheme in active_schemes %}
+            <div class="col-sm-10 col-lg-10 ">
+                <div class="card border border-info">
+                    <div class="card-body">
+                        <div id="response-message-{{ scheme.id }}" class="response-message text-center" style="color: red;">
+                            
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-4 col-sm-4 col-md-4 col-lg-4">
+                                <h6 class="card-title "><strong>Scheme Name:</strong> <em> {{ scheme.name|upper }}</em></h6>
+                                <p><strong>Date added: </strong> {{ scheme.created_date|date }}</p>
+                            </div>
+                            
+                            <div class="col-8 col-sm-8 col-md-8 col-lg-8 mb-5">
+                                <p class="card-text"><strong>Description:</strong> <em>{{ scheme.description }}</em></p>
+                            </div>
+                        </div>
+
+                        
+
+                        <form action="" class="form-control application-form border border-info-subtle" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
+                            <div class="d-flex  justify-content-between">
+                                <button class="btn btn-primary p-3 me-3" type="submit">Details</button>
+                                <button class="btn btn-danger p-3" type="submit">Opt Out</button>
+                            </div>
+                            
+                        </form>
+                    </div>
+
+                </div>
+            </div><!-- col -->
+          {% endfor %}
+        </div><!-- row -->
+    </div><!-- col -->
+    {% endif %}
+{% endblock %}

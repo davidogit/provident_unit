@@ -7,20 +7,35 @@
     {% if available_scheme %}
     <div class="col">
         <!-- New Cards Column -->
-        <h3 class="mt-4 text-center">SCHEMES</h3>
+        <h3 class="mt-4 text-center">AVAILABLE SCHEMES</h3>
         <div class="row justify-content-center g-5 g-lg-5 pt-5">
           {% for scheme in available_scheme %}
-            <div class="col-sm-5 col-lg-5">
+            <div class="col-sm-10 col-lg-10">
                 <div class="card">
                     <div class="card-body">
-                        <div id="response-message-{{ scheme.id }}" class="response-message text-center" style="color: red;"></div>
-                        <h6 class="card-title">Name: <strong>{{ scheme.name|upper }}</strong></h6>
-                        <p class="card-text">Description: <em>{{ scheme.description }}</em></p>
+                        <div id="response-message-{{ scheme.id }}" class="response-message text-center mb-3" style="color: red;">
+                            
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-4 col-sm-4 col-md-4 col-lg-4">
+                                <h6 class="card-title "><strong>Scheme Name:</strong> <em> {{ scheme.name|upper }}</em></h6>
+                                <p><strong>Date added: </strong> {{ scheme.created_date|date }}</p>
+                            </div>
+                            
+                            <div class="col-8 col-sm-8 col-md-8 col-lg-8 mb-5">
+                                <p class="card-text"><strong>Description:</strong> <em>{{ scheme.description }}</em></p>
+                            </div>
+                        </div>
                     </div>
                     <form action="" class="form-control application-form" method="POST">
                       {% csrf_token %}
                       <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
-                      <button class="btn btn-primary" type="submit">Apply Here</button>
+                      
+                        <div class="d-flex justify-content-end">
+                                
+                            <button class="btn btn-primary p-3" type="submit">Apply Here</button>
+                        </div>
                     </form>
                 </div>
             </div><!-- col -->
@@ -61,6 +76,8 @@ $(document).ready(function() {
                 if (response.status === 'success') {
                     alert('Application approved successfully.');
                     form.closest('card').remove(); //remove card 
+
+                    location.reload(); // Reload the page
                 } else {
                     responseMessageDiv.html('Unexpected response status: ' + response.status);
                 }
