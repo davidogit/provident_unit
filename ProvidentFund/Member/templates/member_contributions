@@ -1,0 +1,51 @@
+{% extends 'dashboard/base.html' %} {% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="container mt-5 p-4">
+    <div class="row justify-content-center mt-5">
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Name: {{ membership.first_name }}</h5>
+            <p class="card-text">
+              <strong>Status:</strong> {{ membership.status }}
+            </p>
+            <p class="card-text">
+              <strong>Fund Type:</strong> {{ membership.fund_type }}
+            </p>
+
+            <form
+              method="post"
+              action="{% url 'opt_out_member' tenant_id=request.tenant.id scheme_name=request.scheme_name pk=membership.pk %}"
+              class="mb-3"
+              id="opt-out-form"
+            >
+              {% csrf_token %}
+              <button
+                type="button"
+                class="btn btn-danger"
+                onclick="confirmOptOut()"
+              >
+                Opt Out
+              </button>
+            </form>
+            <a
+              href="{% url 'contribution-history' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=membership.pk %}"
+              class="btn btn-primary"
+              >View Contribution History</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function confirmOptOut() {
+    const confirmation = confirm("Are you sure you want to opt out?");
+    if (confirmation) {
+      document.getElementById("opt-out-form").submit();
+    }
+  }
+</script>
+{% endblock %}
