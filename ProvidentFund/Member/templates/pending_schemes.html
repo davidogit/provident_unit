@@ -1,0 +1,61 @@
+{% extends 'member_base.html' %}
+{% block title %}
+<title>Pending Schemes</title>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+   {% if pending_schemes %}
+    <div class="col">
+        <!-- New Cards Column -->
+        <h3 class="mt-4 text-center">PENDING SCHEME APPLICATIONS</h3>
+        <div class="row justify-content-center g-5 g-lg-5 pt-5">
+          {% for scheme in pending_schemes %}
+            <div class="col-sm-10 col-lg-10 ">
+                <div class="card border border-danger">
+                    <div class="card-body">
+                        <div id="response-message-{{ scheme.id }}" class="response-message text-center" style="color: red;">
+                            
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-4 col-sm-4 col-md-4 col-lg-4">
+                                <h6 class="card-title "><strong>Scheme Name:</strong> <em> {{ scheme.name|upper }}</em></h6>
+                                <p><strong>Date added: </strong> {{ scheme.created_date|date }}</p>
+                            </div>
+                            
+                            <div class="col-8 col-sm-8 col-md-8 col-lg-8 mb-5">
+                                <p class="card-text"><strong>Description:</strong> <em>{{ scheme.description }}</em></p>
+                            </div>
+                        </div>
+
+                        
+
+                        <form action="" class="form-control application-form border border-warning" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
+                            <div class="d-flex justify-content-end">
+                                
+                                <button class="btn btn-danger p-3" type="submit">Delete</button>
+                            </div>
+                            
+                        </form>
+                    </div>
+
+                </div>
+            </div><!-- col -->
+          {% endfor %}
+        </div><!-- row -->
+    </div><!-- col -->
+    {% else %}
+    <div class="col">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title h3">You have no pending scheme applications.</h6>
+                <p class="card-text">Pending schemes will appear here after you have applied to join a scheme <a href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}">here</a>.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+{% endblock %}

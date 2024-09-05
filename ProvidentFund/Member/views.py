@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import UserForm, MemberForm
 from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
-from django.views.generic import TemplateView,UpdateView,CreateView
+from django.views.generic import TemplateView,UpdateView,CreateView,ListView
 from django.contrib.auth.models import Group
 from .models import Member,SchemeApproval
 from django.utils.decorators import method_decorator
@@ -26,6 +26,7 @@ from django.contrib.auth import get_user_model
 # Importing custom decorators
 from .decorators import unauthenticated_user
 from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
 
 
 @unauthenticated_user
@@ -454,3 +455,66 @@ class Application(CreateView):
         user = self.request.user.member.staff_id
         return reverse('member_dashboard', kwargs={'tenant_id':tenant.id, 'member_id':user})
     
+
+
+class ActiveSchemes(ListView):
+    template_name = 'active_schemes.html'
+    model = InvestmentScheme
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Get tenant
+        tenant = self.request.tenant
+        user_id = self.request.user.member.staff_id
+
+        try:
+            staff = StaffAPI.objects.get(tenant=tenant,staff_number=user_id)
+        except ObjectDoesNotExist:
+            staff=None
+
+        # Get queryset
+        if tenant and staff:
+            try:
+                # Get related schems of user from SchemeApproval
+                related_schemes = SchemeApproval.objects.filter(tenant=tenant,approved_by_hr=True,staff=staff).values_list('scheme_id', flat=True)
+
+                # Filter Schemes based on related schemes
+                active_schemes = InvestmentScheme.objects.filter(tenant=tenant, id__in=related_schemes)
+                
+                context['active_schemes'] = active_schemes
+            except SchemeApproval.DoesNotExist:
+                return None
+        return context
+    
+
+
+class PendingSchemes(ListView):
+    template_name = 'pending_schemes.html'
+    model = InvestmentScheme
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Get tenant
+        tenant = self.request.tenant
+        user_id = self.request.user.member.staff_id
+
+        try:
+            staff = StaffAPI.objects.get(tenant=tenant,staff_number=user_id)
+        except ObjectDoesNotExist:
+            staff=None
+
+        # Get queryset
+        if tenant and staff:
+            try:
+                # Get related schems of user from SchemeApproval
+                related_schemes = SchemeApproval.objects.filter(tenant=tenant,approved_by_hr=False,staff=staff).values_list('scheme_id', flat=True)
+
+                # Filter Schemes based on related schemes
+                pending_schemes = InvestmentScheme.objects.filter(tenant=tenant, id__in=related_schemes)
+                
+                context['pending_schemes'] = pending_schemes
+            except SchemeApproval.DoesNotExist:
+                return None
+        return context
