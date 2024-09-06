@@ -1,4 +1,5 @@
-from datetime import timedelta
+from collections import defaultdict
+from datetime import datetime, timedelta
 import smtplib
 from typing import Any
 from django.contrib.auth import authenticate, login, logout
@@ -20,7 +21,7 @@ from Member.decorators import tenant_required
 from Admin.decorators import role_required
 from .forms import CombinedProfileForm
 from MultiScheme.models import Tenant,InvestmentScheme
-from contributions.models import StaffAPI
+from contributions.models import Contribution, StaffAPI
 # Importing the user model 
 from django.contrib.auth import get_user_model
 # Importing custom decorators
@@ -518,3 +519,62 @@ class PendingSchemes(ListView):
             except SchemeApproval.DoesNotExist:
                 return None
         return context
+    
+
+@method_decorator(login_required, name="dispatch")
+class Contributed(ListView):
+    model = Contribution
+    template_name = 'member_contributions.html'  # Template for contributions page
+    paginate_by = 12  # Optional, for paginating the contributions list
+
+    def get_queryset(self):
+        # Get the member_id and year from the request
+        member_id = self.kwargs.get('member_id')
+        selected_year = self.request.GET.get('year')
+
+        # Get tenant and scheme details from the request
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+
+        # Retrieve the member (StaffAPI) instance based on the tenant and staff number
+        member = get_object_or_404(StaffAPI, staff_number=member_id, investment_scheme__tenant=tenant)
+
+        # Set default year to current year if not provided
+        if not selected_year:
+            selected_year = datetime.now().year
+
+        # Filter the contributions based on the member, scheme, tenant, and selected year
+        if tenant and scheme_id:
+            return Contribution.objects.filter(
+                member=member,
+                investment_scheme__id=scheme_id,
+                investment_scheme__tenant=tenant,
+                year=selected_year
+            )
+        return Contribution.objects.none()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Get selected year and list of years for dropdown
+        selected_year = self.request.GET.get('year', datetime.now().year)
+        years = list(range(2020, datetime.now().year + 1))
+
+        context['years'] = years
+        context['selected_year'] = str(selected_year)
+
+        # Get contributions and organize them by month
+        contributions = self.get_queryset()
+        context['contributions'] = contributions
+
+        # Group contributions by month
+        monthly_contributions = defaultdict(list)
+        for contribution in contributions:
+            month_name = contribution.contribution_date.strftime('%B')
+            monthly_contributions[month_name].append(contribution)
+      
+        context['monthly_contributions'] = dict(monthly_contributions)
+
+        return context
+
+   
