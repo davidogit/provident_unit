@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.http.response import HttpResponse as HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
-# Create your views here.
+from ProvidentFund.settings import EMAIL_HOST_USER
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest
 from MultiScheme.models import InvestmentScheme,Tenant
 from MultiScheme.models import InvestmentScheme,Tenant
@@ -15,6 +15,11 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
 from .forms import InvestmentUpdateForm,InvestmentApprovalForm
+from django.core.mail import send_mail
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Importing custom decorators
 from Member.decorators import tenant_required
@@ -997,7 +1002,7 @@ class ApprovedInvestments(ListView):
 
 
 
-# LIST OF APPROVALS
+# LIST OF SCHEME APPROVALS
 class ToBeApproved(ListView):
     model = SchemeApproval
     template_name = 'dashboard/scheme_approval.html'
@@ -1034,6 +1039,18 @@ class ToBeApproved(ListView):
             application = SchemeApproval.objects.get(tenant=tenant, id=application_id)
             # Now we can approve useing the approve method on the SchemeApproval Model
             application.approve()
+            # Notify applicant upon scheme approval
+            applicant_email = application.member.user.email
+            try:
+                send_mail(
+                    subject='Your Scheme Application Approved',
+                    message=f'Your application to enroll onto {application.scheme.name} has been approved successfully. Deductions will start at the end of the current month',
+                    from_email=EMAIL_HOST_USER,
+                    recipient_list=[applicant_email,],
+                    fail_silently=False
+                )
+            except Exception:
+                logger.info(f'couldnt send application approved message to {application.member.user.username}')
             return JsonResponse({'status':'success', 'approved_by_hr':approved_by_hr})
         except SchemeApproval.DoesNotExist:
             return JsonResponse({'status':'error'},status=400)

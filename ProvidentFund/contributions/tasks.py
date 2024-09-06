@@ -116,10 +116,11 @@ def fetch_memberships(self):
 
             except requests.exceptions.RequestException as exc:
                 # Retry the task if there's a network error or other request-related issues
-                raise self.retry(exc=exc, countdown=30)
+                logger.info(f'There was an error contacting server')
+                # raise self.retry(exc=exc, countdown=30)
                 
     except MaxRetriesExceededError as exc:
-        print(f"Max retries exceeded: {exc}")
+        print(f"Max retries exceeded")
 
 
 

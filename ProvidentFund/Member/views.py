@@ -545,13 +545,15 @@ class Contributed(ListView):
 
         # Filter the contributions based on the member, scheme, tenant, and selected year
         if tenant and scheme_id:
-            return Contribution.objects.filter(
+            member_contributions=Contribution.objects.filter(
                 member=member,
                 investment_scheme__id=scheme_id,
                 investment_scheme__tenant=tenant,
                 year=selected_year
             )
-        return Contribution.objects.none()
+            return member_contributions
+        else:
+            return Contribution.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -572,7 +574,7 @@ class Contributed(ListView):
         for contribution in contributions:
             month_name = contribution.contribution_date.strftime('%B')
             monthly_contributions[month_name].append(contribution)
-      
+    
         context['monthly_contributions'] = dict(monthly_contributions)
 
         return context

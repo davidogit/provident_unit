@@ -35,8 +35,9 @@ class Member(models.Model):
     department = models.CharField(max_length = 200,blank=True, null=True)
     job_title = models.CharField(max_length = 200,blank=True, null=True)
 
+    registration_date = models.DateTimeField(null=True)
     scheme_approval = models.BooleanField(default=False)
-    registration_date = models.DateTimeField(auto_now_add=True, null=True)
+    
 
     
 

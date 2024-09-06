@@ -35,7 +35,7 @@
                             {% csrf_token %}
                             <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
                             <div class="d-flex  justify-content-between">
-                                <button class="btn btn-primary p-3 me-3" type="submit">Details</button>
+                                <a class="btn btn-primary mt-3" href="{% url 'member_contribution' tenant_id=request.tenant.id scheme_name=scheme.id member_id=user.member.staff_id %}">View Contributions</a>
                                 <button class="btn btn-danger p-3" type="submit">Opt Out</button>
                             </div>
                             
