@@ -4,6 +4,8 @@
 {% endblock %}
 
 {% block content %}
+
+
 <div class="main main-app p-3 p-lg-4">
    {% if active_schemes %}
     <div class="col">
@@ -35,8 +37,8 @@
                             {% csrf_token %}
                             <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
                             <div class="d-flex  justify-content-between">
-                                <a class="btn btn-primary mt-3" href="{% url 'member_contribution' tenant_id=request.tenant.id scheme_name=scheme.id member_id=user.member.staff_id %}">View Contributions</a>
-                                <button class="btn btn-danger p-3" type="submit">Opt Out</button>
+                                <a class="btn btn-primary" href="{% url 'member_contribution' tenant_id=request.tenant.id scheme_name=scheme.id member_id=user.member.staff_id %}">View Contributions</a>
+                                <a class="btn btn-danger p-3" id="optOutBtn" data-bs-toggle="modal" data-bs-target="#optOutModal">Opt Out</a>
                             </div>
                             
                         </form>
@@ -44,8 +46,33 @@
 
                 </div>
             </div><!-- col -->
+
+            <!-- Modal Structure -->
+            <div class="modal fade" id="optOutModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modalTitle">Opt Out Confirmation</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <p>Are you sure you want to opt out of the scheme?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-warning" id="confirmOptOut">Yes, Opt Out</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
           {% endfor %}
+        
+
+
         </div><!-- row -->
     </div><!-- col -->
-    {% endif %}
+
+
+    
+{% endif %}
 {% endblock %}

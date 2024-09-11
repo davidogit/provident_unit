@@ -1,81 +1,13 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">  
-<head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+{% extends 'member_base.html' %}
 
-    <!-- Favicon -->
-    <link rel="shortcut icon" type="image/x-icon" href="../assets/img/favicon.png">
+{% block title %}
+<title>{{ staff_member.user.username }} 's Profile</title>
+{% endblock %}
 
-    <title>{{ staff_member.user.username }} 's Profile</title>
-
-    <!-- Vendor CSS -->  
-  <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
-  <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
-
-    <!-- Template CSS -->
-    <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-  </head>
-  <body>
-
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <a href="../index.html" class="sidebar-logo">{{ request.tenant.name }}</a>
-      </div>
-
-      <!-- sidebar-header -->
-      <div id="sidebarMenu" class="sidebar-body">
-        <!-- <div class="nav-group">
-          <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="nav-label">Dashboard</a>
-          <ul class="nav nav-sidebar"> 
-          </ul>
-        </div> -->
-        <!-- nav-group -->
-         <a href="{% url 'member_dashboard' tenant_id=request.tenant.id member_id=user.member.staff_id %}">here</a>
-      </div>
-      <!-- sidebar-body -->
-
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-top">
-          <div class="sidebar-footer-thumb">
-            <img src="{{ user.member.image.url }}" class="img-fluid" alt="...">
-          </div>
-          <!-- sidebar-footer-thumb -->
-
-          <div class="sidebar-footer-body">
-            <h6><a href="../pages/profile.html">{{ user.first_name }}</a></h6>
-            <p>User Account</p>
-          </div>
-          <!-- sidebar-footer-body --> 
-          <a id="sidebarFooterMenu" href="#" class="dropdown-link"><i class="ri-arrow-down-s-line"></i></a>
-        </div>
-        <!-- sidebar-footer-top -->
-        <div class="sidebar-footer-menu">
-          <nav class="nav">
-            <a href="{% url 'edit_member_profile' tenant_id=request.tenant.id member_id=user.member.staff_id %}"><i class="ri-edit-2-line"></i> Edit Profile</a>
-            <a href="{% url 'member_profile' tenant_id=request.tenant.id member_id=user.member.staff_id %}"><i class="ri-profile-line"></i> View Profile</a>
-          </nav>
-          <hr>
-          <nav class="nav">
-            <a href="#"><i class="ri-question-line"></i> Help Center</a>
-            <a href="#"><i class="ri-lock-line"></i> Privacy Settings</a>
-            <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
-            <a href="{% url 'logout' tenant_id=request.tenant.id %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
-          </nav>
-        </div><!-- sidebar-footer-menu -->
-      </div><!-- sidebar-footer -->
-    </div><!-- sidebar -->
-
-     <div class="main-mobile-header doc-mobile-header">
-      <a id="menuLink" href="#" class="menu-link"><i class="ri-menu-line"></i></a>
-    </div>
-    <!-- main-mobile-header --> 
-
-    <div class="main p-4 p-lg-5">
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <!-- <div class="container"> -->
+    <!-- <div class="main p-4 p-lg-5"> -->
       <div class="row g-5">
         <div class="col-xl">
           <div class="media-profile mb-5">
@@ -89,147 +21,107 @@
             </div><!-- media-body -->
           </div><!-- media-profile -->
 
-          <div class="row row-cols-sm-auto g-4 g-md-5 g-xl-4 g-xxl-5">
-            <div class="col">
-              <div class="profile-item">
-                <i class="ri-medal-2-line"></i>
-                <div class="profile-item-body">
-                  <p>5 Certificates</p>
-                  <span>Achievements</span>
-                </div><!-- profile-item-body -->
-              </div><!-- profile-item -->
-            </div><!-- col -->
-            <div class="col">
-              <div class="profile-item">
-                <i class="ri-suitcase-line"></i>
-                <div class="profile-item-body">
-                  <p>10+ Years</p>
-                  <span>Experience</span>
-                </div><!-- profile-item-body -->
-              </div><!-- profile-item -->
-            </div><!-- col -->
-            <div class="col">
-              <div class="profile-item">
-                <i class="ri-team-line"></i>
-                <div class="profile-item-body">
-                  <p>356</p>
-                  <span>Following</span>
-                </div><!-- profile-item-body -->
-              </div><!-- profile-item -->
-            </div><!-- col -->
-            <div class="col">
-              <div class="profile-item">
-                <i class="ri-team-line"></i>
-                <div class="profile-item-body">
-                  <p>1,056</p>
-                  <span>Followers</span>
-                </div><!-- profile-item-body -->
-              </div><!-- profile-item -->
-            </div><!-- col -->
-          </div><!-- row -->
-
           <!-- Navigation Tabs -->
-<nav class="nav nav-line mt-5">
-  <a href="#personal-info-tab" class="nav-link active" data-bs-toggle="tab">Personal Information</a>
-  <a href="#employment-info-tab" class="nav-link" data-bs-toggle="tab">Employment Information</a>
-</nav>
+          <nav class="nav nav-line mt-5">
+            <a href="#personal-info-tab" class="nav-link active" data-bs-toggle="tab">Personal Information</a>
+            <a href="#employment-info-tab" class="nav-link" data-bs-toggle="tab">Employment Information</a>
+          </nav>
 
-<!-- Tab Content -->
-<div class="tab-content mt-4">
-  <!-- Personal Information Tab -->
-  <div class="tab-pane fade show active" id="personal-info-tab">
-    <div class="card card-post mt-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="card-title mb-0">Personal Information</h6>
-        <a href="#" class="link-more"><i class="ri-more-2-fill"></i></a>
-      </div>
-      <!-- card-header -->
-      <div class="card-body">
-        <div class="experience-item d-flex">
-          <div class="experience-icon">
-            <i class="ri-suitcase-line"></i>
-          </div>
-          <div class="experience-body">
-            <h5>MEMBER</h5>
-            {% comment %} <p>Themepixels, Inc.</p> {% endcomment %}
-            <p>December 2020 - Present</p>
+          <!-- Tab Content -->
+          <div class="tab-content mt-4">
+            <!-- Personal Information Tab -->
+            <div class="tab-pane fade show active" id="personal-info-tab">
+              <div class="card card-post mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h6 class="card-title mb-0">Personal Information</h6>
+                  <a href="#" class="link-more"><i class="ri-more-2-fill"></i></a>
+                </div>
+                <!-- card-header -->
+                <div class="card-body">
+                  <div class="experience-item d-flex">
+                    <div class="experience-icon">
+                      <i class="ri-suitcase-line"></i>
+                    </div>
+                    <div class="experience-body">
+                      <h5>MEMBER</h5>
+                      <!-- <p>December 2020 - Present</p> -->
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <strong>Username:</strong> {{ staff_member.user.username }}
+                      <div class="row">
+                        <div class="col-md-6 mb-3">
+                          <strong>Username:</strong> {{ staff_member.user.username }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Staff ID:</strong> {{ staff_member.staff_id }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Telephone Number:</strong> {{ staff_member.tel_number }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Address:</strong> {{ staff_member.address }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Date of Birth:</strong> {{ staff_member.date_of_birth }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Nationality:</strong> {{ staff_member.nationality }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Gender:</strong> {{ staff_member.get_gender_display }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Marital Status:</strong> {{ staff_member.marital_status }}
+                        </div>
+                      </div>
+                    </div>
+                    <!-- experience-body -->
+                  </div>
+                  <!-- experience-item -->
+                </div>
+                <!-- card-body -->
               </div>
-              <div class="col-md-6 mb-3">
-                <strong>Staff ID:</strong> {{ staff_member.staff_id }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Telephone Number:</strong> {{ staff_member.tel_number }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Address:</strong> {{ staff_member.address }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Date of Birth:</strong> {{ staff_member.date_of_birth }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Nationality:</strong> {{ staff_member.nationality }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Gender:</strong> {{ staff_member.get_gender_display }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Marital Status:</strong> {{ staff_member.marital_status }}
+            </div>
+
+            <!-- Employment Information Tab -->
+            <div class="tab-pane fade" id="employment-info-tab">
+              <div class="card card-post mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h6 class="card-title mb-0">Employment Information</h6>
+                  <a href="#" class="link-more"><i class="ri-more-2-fill"></i></a>
+                </div>
+                <!-- card-header -->
+                <div class="card-body">
+                  <div class="experience-item d-flex">
+                    <div class="experience-icon">
+                      <i class="ri-suitcase-line"></i>
+                    </div>
+                    <div class="experience-body">
+                      <h5>{{ staff_member.job_title|upper }}</h5>
+                      <p>Themepixels, Inc.</p>
+                      <p>December 2020 - Present</p>
+
+                      <div class="row">
+                        <div class="col-md-6 mb-3">
+                          <strong>Employment Date:</strong> {{ staff_member.employment_date }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Department:</strong> {{ staff_member.department }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Job Title:</strong> {{ staff_member.job_title }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <strong>Scheme Approval:</strong> {{ staff_member.scheme_approval }}
+                        </div>
+                      </div>
+                    </div>
+                    <!-- experience-body -->
+                  </div>
+                  <!-- experience-item -->
+                </div>
+                <!-- card-body -->
               </div>
             </div>
           </div>
-          <!-- experience-body -->
-        </div>
-        <!-- experience-item -->
-      </div>
-      <!-- card-body -->
-    </div>
-  </div>
-
-  <!-- Employment Information Tab -->
-  <div class="tab-pane fade" id="employment-info-tab">
-    <div class="card card-post mt-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="card-title mb-0">Employment Information</h6>
-        <a href="#" class="link-more"><i class="ri-more-2-fill"></i></a>
-      </div>
-      <!-- card-header -->
-      <div class="card-body">
-        <div class="experience-item d-flex">
-          <div class="experience-icon">
-            <i class="ri-suitcase-line"></i>
-          </div>
-          <div class="experience-body">
-            <h5>{{ staff_member.job_title|upper }}</h5>
-            <p>Themepixels, Inc.</p>
-            <p>December 2020 - Present</p>
-
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <strong>Employment Date:</strong> {{ staff_member.employment_date }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Department:</strong> {{ staff_member.department }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Job Title:</strong> {{ staff_member.job_title }}
-              </div>
-              <div class="col-md-6 mb-3">
-                <strong>Scheme Approval:</strong> {{ staff_member.scheme_approval }}
-              </div>
-            </div>
-          </div>
-          <!-- experience-body -->
-        </div>
-        <!-- experience-item -->
-      </div>
-      <!-- card-body -->
-    </div>
-  </div>
-</div>
 
           <hr class="my-4 opacity-0">
 
@@ -242,32 +134,17 @@
           </ul>
 
           <hr class="my-4 opacity-0">
-
+<!-- 
           <h5 class="section-title mb-4">Social Channel</h5>
           <ul class="list-contact-info">
             <li><i class="ri-twitter-fill"></i><span>@username</span></li>
             <li><i class="ri-instagram-fill"></i><span>@username</span></li>
             <li><i class="ri-messenger-fill"></i><span>@username</span></li>
-          </ul>
+          </ul> -->
         </div><!-- col -->
       </div><!-- row -->
 
-      <div class="main-footer">
-        <span>&copy; 2023. Vestrex. All Rights Reserved.</span>
-        <span>Created by: <a href="http://Vestrex.com/" target="_blank">Vestrex</a></span>
-      </div><!-- main-footer -->
+
     </div><!-- main -->
 
-    <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
-  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-  <script src="{% static 'lib/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
-  <script src="{% static 'lib/apexcharts/apexcharts.min.js' %}"></script>
-  <script src="{% static 'lib/jqvmap/jquery.vmap.min.js' %}"></script>
-  <script src="{% static 'lib/jqvmap/maps/jquery.vmap.world.js' %}"></script>
-
-  <script src="{% static 'assets/js/script.js' %}"></script>
-  <script src="{% static 'assets/js/db.data.js' %}"></script>
-  <script src="{% static 'assets/js/db.finance.js' %}"></script>
-  </body>
-
-</html>
+{% endblock %}

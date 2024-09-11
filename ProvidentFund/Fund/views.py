@@ -66,19 +66,20 @@ class Invest(TemplateView):
 
         # Estimated
         try: 
-            interest_query = InvestmentDetail.objects.all().filter(~Q(_status = 'Active'), investment_scheme__tenant = tenant)
+            interest_query = InvestmentDetail.objects.filter(_status = 'Active', investment_scheme__tenant = tenant)
+            print(interest_query)
         except:
             interest_query = []
         
-        context['total_interest'] = sum(inv.interest_amount for inv in interest_query)
+        context['total_interest'] = sum(inv.interest_amount for inv in interest_query.prefetch_related('investment_scheme'))
 
         # Actual
         try: 
-            actual_revenue = InvestmentDetail.objects.all().filter(approval_status=True,_status = 'Expired', investment_scheme__tenant = tenant)
+            actual_revenue = InvestmentDetail.objects.filter(approval_status=True,_status = 'Expired', investment_scheme__tenant = tenant)
         except:
             actual_revenue = []
 
-        context['actual_revenue'] = sum(inv.interest_amount for inv in actual_revenue)
+        context['actual_revenue'] = sum(inv.interest_amount for inv in actual_revenue.prefetch_related('investment_scheme'))
 
 
         # Queryset to calsulate total number of active investments

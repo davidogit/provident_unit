@@ -61,7 +61,7 @@
           {% if is_manager_or_treasury_user %}
           <li class="nav-item">
             <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="nav-link active"><i
-                class="ri-pie-chart-2-fill"></i> <span>Finance Monitoring</span></a>
+                class="ri-pie-chart-2-fill"></i> <span>Overview</span></a>
           </li>
           {% endif %}
 
@@ -77,11 +77,18 @@
                 class="nav-sub-link">Add Scheme
               </a>
 
-              <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
-                class="nav-sub-link">View Applications
-              </a>
+              
 
             </nav>
+          </li>
+
+          <li class="nav-item">
+            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Scheme Apllications</span></a>
+              <nav class="nav nav-sub">
+                <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
+                class="nav-sub-link">View Applications
+                </a>
+              </nav>
           </li>
           {% endif %}
 
@@ -219,8 +226,16 @@
           <img src="../assets/img/img1.jpg" alt="">
         </div><!-- sidebar-footer-thumb -->
         <div class="sidebar-footer-body">
+          {% if is_manager %}
           <h6><a href="../pages/profile.html">PF Manager</a></h6>
-          <p>Manager</p>
+          {% endif %}
+          {% if is_treasury_user %}
+          <h6><a href="../pages/profile.html">PF Treasurer</a></h6>
+          {% endif %}
+          {% if is_hr_user %}
+          <h6><a href="../pages/profile.html">PF HR</a></h6>
+          {% endif %}
+          <p>STAFF</p>
         </div><!-- sidebar-footer-body -->
         <a id="sidebarFooterMenu" href="#" class="dropdown-link"><i class="ri-arrow-down-s-line"></i></a>
       </div><!-- sidebar-footer-top -->

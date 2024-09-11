@@ -4,7 +4,7 @@ import smtplib
 from typing import Any
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import get_object_or_404, render, redirect
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.core.mail import send_mail
 from django.urls import reverse
 import requests
@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import UserForm, MemberForm
 from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
-from django.views.generic import TemplateView,UpdateView,CreateView,ListView
+from django.views.generic import TemplateView,UpdateView,CreateView,ListView,View,DeleteView
 from django.contrib.auth.models import Group
 from .models import Member,SchemeApproval
 from django.utils.decorators import method_decorator
@@ -233,7 +233,7 @@ class MemberPortal(TemplateView):
         member = request.user.member
         
         if member.staff_id != member_id:
-            return redirect('member_profile', tenant_id=tenant.id, member_id=member.staff_id)
+            return redirect('member_dashboard', tenant_id=tenant.id, member_id=member.staff_id)
         
         return super().dispatch(request, *args, **kwargs)
 
@@ -263,6 +263,16 @@ class EditMemberProfileView(UpdateView):
     template_name = 'edit_member_profile.html'
     context_object_name = 'member'
 
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+        
+        if member.staff_id != member_id:
+            return redirect('member_dashboard', tenant_id=tenant.id, member_id=member.staff_id)
+        
+        return super().dispatch(request, *args, **kwargs)
+
     def get_object(self, queryset=None):
         member_id = self.kwargs.get('member_id')
         return get_object_or_404(Member, staff_id=member_id)
@@ -286,6 +296,16 @@ class EditMemberProfileView(UpdateView):
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class MemberDashboard(TemplateView):
     template_name = 'member_home_page.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+        
+        if member.staff_id != member_id:
+            return redirect('member_dashboard', tenant_id=tenant.id, member_id=member.staff_id)
+        
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
@@ -344,6 +364,16 @@ class Application(CreateView):
     model = SchemeApproval
     fields = []
     template_name = 'scheme_application.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+        
+        if member.staff_id != member_id:
+            return redirect('member_dashboard', tenant_id=tenant.id, member_id=member.staff_id)
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
@@ -457,10 +487,22 @@ class Application(CreateView):
         return reverse('member_dashboard', kwargs={'tenant_id':tenant.id, 'member_id':user})
     
 
-
+@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
 class ActiveSchemes(ListView):
     template_name = 'active_schemes.html'
     model = InvestmentScheme
+
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+        
+        if member.staff_id != member_id:
+            return redirect('member_dashboard', tenant_id=tenant.id, member_id=member.staff_id)
+        
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -490,9 +532,22 @@ class ActiveSchemes(ListView):
     
 
 
+@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
 class PendingSchemes(ListView):
     template_name = 'pending_schemes.html'
     model = InvestmentScheme
+
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+        
+        if member.staff_id != member_id:
+            return redirect('member_dashboard', tenant_id=tenant.id, member_id=member.staff_id)
+        
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -522,10 +577,22 @@ class PendingSchemes(ListView):
     
 
 @method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
 class Contributed(ListView):
     model = Contribution
     template_name = 'member_contributions.html'  # Template for contributions page
     paginate_by = 12  # Optional, for paginating the contributions list
+
+    def dispatch(self, request, *args, **kwargs):
+        member_id = kwargs.get('member_id')
+        tenant = request.tenant
+        member = request.user.member
+        
+        if member.staff_id != member_id:
+            return redirect('member_dashboard', tenant_id=tenant.id, member_id=member.staff_id)
+        
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         # Get the member_id and year from the request
