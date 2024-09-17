@@ -1,6 +1,5 @@
-from django.utils import timezone
 from django.db import models
-import uuid
+from simple_history.models import HistoricalRecords
 
 # Create your models here.
 
@@ -16,6 +15,9 @@ class Tenant(models.Model):
     address = models.CharField(max_length=100, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
+
+    # History
+    history = HistoricalRecords()
 
     def __str__(self):
         return f'{self.name}\'s Account'
@@ -67,6 +69,8 @@ class InvestmentScheme(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
 
+    # HISTORY
+    history = HistoricalRecords()
 
     def __str__(self):
         return f'{self.name} Scheme'

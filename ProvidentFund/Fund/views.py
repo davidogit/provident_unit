@@ -1055,3 +1055,68 @@ class ToBeApproved(ListView):
             return JsonResponse({'status':'success', 'approved_by_hr':approved_by_hr})
         except SchemeApproval.DoesNotExist:
             return JsonResponse({'status':'error'},status=400)
+
+
+class RecentActivities(ListView):
+    model = InvestmentDetail
+    template_name = 'dashboard/all_history.html'
+    paginate_by = 2
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        if tenant:
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant).order_by('created_date')
+        return InvestmentDetail.objects.none()
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        tenant = self.request.tenant
+        if tenant:
+            inv_list = self.get_queryset() #Using the 'object_list to maintain the pagination
+            history_list = []
+
+            for inv in inv_list:
+                inv_history = inv.history.all().order_by('-history_date')  # Ensure records are ordered
+
+                # See detailed changes eg.. What fields were changed
+                # Make comparison only if records are 2 or more
+                if inv_history.count() > 1:
+                    for i in range(1, inv_history.count()):
+                        # latest record
+                        new_record = inv_history[i]
+                        # previous record
+                        old_record = inv_history[i - 1]
+
+                        # Find the changes in fields between the two records
+                        delta = new_record.diff_against(old_record)
+                        changes = []
+                        for change in delta.changes:
+                            changes.append({
+                                'field': change.field,
+                                'old_value': change.old,
+                                'new_value': change.new
+                            })
+
+                        # Store the history and its changes together
+                        history_list.append({
+                            'instance': inv,
+                            'history_instance': new_record,
+                            'history_date': new_record.history_date,
+                            'history_user': new_record.history_user,
+                            'history_change': new_record.get_history_type_display(),
+                            'field_changes': changes
+                        })
+
+            # context names and pagination
+            # paginator = Paginator(history_list, self.paginate_by)
+            # page = int(self.request.GET.get('page'))
+            
+            # history_page = paginator.get_page(page)
+            
+            # Add paginated history_list to the context
+            context['investment_history'] = history_list
+            # context['is_paginated'] = history_page.has_other_pages()
+            # context['page_obj'] = history_page
+            # context['paginator'] = paginator
+        return context

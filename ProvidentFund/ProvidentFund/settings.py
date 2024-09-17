@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 
     'django_extensions',
     
+    'simple_history', #Keeps track of audit trails on all models
 
 ]
 
@@ -83,6 +84,8 @@ MIDDLEWARE = [
 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',  
+
+    'simple_history.middleware.HistoryRequestMiddleware', # To automatically populate the user making the change in simple history
     
 ]
 

@@ -1,6 +1,7 @@
 from django.db import models
 from django.urls import reverse
 from MultiScheme.models import InvestmentScheme
+from simple_history.models import HistoricalRecords
 
 class InvestmentDetail(models.Model):
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
@@ -44,6 +45,9 @@ class InvestmentDetail(models.Model):
 
     approval_status = models.BooleanField(default=False)
     closing_amount = models.FloatField(default=0.0)
+
+    # History
+    history = HistoricalRecords()
 
 
     def calculate_inv_interest(self):
@@ -128,6 +132,9 @@ class DelayedInterest(models.Model):
     remarks = models.CharField(max_length=50)
     _status = models.CharField(max_length=20, default='Not used')
 
+    # History
+    history = HistoricalRecords()
+
 
     @property
     def status(self):
@@ -165,6 +172,9 @@ class BankInterest(models.Model):
     created_date = models.DateField(auto_now_add=True)
     remarks = models.CharField(max_length=50)
     _status = models.CharField(max_length=20, default='Not used')
+
+    # History
+    history = HistoricalRecords()
 
     
     @property

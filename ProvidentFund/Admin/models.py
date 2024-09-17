@@ -1,6 +1,7 @@
 from MultiScheme.models import Tenant
 from django.contrib.auth.models import AbstractUser, Permission, Group
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 class User(AbstractUser):
     tenant = models.ForeignKey(Tenant, null=True, on_delete=models.CASCADE)
@@ -21,6 +22,9 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions'
     )
+
+    # History
+    history = HistoricalRecords()
 
 class Role(models.Model):
     name = models.CharField(max_length=50)

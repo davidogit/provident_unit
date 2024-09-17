@@ -6,6 +6,7 @@ from django.conf import settings
 from contributions.models import StaffAPI
 from MultiScheme.models import InvestmentScheme
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 # Create your models here.
 
@@ -37,6 +38,9 @@ class Member(models.Model):
 
     registration_date = models.DateTimeField(null=True)
     scheme_approval = models.BooleanField(default=False)
+
+    # History
+    history = HistoricalRecords()
     
 
     
@@ -57,6 +61,9 @@ class SchemeApproval(models.Model):
     approval_date = models.DateTimeField(null=True,blank=True)
     application_date = models.DateTimeField(null=True,blank=True)
     approved_by_hr = models.BooleanField(default=False)
+
+    # History
+    history = HistoricalRecords()
 
     # method to approve scheme applications
     def approve(self):

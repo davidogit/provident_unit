@@ -38,6 +38,9 @@ urlpatterns =[
     path('access_denied/', views.AccessDenied.as_view(), name='access_denied'),
 
     # Scheme Approval
-    path('approvals/', views.ToBeApproved.as_view(), name='scheme_approval')
+    path('approvals/', views.ToBeApproved.as_view(), name='scheme_approval'),
+
+    # History of investments
+    path('recent_activities/', views.RecentActivities.as_view(), name='recent_activities')
     
 ]

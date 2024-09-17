@@ -1,0 +1,57 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Recent Activities</title>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <h2 class="h2 text-center">Recent Activities</h2>
+{% if investment_history %}
+{% for history in investment_history %}
+    <div class="m-5">
+        {{ forloop.counter }}. <strong>{{ history.history_instance.account_name }}</strong> changed on {{ history.history_date }} by <strong>{{ history.history_user }}</strong>.
+        <p>Change Type: {{ history.history_change }}</p>
+
+        <div class="ms-5 mt-1">
+            <table class="table">
+                <tr class="table-success">
+                    <th>Field</th>
+                    <th>Old Value</th>
+                    <th>New Value</th>
+                </tr>
+                {% for change in history.field_changes %}
+                <tr class="table-danger">
+                    <td>{{ change.field }}</td>
+                    <td>{{ change.old_value }}</td>
+                    <td>{{ change.new_value }}</td>
+                </tr>
+                {% endfor %}
+            </table> 
+        </div>
+    </div>
+{% endfor %}
+
+<!-- <div class="pagination">
+    {% if is_paginated %}
+      {% if page_obj.has_previous %}
+        <a href="?page=1">&laquo; first</a>
+        <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+      {% endif %}
+  
+      <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+      {% endif %}
+    {% endif %}
+</div> -->
+  
+
+
+{% else %}
+    <p>No recent activities.</p>
+{% endif %}
+</div>
+{% endblock %}

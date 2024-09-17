@@ -434,7 +434,7 @@ class Application(CreateView):
         eligibility_in_days = scheme.eligibility_criteria_months*30 #convert months to days for calculation
         eligible_date = timezone.now().date() - timedelta(eligibility_in_days) # returns a date value
 
-        if staff.date_joined<eligible_date:
+        if staff.date_joined<=eligible_date:
 
             if tenant and member and staff:
                 form.instance.tenant = tenant

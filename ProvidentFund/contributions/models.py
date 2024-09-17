@@ -1,5 +1,6 @@
 from django.db import models
 from MultiScheme.models import InvestmentScheme,Tenant
+from simple_history.models import HistoricalRecords
 # from django.utils import timezone
 
 class StaffAPI(models.Model):
@@ -20,6 +21,9 @@ class StaffAPI(models.Model):
     actual_profit = models.FloatField(default=0.00)
     subscription_date = models.DateField(null=True)
     updated_date = models.DateTimeField(auto_now=True)
+
+    # History
+    history = HistoricalRecords()
 
     def __str__(self):
         return f'{self.last_name} {self.first_name}'
@@ -48,6 +52,9 @@ class Contribution(models.Model):
     retro_employee_amount = models.FloatField()
     retro_employer_amount = models.FloatField()
     contribution_date = models.DateField()
+
+    # History
+    history = HistoricalRecords()
 
     def calculated_total_contributions(self):
         a = self.employee_amount
