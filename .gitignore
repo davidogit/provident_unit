@@ -4268,3 +4268,18 @@
 .venv/Scripts/django-admin.exe
 .venv/Scripts/fastapi.exe
 .venv/Scripts/typer.exe
+
+
+
+
+
+
+
+# Remove db.sqlite3 from git
+db.sqlite3
+
+**/__pycache__/
+
+**/migrations/
+
+.venv/
