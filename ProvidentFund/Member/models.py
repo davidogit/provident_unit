@@ -6,14 +6,14 @@ from django.conf import settings
 from contributions.models import StaffAPI
 from MultiScheme.models import InvestmentScheme
 from django.utils import timezone
-from simple_history.models import HistoricalRecords
+# from simple_history.models import HistoricalRecords
 
 # Create your models here.
 
 class Member(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE,null=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='member')
-    staff_id = models.PositiveIntegerField(unique=True, null=False, blank=False)
+    staff_id = models.PositiveIntegerField(unique=True, null=True, blank=False)
     tel_number = models.PositiveIntegerField()
 
     address = models.CharField(max_length=50, blank=True,null=True)
@@ -40,7 +40,7 @@ class Member(models.Model):
     scheme_approval = models.BooleanField(default=False)
 
     # History
-    history = HistoricalRecords()
+    # history = HistoricalRecords()
     
 
     
@@ -63,7 +63,7 @@ class SchemeApproval(models.Model):
     approved_by_hr = models.BooleanField(default=False)
 
     # History
-    history = HistoricalRecords()
+    # history = HistoricalRecords()
 
     # method to approve scheme applications
     def approve(self):

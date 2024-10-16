@@ -66,3 +66,27 @@ def delete_inactive_users(self):
     except Exception as e:
         logger.error(f'Transaction aborted : {e}')
         raise # the raise is used in this case to ensure that the error is masde known and all changes are rolled back
+
+
+# Task to send OTP to members upon login
+@shared_task(bind=True)
+def send_otp_code(self,email,host,otp):
+    # Send OTP to user via email
+    send_mail(
+        subject='PF CODE',
+        message=f'Your OTP code is {otp}',
+        from_email=EMAIL_HOST_USER,
+        recipient_list=[email],
+        fail_silently=False,
+    )
+
+
+@shared_task(bind=True)
+def gen_send_email(self,recepient,message,subject):
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=EMAIL_HOST_USER,
+        recipient_list=[recepient],
+        fail_silently=False,
+    )

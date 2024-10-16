@@ -74,7 +74,7 @@ $(document).ready(function() {
             data: form.serialize(),
             success: function(response) {
                 if (response.status === 'success') {
-                    alert('Application approved successfully.');
+                    alert('Application sent successfully, you will be notified once approved.');
                     form.closest('card').remove(); //remove card 
 
                     location.reload(); // Reload the page

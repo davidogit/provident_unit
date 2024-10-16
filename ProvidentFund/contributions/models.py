@@ -1,16 +1,23 @@
 from django.db import models
 from MultiScheme.models import InvestmentScheme,Tenant
-from simple_history.models import HistoricalRecords
+from Fund.models import AuditTrail
+from django.utils import timezone
+import json
+from django.db.models.signals import pre_delete,post_save
+from django.dispatch import receiver
+from django.utils.encoding import force_str
+from Fund.middleware import get_current_user
+# from simple_history.models import HistoricalRecords
 # from django.utils import timezone
 
 class StaffAPI(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
     # Using Many-to-Many relationship to allow users to have multiple schemes
     investment_scheme = models.ManyToManyField(InvestmentScheme)
-    Id = models.BigIntegerField(primary_key=True, unique=True)
+    Id = models.AutoField(primary_key=True, unique=True,editable=False)
     first_name = models.CharField(max_length=255, null=True, blank=True)
     last_name = models.CharField(max_length=255, null=True, blank=True)
-    staff_number = models.IntegerField()
+    staff_number = models.IntegerField(unique=True)
     date_joined = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=20, blank=True, null=True, default='active')
     fund_type = models.CharField(max_length=50)
@@ -22,15 +29,9 @@ class StaffAPI(models.Model):
     subscription_date = models.DateField(null=True)
     updated_date = models.DateTimeField(auto_now=True)
 
-    # History
-    history = HistoricalRecords()
 
     def __str__(self):
         return f'{self.last_name} {self.first_name}'
-
-    # @property
-    # def contributions(self):
-    #     return self.contribution_set.all()
     
     @property
     def amount(self):
@@ -39,6 +40,64 @@ class StaffAPI(models.Model):
     @amount.setter
     def amount(self,value):
         self._amount += value
+
+
+
+# Signals for StaffAPI
+@receiver(post_save, sender=StaffAPI)
+def audit_log_save(sender,instance,created,update_fields,**kwargs):
+    object_id = instance.pk
+
+    action = 'created' if created else 'updated'
+
+    # User making the change
+    user = get_current_user() or None
+    # Assign name 
+    if created:
+        instance.name = user.username
+        instance.save()
+
+    # Get changes to model
+    changes = {}
+
+    for field in instance._meta.fields:
+        field_name = field.name
+        new_value = getattr(instance,field_name)
+        changes[field_name] = force_str(new_value)
+    
+    
+
+    # Create an AuditTrail instance
+    AuditTrail.objects.create(
+        user = user,
+        model_name = StaffAPI.__name__,
+        action = action,
+        object_id = object_id,
+        changes = json.dumps(changes),
+        timestamp = timezone.now(),
+        name = user.username
+    )
+
+@receiver(pre_delete, sender=StaffAPI)
+def audit_log_delete(sender,instance,**kwargs):
+    object_id = instance.pk
+
+    action = 'deleted'
+
+    user = get_current_user() 
+    # get_object_or_404(get_user_model(),id=instance.pk)
+
+    # Create an AuditTrail instance
+    AuditTrail.objects.create(
+        user = user,
+        model_name = StaffAPI.__name__,
+        action = action,
+        object_id = object_id,
+        changes = f'User {user.username} made a delete operation at {timezone.now()}',
+        timestamp = timezone.now(),
+        name = user.username
+    )
+
 
 
 class Contribution(models.Model):
@@ -53,8 +112,6 @@ class Contribution(models.Model):
     retro_employer_amount = models.FloatField()
     contribution_date = models.DateField()
 
-    # History
-    history = HistoricalRecords()
 
     def calculated_total_contributions(self):
         a = self.employee_amount

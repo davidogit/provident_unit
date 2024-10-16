@@ -59,8 +59,14 @@
                             <p>Are you sure you want to opt out of the scheme?</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-warning" id="confirmOptOut">Yes, Opt Out</button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <form class="opt-out-form" action="" method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
+                                <input type="hidden" name="member_id" value="{{ user.member.staff_id }}">
+                                <button type="submit" class="btn btn-warning" id="confirmOptOut">Yes, Opt Out</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </form>
+                            
                         </div>
                     </div>
                 </div>
@@ -71,8 +77,41 @@
 
         </div><!-- row -->
     </div><!-- col -->
-
-
-    
+{% else %}
+    <div class="col">
+        <div class="alert alert-info text-center" role="alert">
+            <h4 class="alert-heading">No active schemes</h4>
+            <p>You have not been added to any schemes yet.</p>
+        </div>
+    </div>
 {% endif %}
+<script>
+    $(document).ready(function(){
+        $('.opt-out-form').on('submit', function(event){
+            event.preventDefault();
+            
+            var form = $(this);
+            $.ajax({
+                type: form.attr('method'),
+                url: form.attr('action'),
+                data: form.serialize(),
+                success: function(response){
+                    if (response.status == 'success'){
+                        
+                        $('#optOutModal').modal('hide');
+                        location.reload();
+                    }
+                },
+                error: function(response){
+                    if (response.status == 'error'){
+                        //var modal = document.querySelector('.modal-body.text-center');
+                        //modal.textContent = 'There was an error processing your request. Please try again later.';
+                        alert('There was an error processing your request. Please try again later.');
+                        //$('#optOutModal').modal('hide');
+                    }
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

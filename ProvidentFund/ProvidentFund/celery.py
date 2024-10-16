@@ -14,7 +14,7 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Celery beat Scheduler
 
 app.conf.beat_schedule = {
-    'daily_calculation':{
+    'daily_calculation_estimated':{
         'task':'Fund.tasks.member_interest',
         'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*'),
     },

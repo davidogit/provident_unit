@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
     'Fund',
     'contributions',
     'Member',
@@ -51,15 +52,8 @@ INSTALLED_APPS = [
 
     'django_celery_beat',
     'django_celery_results',
-
-    'django_otp',
-    'django_otp.plugins.otp_static',
-    'django_otp.plugins.otp_totp',
-
-    'django_extensions',
     
-    'simple_history', #Keeps track of audit trails on all models
-
+    'rest_framework',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -72,7 +66,6 @@ AUTHENTICATION_BACKENDS = [
 
 MIDDLEWARE = [
     # Tenant ID middleware
-    
     'Fund.middleware.URLTenantMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -80,12 +73,15 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # custom middleware
-    # 'Fund.middleware.TenantLoginMiddleware',
 
+    #Custom user middleware
+    'Fund.middleware.CurrentUserMiddleware',
+    # Custom Page Visit Middleware
+    'Fund.middleware.PageVisitLoggingMiddleware',
+
+    # 'Fund.middleware.TenantLoginMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',  
-
-    'simple_history.middleware.HistoryRequestMiddleware', # To automatically populate the user making the change in simple history
     
 ]
 

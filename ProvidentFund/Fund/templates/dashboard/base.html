@@ -65,10 +65,10 @@
             <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="nav-link active"><i
                 class="ri-pie-chart-2-fill"></i> <span>Overview</span></a>
           </li>
-          <li class="nav-item">
+          <!-- <li class="nav-item">
             <a href="{% url 'recent_activities' tenant_id=request.tenant.id %}" class="nav-link active"><i
                 class="ri-pie-chart-2-fill"></i> <span>Recent Activities</span></a>
-          </li>
+          </li> -->
           {% endif %}
 
           {% if is_manager %}

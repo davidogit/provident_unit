@@ -28,6 +28,8 @@ from django.contrib.auth import get_user_model
 from .decorators import unauthenticated_user
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
+# Import task to send otp via email
+from .tasks import send_otp_code,gen_send_email
 
 
 @unauthenticated_user
@@ -118,17 +120,12 @@ def loginView(request, tenant_id):
                 if user.tenant == tenant:
                     # Generate OTP
                     otp = generate_unique_code()
+
+                    
                     try:
                         # Send OTP to user via email
-                        send_mail(
-                            subject='PF CODE',
-                            message=f'Your OTP code is {otp}',
-                            from_email=EMAIL_HOST_USER,
-                            recipient_list=[user.email],
-                            fail_silently=False,
-                        )
+                        send_otp_code.delay(user.email,EMAIL_HOST_USER,otp)
 
-                        # Save OTP in session for later verification
                         request.session['otp_token'] = otp
                         request.session['username'] = username
                         request.session['email'] = user.email
@@ -321,10 +318,10 @@ class MemberDashboard(TemplateView):
             # APPROVED SCHEMES
             
             ################################################
-            approved_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff,approved_by_hr=True).values_list('scheme_id', flat=True)
+            # approved_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff,approved_by_hr=True).values_list('scheme_id', flat=True)
 
-            schemes = InvestmentScheme.objects.filter(tenant=tenant)
-            active_schemes = schemes.filter(id__in=approved_schemes)
+            # schemes = InvestmentScheme.objects.filter(tenant=tenant)
+            active_schemes = staff.investment_scheme.count()
 
 
             #################################################
@@ -344,7 +341,7 @@ class MemberDashboard(TemplateView):
         if tenant and staff:
             context['staff'] = staff
             context['active_schemes']=active_schemes
-            context['active_schemes_count']=active_schemes.count()
+            context['active_schemes_count']=active_schemes
             context['pending_schemes'] = pending_scheme
             context['pending_schemes_count'] = pending_scheme.count()
             context['days_since_joined']= days_since_joined
@@ -448,23 +445,19 @@ class Application(CreateView):
 
                 # Send Application successful email to user and application email to Management
                 try:
-                    # Email to user
-                    send_mail(
-                        subject='Scheme Application Successful',
-                        message=f'Your application to join "{scheme}" is successfuly received, you will be notified when your application is approved by management',
-                        from_email=EMAIL_HOST_USER,
-                        recipient_list=[self.request.user.email],
-                        fail_silently=False
-                    )
+                    # Email to user through tasks
+                    subject='Scheme Application Successful'
+                    message=f'Your application to join "{scheme}" is successfuly received, you will be notified when your application is approved by management'
+                    recipient = self.request.user.email
+                    gen_send_email.delay(recipient,message,subject)
 
-                    # Email to Management
-                    send_mail(
-                        subject='Scheme Application Received',
-                        message=f'{self.request.user.member.staff_id} has applied to join {scheme}. Review and approve application in due time',
-                        from_email=EMAIL_HOST_USER,
-                        recipient_list=[tenant.email],
-                        fail_silently=False
-                    )
+
+                    # Email to Management through tasks
+                    subject='Scheme Application Received'
+                    message=f'{self.request.user.member.staff_id} has applied to join {scheme}. Review and approve application in due time'
+                    recipient=tenant.email
+                    gen_send_email.delay(recipient,message,subject)
+
                 except smtplib.SMTPException:
                     email_error_message = 'There was an issue sending you a confirmation email, but your application was submitted successfuly and you will be notified when application is approved via email. Thank you'
                     return JsonResponse({'status':'error', 'message':email_error_message}, status=400)
@@ -498,6 +491,10 @@ class ActiveSchemes(ListView):
         member_id = kwargs.get('member_id')
         tenant = request.tenant
         member = request.user.member
+
+        if request.method == 'POST':
+            return self.handle_post(request,*args,**kwargs)
+        
         
         if member.staff_id != member_id:
             return redirect('member_dashboard', tenant_id=tenant.id, member_id=member.staff_id)
@@ -520,15 +517,40 @@ class ActiveSchemes(ListView):
         if tenant and staff:
             try:
                 # Get related schems of user from SchemeApproval
-                related_schemes = SchemeApproval.objects.filter(tenant=tenant,approved_by_hr=True,staff=staff).values_list('scheme_id', flat=True)
+                # related_schemes = SchemeApproval.objects.filter(tenant=tenant,approved_by_hr=True,staff=staff).values_list('scheme_id', flat=True)
 
                 # Filter Schemes based on related schemes
-                active_schemes = InvestmentScheme.objects.filter(tenant=tenant, id__in=related_schemes)
+                # active_schemes = InvestmentScheme.objects.filter(tenant=tenant, id__in=related_schemes)
+                active_schemes = staff.investment_scheme.all()
                 
                 context['active_schemes'] = active_schemes
             except SchemeApproval.DoesNotExist:
                 return None
         return context
+    
+    # Using dispatch to access post request in listview
+    def handle_post(self,request,*args,**kwargs):
+        tenant = request.tenant
+        scheme_id = self.request.POST.get('scheme_id')
+        member_id = self.request.POST.get('member_id')
+
+        try:
+            # Get member and remove selected scheme from their list of schemes
+            member = StaffAPI.objects.get(tenant=tenant,staff_number=member_id)
+            print(f'member_id: {member_id}')
+
+            # Get scheme object
+            scheme = InvestmentScheme.objects.get(tenant=tenant,id=scheme_id)
+            print(f'scheme_id:{scheme.name}')
+
+            # Remove scheme from users schemes
+            if member and scheme:
+                member.investment_scheme.remove(scheme)
+                return JsonResponse({'status':'success'})
+        except:
+            return JsonResponse({'status':'error'}, status=400)
+
+
     
 
 
@@ -604,7 +626,7 @@ class Contributed(ListView):
         scheme_id = self.request.scheme_name
 
         # Retrieve the member (StaffAPI) instance based on the tenant and staff number
-        member = get_object_or_404(StaffAPI, staff_number=member_id, investment_scheme__tenant=tenant)
+        member = StaffAPI.objects.filter(staff_number=member_id, investment_scheme__tenant=tenant).first()
 
         # Set default year to current year if not provided
         if not selected_year:

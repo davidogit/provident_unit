@@ -1,6 +1,11 @@
+import json
 from django.db import models
-from simple_history.models import HistoricalRecords
-
+# from Fund.models import AuditTrail
+from django.db.models.signals import pre_delete,post_save
+from django.utils.encoding import force_str
+# from Fund.middleware import get_current_user
+from django.utils import timezone
+from django.dispatch import receiver
 # Create your models here.
 
 # Tenanat model
@@ -16,8 +21,6 @@ class Tenant(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
 
-    # History
-    history = HistoricalRecords()
 
     def __str__(self):
         return f'{self.name}\'s Account'
@@ -70,7 +73,62 @@ class InvestmentScheme(models.Model):
     updated_date = models.DateTimeField(auto_now=True)
 
     # HISTORY
-    history = HistoricalRecords()
+    # history = HistoricalRecords()
 
     def __str__(self):
         return f'{self.name} Scheme'
+    
+
+# Signals for StaffAPI
+# @receiver(post_save, sender=InvestmentScheme)
+# def audit_log_save(sender,instance,created,update_fields,**kwargs):
+#     object_id = instance.pk
+
+#     action = 'created' if created else 'updated'
+
+#     # User making the change
+#     user = get_current_user() or None
+#     # Assign name 
+#     if created:
+#         instance.name = user.username
+#         instance.save()
+
+#     # Get changes to model
+#     changes = {}
+
+#     for field in instance._meta.fields:
+#         field_name = field.name
+#         new_value = getattr(instance,field_name)
+#         changes[field_name] = force_str(new_value)
+    
+    
+
+#     # Create an AuditTrail instance
+#     AuditTrail.objects.create(
+#         user = user,
+#         model_name = InvestmentScheme.__name__,
+#         action = action,
+#         object_id = object_id,
+#         changes = json.dumps(changes),
+#         timestamp = timezone.now(),
+#         name = user.username
+#     )
+
+# @receiver(pre_delete, sender=InvestmentScheme)
+# def audit_log_delete(sender,instance,**kwargs):
+#     object_id = instance.pk
+
+#     action = 'deleted'
+
+#     user = get_current_user() 
+
+#     # Create an AuditTrail instance
+#     AuditTrail.objects.create(
+#         user = user,
+#         model_name = InvestmentScheme.__name__,
+#         action = action,
+#         object_id = object_id,
+#         changes = f'User {user.username} made a delete operation at {timezone.now()}',
+#         timestamp = timezone.now(),
+#         name = user.username
+#     )

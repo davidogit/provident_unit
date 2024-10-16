@@ -16,6 +16,8 @@ from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
 from .forms import InvestmentUpdateForm,InvestmentApprovalForm
 from django.core.mail import send_mail
+from Fund.tasks import actual_member_interest
+from Member.tasks import gen_send_email
 
 import logging
 
@@ -66,7 +68,7 @@ class Invest(TemplateView):
 
         # Estimated
         try: 
-            interest_query = InvestmentDetail.objects.filter(_status = 'Active', investment_scheme__tenant = tenant)
+            interest_query = InvestmentDetail.objects.filter(investment_scheme__tenant = tenant)
             print(interest_query)
         except:
             interest_query = []
@@ -82,9 +84,9 @@ class Invest(TemplateView):
         context['actual_revenue'] = sum(inv.interest_amount for inv in actual_revenue.prefetch_related('investment_scheme'))
 
 
-        # Queryset to calsulate total number of active investments
+        # Queryset to calculate total number of active investments
         try:
-            active_inv = InvestmentDetail.objects.all().filter(_status = 'Active', investment_scheme__tenant = tenant)
+            active_inv = InvestmentDetail.objects.all().filter(investment_scheme__tenant = tenant)
             context['active_inv'] = active_inv.count()
         except:
             active_inv = []
@@ -946,6 +948,7 @@ class InvestmentApproval(ListView):
         inv_id = request.POST.get('investment_id')
         tenant = request.tenant
         scheme_id = request.scheme_name
+        tenant_id = tenant.id
 
         # Check if 'investment_id' is provided
         if not inv_id:
@@ -967,6 +970,11 @@ class InvestmentApproval(ListView):
                 investment.approval_status = approval_status
                 investment.closing_amount = closing_amount
                 investment.save()
+
+
+                # After saving changes now we calculate members actual profit using tasks
+                actual_member_interest.delay(tenant_id,scheme_id,inv_id)
+                # print('returning success response')
 
                 return JsonResponse({'status':'success'})
             else:
@@ -1043,13 +1051,12 @@ class ToBeApproved(ListView):
             # Notify applicant upon scheme approval
             applicant_email = application.member.user.email
             try:
-                send_mail(
-                    subject='Your Scheme Application Approved',
-                    message=f'Your application to enroll onto {application.scheme.name} has been approved successfully. Deductions will start at the end of the current month',
-                    from_email=EMAIL_HOST_USER,
-                    recipient_list=[applicant_email,],
-                    fail_silently=False
-                )
+                # Email notification to user
+                subject='Your Scheme Application Approved'
+                message=f'Your application to enroll onto {application.scheme.name} has been approved successfully. Deductions will start at the end of the current month'
+                recipient=applicant_email
+                gen_send_email.delay(recipient,message,subject)
+
             except Exception:
                 logger.info(f'couldnt send application approved message to {application.member.user.username}')
             return JsonResponse({'status':'success', 'approved_by_hr':approved_by_hr})
@@ -1077,7 +1084,7 @@ class RecentActivities(ListView):
             history_list = []
 
             for inv in inv_list:
-                inv_history = inv.history.all().order_by('-history_date')  # Ensure records are ordered
+                inv_history = inv.history.all().order_by('history_date')  # Ensure records are ordered
 
                 # See detailed changes eg.. What fields were changed
                 # Make comparison only if records are 2 or more

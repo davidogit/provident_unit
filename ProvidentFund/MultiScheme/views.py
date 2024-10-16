@@ -1,8 +1,4 @@
 from typing import Any
-from django.db.models.query import QuerySet
-from django.forms import BaseModelForm
-from django.http import HttpResponse
-from django.shortcuts import render
 from django.urls import reverse
 from django.views.generic import ListView,CreateView,DeleteView,UpdateView
 from MultiScheme.models import InvestmentScheme
@@ -13,6 +9,13 @@ from django.contrib.auth.decorators import login_required
 from Member.decorators import tenant_required
 from Admin.decorators import role_required
 
+
+from rest_framework.generics import ListAPIView,RetrieveAPIView
+from rest_framework.views import APIView
+from .models import Tenant
+from .serializers import TenantSerializer
+from rest_framework.response import Response
+from rest_framework import status
 
 
 # Scheme List View
@@ -69,3 +72,39 @@ class AddScheme(CreateView):
         tenant = self.request.tenant
 
         return reverse('scheme_list', kwargs={'tenant_id':tenant.id})
+
+# API list view
+class TenantApiListView(ListAPIView):
+    queryset = Tenant.objects.all()
+    serializer_class = TenantSerializer
+
+    def post(self,request,**kwargs):
+        serializer = TenantSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
+
+# API detail view
+class TenantApiPatchView(RetrieveAPIView):
+    queryset = Tenant.objects.all()
+    serializer_class = TenantSerializer
+
+    def patch(self,request,pk,**kwargs):
+        # Retrieve instance to be patched
+        try:
+            obj = Tenant.objects.get(id=pk)
+        except Tenant.DoesNotExist:
+            return Response({'error':'Object not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = TenantSerializer(obj,data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+

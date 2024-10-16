@@ -1,7 +1,8 @@
 from django.db import models
 from django.urls import reverse
 from MultiScheme.models import InvestmentScheme
-from simple_history.models import HistoricalRecords
+from django.conf import settings
+# from simple_history.models import HistoricalRecords
 
 class InvestmentDetail(models.Model):
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
@@ -34,8 +35,8 @@ class InvestmentDetail(models.Model):
     principal_amount = models.FloatField()
     interest_percentage = models.FloatField()
     rollover_interest_percentage = models.FloatField(null=True, blank=True, default=0.0)
-    interest_start_date = models.DateField(null=False, blank=False)
-    interest_end_date = models.DateField(null=False, blank=False)
+    interest_start_date = models.DateField(null=True, blank=False)
+    interest_end_date = models.DateField(null=True, blank=False)
     created_date = models.DateField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     CHOICES = [('ROLLOVER','Roll Over'),('END','End'),('NULL', 'null')]
@@ -47,7 +48,7 @@ class InvestmentDetail(models.Model):
     closing_amount = models.FloatField(default=0.0)
 
     # History
-    history = HistoricalRecords()
+    # history = HistoricalRecords()
 
 
     def calculate_inv_interest(self):
@@ -133,7 +134,7 @@ class DelayedInterest(models.Model):
     _status = models.CharField(max_length=20, default='Not used')
 
     # History
-    history = HistoricalRecords()
+    # history = HistoricalRecords()
 
 
     @property
@@ -174,7 +175,7 @@ class BankInterest(models.Model):
     _status = models.CharField(max_length=20, default='Not used')
 
     # History
-    history = HistoricalRecords()
+    # history = HistoricalRecords()
 
     
     @property
@@ -184,3 +185,27 @@ class BankInterest(models.Model):
     @status.setter
     def status(self,value):
         self._status = value
+
+
+
+
+
+
+# AUDIT TRAIL
+class AuditTrail(models.Model):
+    ACTIONS = [
+        ('created','Created'),
+        ('updated','Updated'),
+        ('deleted','Deleted'),
+        ('visited','Visit')
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL, null=True,blank=True)
+    action = models.CharField(max_length=10, choices=ACTIONS)
+    model_name = models.CharField(max_length=255)
+    timestamp = models.DateTimeField()
+    object_id = models.CharField(max_length=255)
+    changes = models.TextField() #description of changes made
+    name = models.CharField(max_length=255, default='')
+
+    def __str__(self):
+        return f'{self.name} {self.action} at {self.timestamp}'
