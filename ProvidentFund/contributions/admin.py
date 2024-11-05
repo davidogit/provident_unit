@@ -4,8 +4,8 @@ from .models import  StaffAPI, Contribution
 class StaffAPIAdmin(admin.ModelAdmin):
     readonly_fields = (
         'Id',
-        'first_name',
-        'last_name',
+        # 'first_name',
+        # 'last_name',
         # 'staff_number',
         'date_joined',
         'status',

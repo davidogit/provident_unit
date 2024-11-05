@@ -169,6 +169,8 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
     
     total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
 
+    logger.info(f'Total: {total_contribution}')
+
     try:
         if total_contribution>0:
             for member in members:
@@ -176,7 +178,7 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
                 contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
 
                 
-
+                
                 try:
                     scheme_subscription = SchemeApproval.objects.get(
                             staff=member, scheme=scheme, tenant=tenant, 
@@ -196,6 +198,12 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
 
     except Exception as e:
         logger.error(f'Error: {e}')
+
+        # If there is any error uncheck investment to make sure the error does not affect the investment status
+        inv.approval_status = False
+        inv.save()
+        logger.info('Changes were not saved due to an error')
+        ##########
 
 
 
