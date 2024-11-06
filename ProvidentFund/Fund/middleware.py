@@ -5,6 +5,8 @@ from MultiScheme.models import Tenant
 from django.http import HttpRequest
 from django.urls import resolve
 from threading import local
+import logging
+logger = logging.getLogger(__name__)
 
 # middleware to retrieve Tenant ID
 class URLTenantMiddleware(MiddlewareMixin):
@@ -88,16 +90,16 @@ class PageVisitLoggingMiddleware(MiddlewareMixin):
 
 _user = local() # locally storing the request.user for every request that is made
 
+# Returns the current user when called
+def get_current_user():
+    return getattr(_user,'user', None)
+
 class CurrentUserMiddleware(MiddlewareMixin):
     def __init__(self, get_response):
         self.get_response = get_response
     
     def __call__(self, request):
-        _user.value = request.user
+        _user.user = request.user
         response = self.get_response(request)
-
+        # print(f'Username: {self.user}')
         return response
-
-# Returns the current user when called
-def get_current_user():
-    return getattr(_user, 'value', None)

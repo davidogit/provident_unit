@@ -6,9 +6,6 @@ import json
 from django.db.models.signals import pre_delete,post_save
 from django.dispatch import receiver
 from django.utils.encoding import force_str
-from Fund.middleware import get_current_user
-# from simple_history.models import HistoricalRecords
-# from django.utils import timezone
 
 class StaffAPI(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
@@ -46,6 +43,8 @@ class StaffAPI(models.Model):
 # Signals for StaffAPI
 @receiver(post_save, sender=StaffAPI)
 def audit_log_save(sender,instance,created,update_fields,**kwargs):
+    from Fund.middleware import get_current_user
+
     object_id = instance.pk
 
     action = 'created' if created else 'updated'
@@ -54,7 +53,7 @@ def audit_log_save(sender,instance,created,update_fields,**kwargs):
     user = get_current_user() or None
     # Assign name 
     if created:
-        instance.name = user.username
+        instance.name = user
         instance.save()
 
     # Get changes to model
@@ -65,8 +64,6 @@ def audit_log_save(sender,instance,created,update_fields,**kwargs):
         new_value = getattr(instance,field_name)
         changes[field_name] = force_str(new_value)
     
-    
-
     # Create an AuditTrail instance
     AuditTrail.objects.create(
         user = user,
@@ -80,11 +77,13 @@ def audit_log_save(sender,instance,created,update_fields,**kwargs):
 
 @receiver(pre_delete, sender=StaffAPI)
 def audit_log_delete(sender,instance,**kwargs):
+    from Fund.middleware import get_current_user
+    # current_user = CurrentUserMiddleware(None)
     object_id = instance.pk
 
     action = 'deleted'
 
-    user = get_current_user() 
+    user = get_current_user()
     # get_object_or_404(get_user_model(),id=instance.pk)
 
     # Create an AuditTrail instance
@@ -93,7 +92,7 @@ def audit_log_delete(sender,instance,**kwargs):
         model_name = StaffAPI.__name__,
         action = action,
         object_id = object_id,
-        changes = f'User {user.username} made a delete operation at {timezone.now()}',
+        changes = f'User {user} made a delete operation at {timezone.now()}',
         timestamp = timezone.now(),
         name = user.username
     )

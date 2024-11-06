@@ -171,28 +171,41 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
 
     logger.info(f'Total: {total_contribution}')
 
+    logger.info('STEP Try')
     try:
+        logger.info('STEP 0')
         if total_contribution>0:
+            logger.info('STEP 1')
             for member in members:
 
                 contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+                logger.info(f'User Contribution: {contribution}')
 
-                
+                logger.info('STEP 2')
                 
                 try:
                     scheme_subscription = SchemeApproval.objects.get(
                             staff=member, scheme=scheme, tenant=tenant, 
                             approved_by_hr=True)
+                    logger.info('STEP 3')
                     subscription_date = scheme_subscription.approval_date
                 except SchemeApproval.DoesNotExist:
                     subscription_date = None
+                
+                logger.info('STEP 4')
 
                 # Check if user was approved before an investment was made
                 if subscription_date is not None and subscription_date.date() < inv.interest_start_date:
+                    logger.info(f'Sub_date: {subscription_date} and inv_date: {inv.interest_start_date}')
+                    logger.info(f'Inv interest: {inv.interest_amount}')
+                    logger.info(f'Actual Before: {member.actual_profit}')
                     member.actual_profit += (contribution / total_contribution) * inv.interest_amount
+                    logger.info(f'Actual After: {member.actual_profit}')
+                    member.save()
                 else:
+                    logger.info('Not working')
                     member.actual_profit += 0.0
-                member.save()
+                # member.save()
             
         logger.info(f'Actual profit calculated for: {tenant.name}\'s members at: {timezone.now()}')
 
@@ -296,5 +309,6 @@ def track_page_visits(self,user_id,path,view_name,user_ip,*args):
         action = 'visited',
         object_id = user.pk,
         changes = f'{user.username} visited:{view_name}  URL:{path} at:  {timezone.now()} IP:  {user_ip}',
-        timestamp = timezone.now()
+        timestamp = timezone.now(),
+        name = user.username
     )
