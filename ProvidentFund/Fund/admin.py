@@ -1,5 +1,5 @@
 from django.contrib import admin
-from Fund.models import InvestmentDetail,BankInterest,DelayedInterest,AuditTrail
+from Fund.models import InvestmentDetail,BankInterest,DelayedInterest,AuditTrail,BankInterestRate
 
 # Register your models here.
 
@@ -23,3 +23,4 @@ admin.site.register(InvestmentDetail, InvestmentDetailAdmin)
 admin.site.register(BankInterest)
 admin.site.register(DelayedInterest)
 admin.site.register(AuditTrail)
+admin.site.register(BankInterestRate)

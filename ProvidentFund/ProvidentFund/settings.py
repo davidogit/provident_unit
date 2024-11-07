@@ -124,7 +124,7 @@ DATABASES = {
         'OPTIONS': {
             'init_command': 'SET default_storage_engine=INNODB',
         },
-        'NAME': 'provident_fund',
+        'NAME': 'Fund_Management',
         'USER': 'root',
         'PASSWORD': 'collinsxzibit1?',
         'HOST': 'localhost',
