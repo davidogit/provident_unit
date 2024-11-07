@@ -1,6 +1,6 @@
 from django.db.models import Q
 from django.db.models.query import QuerySet
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.http.response import HttpResponse as HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
@@ -16,8 +16,9 @@ from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
 from .forms import InvestmentUpdateForm,InvestmentApprovalForm
 from django.core.mail import send_mail
-from Fund.tasks import actual_member_interest
+from Fund.tasks import actual_member_interest,rollover_inv_creation
 from Member.tasks import gen_send_email
+from django.core.exceptions import ValidationError
 
 import logging
 
@@ -258,7 +259,6 @@ class AddInvestment(CreateView):
 @method_decorator(role_required(role=['Treasury User']), name='dispatch')
 class InvestmentUpdateView(UpdateView):
     model = InvestmentDetail
-    # fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
     form_class = InvestmentUpdateForm
     template_name = 'dashboard/investment_update_form.html'
 
@@ -273,24 +273,34 @@ class InvestmentUpdateView(UpdateView):
         scheme_name = self.request.scheme_name
         scheme = InvestmentScheme.objects.get(id=scheme_name)
 
+        # get inv pk
+        pk = self.kwargs['pk']
+
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant,investment_scheme = scheme)
         else:
             return InvestmentDetail.objects.none()
     
     # Make sure we are updating details under the right tenant
     def form_valid(self, form):
+        try:
+            tenant = self.request.tenant
+            scheme_id = self.request.scheme_name
 
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
+            scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
 
-        scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
+            if scheme:
+                form.instance.investment_scheme = scheme
+                response = super().form_valid(form)
+                # form.save()
+                # add success url to redirect user after a successful update
+                print('form saved')
+                return JsonResponse({'status':'success', 'redirect_url':self.get_success_url()})
 
-        if scheme:
-            form.instance.investment_scheme = scheme
-
-        return super().form_valid(form)
+        except ValidationError as e:
+            return JsonResponse({'status':'error', 'message':str(e.message)},status=400)
+        return response
     
     # Form instance
     def get_context_data(self, **kwargs):
@@ -298,8 +308,11 @@ class InvestmentUpdateView(UpdateView):
 
         tenant = self.request.tenant
         scheme_id = self.request.scheme_name
+        # get inv instance
+        pk = self.kwargs['pk']
 
-        inv = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id = scheme_id).first()
+        inv = InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant, investment_scheme__id = scheme_id).first()
+        print(inv)
         form = InvestmentUpdateForm(instance=inv)
 
         context['form'] = form
@@ -316,45 +329,118 @@ class InvestmentUpdateView(UpdateView):
 
 
 
+
 # Updating rollover interest percentage field only
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury User']), name='dispatch')
-class RolloverPercentage(UpdateView):
-    model = InvestmentDetail
-    fields =('rollover_interest_percentage',)
-    context_object_name = 'rollover'
+class RolloverPercentage(TemplateView):
     template_name = 'dashboard/rollover_percentage.html'
 
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
-    def get_queryset(self):
-         
+    def post(self, request, *args, **kwargs):
+        tenant_id = request.tenant.id
+        scheme_id = request.scheme_name
+
+        # Collect all data in Post request
+        
+        rollover_rate = request.POST.get('rate')
+        
+        start_date_str = request.POST.get('start_date')
+        maturity_date_str = request.POST.get('maturity_date')
+
+        start_date=datetime.strptime(start_date_str, "%Y-%m-%d")
+        maturity_date = datetime.strptime(maturity_date_str, "%Y-%m-%d")
+        
+        account_number = request.POST.get('account_number')
+        pk = kwargs['pk']
+
+        # Increment rollover count of original investment
+        inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=request.tenant,investment_scheme__id=scheme_id)
+
+        print(f'Original Investment: {inv.account_name}')
+
+        counter = 0
+        # Increment rollover count
+        if inv.rollover_count == 0:
+            counter +=1
+        else:
+            counter = inv.rollover_count + 1
+
+
+        name_parts = ''
+        if inv.rollover_count>=1:
+            name_parts = inv.account_name.split()#split name on spaces
+
+            # Remove the last item(Naming conversion)
+            name_parts = name_parts[:-1] #removes the naming conversion
+            name_parts="".join(name_parts)
+        else:
+            name_parts = inv.account_name            
+
+
+        inv_name = f'{name_parts} R{counter}'
+        inv_type = inv.investment_type
+        rollover_principal = inv.interest_amount
+        account_type = inv.account_type
+
+        required_fields = [
+            tenant_id,
+            scheme_id,
+            inv_name,
+            inv_type,
+            rollover_rate,
+            rollover_principal,
+            start_date,
+            maturity_date,
+            account_number,
+            account_type,
+        ]
+        print(required_fields)
+        # Validate all fields
+        if not all(required_fields):
+            return JsonResponse({'status':'error', 'message':'Some fields are missing'})
+        # Call task to handle investment creation
+        try:
+            rollover_inv_creation.delay(
+                tenant_id=tenant_id,
+                scheme_id=scheme_id,
+                inv_name=inv_name,
+                inv_type=inv_type,  # No need for list() if it's just a single value
+                rollover_rate=rollover_rate,
+                rollover_principal=rollover_principal,
+                start_date=start_date,
+                maturity_date=maturity_date,
+                account_number=account_number,
+                account_type=account_type,  # No need for list() here either
+                counter=counter
+            )
+            return JsonResponse({'status':'success', 'redirect_url': self.get_success_url()})
+        except ValidationError as e:
+            return JsonResponse({'status':'error', 'message':str(e.message)}, status=400)
+        except Exception as e:
+            return JsonResponse({'status':'error', 'message':str(e)}, status=500)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
         # Get Tenant
         tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = get_object_or_404(Tenant,id=tenant_id)
 
         # Get scheme name
         scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        scheme = get_object_or_404(InvestmentScheme,id=scheme_name)
 
-        # Filtering Queryset by Tenant
+        # Get inv pk
+        pk = self.kwargs['pk']
+
+        # Fetch investment
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
-        else:
-            return InvestmentDetail.objects.none()
-
-    # Make sure we are updating details under the right tenant
-    def form_valid(self, form):
-
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-
-        scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
-
-        if scheme:
-            form.instance.investment_scheme = scheme
-
-        return super().form_valid(form)
+            inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=tenant,investment_scheme = scheme)
+            
+        
+        context['rollover']= inv
+        return context
     
     def get_success_url(self):
 
@@ -384,9 +470,11 @@ class InvestmentDeleteView(DeleteView):
         scheme_name = self.request.scheme_name
         scheme = InvestmentScheme.objects.get(id=scheme_name)
 
+        # Get inv pk
+        pk=self.kwargs['pk']
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant,investment_scheme = scheme)
         else:
             return InvestmentDetail.objects.none()
     

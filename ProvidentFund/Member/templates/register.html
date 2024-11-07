@@ -28,8 +28,8 @@
 
 <div class="card card-sign">
     <div class="card-header">
-        <h3 class="card-title">Register</h3>
-        <p class="card-text">Please fill in your details to register.</p>
+        <h3 class="card-title text-center">Register</h3>
+        <p class="card-text text-center">Please fill in your details to register.</p>
     </div><!-- card-header -->
 
     <form action="{% url 'register' tenant_id=request.tenant.id %}" method="POST">
@@ -70,13 +70,13 @@
             </div>
             <input type="submit" class="btn btn-primary btn-sign" value="Register">
 
-            <div class="divider"><span>or register with</span></div>
+            <!-- <div class="divider"><span>or register with</span></div> -->
 
             <!-- Uncomment the following section if you want to enable registration with Facebook and Google
             <div class="row gx-2">
                 <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div>
                 <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div>
-            </div><!-- row -->
+            </div> row -->
         </div><!-- card-body -->
     </form>
 

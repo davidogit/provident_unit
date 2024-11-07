@@ -11,7 +11,7 @@
                 <div class="row g-5">
                     <div class="row card-value text-center">
                         <h2 class="mb-5 mt-5 text-decoration-underline">
-                            Investment Detail
+                            Rollover Detail
                         </h2>
                     </div>
 
@@ -19,18 +19,51 @@
                     <form method="POST">
                         {% csrf_token %}
                         <div class="row g-5">
-                            <div class="col-md-5">
+                            <div class="col-md-4">
         
                                 <div class="form-group mb-3">
-                                    <label for="disabledTextInput" class="form-label h3">Roll Over Percentage: {{ rollover.rollover_principal }}</label>
+                                    <label for="principal" class="form-label">Rollover Principal: </label>
+                                    <input class="form-control" id="principal" name="principal" type="number" step="0.01" placeholder="{{ rollover.interest_amount }}" value="{{ rollover.interest_amount }}" disabled>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="rate" class="form-label">New Rate (%): </label>
+                                    <input class="form-control" id="rate" name="rate" type="number" step="0.01" placeholder="{{ rollover.interest_percentage }}" required>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="scheme" class="form-label">Scheme: </label>
+                                    <input class="form-control" id="scheme" name="scheme" type="text" placeholder="{{ rollover.investment_scheme.name }}" value="{{ rollover.investment_scheme.name }}" disabled>
+                                    <!-- <input type="number" name="scheme_id" hidden value="{{ rollover.investment_scheme.id }}"> -->
                                 </div>
         
                             </div>
-                    
-                            <div class="col-md-5">
+
+                            <div class="col-md-4">
                                 <div class="form-group mb-3">
-                                    <label for="rollover_percentage" class="form-label">Roll Over Interest Percentage</label>
-                                    <input type="number" min="1" step="0.01" class="form-control" id="rollover_percentage" name="rollover_interest_percentage">
+                                    <label for="start_date" class="form-label">Start Date: </label>
+                                    <input class="form-control" id="start_date" name="start_date" type="date" required>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="maturity_date" class="form-label">Maturity Date: </label>
+                                    <input class="form-control" id="maturity_date" name="maturity_date" type="date" required>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="inv_type" class="form-label">Investment Type: </label>
+                                    <input class="form-control" id="inv_type" name="inv_type" type="text" placeholder="{{ rollover.investment_type }}" value="{{ rollover.investment_type }}" readonly>
+                                </div>
+                            </div>
+                    
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="maturity_date" class="form-label"> Name: </label>
+                                    <input class="form-control" id="inv_name" name="inv_name" type="text" placeholder="{{ rollover.account_name }}" value="{{ rollover.account_name }}" disabled>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="account_type" class="form-label"> Account Type: </label>
+                                    <input class="form-control" id="account_type" name="account_type" type="text" placeholder="{{ rollover.account_type }}" value="{{ rollover.account_type }}" disabled>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="account_number" class="form-label"> Account Number: </label>
+                                    <input class="form-control" id="account_number" readonly name="account_number" type="number" value="{{rollover.account_number}}" placeholder="{{ rollover.account_number }}">
                                 </div>
                             </div>
                 

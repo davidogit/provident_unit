@@ -2,6 +2,7 @@ from django.db import models
 from django.urls import reverse
 from MultiScheme.models import InvestmentScheme
 from django.conf import settings
+from django.core.exceptions import ValidationError
 # from simple_history.models import HistoricalRecords
 
 class InvestmentDetail(models.Model):
@@ -31,16 +32,17 @@ class InvestmentDetail(models.Model):
 
     account_type = models.CharField(max_length=50, choices=account, default=current)
     account_name = models.CharField(max_length=50)
-    account_number = models.IntegerField(unique=True)
+    account_number = models.IntegerField(unique=False)
     principal_amount = models.FloatField()
-    interest_percentage = models.FloatField()
+    interest_percentage = models.FloatField(null=False,blank=False)
     rollover_interest_percentage = models.FloatField(null=True, blank=True, default=0.0)
-    interest_start_date = models.DateField(null=True, blank=False)
-    interest_end_date = models.DateField(null=True, blank=False)
+    interest_start_date = models.DateField(null=False, blank=False)
+    interest_end_date = models.DateField(null=False, blank=False)
     created_date = models.DateField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     CHOICES = [('ROLLOVER','Roll Over'),('END','End'),('NULL', 'null')]
     roll_over = models.CharField(choices=CHOICES, default='NULL', max_length=15)
+    rollover_count = models.IntegerField(default=0)
     _remaining_days = models.PositiveIntegerField(default=0)
     _status = models.CharField(max_length=20, default='Pending')
 
@@ -97,6 +99,16 @@ class InvestmentDetail(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk:
             self._remaining_days = self.calculate_tenure()
+
+        # Prevent updates to investments after the status has changed to active
+        if self.pk and self.status in ['Active',]:
+            raise ValidationError('This investment is closed and can no longer be edited')
+        
+        # Rollover Inv Creation and naming
+        # if not self.pk and self.rollover_count>=0:
+        #     prev_name = self.account_name
+        #     self.account_name = f'{prev_name} R{self.rollover_count}'
+
         super().save(*args, **kwargs)
 
 

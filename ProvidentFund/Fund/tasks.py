@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.http import JsonResponse
 from .models import InvestmentDetail,BankInterest,DelayedInterest
 from django.utils import timezone
 from MultiScheme.models import Tenant, InvestmentScheme
@@ -24,6 +25,10 @@ def member_interest(self):
             schemes = InvestmentScheme.objects.filter(tenant=tenant)
 
             for scheme in schemes:
+                # Get member allocation percentage
+                member_allocation_percentage = scheme.distribution_percentage
+
+
                 members = StaffAPI.objects.filter(
                     tenant=tenant,
                     investment_scheme=scheme,
@@ -114,7 +119,11 @@ def member_interest(self):
                 for inv in active_investments:
                     try:
                         if inv.tenure > 0:
-                            inv_daily_interest = inv.interest_amount / inv.tenure
+                            # calculate member allocation equivalent
+                            members_int_allocation = (inv.interest_amount*(member_allocation_percentage/100))
+
+                            # calculate daily member allocation
+                            inv_daily_interest = (members_int_allocation / inv.tenure)
                         else:
                             inv_daily_interest = 0.0
 
@@ -167,6 +176,12 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
                     approval_status=True
                 )
     
+    # Get member allocation percentage
+    member_allocation_percentage=scheme.distribution_percentage
+
+    # Calculate member allocation
+    member_allocation = (inv.interest_amount*(member_allocation_percentage/100))
+    
     total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
 
     logger.info(f'Total: {total_contribution}')
@@ -197,10 +212,10 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
                 # Check if user was approved before an investment was made
                 if subscription_date is not None and subscription_date.date() < inv.interest_start_date:
                     logger.info(f'Sub_date: {subscription_date} and inv_date: {inv.interest_start_date}')
-                    logger.info(f'Inv interest: {inv.interest_amount}')
-                    logger.info(f'Actual Before: {member.actual_profit}')
-                    member.actual_profit += (contribution / total_contribution) * inv.interest_amount
-                    logger.info(f'Actual After: {member.actual_profit}')
+                    logger.info(f'Members allocation: {member_allocation}')
+                    logger.info(f'Actual Member Profit Before: {member.actual_profit}')
+                    member.actual_profit += (contribution / total_contribution) * member_allocation
+                    logger.info(f'Actual Member Profit After: {member.actual_profit}')
                     member.save()
                 else:
                     logger.info('Not working')
@@ -312,3 +327,44 @@ def track_page_visits(self,user_id,path,view_name,user_ip,*args):
         timestamp = timezone.now(),
         name = user.username
     )
+
+
+@shared_task(bind=True)
+def rollover_inv_creation(self,**kwargs):
+    tenant_id = kwargs.get('tenant_id')
+    scheme_id = kwargs.get('scheme_id')
+    inv_name = kwargs.get('inv_name')
+    rollover_rate = kwargs.get('rollover_rate')
+    rollover_principal = kwargs.get('rollover_principal')
+    start_date = kwargs.get('start_date')
+    maturity_date = kwargs.get('maturity_date')
+    inv_type = kwargs.get('inv_type')
+    account_type = kwargs.get('account_type')
+    account_number = kwargs.get('account_number')
+    counter = kwargs.get('counter')
+
+    try:
+        tenant = get_object_or_404(Tenant, id=tenant_id)
+        scheme = get_object_or_404(InvestmentScheme,id=scheme_id,tenant=tenant)
+    
+    except Tenant.DoesNotExist as e:
+        logger.info(e)
+    except InvestmentScheme.DoesNotExist as e:
+        logger.info(e)
+    
+    try:
+        InvestmentDetail.objects.create(
+            investment_scheme = scheme,
+            account_name=inv_name,
+            investment_type=inv_type,
+            interest_percentage=rollover_rate,
+            principal_amount=rollover_principal,
+            interest_start_date=start_date,
+            interest_end_date=maturity_date,
+            account_number=account_number,
+            account_type=account_type,
+            rollover_count = counter
+        )
+        logger.info(f'Roll over for inv {inv_name} added')
+    except Exception as e:
+        logger.info(f'Inv Adding Error: {e}')
