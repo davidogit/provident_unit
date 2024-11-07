@@ -169,8 +169,8 @@
                       <th>Date Created</th>
                       <th>Last Updated</th>
                       <th>Roll Over</th>
-                      <th>Roll Over Interest Percentage (%)</th>
-                      <th>Roll Over Accumulated Amount</th>
+                      <!-- <th>Roll Over Interest Percentage (%)</th> -->
+                      <!-- <th>Roll Over Accumulated Amount</th> -->
                       <!-- <th>Rate</th> -->
                     </tr>
                   </thead>
@@ -195,7 +195,7 @@
                       <!-- Rollover Principal -->
                       <td>
                         <select class="form-control" name="rollover" id="">
-                        {% if investment.rollover_interest_percentage != 0 %}
+                        {% if investment.rollover_count >= 1 %}
                         <option value="Roll over">R</option>
                         {% else %}
                         <option value="Null">N</option>
@@ -204,8 +204,8 @@
                       </select>
                     </td>
                       <!-- Rollover Principal -->
-                      <td>{{ investment.rollover_interest_percentage }}</td>
-                      <td>{{ investment.rollover_accumulated_amount }}</td>
+                      <!-- <td>{{ investment.rollover_interest_percentage }}</td>
+                      <td>{{ investment.rollover_accumulated_amount }}</td> -->
               
                     {% endfor %}
                   </tbody>
@@ -291,8 +291,8 @@
                       <th>Date Created</th>
                       <th>Last Updated</th>
                       <th>Roll Over</th>
-                      <th>Roll Over Interest Percentage (%)</th>
-                      <th>Roll Over Accumulated Amount</th>
+                      <!-- <th>Roll Over Interest Percentage (%)</th>
+                      <th>Roll Over Accumulated Amount</th> -->
                       <!-- <th>Rate</th> -->
                     </tr>
                   </thead>
@@ -317,7 +317,7 @@
                       <!-- Rollover Principal -->
                       <td>
                         <select class="form-control" name="rollover" id="">
-                        {% if investment.rollover_interest_percentage != 0 %}
+                        {% if investment.rollover_count != 1 %}
                         <option value="Roll over">R</option>
                         {% else %}
                         <option value="Null">N</option>
@@ -326,8 +326,8 @@
                       </select>
                     </td>
                       <!-- Rollover Principal -->
-                      <td>{{ investment.rollover_interest_percentage }}</td>
-                      <td>{{ investment.rollover_accumulated_amount }}</td>
+                      <!-- <td>{{ investment.rollover_interest_percentage }}</td>
+                      <td>{{ investment.rollover_accumulated_amount }}</td> -->
               
                     {% endfor %}
                   </tbody>

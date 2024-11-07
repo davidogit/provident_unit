@@ -101,13 +101,13 @@
 
   <!--main-->
     <div class="container text-center content">
-        <h1 class="mt-5">Welcome to the {{ request.tenant.name }} Fund Portal</h1>
+        <h1 class="mt-5">Welcome to the {{ request.tenant.name }} Fund Management System</h1>
         <!-- <p class="lead">Please select your login type</p> -->
         <div class="row mt-4 d-flex justify-content-center">
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Member Login</h5>
+                        <!-- <h5 class="card-title">Login</h5> -->
                         <p class="card-text">Access your account, view your contributions and more.</p>
                         <a href="{% url 'member_login' tenant_id=request.tenant.id %}" class="btn btn-primary">Login</a>
                     </div>

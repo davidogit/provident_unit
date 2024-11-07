@@ -38,8 +38,8 @@ class InvestmentScheme(models.Model):
         (Yes,'Yes'),
         (No, 'No')
     ]
-    delayed_int = models.CharField(max_length=3, choices=options,default=No)
-    bank_int = models.CharField(max_length=3, choices=options, default=No)
+    delayed_int = models.CharField(max_length=3, choices=options,default=No,null=True)
+    bank_int = models.CharField(max_length=3, choices=options, default=No,null=True)
 
     Daily = 'Daily'
     Weekly = 'Weekly'
@@ -51,9 +51,9 @@ class InvestmentScheme(models.Model):
     ]
     # contribution_frequency = models.CharField(max_length=20,choices=frequency,default='',null=True)
     contribution_time = models.TimeField(null=True)
-    contribution_date = models.IntegerField(null=True)
+    contribution_date = models.IntegerField(null=True, blank=True)
 
-    distribution_frequency = models.CharField(max_length=20, choices=frequency,default='', null=True)
+    # distribution_frequency = models.CharField(max_length=20, choices=frequency,default='', null=True)
     distribution_percentage = models.FloatField(null=True)
     eligibility_criteria_months = models.IntegerField(null=True)
 
@@ -71,6 +71,7 @@ class InvestmentScheme(models.Model):
     description = models.TextField(blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
+    administrative_costs_percentage = models.FloatField(null=True)
 
     # HISTORY
     # history = HistoricalRecords()
