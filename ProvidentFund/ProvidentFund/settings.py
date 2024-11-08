@@ -74,12 +74,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # custom middleware
 
-    #Custom user middleware
+    #Custom user middleware to save user object from request
     'Fund.middleware.CurrentUserMiddleware',
-    # Custom Page Visit Middleware
+    # Custom Page Visit Middleware tracker
     'Fund.middleware.PageVisitLoggingMiddleware',
 
-    # 'Fund.middleware.TenantLoginMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',  
     

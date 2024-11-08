@@ -3,7 +3,6 @@ from django.urls import reverse
 from MultiScheme.models import InvestmentScheme
 from django.conf import settings
 from django.core.exceptions import ValidationError
-# from simple_history.models import HistoricalRecords
 
 class InvestmentDetail(models.Model):
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
