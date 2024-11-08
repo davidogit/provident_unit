@@ -48,67 +48,69 @@ class AccessDenied(TemplateView):
         return super().get(request, *args, **kwargs)
 
 # the name=dispatch means the decorators will work for POST,GET,PUT etc
-@method_decorator(login_required, name='dispatch')
+@method_decorator(login_required, name='dispatch') 
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager','Treasury User','HR']), name='dispatch')
+@method_decorator(role_required(role=['Manager', 'Treasury User', 'HR']), name='dispatch')
 class Invest(TemplateView):
-    template_name='dashboard/finance.html'
+    template_name = 'dashboard/finance.html'
 
     def get_context_data(self, **kwargs):
-        
+        context = super().get_context_data(**kwargs)
+
         # Get Tenant
         tenant_id = self.request.tenant.id
         tenant = Tenant.objects.get(id=tenant_id)
 
-        # Get scheme name
-        # scheme_name = self.request.scheme_name
-        # scheme = InvestmentScheme.objects.get(id=scheme_name)
-
-        context = super().get_context_data(**kwargs)
-        # Queryset to calculate total interest Actual and Estimated
-
-        # Estimated
+        # Total Interest - Estimated and Actual
         try: 
-            interest_query = InvestmentDetail.objects.filter(investment_scheme__tenant = tenant)
-            print(interest_query)
+            interest_query = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant)
+            context['total_interest'] = sum(inv.interest_amount for inv in interest_query.prefetch_related('investment_scheme'))
         except:
-            interest_query = []
-        
-        context['total_interest'] = sum(inv.interest_amount for inv in interest_query.prefetch_related('investment_scheme'))
+            context['total_interest'] = 0
 
-        # Actual
         try: 
-            actual_revenue = InvestmentDetail.objects.filter(approval_status=True,_status = 'Expired', investment_scheme__tenant = tenant)
+            actual_revenue = InvestmentDetail.objects.filter(approval_status=True, _status='Expired', investment_scheme__tenant=tenant)
+            context['actual_revenue'] = sum(inv.interest_amount for inv in actual_revenue.prefetch_related('investment_scheme'))
         except:
-            actual_revenue = []
+            context['actual_revenue'] = 0
 
-        context['actual_revenue'] = sum(inv.interest_amount for inv in actual_revenue.prefetch_related('investment_scheme'))
-
-
-        # Queryset to calculate total number of active investments
+        # Active Investments
         try:
-            active_inv = InvestmentDetail.objects.all().filter(investment_scheme__tenant = tenant)
+            active_inv = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant)
             context['active_inv'] = active_inv.count()
         except:
-            active_inv = []
-        
-        # Get schemes
-        try:
-            scheme = InvestmentScheme.objects.filter(tenant = tenant)
-            context['schemes'] = scheme
-        except:
-            scheme = []
+            context['active_inv'] = 0
 
-           
-        
-
-        # Queryset to calsulate total number of Active Members
+        # Active Members
         active_members = StaffAPI.objects.filter(investment_scheme__tenant=tenant)
         context['active_members'] = active_members.count()
 
+        # Bank Interest Rates
+        try:
+            context['interest_rates'] = BankInterest.objects.all()
+        except:
+            context['interest_rates'] = []
+
+        # Available Investment Schemes
+        try:
+            context['investment_scheme'] = InvestmentScheme.objects.filter(tenant=tenant)
+        except:
+            context['investment_scheme'] = []
+
+        # Gender Enrollment in Each Scheme
+        try:
+            context['gender_enrollments'] = [
+                {
+                    # 'scheme': scheme,
+                    # 'male_enrollments': Enrollment.objects.filter(scheme=scheme, gender='Male').count(),
+                    # 'female_enrollments': Enrollment.objects.filter(scheme=scheme, gender='Female').count(),
+                }
+                for scheme in InvestmentScheme.objects.filter(tenant=tenant)
+            ]
+        except:
+            context['gender_enrollments'] = []
+
         return context
-
-
 
 
 

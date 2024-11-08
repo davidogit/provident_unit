@@ -220,3 +220,16 @@ class AuditTrail(models.Model):
 
     def __str__(self):
         return f'{self.name} {self.action} at {self.timestamp}'
+
+
+
+class BankInterestRate(models.Model):
+    bank_name = models.CharField(max_length=100)
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2)  
+    effective_date = models.DateField()  # Date from when this interest rate is effective
+
+    class Meta:
+        ordering = ['-effective_date']  # Order by most recent rates
+
+    def __str__(self):
+        return f"{self.bank_name} - {self.interest_rate}%"
