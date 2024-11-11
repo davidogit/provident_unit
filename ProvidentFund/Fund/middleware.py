@@ -4,7 +4,6 @@ from django.utils.deprecation import MiddlewareMixin
 from MultiScheme.models import Tenant
 from django.http import HttpRequest
 from django.urls import resolve
-from threading import local
 import logging
 logger = logging.getLogger(__name__)
 
@@ -88,18 +87,23 @@ class PageVisitLoggingMiddleware(MiddlewareMixin):
 
 # Middleware to extract user from request and pass to signals since signals do not have access to HTTP response
 
-_user = local() # locally storing the request.user for every request that is made
+from threading import local
+
+_threads_local = local() # locally storing the request.user for every request that is made
 
 # Returns the current user when called
 def get_current_user():
-    return getattr(_user,'user', None)
+    return getattr(_threads_local,'user', None)
+
+
 
 class CurrentUserMiddleware(MiddlewareMixin):
     def __init__(self, get_response):
         self.get_response = get_response
     
     def __call__(self, request):
-        _user.user = request.user
+        _threads_local.user = getattr(request, 'user' , None)
         response = self.get_response(request)
-        # print(f'Username: {self.user}')
+        print(f'Username: {_threads_local.user}')
+    
         return response

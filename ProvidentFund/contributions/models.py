@@ -6,6 +6,9 @@ import json
 from django.db.models.signals import pre_delete,post_save
 from django.dispatch import receiver
 from django.utils.encoding import force_str
+import logging
+logger = logging.getLogger(__name__)
+from Fund import middleware
 
 class StaffAPI(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
@@ -50,7 +53,8 @@ def audit_log_save(sender,instance,created,update_fields,**kwargs):
     action = 'created' if created else 'updated'
 
     # User making the change
-    user = get_current_user() or None
+    # user = get_current_user() or None
+    user = middleware.get_current_user()
     # Assign name 
     if created:
         instance.name = user
@@ -63,7 +67,8 @@ def audit_log_save(sender,instance,created,update_fields,**kwargs):
         field_name = field.name
         new_value = getattr(instance,field_name)
         changes[field_name] = force_str(new_value)
-    
+        
+    logger.info(f'User: {user}')
     # Create an AuditTrail instance
     AuditTrail.objects.create(
         user = user,
@@ -85,7 +90,7 @@ def audit_log_delete(sender,instance,**kwargs):
 
     user = get_current_user()
     # get_object_or_404(get_user_model(),id=instance.pk)
-
+    
     # Create an AuditTrail instance
     AuditTrail.objects.create(
         user = user,

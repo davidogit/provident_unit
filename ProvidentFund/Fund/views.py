@@ -364,7 +364,6 @@ class RolloverPercentage(TemplateView):
         # Increment rollover count of original investment
         inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=request.tenant,investment_scheme__id=scheme_id)
 
-        print(f'Original Investment: {inv.account_name}')
 
         counter = 0
         # Increment rollover count
