@@ -100,14 +100,14 @@
   <div class="interest-rates-section mt-5">
     <h4 class="text-dark mb-3">Current Bank Interest Rates</h4>
     <div class="row">
-      {% comment %} {% for int in interest %} {% endcomment %}
+      {% for rate in interest_rates %}
         <div class="col-md-3">
           <div class="card p-3">
-            <h5 class="fw-semibold"> Bank Name: {{ int.bank_name }}</h5>
-            <p class="text-secondary mb-0">Interest Rate: {{ int.rate }}%</p>
+            <h5 class="fw-semibold"> Bank Name: {{ rate.bank_name }}</h5>
+            <p class="text-secondary mb-0">Interest Rate: {{ rate.interest_rate }}%</p>
           </div>
         </div>
-      {% comment %} {% endfor %} {% endcomment %}
+      {% endfor %}
     </div>
   </div>
 
@@ -132,12 +132,13 @@
   <div class="gender-enrollment-section mt-5">
     <h4 class="text-dark mb-3">Gender Enrollment in Investment Schemes</h4>
     <div class="row">
-      {% for enrollment in gender_enrollments %}
+      {% for scheme_name, gender_counts in gender_counts_by_scheme.items %}
         <div class="col-md-4">
           <div class="card p-3">
             <h5 class="fw-semibold">{{ enrollment.scheme.name }}</h5>
-            <p class="text-secondary mb-1">Male Enrollments: {{ enrollment.male_enrollments }}</p>
-            <p class="text-secondary mb-1">Female Enrollments: {{ enrollment.female_enrollments }}</p>
+            <p class="text-secondary mb-1"><strong>Male:</strong> {{ gender_counts.Male }}</p>
+            <p class="text-secondary mb-1"><strong>Female:</strong> {{ gender_counts.Female }}</p>
+            <p class="text-secondary mb-1"><strong>Other:</strong> {{ gender_counts.Other }}</p>
           </div>
         </div>
       {% endfor %}

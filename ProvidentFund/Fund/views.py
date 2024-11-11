@@ -1,11 +1,12 @@
-from django.db.models import Q
+from django.db.models import Q,Count
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, JsonResponse
 from django.http.response import HttpResponse as HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 from ProvidentFund.settings import EMAIL_HOST_USER
-from Fund.models import InvestmentDetail,DelayedInterest,BankInterest
+from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate
+from Member.models import Member
 from MultiScheme.models import InvestmentScheme,Tenant
 from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI
@@ -56,10 +57,15 @@ class Invest(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        tenant_id = self.request.tenant.id
+        tenant = Tenant.objects.get(id=tenant_id)
 
         # Get Tenant
         tenant_id = self.request.tenant.id
         tenant = Tenant.objects.get(id=tenant_id)
+
+        # Fetch schemes
+        schemes = InvestmentScheme.objects.filter(tenant=tenant)
 
         # Total Interest - Estimated and Actual
         try: 
@@ -87,7 +93,7 @@ class Invest(TemplateView):
 
         # Bank Interest Rates
         try:
-            context['interest_rates'] = BankInterest.objects.all()
+            context['interest_rates'] = BankInterestRate.objects.all()
         except:
             context['interest_rates'] = []
 
@@ -98,20 +104,21 @@ class Invest(TemplateView):
             context['investment_scheme'] = []
 
         # Gender Enrollment in Each Scheme
-        try:
-            context['gender_enrollments'] = [
-                {
-                    # 'scheme': scheme,
-                    # 'male_enrollments': Enrollment.objects.filter(scheme=scheme, gender='Male').count(),
-                    # 'female_enrollments': Enrollment.objects.filter(scheme=scheme, gender='Female').count(),
-                }
-                for scheme in InvestmentScheme.objects.filter(tenant=tenant)
-            ]
-        except:
-            context['gender_enrollments'] = []
+        gender_counts_by_scheme = {}
+        for scheme in schemes:
+            gender_counts = (
+                Member.objects.filter(investment_scheme=scheme)
+                .values('gender')
+                .annotate(count=Count('gender'))
+            )
+            gender_counts_by_scheme[scheme.name] = {
+                'Male': next((item['count'] for item in gender_counts if item['gender'] == 'Male'), 0),
+                'Female': next((item['count'] for item in gender_counts if item['gender'] == 'Female'), 0),
+                'Other': next((item['count'] for item in gender_counts if item['gender'] == 'Other'), 0),
+            }
 
+        context['gender_counts_by_scheme'] = gender_counts_by_scheme
         return context
-
 
 
 # Creating List View for model

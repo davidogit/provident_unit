@@ -42,6 +42,8 @@ class Member(models.Model):
     # History
     # history = HistoricalRecords()
     
+    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, blank=True)
+
 
     
 
