@@ -96,56 +96,81 @@
   
   <!-- row -->
 
-  <!-- Interest Rates Section -->
-  <div class="interest-rates-section mt-5">
-    <h4 class="text-dark mb-3">Current Bank Interest Rates</h4>
-    <div class="row">
-      {% for rate in interest_rates %}
-        <div class="col-md-3">
-          <div class="card p-3">
-            <h5 class="fw-semibold"> Bank Name: {{ rate.bank_name }}</h5>
-            <p class="text-secondary mb-0">Interest Rate: {{ rate.interest_rate }}%</p>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  </div>
+  <div class="row mt-5">
 
-  <!-- Available Schemes Section for Treasurer -->
-  <div class="available-schemes-section mt-5">
-    <h4 class="text-dark mb-3">Available Investment Schemes</h4>
-    <div class="row">
-       {% for scheme in schemes %}
-        <div class="col-md-4">
-          <div class="card p-3">
-            <h5 class="fw-semibold">{{ scheme.name }}</h5>
-            <p class="text-secondary mb-1">Investment Type: {{ scheme.eligibility_criteria_months }}</p>
-            <p class="text-secondary mb-1">Minimum Investment: {{ scheme.created_date }}</p>
-            <p class="text-secondary mb-1">Description: {{ scheme.description }}</p>
-          </div>
+    <!-- Current Bank Interest Rates -->
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="text-dark">Current Bank Interest Rates</h4>
         </div>
-      {% endfor %}
+        <div class="card-body">
+          {% for rate in interest_rates %}
+            <div class="p-3 mb-3 rounded">
+              <h5 class="fw-semibold">Bank Name: {{ rate.bank_name }}</h5>
+              <p class="text-secondary mb-0">Interest Rate: {{ rate.interest_rate }}%</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
     </div>
-  </div>
 
-  <!-- Gender Enrollment Section -->
-  <div class="gender-enrollment-section mt-5">
-    <h4 class="text-dark mb-3">Gender Enrollment in Investment Schemes</h4>
-    <div class="row">
-      {% for scheme_name, gender_counts in gender_counts_by_scheme.items %}
-        <div class="col-md-4">
-          <div class="card p-3">
-            <h5 class="fw-semibold">{{ enrollment.scheme.name }}</h5>
-            <p class="text-secondary mb-1"><strong>Male:</strong> {{ gender_counts.Male }}</p>
-            <p class="text-secondary mb-1"><strong>Female:</strong> {{ gender_counts.Female }}</p>
-            <p class="text-secondary mb-1"><strong>Other:</strong> {{ gender_counts.Other }}</p>
+    <!-- Available Investment Schemes -->
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="text-dark">Available Investment Schemes</h4>
+        </div>
+        <div class="card-body">
+          {% for scheme in schemes %}
+            <div class="p-3 mb-3 rounded">
+              <h5 class="fw-semibold">{{ scheme.name }}</h5>
+              <p class="text-secondary mb-1">Investment Type: {{ scheme.eligibility_criteria_months }}</p>
+              <p class="text-secondary mb-1">Minimum Investment: {{ scheme.created_date }}</p>
+              <p class="text-secondary mb-1">Description: {{ scheme.description }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Gender Enrollment -->
+    <div class="col-md-4">
+      <div class="card card-one">
+        <div class="card-header">
+          <h4 class="text-dark">Gender Enrollment</h4>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-one">
+              <thead>
+                <tr>
+                  <th>Schemes</th>
+                  <th>Males</th>
+                  <th>Females</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for scheme_name, gender_counts in gender_counts_by_scheme.items %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center fw-medium">
+
+                      <h5>{{ scheme_name }}</h5>
+                    </div>
+                  </td>
+                  <td>{{ gender_counts.Male }}</td>
+                  <td>{{ gender_counts.Female }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
         </div>
-      {% endfor %}
+      </div>
     </div>
-  </div>
-</div><!-- col -->
+    
+  </div> <!-- End of Row -->
+
 </div>
-
-
 {% endblock %}
