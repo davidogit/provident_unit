@@ -16,7 +16,7 @@
                     </div>
 
                     
-                    <form method="POST">
+                    <form method="POST" id="rollover-form">
                         {% csrf_token %}
                         <div class="row g-5">
                             <div class="col-md-4">
@@ -75,4 +75,36 @@
           </div><!-- card-one -->
     </div>
 </div>
+
+<script>
+    $(document).ready(function(){
+        $('#rollover-form').submit(function(e){
+            e.preventDefault();
+            var form = $(this);
+            var url = form.attr('action');
+            var data = form.serialize();
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: data,
+                success: function(response){
+                    
+                    if(response.status === 'success'){
+                        alert('Rollover Successful');
+                        window.location.href = response.redirect_url;
+                    }else{
+                        message = response.message;
+
+                        alert('Roll over failed '+ message);
+
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                    alert('Rollover Failed');
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

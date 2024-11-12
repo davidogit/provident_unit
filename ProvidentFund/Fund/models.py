@@ -39,8 +39,7 @@ class InvestmentDetail(models.Model):
     interest_end_date = models.DateField(null=False, blank=False)
     created_date = models.DateField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
-    CHOICES = [('ROLLOVER','Roll Over'),('END','End'),('NULL', 'null')]
-    roll_over = models.CharField(choices=CHOICES, default='NULL', max_length=15)
+    roll_over = models.BooleanField(default=False)
     rollover_count = models.IntegerField(default=0)
     _remaining_days = models.PositiveIntegerField(default=0)
     _status = models.CharField(max_length=20, default='Pending')
