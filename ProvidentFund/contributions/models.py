@@ -44,63 +44,63 @@ class StaffAPI(models.Model):
 
 
 # Signals for StaffAPI
-@receiver(post_save, sender=StaffAPI)
-def audit_log_save(sender,instance,created,update_fields,**kwargs):
-    from Fund.middleware import get_current_user
+# @receiver(post_save, sender=StaffAPI)
+# def audit_log_save(sender,instance,created,update_fields,**kwargs):
+#     from Fund.middleware import get_current_user
 
-    object_id = instance.pk
+#     object_id = instance.pk
 
-    action = 'created' if created else 'updated'
+#     action = 'created' if created else 'updated'
 
-    # User making the change
-    # user = get_current_user() or None
-    user = middleware.get_current_user()
-    # Assign name 
-    if created:
-        instance.name = user
-        instance.save()
+#     # User making the change
+#     # user = get_current_user() or None
+#     user = middleware.get_current_user()
+#     # Assign name 
+#     if created:
+#         instance.name = user
+#         instance.save()
 
-    # Get changes to model
-    changes = {}
+#     # Get changes to model
+#     changes = {}
 
-    for field in instance._meta.fields:
-        field_name = field.name
-        new_value = getattr(instance,field_name)
-        changes[field_name] = force_str(new_value)
+#     for field in instance._meta.fields:
+#         field_name = field.name
+#         new_value = getattr(instance,field_name)
+#         changes[field_name] = force_str(new_value)
         
-    logger.info(f'User: {user}')
-    # Create an AuditTrail instance
-    AuditTrail.objects.create(
-        user = user,
-        model_name = StaffAPI.__name__,
-        action = action,
-        object_id = object_id,
-        changes = json.dumps(changes),
-        timestamp = timezone.now(),
-        name = user.username
-    )
+#     logger.info(f'User: {user}')
+#     # Create an AuditTrail instance
+#     AuditTrail.objects.create(
+#         user = user,
+#         model_name = StaffAPI.__name__,
+#         action = action,
+#         object_id = object_id,
+#         changes = json.dumps(changes),
+#         timestamp = timezone.now(),
+#         name = user.username
+#     )
 
-@receiver(pre_delete, sender=StaffAPI)
-def audit_log_delete(sender,instance,**kwargs):
-    from Fund.middleware import get_current_user
-    # current_user = CurrentUserMiddleware(None)
-    object_id = instance.pk
+# @receiver(pre_delete, sender=StaffAPI)
+# def audit_log_delete(sender,instance,**kwargs):
+#     from Fund.middleware import get_current_user
+#     # current_user = CurrentUserMiddleware(None)
+#     object_id = instance.pk
 
-    action = 'deleted'
+#     action = 'deleted'
 
-    user = get_current_user()
-    # get_object_or_404(get_user_model(),id=instance.pk)
+#     user = get_current_user()
+#     # get_object_or_404(get_user_model(),id=instance.pk)
     
-    # Create an AuditTrail instance
-    AuditTrail.objects.create(
-        user = user,
-        model_name = StaffAPI.__name__,
-        action = action,
-        object_id = object_id,
-        changes = f'User {user} made a delete operation at {timezone.now()}',
-        timestamp = timezone.now(),
-        name = user.username
-    )
+#     # Create an AuditTrail instance
+#     AuditTrail.objects.create(
+#         user = user,
+#         model_name = StaffAPI.__name__,
+#         action = action,
+#         object_id = object_id,
+#         changes = f'User {user} made a delete operation at {timezone.now()}',
+#         timestamp = timezone.now(),
+#         name = user.username
+#     )
 
 
 
@@ -115,6 +115,7 @@ class Contribution(models.Model):
     retro_employee_amount = models.FloatField()
     retro_employer_amount = models.FloatField()
     contribution_date = models.DateField()
+    approved_contribution = models.BooleanField(default=False)
 
 
     def calculated_total_contributions(self):

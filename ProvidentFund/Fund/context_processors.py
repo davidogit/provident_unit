@@ -88,6 +88,7 @@ def user_groups_and_permissions(request):
                 is_treasury_user = groups.filter(name__in=['Treasury User'])
                 is_hr_user = groups.filter(name__in=['HR'])
                 is_manager_user = groups.filter(name__in=['Manager'])
+                is_finance_manager = groups.filter(name__in=['Finance Manager'])
 
                 return{
                     'is_manager_or_treasury_user':is_manager_or_treasury_user,
@@ -96,6 +97,7 @@ def user_groups_and_permissions(request):
                     'is_hr_user': is_hr_user,
                     'is_manager' : is_manager_user,
                     'user':user,
+                    'is_finance_manager': is_finance_manager,
                 }
         else:
             return {}

@@ -1,7 +1,8 @@
+from django.conf import settings
 from django.http import HttpResponseRedirect,HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
-
+from django.contrib.auth.decorators import login_required
 from MultiScheme.models import Tenant
 
 # This decorator is to prevent users from accessing login and register views while alredy logged in 
@@ -36,15 +37,6 @@ def tenant_required(view_func):
     return _wrapped_view
 
 
-
-
-
-
-
-
-
-
-
 # This decorator is to check the group of the user and give access accordingly
 def allowed_user(allowed_groups=[]):
     def allowed_user_dec(view_func):
@@ -63,3 +55,14 @@ def allowed_user(allowed_groups=[]):
                 
         return wrapper_func
     return allowed_user_dec
+
+
+# Login required for Tenant
+def tenant_login_required(view_func):
+    @wraps(view_func)
+    def wrapper_func(request,*args,**kwargs):
+        login_url = getattr(request,'login_url',settings.LOGIN_URL)
+        
+        return login_required(login_url=login_url)(view_func)(request,*args,**kwargs)
+    return wrapper_func
+

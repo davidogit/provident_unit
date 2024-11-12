@@ -20,13 +20,13 @@ from django.core.mail import send_mail
 from Fund.tasks import actual_member_interest,rollover_inv_creation
 from Member.tasks import gen_send_email
 from django.core.exceptions import ValidationError
-
+from django.db.models import Sum,F
 import logging
 
 logger = logging.getLogger(__name__)
 
 # Importing custom decorators
-from Member.decorators import tenant_required
+from Member.decorators import tenant_required,tenant_login_required
 from Member.models import SchemeApproval
 
 class LandingPage(TemplateView):
@@ -51,7 +51,7 @@ class AccessDenied(TemplateView):
 # the name=dispatch means the decorators will work for POST,GET,PUT etc
 @method_decorator(login_required, name='dispatch') 
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager', 'Treasury User', 'HR']), name='dispatch')
+@method_decorator(role_required(role=['Manager', 'Treasury User', 'HR','Finance Manager']), name='dispatch')
 class Invest(TemplateView):
     template_name = 'dashboard/finance.html'
 
@@ -401,7 +401,7 @@ class RolloverPercentage(TemplateView):
             account_number,
             account_type,
         ]
-        print(required_fields)
+
         # Validate all fields
         if not all(required_fields):
             return JsonResponse({'status':'error', 'message':'Some fields are missing'})
@@ -496,7 +496,7 @@ class InvestmentDeleteView(DeleteView):
 # Active Members List
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR','Manager']), name='dispatch')
+@method_decorator(role_required(role=['HR','Manager','Finance Manager']), name='dispatch')
 class MemberListView(ListView):
     # model = Member
     model = StaffAPI
@@ -538,7 +538,7 @@ class MemberListView(ListView):
 # Exited Members List
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR','Manager']), name='dispatch')
+@method_decorator(role_required(role=['HR','Manager','Finance Manager']), name='dispatch')
 class ExitedMembers(ListView):
     model = StaffAPI
     template_name ='dashboard/exited_members.html'
@@ -576,7 +576,7 @@ class ExitedMembers(ListView):
 # Memeber detailed View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR','Manager']), name='dispatch')
+@method_decorator(role_required(role=['HR','Manager','Finance Manager']), name='dispatch')
 class MemberDetailView(DetailView):
     # model = Member
     model = StaffAPI
@@ -757,6 +757,7 @@ class InvestmentQuery(ListView):
         return context
 
 
+# List view for delayed interest
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
@@ -1025,6 +1026,9 @@ class DelayedInterestQuery(ListView):
 
 
 # Approval of investments
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Manager']), name='dispatch')
 class InvestmentApproval(ListView):
     model = InvestmentDetail
     template_name = 'dashboard/investment_approval.html'
@@ -1089,7 +1093,9 @@ class InvestmentApproval(ListView):
 
 
 # Approved Investments list
-
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Manager']), name='dispatch')
 class ApprovedInvestments(ListView):
     model = InvestmentDetail
     template_name = 'dashboard/approved_investments.html'
@@ -1107,7 +1113,10 @@ class ApprovedInvestments(ListView):
 
 
 
-# LIST OF SCHEME APPROVALS
+# LIST OF SCHEME APPLICATION APPROVALS
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['HR','Manager']), name='dispatch')
 class ToBeApproved(ListView):
     model = SchemeApproval
     template_name = 'dashboard/scheme_approval.html'
@@ -1159,7 +1168,9 @@ class ToBeApproved(ListView):
         except SchemeApproval.DoesNotExist:
             return JsonResponse({'status':'error'},status=400)
 
-
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Manager']), name='dispatch')
 class RecentActivities(ListView):
     model = InvestmentDetail
     template_name = 'dashboard/all_history.html'
@@ -1223,3 +1234,79 @@ class RecentActivities(ListView):
             # context['page_obj'] = history_page
             # context['paginator'] = paginator
         return context
+
+
+
+# Contribution Approval
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager']), name='dispatch')
+class ApproveContributions(TemplateView):
+    template_name = 'dashboard/approve_contributions.html'
+
+    def post(self,request,*args,**kwargs):
+        tenant = request.tenant
+        scheme_id = request.scheme_name
+
+        # Collect filter parameters
+        month = request.POST.get('month')
+        year = request.POST.get('year')
+
+        print(f'month={month}, year={year}')
+
+        if year and month:
+            # Collect investments within the provided month
+            from contributions.models import Contribution
+            contributions = Contribution.objects.filter(investment_scheme__tenant = tenant,investment_scheme__id=scheme_id,month=month,year=year, approved_contribution=False)
+
+            if not contributions.exists():
+                return JsonResponse({'status': 'error', 'message': 'No contributions found for the given month.'})
+            
+            # change approval status of contributions to True
+            contributions.update(approved_contribution=True)
+            message = f'Successfully approved investments for {month} {year}'
+            return JsonResponse({'status':'success', 'message':message})
+        else:
+            return JsonResponse({'status':'error', 'message':'No contributions for selected Year and Month'})
+
+@method_decorator(tenant_login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+class FetchContributions(TemplateView):
+    def get(self, request: HttpRequest, *args, **kwargs):
+        tenant = request.tenant
+        scheme_id = request.scheme_name
+        month = request.GET.get('month')
+        year = request.GET.get('year')
+        print(f'scheme_id={scheme_id},tenant={tenant},month={month}, year={year}')
+        if not month or not year:
+            return JsonResponse({'status': 'error', 'message': 'Month and year are required.'})
+        try:
+            # Fetch data
+            from contributions.models import Contribution
+            queryset = Contribution.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,month=month,year=year,approved_contribution=False)
+
+
+            # If no contributions are found, return an appropriate response
+            if not queryset.exists():
+                return JsonResponse({'status': 'error', 'message': 'No contributions found for the given criteria.'})
+
+
+            total_number = queryset.count()
+            total_amount = queryset.aggregate(total_amount=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total_amount'] or 0
+            contribution_date = queryset.first().contribution_date
+            contribution_status = queryset.first().approved_contribution
+            # object response
+            contribution_data = {
+                'number_of_contributions':total_number,
+                'total_amount':total_amount,
+                'date_of_contribution':contribution_date,
+                'contribution_status':contribution_status,
+            }
+
+            return JsonResponse({'number_of_contributions':total_number,
+                'total_amount':total_amount,
+                'date_of_contribution':contribution_date,
+                'contribution_status':contribution_status,
+                'status':'success'})
+        except Exception as e:
+            return JsonResponse({'status':'error', 'message':str(e)})

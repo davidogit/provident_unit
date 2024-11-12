@@ -15,7 +15,7 @@ from django.template import loader
 from MultiScheme.models import Tenant,InvestmentScheme
 from django.shortcuts import render, get_object_or_404
 
-from Member.decorators import tenant_required
+from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -23,8 +23,9 @@ from django.urls import reverse
 
 # Create your views here.
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['HR',]), name='dispatch')
 class StaffMemberListView(ListView):
     model = StaffAPI
     template_name = 'contributions/staffmember_list.html'
@@ -52,8 +53,9 @@ class StaffMemberListView(ListView):
 
 
 
-@method_decorator(login_required, name='dispatch')
-@method_decorator(tenant_required, name='dispatch')   
+@method_decorator(tenant_login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch') 
+@method_decorator(role_required(role=['HR',]), name='dispatch')  
 class OptOutMemberView(View):
     def post(self, request, *args, **kwargs):
         member_id = kwargs.get('pk')
@@ -86,16 +88,18 @@ class OptOutMemberView(View):
         )
 
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['HR',]), name='dispatch')
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
     context_object_name = 'membership'
 
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['HR',]), name='dispatch')
 class Contributed(ListView):
     model = Contribution
     template_name = 'contributions/contributed.html'
@@ -122,7 +126,7 @@ class Contributed(ListView):
             selected_year = str(selected_year)
 
         if tenant and scheme_id:
-            return Contribution.objects.filter(member = user,investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,year=selected_year)
+            return Contribution.objects.filter(member = user,investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,year=selected_year,approved_contribution=True)
         else:
             return Contribution.objects.none()
 
@@ -161,14 +165,3 @@ class Contributed(ListView):
         context['monthly_contributions'] = dict(monthly_contributions)
 
         return context
-    
-
-
-    
-
-
-
-# def staff_profile(request, staff_id):
-#     tenant = request.tenant
-#     staff_member = get_object_or_404(StaffAPI, Id=staff_id, investment_scheme__tenant=tenant)
-#     return render(request, 'staff_profile.html', {'staff_member': staff_member})

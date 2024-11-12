@@ -67,6 +67,7 @@ AUTHENTICATION_BACKENDS = [
 MIDDLEWARE = [
     # Tenant ID middleware
     'Fund.middleware.URLTenantMiddleware',
+    'Fund.middleware.TenantLoginUrlMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

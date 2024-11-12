@@ -4,20 +4,18 @@ import smtplib
 from typing import Any
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import get_object_or_404, render, redirect
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.core.mail import send_mail
+from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
-from django.contrib.auth.decorators import login_required
 from .forms import UserForm, MemberForm
 from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
-from django.views.generic import TemplateView,UpdateView,CreateView,ListView,View,DeleteView
+from django.views.generic import TemplateView,UpdateView,CreateView,ListView
 from django.contrib.auth.models import Group
 from .models import Member,SchemeApproval
 from django.utils.decorators import method_decorator
-from Member.decorators import tenant_required
+from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
 from .forms import CombinedProfileForm
 from MultiScheme.models import Tenant,InvestmentScheme
@@ -47,7 +45,7 @@ def registrationView(request,tenant_id):
                 form1.instance.tenant = tenant
 
                 # Check from API to see if member is there
-                response = requests.get(tenant.api_endpoint_contribution)
+                response = requests.get(tenant.api_endpoint_member)
                 response.raise_for_status() #if theres an error trying to get a response from endpoint
                 data = response.json()
                 print(data)
@@ -205,7 +203,7 @@ def verifyOtpView(request,user_id, tenant_id):
     return render(request, 'verify_otp.html',{'email':user_email})
 
 
-@login_required
+@method_decorator(tenant_login_required, name="dispatch")
 def logoutView(request, tenant_id):
     logout(request)
     return redirect('landing_page',tenant_id=tenant_id)
@@ -218,7 +216,7 @@ def terms_and_conditions_view(request):
 
 
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class MemberPortal(TemplateView):
@@ -251,7 +249,7 @@ class MemberPortal(TemplateView):
 
 
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class EditMemberProfileView(UpdateView):
@@ -288,7 +286,7 @@ class EditMemberProfileView(UpdateView):
 
 # Member Scheme Application View
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class MemberDashboard(TemplateView):
@@ -354,7 +352,7 @@ class MemberDashboard(TemplateView):
 
 # View for Application
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class Application(CreateView):
@@ -480,7 +478,7 @@ class Application(CreateView):
         return reverse('member_dashboard', kwargs={'tenant_id':tenant.id, 'member_id':user})
     
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class ActiveSchemes(ListView):
@@ -554,7 +552,7 @@ class ActiveSchemes(ListView):
     
 
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class PendingSchemes(ListView):
@@ -598,7 +596,7 @@ class PendingSchemes(ListView):
         return context
     
 
-@method_decorator(login_required, name="dispatch")
+@method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class Contributed(ListView):
@@ -638,7 +636,8 @@ class Contributed(ListView):
                 member=member,
                 investment_scheme__id=scheme_id,
                 investment_scheme__tenant=tenant,
-                year=selected_year
+                year=selected_year,
+                api_endpoint_member=True
             )
             return member_contributions
         else:

@@ -41,6 +41,12 @@ urlpatterns =[
     path('approvals/', views.ToBeApproved.as_view(), name='scheme_approval'),
 
     # History of investments
-    path('recent_activities/', views.RecentActivities.as_view(), name='recent_activities')
+    path('recent_activities/', views.RecentActivities.as_view(), name='recent_activities'),
+
+    # contribution approval
+    path('<int:scheme_name>/approve-contributions/', views.ApproveContributions.as_view(), name='approve_contributions'),
+
+    # Endpoint for contribution data fetch
+    path('<int:scheme_name>/fetch_contributions/', views.FetchContributions.as_view(), name='fetch-contributions'),
     
 ]

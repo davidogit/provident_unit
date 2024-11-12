@@ -1,4 +1,5 @@
 from typing import Any
+from django.conf import settings
 from django.shortcuts import redirect
 from django.utils.deprecation import MiddlewareMixin
 from MultiScheme.models import Tenant
@@ -6,6 +7,41 @@ from django.http import HttpRequest
 from django.urls import resolve
 import logging
 logger = logging.getLogger(__name__)
+
+class TenantLoginUrlMiddleware(MiddlewareMixin):
+    def __init__(self,get_response):
+        self.get_response = get_response
+
+    def __call__(self,request):
+        tenant_code = self.get_tenant_id(request)
+        # Extract code from tenant
+        print(tenant_code)
+
+        # Generate dynamic login url path
+        if tenant_code:
+            request.login_url =f'/{tenant_code}/login/'
+        else:
+            # Default login url
+            request.login_url = settings.LOGIN_URL
+        
+        response = self.get_response(request)
+        return response
+    
+    def get_tenant_id(self,request: HttpRequest):
+        path_parts = request.path.split('/')
+
+        # Ensure admin is not affected by tenant_id
+        if len(path_parts) > 1:
+            try:
+                tenant_id = int(path_parts[1])
+                return tenant_id
+            except(IndexError, ValueError):
+                return None
+        else:
+            return None
+
+
+
 
 # middleware to retrieve Tenant ID
 class URLTenantMiddleware(MiddlewareMixin):
@@ -18,7 +54,7 @@ class URLTenantMiddleware(MiddlewareMixin):
                 tenant_id = int(path_parts[1])
                 try:
                     request.tenant = Tenant.objects.get(id=tenant_id)
-                    # print(request.tenant)
+
                 except Tenant.DoesNotExist:
                     request.tenant = None
             except ValueError:
