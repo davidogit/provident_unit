@@ -35,9 +35,6 @@ def member_interest(self):
                     exited_flag=False
                 )
 
-                # total_contributions = members.aggregate(total=Sum(F('_amount')))['total'] or 0.0
-                # logger.info(f'Tenant: {tenant.id}, Scheme: {scheme.id}, Total Contribution: {total_contributions}')
-
                 active_investments = InvestmentDetail.objects.filter(
                     investment_scheme=scheme,
                     investment_scheme__tenant = tenant,
@@ -57,7 +54,7 @@ def member_interest(self):
                 )
 
                 # Get total contributions of each scheme
-                total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total'] or 0.0
+                total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total'] or 0.0
 
 
                 # with transaction.atomic():
@@ -67,7 +64,7 @@ def member_interest(self):
                         if total_contribution > 0:
                             for member in members:
                                 
-                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total'] or 0
+                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total'] or 0
 
                                 
                                 
@@ -95,7 +92,7 @@ def member_interest(self):
                         if total_contribution > 0:
                             for member in members:
                                 
-                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
 
                                 try:
                                     scheme_subscription = SchemeApproval.objects.get(
@@ -129,7 +126,7 @@ def member_interest(self):
 
                         if total_contribution > 0:
                             for member in members:
-                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
 
 
                                 try:
@@ -182,7 +179,7 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
     # Calculate member allocation
     member_allocation = (inv.interest_amount*(member_allocation_percentage/100))
     
-    total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+    total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
 
     logger.info(f'Total: {total_contribution}')
 
@@ -193,7 +190,7 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
             logger.info('STEP 1')
             for member in members:
 
-                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
                 logger.info(f'User Contribution: {contribution}')
 
                 logger.info('STEP 2')

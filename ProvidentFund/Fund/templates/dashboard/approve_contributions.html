@@ -1,0 +1,172 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Contribution Approval</title>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row g-3 justify-content-center">
+        <div class="col-md-12 col-xl-10">
+            <div class="card card-one">
+                <div class="card-body">
+                    <h2 class="card-title text-center">
+                        Contribution Approval
+                    </h2>
+                    
+                    <div class="container">
+                        <form action="" method="POST" id="approval-form">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col m-3">
+                                    <label for="month" class="form-label">Month:</label>
+                                    <select id="month" name="month" class="form-control form-control-lg" name="month">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                    </select>
+
+                                </div>
+                                <div class="col m-3">
+                                    <label for="year" class="form-label">Year</label>
+                                    <input type="number" class="form-control form-control-lg" placeholder="YYYY" id="year" name="year">
+                                </div>
+                                
+                            </div>
+
+                            <div class="row g3 mt-3 text-center" id="contribution-info">
+                                <!-- Contribution Info -->
+                                 <p>
+                                    Select a month and year to approve contribution.
+                                 </p>
+                            </div>
+
+                            <button class="form-control btn btn-success" type="submit" name="" id="">Validate</button>
+
+                            <!-- Dynamic Data -->
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var yearInput = document.getElementById('year');
+  
+    yearInput.addEventListener('input', function() {
+      // Ensure the input doesn't exceed 4 digits
+      if (this.value.length > 4) {
+        this.value = this.value.slice(0, 4);
+      }
+    });
+
+    //Handle from submission
+    $(document).ready(function(){
+        $('#approval-form').on('submit',function(event){
+            event.preventDefault();
+            var form = $(this);
+
+            $.ajax({
+                type: form.attr('method'),
+                url: form.attr('action'),
+                data: form.serialize(),
+
+                success: function(response){
+                    if (response.status === 'success'){
+                        contributionInfo.innerHTML = `
+                        <div class="alert alert-success text-center">
+                            <span>contribution successfully validated</span> 
+                        </div>`;
+                    } else{
+                        alert(response.message);
+                    
+                    }
+                },
+                error: function(jqXHR){
+                    var response = jqXHR.responseJSON;
+
+                    var message = response.message;
+                    if (response.errors && message){
+                        message += '\n' + Object.values(response.errors).join('\n');
+                        alert(message);
+                    }
+                }
+            });
+        });
+    });
+
+
+
+    // Dynamic Contribution Data
+    const monthSelect = document.getElementById('month');
+    //const yearInput = document.getElementById('year');
+    const contributionInfo = document.getElementById('contribution-info');
+    
+
+    // Function to fetch and display contribution info
+    async function fetchContributionInfo() {
+        const month = monthSelect.value;
+        const year = yearInput.value;
+        var scheme_id = "{{ scheme_name }}";
+        console.log(scheme_id);
+        //var scheme_id = 1;
+        //var tenant_id = 1;
+        var tenant_id = "{{ request.tenant.id }}";
+        console.log(tenant_id);
+        var app_base_url = "http://127.0.0.1:8000";
+
+        // Ensure both fields are filled
+        if (month && year.length === 4) {
+            // Simulate fetching data (replace with an actual fetch request)
+            
+            try {
+                var response = await fetch(`${app_base_url}/${tenant_id}/fund/${scheme_id}/fetch_contributions/?month=${month}&year=${year}`, {
+                    method: 'GET',
+                    credentials: 'include', //Ensures cookies are sent to the server to allow user authentication upon request
+                })
+
+                var data = await response.json();
+            
+                // Display fetched data in the contribution-info div
+
+                if (data && data.number_of_contributions !== undefined && data.total_amount !== undefined && data.date_of_contribution !== undefined && data.contribution_status !== undefined){
+                    contributionInfo.innerHTML = `
+                    <div class="alert alert-info text-center">
+                        <span class="m-2">Number of contributions : ${data.number_of_contributions}</span> <br>
+                        <span class="m-2">Total Contribution Amount : ${data.total_amount}</span>
+                        <span class="m-2">Date of Contribution : ${data.date_of_contribution}</span>
+                        <span class="m-2">Status : ${data.contribution_status}</span> 
+                    </div>`;
+                } else{
+                    contributionInfo.innerHTML = `
+                        <div class="alert alert-danger text-center">
+                            No contribution data available for the selected month and year
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Fetch Error',error);
+            }
+            
+        }
+    }
+
+    // Add event listeners to month and year input fields
+    monthSelect.addEventListener('change', fetchContributionInfo);
+    yearInput.addEventListener('input', fetchContributionInfo);
+</script>
+
+
+{% endblock %}

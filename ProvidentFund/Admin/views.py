@@ -8,7 +8,7 @@ from django.contrib import messages
 from datetime import datetime
 # Custom Decorators
 from .decorators import role_required
-from Member.decorators import unauthenticated_user,tenant_required
+from Member.decorators import unauthenticated_user,tenant_required,tenant_login_required
 
 from .forms import UserForm
 import logging
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 # View to assign roles to users
-@login_required
+@tenant_login_required
 @tenant_required
 @role_required(role=['Admin'])
 def assign_roles(request, tenant_id):
@@ -76,7 +76,7 @@ def assign_roles(request, tenant_id):
     })
 
 # View to add a new user
-@login_required
+@tenant_login_required
 @tenant_required
 @role_required(role=['Admin'])
 def add_user(request, tenant_id):
@@ -107,7 +107,7 @@ def add_user(request, tenant_id):
 
 
 # View to manage users
-@login_required
+@tenant_login_required
 @tenant_required
 @role_required(role=['Admin'])
 def manage_users(request, tenant_id):
@@ -146,7 +146,7 @@ def manage_users(request, tenant_id):
 
 
 
-@login_required
+@tenant_login_required
 @tenant_required
 @role_required(role = ['Admin', ])
 def delete_user(request, tenant_id, user_id):
@@ -157,7 +157,7 @@ def delete_user(request, tenant_id, user_id):
     
 
 # View to delete a group
-@login_required
+@tenant_login_required
 @tenant_required
 @role_required(role = ['Admin', ])
 def delete_group(request, group_id):
@@ -167,13 +167,13 @@ def delete_group(request, group_id):
     return redirect('admin_panel')
 
 # View for the admin panel, accessible only by users with the 'Admin' role
-@login_required
+@tenant_login_required
 @tenant_required
 @role_required(role = ['Admin', 'Customer'])
 def admin_panel(request, *args, **kwargs):
     return render(request, 'admin_panel/admin_panel.html')
 
-@login_required
+@tenant_login_required
 @tenant_required
 @role_required(role=['Admin'])
 def edit_user_view(request, user_id):
@@ -205,7 +205,7 @@ def edit_user_view(request, user_id):
 
 
 # View accessible by both Admin and Customer roles
-@login_required
+@tenant_login_required
 @role_required(role=['Admin'])
 def admin_panel(request, *args, **kwargs):
     # Render the admin panel template
@@ -292,7 +292,7 @@ def custom_login(request, tenant_id):
     return render(request, 'admin_panel/admin_login.html')
 
 
-@login_required
+@tenant_login_required
 def logoutView(request, tenant_id):
     logout(request)
     return redirect('landing_page', tenant_id=tenant_id)

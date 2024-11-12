@@ -144,6 +144,7 @@
                   class="nav-sub-link">Generate Report
                 </a>
               </nav>
+              
             </li>
             {% endif %}
           {% endif %}
@@ -182,14 +183,19 @@
           </li>
           {% endif %}
 
-          {% if is_manager_or_treasury_user %}
+          {% if is_manager_or_treasury_user or is_finance_manager %}
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Member
                 Contributions</span></a>
             <nav class="nav nav-sub">
               <a href="{% url 'staff_member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">View Contributions</a>
+                class="nav-sub-link">View contributions</a>
+              
+              {% if is_finance_manager %}
+              <a href="{% url 'approve_contributions' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Validate contributions</a>
+              {% endif %}
             </nav>
+
           </li>
           {% endif %}
           
@@ -198,11 +204,11 @@
             <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Approvals</span></a>
             <nav class="nav nav-sub">
               <a href="{% url 'investment_approval' tenant_id=request.tenant.id scheme_name=scheme.id %}"
-                class="nav-sub-link">Pending Approvals
+                class="nav-sub-link">Investments approvals
               </a>
 
               <a href="{% url 'approved_investments'  tenant_id=request.tenant.id scheme_name=scheme.id %}"
-                class="nav-sub-link">Approved Investments
+                class="nav-sub-link">Approved nnvestments
               </a>
             </nav>
           </li>
@@ -229,7 +235,7 @@
     <div class="sidebar-footer">
       <div class="sidebar-footer-top">
         <div class="sidebar-footer-thumb">
-          <img src="../assets/img/img1.jpg" alt="">
+          <img src="{% static 'assets/img/default_profile_pic.png' %}" alt="">
         </div><!-- sidebar-footer-thumb -->
         <div class="sidebar-footer-body">
           {% if is_manager %}
@@ -240,6 +246,9 @@
           {% endif %}
           {% if is_hr_user %}
           <h6><a href="../pages/profile.html">PF HR</a></h6>
+          {% endif %}
+          {% if is_finance_manager %}
+          <h6><a href="../pages/profile.html">PF Finance Manager</a></h6>
           {% endif %}
           <p>STAFF</p>
         </div><!-- sidebar-footer-body -->
@@ -304,40 +313,11 @@
         </div><!-- dropdown-menu-header -->
         <ul class="list-group">
           <li class="list-group-item">
-            <div class="avatar online"><img src="../assets/img/img10.jpg" alt=""></div>
+            <div class="avatar online"><img src="{% static 'assets/img/default_profile_pic.png' %}" alt=""></div>
             <div class="list-group-body">
               <p><strong>Dominador Manuel</strong> and <strong>100 other people</strong> reacted to your comment "Tell
                 your partner that...</p>
               <span>Aug 20 08:55am</span>
-            </div><!-- list-group-body -->
-          </li>
-          <li class="list-group-item">
-            <div class="avatar online"><img src="../assets/img/img11.jpg" alt=""></div>
-            <div class="list-group-body">
-              <p><strong>Angela Ighot</strong> tagged you and <strong>9 others</strong> in a post.</p>
-              <span>Aug 18 10:30am</span>
-            </div><!-- list-group-body -->
-          </li>
-          <li class="list-group-item">
-            <div class="avatar"><span class="avatar-initial bg-primary">a</span></div>
-            <div class="list-group-body">
-              <p>New listings were added that match your search alert <strong>house for rent</strong></p>
-              <span>Aug 15 08:10pm</span>
-            </div><!-- list-group-body -->
-          </li>
-          <li class="list-group-item">
-            <div class="avatar online"><img src="../assets/img/img14.jpg" alt=""></div>
-            <div class="list-group-body">
-              <p>Reminder: <strong>Jerry Cuares</strong> invited you to like <strong>Cuares Surveying Services</strong>.
-                <br><a href="#">Accept</a> or <a href="#">Decline</a></p>
-              <span>Aug 14 11:50pm</span>
-            </div><!-- list-group-body -->
-          </li>
-          <li class="list-group-item">
-            <div class="avatar online"><img src="../assets/img/img15.jpg" alt=""></div>
-            <div class="list-group-body">
-              <p><strong>Dyanne Aceron</strong> reacted to your post <strong>King of the Bed</strong>.</p>
-              <span>Aug 10 05:30am</span>
             </div><!-- list-group-body -->
           </li>
         </ul>
@@ -346,13 +326,13 @@
     </div><!-- dropdown -->
     <div class="dropdown dropdown-profile ms-3 ms-xl-4">
       <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-        <div class="avatar online"><img src="../assets/img/img1.jpg" alt=""></div>
+        <div class="avatar online"><img src="{% static 'assets/img/default_profile_pic.png' %}" alt=""></div>
       </a>
       <div class="dropdown-menu dropdown-menu-end mt-10-f">
         <div class="dropdown-menu-body">
-          <div class="avatar avatar-xl online mb-3"><img src="../assets/img/img1.jpg" alt=""></div>
+          <div class="avatar avatar-xl online mb-3"><img src="{% static 'assets/img/default_profile_pic.png' %}" alt=""></div>
           <h5 class="mb-1 text-dark fw-semibold">{{ user.username }}</h5>
-          <p class="fs-sm text-secondary">Premium Member</p>
+          <p class="fs-sm text-secondary">Staff</p>
 
           <nav class="nav">
             <a href="#"><i class="ri-edit-2-line"></i> Edit Profile</a>
@@ -363,7 +343,7 @@
             <a href="#"><i class="ri-question-line"></i> Help Center</a>
             <a href="#"><i class="ri-lock-line"></i> Privacy Settings</a>
             <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
-            <a href="#"><i class="ri-logout-box-r-line"></i> Log Out</a>
+            <a href="{% url 'logout' tenant_id=request.tenant.id %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
           </nav>
         </div><!-- dropdown-menu-body -->
       </div><!-- dropdown-menu -->

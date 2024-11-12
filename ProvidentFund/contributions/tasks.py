@@ -121,37 +121,3 @@ def fetch_memberships(self):
                 
     except MaxRetriesExceededError as exc:
         print(f"Max retries exceeded")
-
-
-
-
-# @shared_task(bind=True)
-# def fetch_contributions(self):
-#     response = requests.get('https://6697f43902f3150fb66f9865.mockapi.io/api/v1/contribution')
-#     contributions = response.json()
-
-#     for contrib in contributions:
-#         date_str = contrib['contribution_date']
-#         date_obj = parser.parse(date_str) if date_str else None
-
-#         # Get month and year from date
-#         month = date_obj.month if date_obj else None
-#         year = date_obj.year if date_obj else None
-
-#         # Fetch corresponding member
-#         member = StaffAPI.objects.get(Id=contrib['id'])
-
-#         # Only take active members contribution
-#         if member.exited_flag == False:        
-#             Contribution.objects.update_or_create(
-#                 member=member,
-#                 month=month,
-#                 year=year,
-#                 defaults={
-#                     'employee_amount': contrib['employee_amount'],
-#                     'employer_amount': contrib['employer_amount'],
-#                     'retro_employee_amount': contrib['retro_employee_amount'],
-#                     'retro_employer_amount': contrib['retro_employer_amount'],
-#                     'contribution_date': contrib['contribution_date'],
-#                 }
-#             )

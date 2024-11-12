@@ -11,7 +11,6 @@ from Admin.decorators import role_required
 
 
 from rest_framework.generics import ListAPIView,RetrieveAPIView
-from rest_framework.views import APIView
 from .models import Tenant
 from .serializers import TenantSerializer
 from rest_framework.response import Response
@@ -72,6 +71,8 @@ class AddScheme(CreateView):
         tenant = self.request.tenant
 
         return reverse('scheme_list', kwargs={'tenant_id':tenant.id})
+
+
 
 # API list view
 class TenantApiListView(ListAPIView):
