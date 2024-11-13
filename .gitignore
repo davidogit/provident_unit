@@ -4283,3 +4283,5 @@ db.sqlite3
 **/migrations/
 
 .venv/
+
+media/
