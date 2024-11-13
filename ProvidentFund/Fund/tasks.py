@@ -365,3 +365,35 @@ def rollover_inv_creation(self,**kwargs):
         logger.info(f'Roll over for inv {inv_name} added')
     except Exception as e:
         logger.info(f'Inv Adding Error: {e}')
+
+
+# Task to calculate and add contributiond to user actual_amount
+@shared_task(bind=True)
+def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
+    scheme_id = scheme_id
+    tenant_id = tenant_id
+    logger.info(f'Tenant ID: {tenant_id}')
+    tenant = Tenant.objects.get(id=tenant_id)
+    month = month
+    year = year
+
+
+    # Add contributions to member principal
+    staff_api = StaffAPI.objects.filter(tenant=tenant, investment_scheme__id=scheme_id)
+
+    # List of staff updates
+    staff_updates =[]
+
+    for staff in staff_api:
+        staff_contribution = Contribution.objects.get(investment_scheme__tenant = tenant,investment_scheme__id=scheme_id,month=month,year=year, approved_contribution=True,member=staff).total_contributions
+        
+
+        if staff_contribution:
+            staff.actual_profit += float(staff_contribution) 
+            # if staff_contribution else 0.0
+
+            # append to update list
+            staff_updates.append(staff)
+
+    # Using bulk update to effect all changes at once
+    StaffAPI.objects.bulk_update(staff_updates,['actual_profit'])

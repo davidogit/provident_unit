@@ -28,13 +28,19 @@
                             </div>
                         </div>
                     </div>
-                    <form action="" class="form-control application-form" method="POST">
-                      {% csrf_token %}
-                      <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
+                    <form class="form-control application-form" method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
+                        
+                        <label for="document" class="form-label">Uploat File(pdf and docx). File size shouldnt be bigger than 2MB</label>
+                        <input class="form-control" type="file" name="document" id="document">
                       
-                        <div class="d-flex justify-content-end">
+                        <div class="d-flex justify-content-end m-3">
                                 
                             <button class="btn btn-primary p-3" type="submit">Apply Here</button>
+                            <!-- Dynamically display file size -->
+                            <span class="file-size"></span>
+                            <!-- Dynamically display file size -->
                         </div>
                     </form>
                 </div>
@@ -68,10 +74,14 @@ $(document).ready(function() {
         var schemeId = form.find('input[name="scheme_id"]').val();
         var responseMessageDiv = $('#response-message-' + schemeId);
 
+        var formData = new FormData(this);
+
         $.ajax({
             type: form.attr('method'),
             url: form.attr('action'),
-            data: form.serialize(),
+            data: formData,
+            contentType: false,
+            processData: false,
             success: function(response) {
                 if (response.status === 'success') {
                     alert('Application sent successfully, you will be notified once approved.');
@@ -79,7 +89,7 @@ $(document).ready(function() {
 
                     location.reload(); // Reload the page
                 } else {
-                    responseMessageDiv.html('Unexpected response status: ' + response.status);
+                    responseMessageDiv.html(response.message);
                 }
             },
             error: function(jqXHR) {

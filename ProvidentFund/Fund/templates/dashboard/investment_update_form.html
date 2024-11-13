@@ -14,6 +14,10 @@
                 <div class="col-md-4">
                   <!-- Investment Type -->
                   <div class="form-group mb-3">
+                    <label for="invoice_number" class="form-label">Invoice No. </label><br>
+                    <strong id="invoice_number">{{ invoice_number }}</strong>
+                  </div>
+                  <div class="form-group mb-3">
                     <label for="{{ form.investment_type.id_for_label }}" class="form-label">Investment Type</label>
                     {{ form.investment_type }}
                   </div>

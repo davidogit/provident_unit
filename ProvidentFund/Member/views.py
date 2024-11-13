@@ -350,8 +350,7 @@ class MemberDashboard(TemplateView):
 
 
 
-# View for Application
-
+# View for Scheme Application
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
@@ -406,13 +405,21 @@ class Application(CreateView):
         return context
     
     def form_invalid(self, form):
-        print(f"Form is invalid: {form.errors}")
+        # print(f"Form is invalid: {form.errors}")
         return super().form_invalid(form)
         
     def form_valid(self, form):
         tenant = self.request.tenant
         member = self.request.user.member
         scheme_id = self.request.POST.get('scheme_id')
+        document = self.request.FILES.get('document')
+
+        if document:
+            # print(f'Document Details: Name:{document.name} size: {document.size}')
+            pass
+
+        if document and document.size > 2 * 1024 * 1024: #file size shouldnt be greater than 2MB
+            return JsonResponse({'status':'error','message':'File size bigger than 2MB'})
 
         # Get staff using member.staff_id
         try:
@@ -422,7 +429,10 @@ class Application(CreateView):
             return self.form_invalid(form)
         
         # print(f'{tenant},{member},{staff}')
-        scheme = get_object_or_404(InvestmentScheme,tenant=tenant,id=scheme_id)
+        try:
+            scheme = get_object_or_404(InvestmentScheme,tenant=tenant,id=scheme_id)
+        except Exception:
+            return JsonResponse({'status':'error', 'message':'The selected scheme is not available at the moment'})
 
         # Check for eligibility before submitting application
 
@@ -437,6 +447,7 @@ class Application(CreateView):
                 form.instance.staff = staff
                 form.instance.scheme = scheme
                 form.instance.application_date = timezone.now()
+                form.instance.document = document
 
                 # Save form
                 form.save()
@@ -462,7 +473,7 @@ class Application(CreateView):
 
                 # Success prompt to user
 
-                return JsonResponse({'status':'success'}, status=200)
+                return JsonResponse({'status':'success','message':'Application sent successfully.'}, status=200)
             else:
                 message = 'Some required fields are missing'
                 return JsonResponse({'status':'error', 'message':message}, status=400)
@@ -595,6 +606,23 @@ class PendingSchemes(ListView):
                 return None
         return context
     
+    # Delete pending scheme
+    def post(self,request,*args,**kwargs):
+        if request.method == 'POST':
+            tenant = request.tenant
+            scheme_id = self.request.POST.get('scheme_id')
+            member = self.request.user.member
+
+            print(f'DEL SCH: {tenant},{scheme_id},{member}')
+            
+            if scheme_id and tenant and member:
+                SchemeApproval.objects.get(tenant=tenant,member=member,scheme__id=scheme_id).delete()
+                return JsonResponse({'status':'success', 'message':'scheme application withdrawn successfully'})
+            else:
+                return JsonResponse({'status':'error', 'message':'Error deleting scheme'})
+
+            
+    
 
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
@@ -637,7 +665,7 @@ class Contributed(ListView):
                 investment_scheme__id=scheme_id,
                 investment_scheme__tenant=tenant,
                 year=selected_year,
-                api_endpoint_member=True
+                approved_contribution=True
             )
             return member_contributions
         else:

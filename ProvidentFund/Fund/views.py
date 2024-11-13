@@ -319,7 +319,10 @@ class InvestmentUpdateView(UpdateView):
         pk = self.kwargs['pk']
 
         inv = InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant, investment_scheme__id = scheme_id).first()
-        print(inv)
+        
+        # Pass invoice number separately since its not part of the form
+        context['invoice_number'] = inv.invoice_number
+
         form = InvestmentUpdateForm(instance=inv)
 
         context['form'] = form
@@ -1258,7 +1261,7 @@ class ApproveContributions(TemplateView):
         month = request.POST.get('month')
         year = request.POST.get('year')
 
-        print(f'month={month}, year={year}')
+        # print(f'month={month}, year={year}')
 
         if year and month:
             # Collect investments within the provided month
@@ -1268,8 +1271,19 @@ class ApproveContributions(TemplateView):
             if not contributions.exists():
                 return JsonResponse({'status': 'error', 'message': 'No contributions found for the given month.'})
             
-            # change approval status of contributions to True
+            # Mark all contributions as approved
             contributions.update(approved_contribution=True)
+            tenant_id = tenant.id
+            from Fund.tasks import calculate_staff_contribution
+            calculate_staff_contribution.delay(
+                scheme_id,
+                tenant_id,
+                month,
+                year
+            )
+
+            
+
             message = f'Successfully approved investments for {month} {year}'
             return JsonResponse({'status':'success', 'message':message})
         else:
