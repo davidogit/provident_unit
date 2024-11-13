@@ -136,16 +136,15 @@ class Contribution(models.Model):
 
     # Saving every contribution for user whenever a contribution is made
     def save(self, *args, **kwargs):
-
-        super().save(*args,**kwargs)
-
-        # update member.amount field
-        self.member.amount = self.total_contributions
-        self.member.save()
-
-    def save(self, *args, **kwargs):
-        # Extract month and year from the contribution_date
+    # Extract month and year from the contribution_date
         if self.contribution_date:
             self.month = self.contribution_date.month
             self.year = self.contribution_date.year
+
+    # Save the main object first to ensure total_contributions is saved
         super().save(*args, **kwargs)
+
+    # Check if member exists, then update member.amount field
+        if self.member:
+           self.member.amount = self.total_contributions
+           self.member.save()
