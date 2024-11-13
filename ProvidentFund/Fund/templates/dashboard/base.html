@@ -174,8 +174,16 @@
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-account-circle-line"></i> <span>Members</span></a>
             <nav class="nav nav-sub">
+              {% if is_manager %}
               <a href="{% url 'member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Active PF Members</a>
+              {% endif %}
+              {% if is_hr_user %}
+              <a href="{% url 'staff_member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Active PF Members</a>
+              {% endif %}
+
+                
               <a href="{% url 'exited_members' scheme_name=scheme.id tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Exited Members</a>
               <!-- <a href="#" class="nav-sub-link">Add Member</a> -->
@@ -183,16 +191,14 @@
           </li>
           {% endif %}
 
-          {% if is_manager_or_treasury_user or is_finance_manager %}
+          {% if is_finance_manager %}
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Member
                 Contributions</span></a>
+
             <nav class="nav nav-sub">
-              <a href="{% url 'staff_member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">View contributions</a>
-              
               {% if is_finance_manager %}
-              <a href="{% url 'approve_contributions' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Validate contributions</a>
+                <a href="{% url 'approve_contributions' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Validate contributions</a>
               {% endif %}
             </nav>
 

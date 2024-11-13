@@ -362,7 +362,10 @@ class RolloverPercentage(TemplateView):
         pk = kwargs['pk']
 
         # Increment rollover count of original investment
-        inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=request.tenant,investment_scheme__id=scheme_id)
+        try:
+            inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=request.tenant,investment_scheme__id=scheme_id,approval_status=False)
+        except:
+            return JsonResponse({'status':'error', 'message':'Cannot rollover approved investments', 'redirect_url': self.get_success_url()})
 
 
         counter = 0
@@ -379,7 +382,7 @@ class RolloverPercentage(TemplateView):
 
             # Remove the last item(Naming conversion)
             name_parts = name_parts[:-1] #removes the naming conversion
-            name_parts="".join(name_parts)
+            name_parts=" ".join(name_parts)
         else:
             name_parts = inv.account_name            
 
@@ -420,6 +423,8 @@ class RolloverPercentage(TemplateView):
                 account_type=account_type,  # No need for list() here either
                 counter=counter
             )
+            inv.roll_over = True
+            inv.save()
             return JsonResponse({'status':'success', 'redirect_url': self.get_success_url()})
         except ValidationError as e:
             return JsonResponse({'status':'error', 'message':str(e.message)}, status=400)
@@ -513,7 +518,7 @@ class MemberListView(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return StaffAPI.objects.filter(investment_scheme__tenant=tenant)
+            return StaffAPI.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id=scheme_id)
         else:
             return StaffAPI.objects.none()
 
@@ -554,7 +559,7 @@ class ExitedMembers(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return StaffAPI.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id=scheme_id)
+            return StaffAPI.objects.filter(tenant=tenant, investment_scheme__id=scheme_id)
         else:
             return StaffAPI.objects.none()
 
@@ -587,10 +592,11 @@ class MemberDetailView(DetailView):
          
         # Get Tenant
         tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
 
         # Filtering Queryset by Tenant
         if tenant:
-            return StaffAPI.objects.filter(tenant=tenant)
+            return StaffAPI.objects.filter(tenant=tenant, investment_scheme__id=scheme_id)
         else:
             return StaffAPI.objects.none()
 
