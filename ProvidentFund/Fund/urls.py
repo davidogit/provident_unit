@@ -48,5 +48,8 @@ urlpatterns =[
 
     # Endpoint for contribution data fetch
     path('<int:scheme_name>/fetch_contributions/', views.FetchContributions.as_view(), name='fetch-contributions'),
+
+    # Exit Meber approval url
+    path('exiting_members/', views.ApproveExitedMembers.as_view(), name='approve_exit_members'),
     
 ]

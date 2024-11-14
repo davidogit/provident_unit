@@ -64,7 +64,7 @@ class SchemeApproval(models.Model):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     staff = models.ForeignKey(StaffAPI, on_delete=models.CASCADE)
     scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE)
-    applied_date = models.DateTimeField(auto_now_add=True)
+    # applied_date = models.DateTimeField(auto_now_add=True)
     approval_date = models.DateTimeField(null=True,blank=True)
     application_date = models.DateTimeField(null=True,blank=True)
     approved_by_hr = models.BooleanField(default=False)
@@ -89,3 +89,17 @@ class SchemeApproval(models.Model):
 
         # Add member to scheme(but in this case we have to set it on the StaffApi model)
         self.staff.investment_scheme.add(self.scheme)
+
+
+class ExitApproval(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    staff = models.ForeignKey(StaffAPI, on_delete=models.CASCADE)
+    scheme = models.ForeignKey(InvestmentScheme,on_delete=models.CASCADE)
+    reason = models.CharField(max_length=500, default='')
+    application_date = models.DateTimeField(auto_now_add=True,null=False,blank=True)
+    approval_date = models.DateTimeField(null=True,blank=True)
+    approved = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.tenant.name} - {self.member.user.username}\'s EXIT application'

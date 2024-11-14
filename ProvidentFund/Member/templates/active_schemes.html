@@ -55,19 +55,61 @@
                             <h5 class="modal-title" id="modalTitle">Opt Out Confirmation</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-center">
-                            <p>Are you sure you want to opt out of the scheme?</p>
-                        </div>
-                        <div class="modal-footer">
-                            <form class="opt-out-form" action="" method="POST">
-                                {% csrf_token %}
+                        <form class="opt-out-form" action="" method="POST">
+                            {% csrf_token %}
+                            <div class="modal-body text-left">
+                                <p>Select reason a for opting out.</p>
+                                <div class="status-message text-center">
+                                    <!-- holds status messages from checkbox submission -->
+                                </div>
+                                <!-- checkboxes to accept user input -->
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="I am no longer interested in the scheme" id="reason1" name="reason1">
+                                    <label class="form-check" for="reason1">
+                                        I am no longer interested in the scheme
+                                    </label>
+
+                                    <input class="form-check-input" type="checkbox" value="I am no longer able to contribute to the scheme" id="reason2" name="reason2">
+                                    <label class="form-check" for="reason2">
+                                        I am no longer able to contribute to the scheme
+                                    </label>
+
+                                    <input class="form-check-input" type="checkbox" value="Financial emergency or need for funds" id="reason3" name="reason3">
+                                    <label class="form-check" for="reason3">
+                                        Financial emergency or need for funds
+                                    </label>
+
+                                    <input class="form-check-input" type="checkbox" value="Tax implications" id="reason4" name="reason4">
+                                    <label class="form-check" for="reason4">
+                                        Tax implications
+                                    </label>
+
+                                    <input class="form-check-input" type="checkbox" value="Long lock-in period" id="reason5" name="reason5">
+                                    <label class="form-check" for="reason5">
+                                        Long lock-in period
+                                    </label>
+
+                                    <input class="form-check-input" type="checkbox" value="other" id="reason6" name="reason6">
+                                    <label class="form-check" for="reason6">
+                                        Other
+                                    </label>
+
+                                    <!-- Text area for user reason -->
+                                    <div class="form-group other-reason">
+                                        <label for="otherReason" class="form-label">Please specify other reason</label>
+                                        <textarea class="form-control" id="otherReason" rows="3"
+                                        name="custom_reason"></textarea>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            <div class="modal-footer">
                                 <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
                                 <input type="hidden" name="member_id" value="{{ user.member.staff_id }}">
                                 <button type="submit" class="btn btn-warning" id="confirmOptOut">Yes, Opt Out</button>
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            </form>
-                            
-                        </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -85,7 +127,97 @@
         </div>
     </div>
 {% endif %}
+
+
 <script>
+    //Hide other-reason text area when page loads
+    $(document).ready(function(){
+        $('.other-reason').hide();
+    });
+    // Display other-reson when user selcts other as reason for opting out
+    $(document).ready(function(){
+        $('other-reason').hide();
+        $('#reason6').on('click', function(){
+            if ($(this).is(':checked')){
+                $('.other-reason').show();
+            } else {
+                $('.other-reason').hide();
+            }
+        });
+    });
+
+
+    // only one checkbox can be selected at a time, when user tries to select a second checkbox, the first checkbox is unchecked
+    $(document).ready(function(){
+        $('.form-check-input').on('click', function(){
+            var checkboxes = document.querySelectorAll('.form-check-input');
+            checkboxes.forEach(function(checkbox){
+                if (checkbox.checked){
+                    checkboxes.forEach(function(box){
+                        if (box != checkbox){
+                            box.checked = false;
+                        }
+                    });
+                }
+            });
+        });
+    });
+
+
+
+
+
+
+
+    // user should only select one reason for opting out
+    $(document).ready(function(){
+        $('#confirmOptOut').on('click', function(){
+            var reasons = document.querySelectorAll('.form-check-input');
+            var count = 0;
+            reasons.forEach(function(reason){
+                if (reason.checked){
+                    count++;
+                }
+            });
+            if (count > 1){
+                $('.status-message').text('Please select only one reason for opting out');
+                return false;
+            }
+        });
+    });
+
+
+    // at least a reason must be selected before submitting form
+    $(document).ready(function(){
+        $('#confirmOptOut').on('click', function(){
+            var reasons = document.querySelectorAll('.form-check-input');
+            var checked = false;
+            reasons.forEach(function(reason){
+                if (reason.checked){
+                    checked = true;
+                }
+            });
+            if (!checked){
+                $('.status-message').text('Please select at a reason for opting out');
+                return false;
+            }
+        });
+    });
+
+
+    //when user selects other as reason for opting out, the text area must be filled
+    $(document).ready(function(){
+        $('#confirmOptOut').on('click', function(){
+            var otherReason = document.querySelector('#otherReason');
+            var other = document.querySelector('#reason6');
+            if (other.checked && otherReason.value == ''){
+                $('.status-message').text('Please specify other reason for opting out');
+                return false;
+            }
+        });
+    });
+
+
     $(document).ready(function(){
         $('.opt-out-form').on('submit', function(event){
             event.preventDefault();
@@ -96,10 +228,15 @@
                 url: form.attr('action'),
                 data: form.serialize(),
                 success: function(response){
-                    if (response.status == 'success'){
-                        
-                        $('#optOutModal').modal('hide');
-                        location.reload();
+                    if (response.status === 'success'){
+                        $('.status-message').text(response.message).css('color', 'green');
+                        //$('#optOutModal').modal('hide');
+                        //location.reload();
+                    }else{
+                        if (response.status === 'error'){
+                            //$('#response-message-' + response.scheme_id).text(response.message);
+                            $('.status-message').text(response.message).css('color', 'red');
+                        }                        
                     }
                 },
                 error: function(response){

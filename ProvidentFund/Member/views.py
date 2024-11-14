@@ -13,7 +13,7 @@ from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView,UpdateView,CreateView,ListView
 from django.contrib.auth.models import Group
-from .models import Member,SchemeApproval
+from .models import Member,SchemeApproval,ExitApproval
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
@@ -542,22 +542,76 @@ class ActiveSchemes(ListView):
         tenant = request.tenant
         scheme_id = self.request.POST.get('scheme_id')
         member_id = self.request.POST.get('member_id')
+        user = self.request.user.member
+
+        reason_1 = self.request.POST.get('reason1')
+        reason_2 = self.request.POST.get('reason2')
+        reason_3 = self.request.POST.get('reason3')
+        reason_4 = self.request.POST.get('reason4')
+        reason_5 = self.request.POST.get('reason5')
+        reason_6 = self.request.POST.get('other')
+        custom_reason = self.request.POST.get('custom_reason')
+        print(f'REASON: {custom_reason}')
+        print(f'REASON 1: {reason_1}')
+
+        reason_list = [
+            reason_1,
+            reason_2,
+            reason_3,
+            reason_4,
+            reason_5,
+            reason_6
+        ]
+
+        # look for which reason with value
+        reason = ''
+        for r in reason_list:
+            if r:
+                # if user chose 'other' then reason should be custom reason
+                if r == 'other':
+                    reason = custom_reason if custom_reason else ''
+                else:
+                    reason = r
+                break
 
         try:
             # Get member and remove selected scheme from their list of schemes
             member = StaffAPI.objects.get(tenant=tenant,staff_number=member_id)
-            print(f'member_id: {member_id}')
+            # print(f'member_id: {member_id}')
 
             # Get scheme object
             scheme = InvestmentScheme.objects.get(tenant=tenant,id=scheme_id)
-            print(f'scheme_id:{scheme.name}')
-
+            
+            # Approval Phase of Opt-out by management
+            # ################################
             # Remove scheme from users schemes
-            if member and scheme:
-                member.investment_scheme.remove(scheme)
-                return JsonResponse({'status':'success'})
-        except:
-            return JsonResponse({'status':'error'}, status=400)
+            if member and scheme and user:
+                # member.investment_scheme.remove(scheme)
+
+                # Check database if user has an application sent already
+                potential_application = ExitApproval.objects.filter(member=user,staff=member,tenant=tenant,scheme=scheme).first()
+
+                # Prevent user from sending more than one exit application
+                if potential_application:
+                    return JsonResponse({'status':'error', 'message':'You already have an application sent. wait for approval'})
+
+
+                # create exit instance for user
+                
+                ExitApproval.objects.create(
+                    tenant = tenant,
+                    member = user,
+                    staff = member,
+                    scheme = scheme,
+                    reason = reason
+                )
+                return JsonResponse({'status':'success','message':'Application received. You will be notified after further review of your application'})
+
+
+            ##################################
+
+        except Exception as e:
+            return JsonResponse({'status':'error', 'message': str(e)}, status=400)
 
 
     

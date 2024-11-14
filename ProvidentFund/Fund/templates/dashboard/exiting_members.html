@@ -1,0 +1,218 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}
+<title>Approval list</title>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+{% block css %}
+<style>
+  .nav-tabs {
+      border-bottom: none !important; /* Remove the bottom border of the container */
+  }
+  .nav-tabs .nav-link {
+      position: relative;
+      border: none !important; /* Remove border for all tabs */
+      margin-bottom: -3px; /* Adjusts the margin to align the underline correctly */
+      transition: color 0.3s ease; /* Smooth color transition for text */
+  }
+  .nav-tabs .nav-link:hover {
+      border: none !important; /* Remove border on hover */
+  }
+  .nav-tabs .nav-link.active {
+      color: #000; /* Optionally change the active text color */
+  }
+  .nav-tabs .nav-link::after {
+      content: '';
+      display: block;
+      width: 0;
+      height: 3px;
+      background-color: blue;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      transition: width 0.3s ease, left 0.3s ease;
+  }
+  .nav-tabs .nav-link.active::after {
+      width: 100%;
+  }
+
+  .nav-tabs .nav-link.active {
+    color: var(--tab-active-text-color, #000);
+    background-color: transparent; /* Remove background color for active tab */
+  }
+
+  /* Dark Mode Styles */
+  .dark-mode .nav-tabs {
+    background-color: var(--dark-mode-background-color, #333);
+  }
+
+  .dark-mode .nav-tabs .nav-link {
+    color: #fff; /* Set text color to white in dark mode */
+  }
+
+  .dark-mode .nav-tabs .nav-link:hover {
+    color: #fff;
+  }
+
+  .dark-mode .nav-tabs .nav-link.active {
+    color: var(--dark-mode-tab-active-text-color, #fff);
+    background-color: transparent; /* Remove background color for active tab in dark mode */
+  }
+
+  .dark-mode .nav-tabs .nav-link::after {
+    background-color: var(--dark-mode-tab-underline-color, #fff);
+  }
+
+  
+  /* Hide the arrows in Chrome, Safari, Edge, and Opera */
+  input[type="number"].form-control::-webkit-outer-spin-button,
+  input[type="number"].form-control::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+  }
+
+</style>
+{% endblock %}
+
+<div class="container mt-5">
+    <div class="tab-content">
+        <div id="approvals">
+            <div class="card card-one mt-3">
+                <div class="card-body p-3">
+                    <div class="table-responsive">
+                        <h4 class="card-title text-center">Member Exit List</h4>
+                        <table class="table table-four table-bordered">
+                        <thead>
+                            <th></th>
+                            <th class="text-center">Approve</th>
+                            <th class="text-center">Staff ID</th>
+                            <th class="text-center">Scheme Name</th>
+                            <th class="text-center">Application Date</th>
+                            <th class="text-center">Approval Status</th>
+                            <th class="text-center">Attached File</th>
+                        
+                        </thead>
+                        <tbody>
+                            {% for application in exiting_members %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <form class="approval-form d-flex" action="" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="application_id" value="{{ application.id }}">
+                                        <input type="hidden" name="scheme_id" value="{{ application.scheme.id }}">
+                                        <input type="hidden" name="member_id" value="{{ application.member.id }}">
+                                        <input type="hidden" name="staff_id" value="{{ application.staff.Id }}">
+                                        <input type="checkbox" class="form-check-input m-1" name="approved" id="approve-checkbox-{{ application.id }}" 
+                                            {% if application.approved_by_hr %}checked{% endif %}
+                                            onchange="toggleApproveButton('{{ application.id }}');">
+                                        <button type="submit" class="btn btn-success" id="approve-button-{{ application.id }}" disabled>Approve</button>
+                                    </form>
+                                </td>
+                                <td>{{ application.staff.staff_number }}</td>
+                                <td>{{ application.scheme.name }}</td>
+                                <td>{{ application.application_date }}</td>
+                                <td>{{ application.approved }}</td>
+                                <td><a href="" download=""><i class="fas fa-download"></i> Download File</a></td>
+                                
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        </table>
+                    </div>
+                </div><!-- card-body -->
+            </div><!-- card -->
+
+          <!-- PAGINATION -->
+          
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                {% if t_bill_page.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?t_bill_page=1" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?t_bill_page={{ t_bill_page.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for i in t_bill_page.paginator.page_range %}
+                {% if t_bill_page.number == i %}
+                <li class="page-item active"><a class="page-link" href="?t_bill_page={{ i }}">{{ i }}</a></li>
+                {% else %}
+                <li class="page-item"><a class="page-link" href="?t_bill_page={{ i }}">{{ i }}</a></li>
+                {% endif %}
+                {% endfor %}
+
+                {% if t_bill_page.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?t_bill_page={{ t_bill_page.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?t_bill_page={{ t_bill_page.paginator.num_pages }}" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                </ul>
+            </nav>
+      
+
+          <!-- PAGINATION -->
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function toggleApproveButton(applicationId) {
+        var checkbox = document.getElementById('approve-checkbox-' + applicationId);
+        var button = document.getElementById('approve-button-' + applicationId);
+        button.disabled = !checkbox.checked;
+    }
+    $(document).ready(function() {
+        $('.approval-form').on('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+    
+            var form = $(this);
+            $.ajax({
+                type: form.attr('method'),
+                url: form.attr('action'),
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert('Application approved successfully.');
+                        form.closest('tr').remove();
+
+                    }
+                },
+                error: function(jqXHR,) {
+                    var response = jqXHR.responseJSON; // Get the JSON response from the server
+                    var errorMessage = 'An error occurred. Please try again.';
+
+                    if (response && response.message) {
+                        errorMessage = response.message;
+                    }
+
+                    alert(errorMessage);
+                }
+            }); 
+        });
+    
+
+    });
+</script>
+
+{% endblock %}

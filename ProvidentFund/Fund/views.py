@@ -1330,3 +1330,57 @@ class FetchContributions(TemplateView):
                 'status':'success'})
         except Exception as e:
             return JsonResponse({'status':'error', 'message':str(e)})
+
+from Member.models import ExitApproval
+class ApproveExitedMembers(TemplateView):
+    # model = ExitApproval
+    template_name = 'dashboard/exiting_members.html'
+    # context_object_name = 'exiting_members'
+
+    def post(self,request,*args,**kwargs):
+        if request.method == 'POST':
+            tenant = request.tenant
+            application_id = request.POST.get('application_id')
+            approved = request.POST.get('approved')
+            member_id = request.POST.get('member_id')
+            staff_id = request.POST.get('staff_id')
+            scheme_id = request.POST.get('scheme_id')
+            member = get_object_or_404(Member,id=member_id)
+
+            if tenant and application_id and approved:
+                application = ExitApproval.objects.get(tenant=tenant,member=member,id=application_id)
+
+                if application:
+                    try:
+                        application.approved = True
+                        application.approval_date = timezone.now()
+                        application.save()
+
+                        # Remove scheme from memeber list of schemes
+                        staff = get_object_or_404(StaffAPI,tenant=tenant,Id=staff_id)
+
+                        # Scheme to remove from member list of schemes
+                        scheme_to_remove = get_object_or_404(InvestmentScheme, tenant=tenant,id=scheme_id)
+
+                        # Remove schemes and save staff instance
+                        staff.investment_scheme.remove(scheme_to_remove)
+                        staff.save()
+
+
+                        # Notify member of successful exit
+
+
+                    except Exception as e:
+                        return JsonResponse({'status':'error','message':'Application cannot be approved at the moment'})
+                    return JsonResponse({'status':'success', 'message':'Application approve successfully'})
+                else:
+                    return JsonResponse({'status':'error', 'message':'Application cannot be approved at the moment'})
+            else:
+                return JsonResponse({'status':'error', 'message':'Something went wrong, can not approve application at this time. Try again later'})
+    
+    def get_context_data(self, **kwargs):
+        tenant = self.request.tenant
+        context = super().get_context_data(**kwargs)
+        context['exiting_members']= ExitApproval.objects.filter(tenant=tenant)
+
+        return context
