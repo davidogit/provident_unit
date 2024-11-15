@@ -5,7 +5,7 @@ from typing import Any
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse, JsonResponse
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
 from .forms import UserForm, MemberForm
@@ -13,7 +13,7 @@ from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView,UpdateView,CreateView,ListView
 from django.contrib.auth.models import Group
-from .models import Member,SchemeApproval
+from .models import Member,SchemeApproval, TransactionHistory
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
@@ -28,6 +28,7 @@ from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 # Import task to send otp via email
 from .tasks import send_otp_code,gen_send_email
+from django.core.paginator import Paginator
 
 
 @unauthenticated_user
@@ -667,4 +668,200 @@ class Contributed(ListView):
 
         return context
 
-   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@method_decorator(tenant_login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
+class CreateTransactionView(CreateView):
+    model = TransactionHistory
+    fields = ('transaction_type', 'amount', 'reference','payment_method')
+    template_name = 'create_transaction.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        member = self.request.user.member
+        
+        try:
+        # Fetch staff schemes related to the member
+            staff_schemes = StaffAPI.objects.filter(staff_number=member.staff_id).values_list('investment_scheme__id', flat=True)
+            schemes = InvestmentScheme.objects.filter(tenant=tenant, id__in=staff_schemes)
+        # Pass schemes to the template
+            context['schemes'] = schemes 
+        except StaffAPI.DoesNotExist: 
+            print("Error:StaffAPI entry not found for the given member.")
+        return context
+
+    def form_valid(self, form):
+        tenant = self.request.tenant
+        member = self.request.user.member
+        scheme_id = self.request.POST.get('scheme_id')  # Get scheme_id from form POST data
+        amount = self.request.POST.get('amount')
+        payment_method = self.request.POST.get('payment_method')
+        staff_id = self.kwargs.get('staff_id') or member.staff_id
+
+        try:
+            # Fetch the staff and scheme instances
+            staff = get_object_or_404(StaffAPI, staff_number=staff_id)
+            scheme = get_object_or_404(InvestmentScheme, tenant=tenant, id=scheme_id)
+
+            # Set additional fields on the form instance
+            form.instance.scheme = scheme
+            form.instance.member = member
+            form.instance.amount = amount
+            form.instance.staff = staff
+            form.instance.payment_method = payment_method
+            
+            # Proceed with form save
+            return super().form_valid(form)
+
+        except Exception as e:
+            print(f"Error: {e}")  # Print error for debugging
+            return JsonResponse({'status': 'error', 'message': 'Transaction was unsuccessful'})
+
+    def get_success_url(self):
+        return reverse_lazy('transaction_history', kwargs={
+            'tenant_id': self.kwargs.get('tenant_id'),
+            'staff_id': self.kwargs.get('staff_id')
+        })
+
+
+@method_decorator(tenant_login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
+class TransactionHistoryView(ListView):
+    model = TransactionHistory
+    template_name = 'transaction_history.html'
+    context_object_name = 'transactions'
+
+    def get_queryset(self):
+        tenant_id = self.request.tenant.id  # Retrieve tenant info from the request
+        staff_id = self.kwargs.get('staff_id')  # Using staff_id based on your updated `CreateTransactionView`
+        scheme_id = self.kwargs.get('scheme_id')
+        sort = self.request.GET.get('sort','-transaction_date')
+
+        if sort not in ['amount', '-amount', 'transaction_date', '-transaction_date', 'transaction_type', '-transaction_type']:
+            sort = '-transaction_date' 
+        
+        # Fetch the member associated with the staff ID and tenant
+        member = get_object_or_404(Member, staff_id=staff_id, tenant_id=tenant_id)
+        
+        return TransactionHistory.objects.filter(
+            member=member,  # Filter by the member object
+            scheme__tenant_id=tenant_id  # Ensure the scheme is related to the tenant
+        ).order_by(sort)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        transactions = self.get_queryset()
+        paginator = Paginator(transactions, 10)  # Set the number of transactions per page
+        page_number = self.request.GET.get('page')
+        context['is_paginated'] = paginator.get_page(page_number).has_other_pages()
+        context['transactions'] = paginator.get_page(page_number)
+        # Pass the member and related schemes to the context
+        tenant_id = self.request.tenant.id
+        staff_id = self.kwargs.get('staff_id')
+        
+        member = get_object_or_404(Member, staff_id=staff_id, tenant_id=tenant_id)
+        schemes = InvestmentScheme.objects.filter(tenant_id=tenant_id, transactions__member=member).distinct()
+        
+        context['member'] = member
+        context['schemes'] = schemes
+        return context

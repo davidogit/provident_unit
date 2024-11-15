@@ -1,0 +1,55 @@
+{%  extends "member_base.html" %}
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="d-md-flex align-items-center justify-content-between mb-4">
+<table class="table table-striped">
+  <thead>
+      <tr>
+          <th>Transaction ID</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Type</th>
+      </tr>
+  </thead>
+  <tbody>
+      {% for transaction in transactions %}
+      <tr>
+          <td>{{ transaction.transaction_id }}</td>
+          <td>{{ transaction.transaction_date|date:"F d, Y, h:i A" }}</td>
+          <td>{{ transaction.amount }}</td>
+          <td>{{ transaction.transaction_type }}</td>
+          <td>{{ transaction.payment_method }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+          <td colspan="4">No transactions found.</td>
+      </tr>
+      {% endfor %}
+  </tbody>
+</table>
+<div class="pagination">
+  <span class="step-links">
+    {% if is_paginated %}
+      {% if transactions.has_previous %}
+          <a href="?page=1">&laquo; first</a>
+          <a href="?page={{ transactions.previous_page_number }}">previous</a>
+      {% endif %}
+
+      <span class="current">
+          Page {{ transactions.number }} of {{ transactions.paginator.num_pages }}.
+      </span>
+
+      {% if transactions.has_next %}
+          <a href="?page={{ transactions.next_page_number }}">next</a>
+          <a href="?page={{ transactions.paginator.num_pages }}">last &raquo;</a>
+      {% endif %}
+      {% endif %}
+  </span>
+</div>
+<a href="?sort=amount">Sort by Amount</a>
+<a href="?sort=date">Sort by Date</a>
+<a href="?sort=type">Sort by Type</a>
+</div>
+</div>
+
+{% endblock %}
