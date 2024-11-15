@@ -93,37 +93,6 @@ class SchemeApproval(models.Model):
         self.staff.investment_scheme.add(self.scheme)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class TransactionHistory(models.Model):
     transaction_id  =models.UUIDField(default = uuid.uuid4,unique = True)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE,null = True)
