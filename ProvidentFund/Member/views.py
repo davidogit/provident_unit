@@ -379,9 +379,9 @@ class Application(CreateView):
             staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
 
             # Get staff's schemes both approved and unapproved
-            # associated_schemes = staff.investment_scheme.all()
+            associated_schemes = staff.investment_scheme.values_list('id', flat=True)
 
-            associated_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff).values_list('scheme_id', flat=True)
+            # associated_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff).values_list('scheme_id', flat=True)
             # unapproved staff schemes: Omit schemes that are pending for a user
 
             # Get Scheme approvals based on tenant and member
@@ -589,7 +589,7 @@ class ActiveSchemes(ListView):
                 # member.investment_scheme.remove(scheme)
 
                 # Check database if user has an application sent already
-                potential_application = ExitApproval.objects.filter(member=user,staff=member,tenant=tenant,scheme=scheme).first()
+                potential_application = ExitApproval.objects.filter(member=user,staff=member,tenant=tenant,scheme=scheme,approved=False)
 
                 # Prevent user from sending more than one exit application
                 if potential_application:

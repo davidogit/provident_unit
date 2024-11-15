@@ -97,9 +97,11 @@
                                     <th scope="col">Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% if results %}
+                            <div>
+                                <div class="paginated-data">
+                                    {% if results %}
                                     {% for inv in results %}
+                                    
                                         <tr>
                                             <td>{{ forloop.counter }}</td>
                                             <td>{{ inv.invoice_number }}</td>
@@ -113,12 +115,15 @@
                                             <td>{{ inv.status }}</td>
 
                                         </tr>
+                                    
+                                        
                                     {% endfor %}
-                                {% else %}
+                                    {% else %}
                                     <tr>
                                         <td class="text-center text-danger " colspan="10">No records match your search</td>
                                     </tr>
-                                {% endif %}
+                                    {% endif %}
+                                </div>
                                 
                             </tbody>
                         </table>
@@ -128,7 +133,7 @@
             {% if is_paginated %}
             <nav aria-label="Page navigation example">
               <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
+                    {% if page.has_previous %}
                     <li class="page-item">
                     <a
                         class="page-link"
@@ -139,15 +144,10 @@
                     </a>
                     </li>
                     {% endif %}
-                    <!-- {% comment %}
-                    <li class="page-item"><a class="page-link" href="#">1</a></li>
-                    {% endcomment %} -->
                     <li class="page-item">
                     <a class="page-link" href="#">{{ page_obj.number }}</a>
                     </li>
-                    <!-- {% comment %}
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    {% endcomment %} {% if page_obj.has_next %} -->
+                    {% if page_obj.has_next %}
                     <li class="page-item">
                     <a
                         class="page-link"

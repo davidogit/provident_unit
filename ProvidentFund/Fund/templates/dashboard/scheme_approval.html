@@ -115,8 +115,10 @@
                                 <td>{{ application.staff.staff_number }}</td>
                                 <td>{{ application.scheme.name }}</td>
                                 <td>{{ application.application_date }}</td>
-                                <td>{{ application.approved_by_hr }}</td>
-                                <td><a href="{{ application.document.url }}" download=""><i class="fas fa-download"></i> Download File</a></td>
+                                <td>
+                                    {{ application.approved_by_hr }}</td>
+                                <td>{% if applicatio.document %}<a href="{{ application.document.url }}" download=""><i class="fas fa-download"></i> Download File</a>
+                                    {% else %} No file uploaded{% endif %}</td>
                                 
                             </tr>
                             {% endfor %}
