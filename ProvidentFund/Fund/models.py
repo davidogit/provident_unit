@@ -1,10 +1,17 @@
+import random
+import string
 from django.db import models
+from django.dispatch import receiver
+from django.db.models.signals import pre_save
 from django.urls import reverse
 from MultiScheme.models import InvestmentScheme
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from .generate_invoice import generate_invoice_number
 
 class InvestmentDetail(models.Model):
+    invoice_number = models.CharField(max_length=6, unique=True,null=True,blank=True, editable=False)
+
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
     T_bill = 'Treasury Bill'
     F_dep = 'Fixed Deposit'
@@ -71,9 +78,6 @@ class InvestmentDetail(models.Model):
     def calculate_rollover_principal(self):
         return (self.interest_amount + self.principal_amount)  # Simplified to directly return interest_amount
     
-
-
-
     # Remaining Days
     @property
     def remaining_days(self):
@@ -101,11 +105,6 @@ class InvestmentDetail(models.Model):
         # Prevent updates to investments after the status has changed to active
         if self.pk and self.status in ['Active',]:
             raise ValidationError('This investment is closed and can no longer be edited')
-        
-        # Rollover Inv Creation and naming
-        # if not self.pk and self.rollover_count>=0:
-        #     prev_name = self.account_name
-        #     self.account_name = f'{prev_name} R{self.rollover_count}'
 
         super().save(*args, **kwargs)
 
@@ -132,6 +131,15 @@ class InvestmentDetail(models.Model):
         return reverse('investment_detail', kwargs={'pk': self.pk},) 
 
 
+@receiver(pre_save,sender=InvestmentDetail)
+def set_invoice_number(sender,instance,**kwargs):
+    if not instance.invoice_number:
+        while True:
+            invoice_number = generate_invoice_number()
+
+            if not InvestmentDetail.objects.filter(invoice_number=invoice_number).exists():
+                instance.invoice_number = invoice_number
+                break
 
 
 class DelayedInterest(models.Model):

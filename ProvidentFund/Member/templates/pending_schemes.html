@@ -31,7 +31,7 @@
 
                         
 
-                        <form action="" class="form-control application-form border border-warning" method="POST">
+                        <form action="" class="form-control pending-application-form border border-warning" method="POST">
                             {% csrf_token %}
                             <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
                             <div class="d-flex justify-content-end">
@@ -57,5 +57,44 @@
         </div>
     </div>
     {% endif %}
+
+<script>
+    $(document).ready(function(){
+        $('.pending-application-form').on('submit', function(e){
+            e.preventDefault();
+
+            var form = $(this);
+
+            $.ajax({
+                method: form.attr('method'),
+                action: form.attr('action'),
+                data: form.serialize(),
+
+                success: function(response){
+                    if (response.status === 'success'){
+                        window.location.reload()
+                    }
+                    else{
+                        if (response.status === 'error'){
+                            alert(response.message)
+                        }
+                    }
+
+                },
+                error: function(jqXHR){
+                    var response = jqXHR.responseJSON;
+
+                    if (response && response.message){
+                        message = (response + response.message)
+                        alert(message)
+                    }
+
+                    alert(response)
+                }
+            });
+
+        });
+    });
+</script>
 
 {% endblock %}

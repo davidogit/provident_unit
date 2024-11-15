@@ -13,7 +13,7 @@ from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView,UpdateView,CreateView,ListView
 from django.contrib.auth.models import Group
-from .models import Member,SchemeApproval, TransactionHistory
+from .models import Member,SchemeApproval, TransactionHistory,ExitApproval
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
@@ -351,8 +351,7 @@ class MemberDashboard(TemplateView):
 
 
 
-# View for Application
-
+# View for Scheme Application
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
@@ -381,9 +380,9 @@ class Application(CreateView):
             staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
 
             # Get staff's schemes both approved and unapproved
-            # associated_schemes = staff.investment_scheme.all()
+            associated_schemes = staff.investment_scheme.values_list('id', flat=True)
 
-            associated_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff).values_list('scheme_id', flat=True)
+            # associated_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff).values_list('scheme_id', flat=True)
             # unapproved staff schemes: Omit schemes that are pending for a user
 
             # Get Scheme approvals based on tenant and member
@@ -407,13 +406,21 @@ class Application(CreateView):
         return context
     
     def form_invalid(self, form):
-        print(f"Form is invalid: {form.errors}")
+        # print(f"Form is invalid: {form.errors}")
         return super().form_invalid(form)
         
     def form_valid(self, form):
         tenant = self.request.tenant
         member = self.request.user.member
         scheme_id = self.request.POST.get('scheme_id')
+        document = self.request.FILES.get('document')
+
+        if document:
+            # print(f'Document Details: Name:{document.name} size: {document.size}')
+            pass
+
+        if document and document.size > 2 * 1024 * 1024: #file size shouldnt be greater than 2MB
+            return JsonResponse({'status':'error','message':'File size bigger than 2MB'})
 
         # Get staff using member.staff_id
         try:
@@ -423,7 +430,10 @@ class Application(CreateView):
             return self.form_invalid(form)
         
         # print(f'{tenant},{member},{staff}')
-        scheme = get_object_or_404(InvestmentScheme,tenant=tenant,id=scheme_id)
+        try:
+            scheme = get_object_or_404(InvestmentScheme,tenant=tenant,id=scheme_id)
+        except Exception:
+            return JsonResponse({'status':'error', 'message':'The selected scheme is not available at the moment'})
 
         # Check for eligibility before submitting application
 
@@ -438,6 +448,7 @@ class Application(CreateView):
                 form.instance.staff = staff
                 form.instance.scheme = scheme
                 form.instance.application_date = timezone.now()
+                form.instance.document = document
 
                 # Save form
                 form.save()
@@ -463,7 +474,7 @@ class Application(CreateView):
 
                 # Success prompt to user
 
-                return JsonResponse({'status':'success'}, status=200)
+                return JsonResponse({'status':'success','message':'Application sent successfully.'}, status=200)
             else:
                 message = 'Some required fields are missing'
                 return JsonResponse({'status':'error', 'message':message}, status=400)
@@ -532,22 +543,76 @@ class ActiveSchemes(ListView):
         tenant = request.tenant
         scheme_id = self.request.POST.get('scheme_id')
         member_id = self.request.POST.get('member_id')
+        user = self.request.user.member
+
+        reason_1 = self.request.POST.get('reason1')
+        reason_2 = self.request.POST.get('reason2')
+        reason_3 = self.request.POST.get('reason3')
+        reason_4 = self.request.POST.get('reason4')
+        reason_5 = self.request.POST.get('reason5')
+        reason_6 = self.request.POST.get('other')
+        custom_reason = self.request.POST.get('custom_reason')
+        print(f'REASON: {custom_reason}')
+        print(f'REASON 1: {reason_1}')
+
+        reason_list = [
+            reason_1,
+            reason_2,
+            reason_3,
+            reason_4,
+            reason_5,
+            reason_6
+        ]
+
+        # look for which reason with value
+        reason = ''
+        for r in reason_list:
+            if r:
+                # if user chose 'other' then reason should be custom reason
+                if r == 'other':
+                    reason = custom_reason if custom_reason else ''
+                else:
+                    reason = r
+                break
 
         try:
             # Get member and remove selected scheme from their list of schemes
             member = StaffAPI.objects.get(tenant=tenant,staff_number=member_id)
-            print(f'member_id: {member_id}')
+            # print(f'member_id: {member_id}')
 
             # Get scheme object
             scheme = InvestmentScheme.objects.get(tenant=tenant,id=scheme_id)
-            print(f'scheme_id:{scheme.name}')
-
+            
+            # Approval Phase of Opt-out by management
+            # ################################
             # Remove scheme from users schemes
-            if member and scheme:
-                member.investment_scheme.remove(scheme)
-                return JsonResponse({'status':'success'})
-        except:
-            return JsonResponse({'status':'error'}, status=400)
+            if member and scheme and user:
+                # member.investment_scheme.remove(scheme)
+
+                # Check database if user has an application sent already
+                potential_application = ExitApproval.objects.filter(member=user,staff=member,tenant=tenant,scheme=scheme,approved=False)
+
+                # Prevent user from sending more than one exit application
+                if potential_application:
+                    return JsonResponse({'status':'error', 'message':'You already have an application sent. wait for approval'})
+
+
+                # create exit instance for user
+                
+                ExitApproval.objects.create(
+                    tenant = tenant,
+                    member = user,
+                    staff = member,
+                    scheme = scheme,
+                    reason = reason
+                )
+                return JsonResponse({'status':'success','message':'Application received. You will be notified after further review of your application'})
+
+
+            ##################################
+
+        except Exception as e:
+            return JsonResponse({'status':'error', 'message': str(e)}, status=400)
 
 
     
@@ -596,6 +661,23 @@ class PendingSchemes(ListView):
                 return None
         return context
     
+    # Delete pending scheme
+    def post(self,request,*args,**kwargs):
+        if request.method == 'POST':
+            tenant = request.tenant
+            scheme_id = self.request.POST.get('scheme_id')
+            member = self.request.user.member
+
+            print(f'DEL SCH: {tenant},{scheme_id},{member}')
+            
+            if scheme_id and tenant and member:
+                SchemeApproval.objects.get(tenant=tenant,member=member,scheme__id=scheme_id).delete()
+                return JsonResponse({'status':'success', 'message':'scheme application withdrawn successfully'})
+            else:
+                return JsonResponse({'status':'error', 'message':'Error deleting scheme'})
+
+            
+    
 
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
@@ -638,7 +720,7 @@ class Contributed(ListView):
                 investment_scheme__id=scheme_id,
                 investment_scheme__tenant=tenant,
                 year=selected_year,
-                api_endpoint_member=True
+                approved_contribution=True
             )
             return member_contributions
         else:

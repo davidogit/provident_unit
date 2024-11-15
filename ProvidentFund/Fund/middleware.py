@@ -15,7 +15,6 @@ class TenantLoginUrlMiddleware(MiddlewareMixin):
     def __call__(self,request):
         tenant_code = self.get_tenant_id(request)
         # Extract code from tenant
-        print(tenant_code)
 
         # Generate dynamic login url path
         if tenant_code:
@@ -140,6 +139,5 @@ class CurrentUserMiddleware(MiddlewareMixin):
     def __call__(self, request):
         _threads_local.user = getattr(request, 'user' , None)
         response = self.get_response(request)
-        print(f'Username: {_threads_local.user}')
     
         return response

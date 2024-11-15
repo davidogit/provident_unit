@@ -53,57 +53,45 @@ class Activity(models.Model):
         return f"{self.user.username}: {self.description} at {self.timestamp}"
 
 
-@receiver(post_save, sender=User)
-def audit_log_save(sender,instance,created,**kwargs):
-    from Fund.middleware import get_current_user
-    object_id = instance.pk
+# @receiver(post_save, sender=User)
+# def audit_log_save(sender,instance,created,**kwargs):
+#     from Fund.middleware import get_current_user
+#     object_id = instance.pk
 
-    action = 'created' if created else 'updated'
-    user = get_current_user()
-    # get_object_or_404(get_user_model(),id=instance.pk)
-    # Assign name 
-    if created:
-        instance.name = user.username
-        instance.save()
+#     action = 'created' if created else 'updated'
+#     user = get_current_user()
+#     # get_object_or_404(get_user_model(),id=instance.pk)
+#     # Assign name 
+#     if created:
+#         instance.name = user.username
+#         instance.save()
 
-    # Get changes to model
-    changes = {}
+#     # Get changes to model
+#     changes = {}
 
-    for field in instance._meta.fields:
-        field_name = field.name
-        new_value = getattr(instance,field_name)
-        changes[field_name] = force_str(new_value)
+#     for field in instance._meta.fields:
+#         field_name = field.name
+#         new_value = getattr(instance,field_name)
+#         changes[field_name] = force_str(new_value)
     
+
+# @receiver(pre_delete, sender=User)
+# def audit_log_delete(sender,instance,**kwargs):
+#     from Fund.middleware import get_current_user
+#     object_id = instance.pk
+
+#     action = 'deleted'
     
+#     user = get_current_user()
+#     # get_object_or_404(get_user_model(),id=instance.pk)
 
-    # Create an AuditTrail instance
-    # AuditTrail.objects.create(
-    #     user = user,
-    #     model_name = User.__name__,
-    #     action = action,
-    #     object_id = object_id,
-    #     changes = json.dumps(changes),
-    #     timestamp = timezone.now(),
-    #     name = user.username
-    # )
-
-@receiver(pre_delete, sender=User)
-def audit_log_delete(sender,instance,**kwargs):
-    from Fund.middleware import get_current_user
-    object_id = instance.pk
-
-    action = 'deleted'
-    
-    user = get_current_user()
-    # get_object_or_404(get_user_model(),id=instance.pk)
-
-    # Create an AuditTrail instance
-    AuditTrail.objects.create(
-        user = user,
-        model_name = User.__name__,
-        action = action,
-        object_id = object_id,
-        changes = f'User {user.username} made a delete operation at {timezone.now()}',
-        timestamp = timezone.now(),
-        name = user.username
-    )
+#     # Create an AuditTrail instance
+#     AuditTrail.objects.create(
+#         user = user,
+#         model_name = User.__name__,
+#         action = action,
+#         object_id = object_id,
+#         changes = f'User {user.username} made a delete operation at {timezone.now()}',
+#         timestamp = timezone.now(),
+#         name = user.username
+#     )

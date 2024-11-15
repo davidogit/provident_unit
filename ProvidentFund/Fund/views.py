@@ -16,12 +16,15 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
 from .forms import InvestmentUpdateForm,InvestmentApprovalForm
-from django.core.mail import send_mail
 from Fund.tasks import actual_member_interest,rollover_inv_creation
 from Member.tasks import gen_send_email
 from django.core.exceptions import ValidationError
 from django.db.models import Sum,F
 import logging
+from django.utils import timezone
+from datetime import datetime
+
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 logger = logging.getLogger(__name__)
 
@@ -319,7 +322,10 @@ class InvestmentUpdateView(UpdateView):
         pk = self.kwargs['pk']
 
         inv = InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant, investment_scheme__id = scheme_id).first()
-        print(inv)
+        
+        # Pass invoice number separately since its not part of the form
+        context['invoice_number'] = inv.invoice_number
+
         form = InvestmentUpdateForm(instance=inv)
 
         context['form'] = form
@@ -657,8 +663,7 @@ class MemberDeleteView(DeleteView):
             return StaffAPI.objects.none()
 
 
-from django.utils import timezone
-from datetime import datetime
+
 
 # Query For Investment View
 @method_decorator(login_required, name='dispatch')
@@ -667,15 +672,15 @@ from datetime import datetime
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
-    paginate_by = 10
-    # context_object_name = 'results'
+    paginate_by = 5
+    # context_object_name = 'results'  
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
     def get_queryset(self):
          
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = self.request.tenant
+        # tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme id
         scheme_id = self.request.scheme_name
@@ -683,7 +688,7 @@ class InvestmentQuery(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme).order_by('created_date')
         else:
             return InvestmentDetail.objects.none()
 
@@ -696,71 +701,40 @@ class InvestmentQuery(ListView):
         to_date = self.request.GET.get('to-date','')
         inv_type = self.request.GET.get('inv_type','')
         status = self.request.GET.get('status','')
-    
+        # page_number = self.request.GET.get('page')
 
-        
-        # Get current date
-        # current_date = timezone.now().date()
 
         # convert 'date' to date format
         from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
         to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
 
         # get all investments
-        # queryset = InvestmentDetail.objects.all()
         queryset = self.get_queryset()
 
-        # A list to accumulate all related search before passing it as a context
-        query=[]
-        
-        # If no date is specified
-        if from_date == None and to_date == None:
-            for inv in queryset:
-                # Filters investment based on 'Expired' and investment type
-                if inv.status == 'Expired' and status=='matured' and (inv.investment_type==inv_type):
-                    query.append(inv)
+        # Base query
+        query = queryset.filter(investment_type=inv_type)
 
-                # Filters investment based on 'Active' and investment type
-                elif inv.status == 'Active' and status=='active' and (inv.investment_type==inv_type):
-                    query.append(inv)
+        # Filter based on status
+        if status == 'matured':
+            query = query.filter(_status='Expired')
+        elif status == 'active':
+            query = query.filter(_status='Active')
+        elif status == 'Not started':
+            query = query.filter(_status='Not Start')
 
-                # Filters investment based on 'Not start' and investment type
-                elif inv.status == 'Not Start' and status =='Not started' and (inv.investment_type==inv_type):
-                    query.append(inv)
+        # Apply date filter if provided
+        if from_date and to_date:
+            if sort == 'start_date':
+                query = query.filter(interest_start_date__range=(from_date, to_date))
+            elif sort == 'created_date':
+                query = query.filter(created_date__range=(from_date, to_date))
+        else:
+            # Default date sorting if no date is provided
+            query = query.order_by(sort or 'interest_start_date')
 
-                                
-            # Returns the list of results 
-            context['results'] = query
-
-        # If dates are specified
-        elif (from_date and to_date) or (inv_type or status):
-            for inv in queryset:
-
-                if sort == 'start_date':
-                    search_criteria = inv.interest_start_date
-                elif sort == 'created_date':
-                    search_criteria = inv.created_date
-                else:
-                    search_criteria = inv.interest_start_date
-                    
-                # print(sort)
-                # print(search_criteria)
-                if from_date <= search_criteria <= to_date:
-                # queries matured investments within the given dates
-                    if inv.status == 'Expired' and status=='matured' and (inv.investment_type==inv_type):
-                        query.append(inv)
-
-                    elif inv.status == 'Active' and status=='active' and (inv.investment_type==inv_type):
-                        query.append(inv)
-
-                    elif inv.status == 'Not Start' and status =='Not started' and (inv.investment_type==inv_type):
-                        query.append(inv)
-
-
-            # Returns the list of results
-            context['results'] = query
-
+        context['results'] = query
         return context
+
 
 
 # List view for delayed interest
@@ -1258,7 +1232,7 @@ class ApproveContributions(TemplateView):
         month = request.POST.get('month')
         year = request.POST.get('year')
 
-        print(f'month={month}, year={year}')
+        # print(f'month={month}, year={year}')
 
         if year and month:
             # Collect investments within the provided month
@@ -1268,8 +1242,19 @@ class ApproveContributions(TemplateView):
             if not contributions.exists():
                 return JsonResponse({'status': 'error', 'message': 'No contributions found for the given month.'})
             
-            # change approval status of contributions to True
+            # Mark all contributions as approved
             contributions.update(approved_contribution=True)
+            tenant_id = tenant.id
+            from Fund.tasks import calculate_staff_contribution
+            calculate_staff_contribution.delay(
+                scheme_id,
+                tenant_id,
+                month,
+                year
+            )
+
+            
+
             message = f'Successfully approved investments for {month} {year}'
             return JsonResponse({'status':'success', 'message':message})
         else:
@@ -1316,3 +1301,57 @@ class FetchContributions(TemplateView):
                 'status':'success'})
         except Exception as e:
             return JsonResponse({'status':'error', 'message':str(e)})
+
+from Member.models import ExitApproval
+class ApproveExitedMembers(TemplateView):
+    # model = ExitApproval
+    template_name = 'dashboard/exiting_members.html'
+    # context_object_name = 'exiting_members'
+
+    def post(self,request,*args,**kwargs):
+        if request.method == 'POST':
+            tenant = request.tenant
+            application_id = request.POST.get('application_id')
+            approved = request.POST.get('approved')
+            member_id = request.POST.get('member_id')
+            staff_id = request.POST.get('staff_id')
+            scheme_id = request.POST.get('scheme_id')
+            member = get_object_or_404(Member,id=member_id)
+
+            if tenant and application_id and approved:
+                application = ExitApproval.objects.get(tenant=tenant,member=member,id=application_id)
+
+                if application:
+                    try:
+                        application.approved = True
+                        application.approval_date = timezone.now()
+                        application.save()
+
+                        # Remove scheme from memeber list of schemes
+                        staff = get_object_or_404(StaffAPI,tenant=tenant,Id=staff_id)
+
+                        # Scheme to remove from member list of schemes
+                        scheme_to_remove = get_object_or_404(InvestmentScheme, tenant=tenant,id=scheme_id)
+
+                        # Remove schemes and save staff instance
+                        staff.investment_scheme.remove(scheme_to_remove)
+                        staff.save()
+
+
+                        # Notify member of successful exit
+
+
+                    except Exception as e:
+                        return JsonResponse({'status':'error','message':'Application cannot be approved at the moment'})
+                    return JsonResponse({'status':'success', 'message':'Application approve successfully'})
+                else:
+                    return JsonResponse({'status':'error', 'message':'Application cannot be approved at the moment'})
+            else:
+                return JsonResponse({'status':'error', 'message':'Something went wrong, can not approve application at this time. Try again later'})
+    
+    def get_context_data(self, **kwargs):
+        tenant = self.request.tenant
+        context = super().get_context_data(**kwargs)
+        context['exiting_members']= ExitApproval.objects.filter(tenant=tenant)
+
+        return context

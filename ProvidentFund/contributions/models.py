@@ -24,8 +24,8 @@ class StaffAPI(models.Model):
     _amount = models.FloatField(null=True,blank=True,default=0.00)
     exited_date = models.DateField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
-    profit = models.FloatField(default=0.00)
-    actual_profit = models.FloatField(default=0.00)
+    profit = models.FloatField(default=0.00) # Estimated interest to gain NB: does not include contributions
+    actual_amount = models.FloatField(default=0.00) # holds contributions and interest
     subscription_date = models.DateField(null=True)
     updated_date = models.DateTimeField(auto_now=True)
 

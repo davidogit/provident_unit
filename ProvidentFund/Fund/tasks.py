@@ -54,8 +54,15 @@ def member_interest(self):
                 )
 
                 # Get total contributions of each scheme
-                total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total'] or 0.0
-
+                # total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total'] or 0.0
+                
+                
+                # Get all members of scheme and sump up their actual amount which will be used in distribution by proportion
+                total_contribution = StaffAPI.objects.filter(
+                    tenant=tenant,
+                    investment_scheme = scheme,
+                    exited_flag=True
+                ).aggregate(total = Sum('actual_amount'))['total'] or 0.0
 
                 # with transaction.atomic():
                 # Distribute Delayed Interests
@@ -64,10 +71,10 @@ def member_interest(self):
                         if total_contribution > 0:
                             for member in members:
                                 
-                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total'] or 0
-
+                                # get staff's actual amount
+                                contribution = member.actual_amount or 0.0
                                 
-                                
+                                # Find date at which user joined the scheme
                                 try:
                                     scheme_subscription = SchemeApproval.objects.get(
                                         staff=member, scheme=scheme, tenant=tenant, 
@@ -77,9 +84,9 @@ def member_interest(self):
                                     subscription_date = None
 
                                 if subscription_date is not None and subscription_date.date() < d_int.created_date:
-                                    member.profit += (contribution / total_contribution) * d_int.amount
+                                    member.actual_amount += (contribution / total_contribution) * d_int.amount
                                 else:
-                                    member.profit += 0.0
+                                    member.actual_amount += 0.0
                                 member.save()
                             d_int.status = 'Used'
                             d_int.save()
@@ -91,9 +98,10 @@ def member_interest(self):
                     try:
                         if total_contribution > 0:
                             for member in members:
-                                
-                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+                                # collect member amount
+                                contribution = member.actual_amount or 0.0
 
+                                # check date user joined the scheme
                                 try:
                                     scheme_subscription = SchemeApproval.objects.get(
                                         staff=member, scheme=scheme, tenant=tenant, 
@@ -103,9 +111,9 @@ def member_interest(self):
                                     subscription_date = None
 
                                 if subscription_date is not None and subscription_date.date() < b_int.created_date:
-                                    member.profit += (contribution / total_contribution) * b_int.amount
+                                    member.actual_amount += (contribution / total_contribution) * b_int.amount
                                 else:
-                                    member.profit += 0.0
+                                    member.actual_amount += 0.0
                                 member.save()
                             b_int.status = 'Used'
                             b_int.save()
@@ -126,9 +134,10 @@ def member_interest(self):
 
                         if total_contribution > 0:
                             for member in members:
-                                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+                                # get member amount
+                                contribution = member.actual_amount or 0.0
 
-
+                                # Check date user joined scheme
                                 try:
                                     scheme_subscription = SchemeApproval.objects.get(
                                             staff=member, scheme=scheme, tenant=tenant, 
@@ -137,6 +146,7 @@ def member_interest(self):
                                 except SchemeApproval.DoesNotExist:
                                     subscription_date = None                            
 
+                                # Calculate Estimated income NB: Does not include Principal of member
                                 if subscription_date is not None and subscription_date.date() < inv.interest_start_date and inv._remaining_days > 0:
                                     profit = (contribution / total_contribution) * inv_daily_interest
                                     member.profit += profit
@@ -179,7 +189,12 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
     # Calculate member allocation
     member_allocation = (inv.interest_amount*(member_allocation_percentage/100))
     
-    total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
+    # Get all members of scheme and sump up their actual amount which will be used in distribution by proportion
+    total_contribution = StaffAPI.objects.filter(
+        tenant=tenant,
+        investment_scheme = scheme,
+        exited_flag=False
+    ).aggregate(total = Sum('actual_amount'))['total'] or 0.0
 
     logger.info(f'Total: {total_contribution}')
 
@@ -189,17 +204,22 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
         if total_contribution>0:
             logger.info('STEP 1')
             for member in members:
+                
+                # Get member actual amount
+                contribution = member.actual_amount or 0.0
 
-                contribution = Contribution.objects.filter(member=member,investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total']
                 logger.info(f'User Contribution: {contribution}')
 
                 logger.info('STEP 2')
                 
+                # Check date user joined scheme
                 try:
                     scheme_subscription = SchemeApproval.objects.get(
-                            staff=member, scheme=scheme, tenant=tenant, 
-                            approved_by_hr=True)
-                    logger.info('STEP 3')
+                        staff=member,
+                        scheme=scheme,
+                        tenant=tenant, 
+                        approved_by_hr=True)
+                    logger.info(f'STEP 3: {scheme_subscription.approval_date}')
                     subscription_date = scheme_subscription.approval_date
                 except SchemeApproval.DoesNotExist:
                     subscription_date = None
@@ -208,16 +228,19 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
 
                 # Check if user was approved before an investment was made
                 if subscription_date is not None and subscription_date.date() < inv.interest_start_date:
-                    logger.info(f'Sub_date: {subscription_date} and inv_date: {inv.interest_start_date}')
-                    logger.info(f'Members allocation: {member_allocation}')
-                    logger.info(f'Actual Member Profit Before: {member.actual_profit}')
-                    member.actual_profit += (contribution / total_contribution) * member_allocation
-                    logger.info(f'Actual Member Profit After: {member.actual_profit}')
+                    
+                    interest_on_inv = (contribution / total_contribution) * member_allocation
+
+                    # Add interest to member actual amount
+                    member.actual_amount += interest_on_inv
+                    
+                    # Subtract interest from member estimated amount
+                    member.profit = (0-interest_on_inv)
                     member.save()
                 else:
                     logger.info('Not working')
-                    member.actual_profit += 0.0
-                # member.save()
+                    member.actual_amount += 0.0
+                
             
         logger.info(f'Actual profit calculated for: {tenant.name}\'s members at: {timezone.now()}')
 
@@ -277,7 +300,7 @@ def reduce_date(self):
 
                 send_mail(
                     subject='Investment Due',
-                    message= f'Investment with ID:{inv.id} and Acc No.: {inv.account_number} is due',
+                    message= f'Investment with Invoice Number:{inv.invoice_number} and Acc No.: {inv.account_number} is due. Approve investment if funds have been recorgnised',
                     from_email=EMAIL_HOST_USER,
                     recipient_list=[tenant_email,],
                     fail_silently=False
@@ -365,3 +388,35 @@ def rollover_inv_creation(self,**kwargs):
         logger.info(f'Roll over for inv {inv_name} added')
     except Exception as e:
         logger.info(f'Inv Adding Error: {e}')
+
+
+# Task to calculate and add contribution to user actual_amount when a contribution is approved
+@shared_task(bind=True)
+def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
+    scheme_id = scheme_id
+    tenant_id = tenant_id
+    logger.info(f'Tenant ID: {tenant_id}')
+    tenant = Tenant.objects.get(id=tenant_id)
+    month = month
+    year = year
+
+
+    # Add contributions to member principal
+    staff_api = StaffAPI.objects.filter(tenant=tenant, investment_scheme__id=scheme_id)
+
+    # List of staff updates
+    staff_updates =[]
+
+    for staff in staff_api:
+        staff_contribution = Contribution.objects.get(investment_scheme__tenant = tenant,investment_scheme__id=scheme_id,month=month,year=year, approved_contribution=True,member=staff).total_contributions
+        
+
+        if staff_contribution:
+            staff.actual_amount += float(staff_contribution) 
+            # if staff_contribution else 0.0
+
+            # append to update list
+            staff_updates.append(staff)
+
+    # Using bulk update to effect all changes at once
+    StaffAPI.objects.bulk_update(staff_updates,['actual_amount'])

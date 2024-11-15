@@ -58,18 +58,8 @@
     <div id="sidebarMenu" class="sidebar-body">
 
       <div class="nav-item">
-        <a href="#" class="nav-label">Dashboard</a>
+        <a href="#" class="nav-label">Configuration</a>
         <ul class="nav nav-sidebar">
-          {% if is_manager_or_treasury_user %}
-          <li class="nav-item">
-            <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="nav-link active"><i
-                class="ri-pie-chart-2-fill"></i> <span>Overview</span></a>
-          </li>
-          <!-- <li class="nav-item">
-            <a href="{% url 'recent_activities' tenant_id=request.tenant.id %}" class="nav-link active"><i
-                class="ri-pie-chart-2-fill"></i> <span>Recent Activities</span></a>
-          </li> -->
-          {% endif %}
 
           {% if is_manager %}
           <li class="nav-item">
@@ -94,7 +84,11 @@
                 <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
                 class="nav-sub-link">View Applications
                 </a>
+                <a href="{% url 'approve_exit_members'  tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Exiting Members Applications
+                </a>
               </nav>
+
           </li>
           {% endif %}
 
