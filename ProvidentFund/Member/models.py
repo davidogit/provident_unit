@@ -1,8 +1,10 @@
 import os
 from django.db import models
 from django.contrib.auth.models import User
+from requests import options
 from MultiScheme.models import Tenant
 from django.conf import settings
+import uuid
 
 from contributions.models import StaffAPI
 from MultiScheme.models import InvestmentScheme
@@ -89,6 +91,40 @@ class SchemeApproval(models.Model):
 
         # Add member to scheme(but in this case we have to set it on the StaffApi model)
         self.staff.investment_scheme.add(self.scheme)
+
+
+class TransactionHistory(models.Model):
+    transaction_id  =models.UUIDField(default = uuid.uuid4,unique = True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE,null = True)
+    staff = models.ForeignKey(StaffAPI, on_delete=models.CASCADE,null=True)
+    member = models.ForeignKey(Member,on_delete=models.CASCADE,related_name="transactions")
+    scheme = models.ForeignKey(InvestmentScheme, on_delete= models.CASCADE,related_name ="transactions")
+    transaction_date = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    DEPOSIT = 'Deposit'
+    WITHDRAWAL = 'Withdrawal'
+    transaction_type_choices = [
+        (DEPOSIT,'Deposit'),
+        (WITHDRAWAL,'Withdrawal')
+    ]
+    transaction_type = models.CharField(max_length=20, choices=transaction_type_choices,default=DEPOSIT)
+    MOBILE_MONEY = 'MobileMoney'
+    BANK_TRANSFER = 'BankTransfer'
+    payment_method = [
+        (MOBILE_MONEY,'Mobile Money'),
+        (BANK_TRANSFER,'Bank Transfer')
+    ]
+    payment_method = models.CharField(max_length=20, choices=payment_method, default=MOBILE_MONEY)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reference = models.TextField(max_length=255, blank=True)
+    def __str__(self):
+       return f"{self.transaction_type} - {self.amount} on {self.transaction_date}"
+    
+    def save(self, *args, **kwargs):
+        if not self.transaction_id:
+            self.transaction_id = uuid.uuid4()
+        super().save(*args, **kwargs)
+
+
 
 
 class ExitApproval(models.Model):

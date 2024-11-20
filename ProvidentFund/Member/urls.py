@@ -1,7 +1,7 @@
 from django.urls import path
 from Member import views
 from . import views
-from .views import EditMemberProfileView
+from .views import EditMemberProfileView,TransactionHistoryView
 
 
 urlpatterns=[
@@ -29,6 +29,8 @@ urlpatterns=[
 
     #Member Contributions
     path('<str:scheme_name>/member_contributions/<int:member_id>/', views.Contributed.as_view(), name='member_contribution'),
-
+    path('create_transaction/<int:staff_id>/', views.CreateTransactionView.as_view(),name='create_transaction'),
+    path('transaction_history/<int:staff_id>/', views.TransactionHistoryView.as_view(),  name='transaction_history'),
+    
 ]
 
