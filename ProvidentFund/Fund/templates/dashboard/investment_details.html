@@ -33,10 +33,50 @@
                         
                     </div>
                 </div>
-                <!-- <input class="btn btn-primary" type="submit" value="update"> -->
+                
+                <!-- Modal for termination -->
+                <div class="modal fade" id="terminateModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modalTitle">
+                                    Terminate
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- info message box -->
+                                <div class="message-info">
+                                    <!-- Messages from response show in here -->
+                                </div>
+
+                                <form class="terminate-form" action="" method="POST">
+                                    {% csrf_token %}
+                                    <input type="number" name="inv_id" value="{{ investment_detail.id }}" hidden>
+
+                                    <!-- termination date -->
+                                     <label class="form-label" for="date">Termination date</label>
+                                     <input type="date" id="date" name="termination_date" class="form-control">
+
+                                    <button class="btn btn-primary mt-2" type="submit" id="confirm-terminate">confirm</button>
+
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 
                 <div class="row g-2 d-flex justify-content-between">
+                    {% if is_manager %}
+                    {% if not investment_detail.status == 'Terminated' %}
+                    <div class="col-1">
+                        <a class="btn btn-warning" href="" type="submit" data-bs-toggle="modal" data-bs-target="#terminateModal">Terminate</a>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if is_treasury_user %}
                     <div class="col-1">
                         <a class="btn btn-primary" href="{% url 'investment_update' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">update</a>
                     </div>
@@ -46,9 +86,48 @@
                     <div class="col-1 justify-content-end">
                         <a class="btn btn-danger" href="{% url 'delete_investment' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Delete</a>
                     </div>
+                    {% endif %}
                 </div>
             </div><!-- card-body -->
           </div><!-- card-one -->
     </div>
 </div>
+
+<script>
+    $(document).ready(function(){
+        $('.terminate-form').on('submit', function(event){
+            event.preventDefault(); // Prevent default form submission
+            var form = $(this);
+
+            $.ajax({
+                type: 'POST',
+                url: form.attr('action'),
+                data: form.serialize(),
+                success: function(response){
+                    if (response.status === 'success'){
+                        $('.message-info').text(response.message).css('color', 'green');
+
+                        //render the submit button inactive
+                        $('#confirm-terminate').attr('disabled', true);
+                        
+                        // Hide the modal after 2 seconds
+                        setTimeout(function(){
+                            $('#terminateModal').modal('hide');
+                        }, 3000);
+
+                    } else {
+                        if (response.status === 'error'){
+                            $('.message-info').text(response.message).css('color', 'red');
+                        }
+                    }
+                },
+                error: function(jqXHR, status, error){
+                    // Handle error scenario correctly
+                    $('.message-info').text('An error occurred: ' + jqXHR.status + ' ' + error).css('color', 'red');
+                }
+            });
+        });
+    });
+</script>
+
 {% endblock %}

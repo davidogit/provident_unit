@@ -23,6 +23,7 @@ from django.db.models import Sum,F
 import logging
 from django.utils import timezone
 from datetime import datetime
+from django.utils.dateparse import parse_date
 
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
@@ -132,6 +133,7 @@ class InvestmentListView(ListView):
     context_object_name = 'investment_list'
     model = InvestmentDetail
     template_name = 'dashboard/investment_list.html'
+    paginate_by = 10
 
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
@@ -151,38 +153,91 @@ class InvestmentListView(ListView):
         else:
             return InvestmentDetail.objects.none()
         
+    # def get_filtered_queryset(self, queryset):
+    #     t_bill_page = self.request.GET.get('t_bill_page')
+    #     f_deposit_page = self.request.GET.get('f_deposit_page')
+
+    #     if t_bill_page:
+    #         queryset = queryset.filter(investment_type='Treasury Bill')
+    #         # print(f'T-bills = {queryset}')
+
+    #         return queryset
+    #     if f_deposit_page:
+    #         queryset = queryset.filter(investment_type='Fixed Deposit')
+    #         print(f'F-bills = {queryset}')
+    #         return queryset
+
+    #     else:
+    #         # Default ordering
+    #         queryset = queryset.order_by('-created_date')
+    #         print('NONE')
+
+    #     return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         queryset = self.get_queryset()
 
-        # Grouping Investment based on Types
-        context['inv_type_t_bill'] = queryset.filter(investment_type='Treasury Bill')
-        context['inv_type_f_dep'] = queryset.filter(investment_type='Fixed Deposit')
-        # context['inv_type_d_int'] = queryset.filter(investment_type='D-interest')
+        # pass queryset to custom function for further filtering
+        # filtered_queryset = self.get_filtered_queryset(queryset)
 
-        # Getting queryset for each investment type
-        t_bill_queryset = queryset.filter(investment_type='Treasury Bill')
-        f_deposit_queryset = queryset.filter(investment_type='Fixed Deposit')
-        # d_interest_queryset = queryset.filter(investment_type='D-interest')
-
-        # Paginating for each Tab-Pane
-        t_bill_page = self.request.GET.get('t_bill_page',1)
-        f_deposit_page = self.request.GET.get('f_deposit_page',1)
-        # d_interest_page = self.request.GET.get('d_interest_page',1)
-
-
-        # Returning context keys for each page and applying pagination
-        context['t_bill_page'] = Paginator(t_bill_queryset, per_page=2).get_page(t_bill_page)
-        context['f_deposit_page'] = Paginator(f_deposit_queryset,2).get_page(f_deposit_page)
-        # context['d_interest_page'] = Paginator(d_interest_queryset,10).get_page(d_interest_page)
-
-
-        # Counting Number of individual Investments
         context['investment_count']= queryset.count()
         context['T_bills_count'] = queryset.filter(investment_type='Treasury Bill').count()
         context['F_deposit_count'] = queryset.filter(investment_type='Fixed Deposit').count()
-        # context['D_interest_count'] = queryset.filter(investment_type='D-interest').count()
+
+
+        # context['t_bill_page'] 
+
+        fixed_deposit =queryset.filter(investment_type='Fixed Deposit')
+        paginator = Paginator(fixed_deposit, self.paginate_by)
+        page = self.request.GET.get('f_deposit_page',1)
+        try:
+            paginated_queryset = paginator.page(page)
+
+        except PageNotAnInteger:
+            paginated_queryset = paginator.page(1)
+        except EmptyPage:
+            paginated_queryset = paginator.page(paginator.num_pages)
+
+        context['f_deposit_page'] = paginated_queryset
+        context['paginator'] = paginator
+        context['fixed_is_paginated'] = paginator.num_pages > 1
+        print(f'Paginated F: {paginated_queryset} is paginated:{paginator.num_pages > 1} has next: {paginated_queryset.has_next()}')
+        # Add paginated results to context
+            
+
+        treasury_bills = queryset.filter(investment_type='Treasury Bill')
+        # Apply pagination for Tresury bill or Fixed deposit
+
+        # print(f'Filtered T_bill = {filtered_queryset}')
+        paginator = Paginator(treasury_bills, self.paginate_by)
+        page = self.request.GET.get('t_bill_page')
+        try:
+            paginated_queryset = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_queryset = paginator.page(1)
+        except EmptyPage:
+            paginated_queryset = paginator.page(paginator.num_pages)
+
+        # Add paginated results to context
+        context['t_bill_page'] = paginated_queryset
+        context['paginator'] = paginator
+        context['is_paginated'] = paginator.num_pages > 1
+        # else:
+        #     print(f'Filtered F_dep = {filtered_queryset}')
+        #     paginator = Paginator(filtered_queryset, self.paginate_by)
+        #     page = self.request.GET.get('f_deposit_page')
+        #     try:
+        #         paginated_queryset = paginator.page(page)
+        #     except PageNotAnInteger:
+        #         paginated_queryset = paginator.page(1)
+        #     except EmptyPage:
+        #         paginated_queryset = paginator.page(paginator.num_pages)
+
+        #     # Add paginated results to context
+        #     context['f_deposit_page'] = paginated_queryset
+        #     context['paginator'] = paginator
+        #     context['is_paginated'] = paginator.num_pages > 1
         
         return context
     
@@ -200,8 +255,7 @@ class InvestmentDetailView(DetailView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = self.request.tenant        
 
         # Get scheme name
         scheme_id = self.request.scheme_name
@@ -213,6 +267,51 @@ class InvestmentDetailView(DetailView):
         else:
             return InvestmentDetail.objects.none()
 
+    def post(self, request, *args, **kwargs):
+        if request.method == 'POST':
+            try:
+                tenant = request.tenant
+                scheme_id = request.scheme_name
+                inv_id = request.POST.get('inv_id')
+                termination_date_str = request.POST.get('termination_date')
+
+                if not inv_id or not termination_date_str:
+                    return JsonResponse({'status': 'error', 'message': 'Missing required parameters.'})
+
+                try:
+                    termination_date = datetime.strptime(termination_date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid termination date format.'})
+
+                # Get investment to terminate
+                inv = InvestmentDetail.objects.get(
+                    id=inv_id,
+                    investment_scheme__tenant=tenant,
+                    investment_scheme__id=scheme_id
+                )
+
+                # Calculate interest up to termination date
+                current_date = timezone.now().date()
+                days_to_termination = (termination_date - current_date).days
+                if days_to_termination < 0:
+                    return JsonResponse({'status': 'error', 'message': 'Termination date cannot be in the past.'})
+                duration_of_inv_days = (termination_date - inv.interest_start_date).days
+                interest = (inv.interest_percentage / 100) * inv.principal_amount
+                new_interest = (interest / inv.tenure) * duration_of_inv_days
+                inv.interest_amount = new_interest
+                inv.status = 'Terminated'
+                inv.interest_end_date = termination_date
+                inv.termination_status = True
+                inv.save()
+
+                return JsonResponse({'status': 'success', 'message': 'Termination successful'})
+
+            except InvestmentDetail.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Investment not found.'})
+
+            except Exception as e:
+                print(f"Unhandled exception: {e}")
+                return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'})
 
 
 # Adding an investment
@@ -369,7 +468,7 @@ class RolloverPercentage(TemplateView):
 
         # Increment rollover count of original investment
         try:
-            inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=request.tenant,investment_scheme__id=scheme_id,approval_status=False)
+            inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=request.tenant,investment_scheme__id=scheme_id,approval_status=False,termination_status=False)
         except:
             return JsonResponse({'status':'error', 'message':'Cannot rollover approved investments', 'redirect_url': self.get_success_url()})
 
@@ -672,67 +771,80 @@ class MemberDeleteView(DeleteView):
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
-    paginate_by = 5
-    # context_object_name = 'results'  
+    paginate_by = 10  # Set the number of results per page
 
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
     def get_queryset(self):
-         
         # Get Tenant
         tenant = self.request.tenant
-        # tenant = Tenant.objects.get(id=tenant_id)
 
         # Get scheme id
         scheme_id = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_id,tenant=tenant)
+        scheme = InvestmentScheme.objects.filter(id=scheme_id, tenant=tenant).first()
 
         # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme).order_by('created_date')
-        else:
-            return InvestmentDetail.objects.none()
+        if tenant and scheme:
+            return InvestmentDetail.objects.filter(
+                investment_scheme__tenant=tenant,
+                investment_scheme=scheme
+            ).order_by('created_date')
+        return InvestmentDetail.objects.none()
 
-    # Using get_queryset so that we can paginate seperate queries based on filter
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        sort = self.request.GET.get('sort','')
-        from_date = self.request.GET.get('from-date','')
-        to_date = self.request.GET.get('to-date','')
-        inv_type = self.request.GET.get('inv_type','')
-        status = self.request.GET.get('status','')
-        # page_number = self.request.GET.get('page')
-
-
-        # convert 'date' to date format
-        from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
-        to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
-
-        # get all investments
-        queryset = self.get_queryset()
+    def get_filtered_queryset(self, queryset):
+        # Filtering logic
+        sort = self.request.GET.get('sort', '')
+        from_date = parse_date(self.request.GET.get('from-date', ''))
+        to_date = parse_date(self.request.GET.get('to-date', ''))
+        inv_type = self.request.GET.get('inv_type', '')
+        status = self.request.GET.get('status', '')
+        invoice_number = self.request.GET.get('invoice_number', '')
 
         # Base query
-        query = queryset.filter(investment_type=inv_type)
+        if inv_type:
+            queryset = queryset.filter(investment_type=inv_type)
 
-        # Filter based on status
-        if status == 'matured':
-            query = query.filter(_status='Expired')
-        elif status == 'active':
-            query = query.filter(_status='Active')
-        elif status == 'Not started':
-            query = query.filter(_status='Not Start')
+        if invoice_number:
+            queryset = queryset.filter(invoice_number=invoice_number)
 
-        # Apply date filter if provided
+        if status:
+            if status == 'matured':
+                queryset = queryset.filter(_status='Expired')
+            elif status == 'active':
+                queryset = queryset.filter(_status='Active')
+            elif status == 'Not started':
+                queryset = queryset.filter(_status='Not Start')
+
         if from_date and to_date:
             if sort == 'start_date':
-                query = query.filter(interest_start_date__range=(from_date, to_date))
+                queryset = queryset.filter(interest_start_date__range=(from_date, to_date))
             elif sort == 'created_date':
-                query = query.filter(created_date__range=(from_date, to_date))
+                queryset = queryset.filter(created_date__range=(from_date, to_date))
         else:
-            # Default date sorting if no date is provided
-            query = query.order_by(sort or 'interest_start_date')
+            # Default ordering
+            queryset = queryset.order_by(sort or 'interest_start_date')
 
-        context['results'] = query
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get the base queryset
+        queryset = self.get_queryset()
+        # Apply filtering
+        filtered_queryset = self.get_filtered_queryset(queryset)
+
+        # Apply pagination
+        paginator = Paginator(filtered_queryset, self.paginate_by)
+        page = self.request.GET.get('page')
+        try:
+            paginated_queryset = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_queryset = paginator.page(1)
+        except EmptyPage:
+            paginated_queryset = paginator.page(paginator.num_pages)
+
+        # Add paginated results to context
+        context['results'] = paginated_queryset
+        context['paginator'] = paginator
+        context['is_paginated'] = paginator.num_pages > 1
         return context
 
 
@@ -1303,6 +1415,9 @@ class FetchContributions(TemplateView):
             return JsonResponse({'status':'error', 'message':str(e)})
 
 from Member.models import ExitApproval
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['HR',]), name='dispatch')
 class ApproveExitedMembers(TemplateView):
     # model = ExitApproval
     template_name = 'dashboard/exiting_members.html'

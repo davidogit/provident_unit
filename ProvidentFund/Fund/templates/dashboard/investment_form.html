@@ -15,10 +15,25 @@
                     <div class="form-group mb-3">
                       <label for="investmentType" class="form-label">Investment Type</label>
                       <select class="form-control" name="investment_type" id="investmentType">
+                        <option value="">--select--</option>
                         {% for acc,label in inv_type %}
                         <option value="{{acc}}">{{ label }}</option>
                         {% endfor %}
                       </select>
+
+                      <div class="group mt-2" aria-hidden="true">
+                        <input class="form-input" type="radio" id="91_t_bill" name="t-bill-type">
+                        <label class="form-label" for="91_t_bill" class="form-label">91-day T-bill</label>
+                        <br>
+                        <input class="form-input" type="radio" id="91_t_bill" name="t-bill-type">
+                        <label class="form-label" for="91_t_bill" class="form-label">182-day T-bill</label>
+                        <br>
+                        <input class="form-input" type="radio" id="91_t_bill" name="t-bill-type">
+                        <label class="form-label" for="91_t_bill" class="form-label">364-day T-bill</label>
+                        <br>
+                      </div>
+                    
+
                     </div>
                     <div class="form-group mb-3">
                       <label for="investmentId" class="form-label">Investment Name</label>
@@ -72,5 +87,24 @@
   </div>
 
   <!-- main -->
+   <script>
+    $(document).ready(function(){
+      $('.group').hide();
+      $('#investmentType').change(function(){
+        var investmentType = $(this).val();
+        if(investmentType == 'Treasury Bill'){
+          $('.group').show();
+          
+          //change required attribute to true
+          $('input[name="t-bill-type"]').attr('required', true);
+
+        }else{
+          $('.group').hide();
+          //change required attribute to false
+          $('input[name="t-bill-type"]').attr('required', false);
+        }
+      });
+    });
+   </script>
 {% endblock %}
 

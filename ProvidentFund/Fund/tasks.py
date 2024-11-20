@@ -270,7 +270,7 @@ def reduce_date(self):
     for inv in investments:
         # Checks if the investment is within duration
         if (inv.interest_start_date <= current_date <= inv.interest_end_date):     
-            inv.remaining_days -=1
+            inv.remaining_days = (inv.interest_end_date-current_date).days
             inv.status = 'Active'
         
         # Checks if investment is expired

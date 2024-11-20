@@ -147,6 +147,7 @@
                       <th>Principal Amount</th>
                       <th>Percentage Interest (%)</th>
                       <th>Accumulated Interest</th>
+                      <th>Closing Balance</th>
                       <th>Investment start Date</th>
                       <th>Maturity Date</th>
                       <th>Tenure</th>
@@ -161,17 +162,18 @@
                     </tr>
                   </thead>
                   <tbody>
-                    {% for investment in inv_type_t_bill %}
+                    {% for investment in t_bill_page %}
                     <tr>
-                      <td>{{ forloop.counter }}</td>
+                      <td>{{ forloop.counter0|add:t_bill_page.start_index|default:forloop.counter }}</td>
                       <td>{{ investment.invoice_number }}</td>
                       <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
-                      <td>{{ investment.principal_amount }}</td>
+                      <td>{{ investment.principal_amount|floatformat:2 }}</td>
                       <td>{{ investment.interest_percentage }}</td>
-                      <td>{{ investment.interest_amount }}</td>
+                      <td>{{ investment.interest_amount|floatformat:2 }}</td>
+                      <td>{{ investment.closing_amount|floatformat:2 }}</td>
                       <td>{{ investment.interest_start_date }}</td>
                       <td>{{ investment.interest_end_date }}</td>
                       <td>{{ investment.tenure }} days</td>
@@ -206,6 +208,7 @@
           <!-- PAGINATION -->
           
           <nav aria-label="Page navigation">
+            {% if is_paginated %}
             <ul class="pagination justify-content-center">
               {% if t_bill_page.has_previous %}
               <li class="page-item">
@@ -241,6 +244,7 @@
               </li>
               {% endif %}
             </ul>
+            {% endif %}
           </nav>
       
 
@@ -285,17 +289,17 @@
                     </tr>
                   </thead>
                   <tbody>
-                    {% for investment in inv_type_f_dep %}
+                    {% for investment in f_deposit_page %}
                     <tr>
-                      <td>{{ forloop.counter }}</td>
+                      <td>{{ forloop.counter0|add:f_deposit_page.start_index|default:forloop.counter }}</td>
                       <td>{{ investment.invoice_number }}</td>
                       <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
-                      <td>{{ investment.principal_amount }}</td>
+                      <td>{{ investment.principal_amount|floatformat:2 }}</td>
                       <td>{{ investment.interest_percentage }}</td>
-                      <td>{{ investment.interest_amount }}</td>
+                      <td>{{ investment.interest_amount|floatformat:2 }}</td>
                       <td>{{ investment.interest_start_date }}</td>
                       <td>{{ investment.interest_end_date }}</td>
                       <td>{{ investment.tenure }}</td>
@@ -332,6 +336,7 @@
           
           <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center">
+              {% if fixed_is_paginated %}
               {% if f_deposit_page.has_previous %}
               <li class="page-item">
                 <a class="page-link" href="?f_deposit_page=1" aria-label="First">
@@ -366,12 +371,12 @@
               </li>
               {% endif %}
             </ul>
+            {% endif %}
           </nav>      
           <!-- PAGINATION -->
       </div>
   </div>
   <!-- Tab panes -->
 <!--Tabs for investments-->
-
 {% endblock %}
 <!-- main -->

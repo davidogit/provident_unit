@@ -19,7 +19,7 @@ class InvestmentDetail(models.Model):
         (T_bill,'Treasury Bill'),
         (F_dep, 'Fixed Deposit')
     ]
-    investment_type = models.CharField(max_length=50, choices=inv_type, default=T_bill)
+    investment_type = models.CharField(max_length=50, choices=inv_type, default='')
 
     current = 'Current'
     checking ='Checking'
@@ -53,7 +53,8 @@ class InvestmentDetail(models.Model):
 
     approval_status = models.BooleanField(default=False)
     closing_amount = models.FloatField(default=0.0)
-
+    termination_status = models.BooleanField(default=False)
+    interest_amount = models.FloatField(default=0.0)
     # History
     # history = HistoricalRecords()
 
@@ -61,12 +62,12 @@ class InvestmentDetail(models.Model):
     def calculate_inv_interest(self):
         principal = self.principal_amount or 0.0
         rate = self.interest_percentage or 0.0
-        interest = (((rate / 100.0) * principal)+(principal))
+        interest = (((rate / 100.0) * principal))
         return interest
     
-    @property
-    def interest_amount(self):
-        return self.calculate_inv_interest()
+    # @property
+    # def interest_amount(self):
+    #     return self.calculate_inv_interest()
 
     def calculate_tenure(self):
         return (self.interest_end_date - self.interest_start_date).days
@@ -99,6 +100,9 @@ class InvestmentDetail(models.Model):
     
     # Set remaining days and status 
     def save(self, *args, **kwargs):
+        # Set interest amount 
+        self.interest_amount = self.calculate_inv_interest()
+
         if not self.pk:
             self._remaining_days = self.calculate_tenure()
 
