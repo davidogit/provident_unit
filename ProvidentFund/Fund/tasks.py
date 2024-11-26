@@ -40,7 +40,8 @@ def member_interest(self):
                     investment_scheme__tenant = tenant,
                     _remaining_days__gt=0,
                     _status='Active',
-                    approval_status=False
+                    approval_status=False,
+                    termination_status = False
                 )
 
                 delayed_interests = DelayedInterest.objects.filter(
@@ -52,11 +53,7 @@ def member_interest(self):
                     investment_scheme=scheme,
                     _status='Not used'
                 )
-
-                # Get total contributions of each scheme
-                # total_contribution = Contribution.objects.filter(investment_scheme=scheme, investment_scheme__tenant=tenant,approved_contribution=True).aggregate(total=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total'] or 0.0
-                
-                
+                                
                 # Get all members of scheme and sump up their actual amount which will be used in distribution by proportion
                 total_contribution = StaffAPI.objects.filter(
                     tenant=tenant,
@@ -64,6 +61,8 @@ def member_interest(self):
                     exited_flag=True
                 ).aggregate(total = Sum('actual_amount'))['total'] or 0.0
 
+                total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aaggregate(total=Sum('total_contributions'))['total'] or 0.0
+                
                 # with transaction.atomic():
                 # Distribute Delayed Interests
                 for d_int in delayed_interests:

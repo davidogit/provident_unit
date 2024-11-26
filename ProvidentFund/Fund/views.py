@@ -24,7 +24,7 @@ import logging
 from django.utils import timezone
 from datetime import datetime
 from django.utils.dateparse import parse_date
-
+from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 logger = logging.getLogger(__name__)
@@ -284,22 +284,30 @@ class InvestmentDetailView(DetailView):
                     return JsonResponse({'status': 'error', 'message': 'Invalid termination date format.'})
 
                 # Get investment to terminate
-                inv = InvestmentDetail.objects.get(
-                    id=inv_id,
-                    investment_scheme__tenant=tenant,
-                    investment_scheme__id=scheme_id
-                )
+                try:
+                    inv = InvestmentDetail.objects.get(
+                        id=inv_id,
+                        investment_scheme__tenant=tenant,
+                        investment_scheme__id=scheme_id,
+                        _status = 'Expired'
+                    )
+                except Exception:
+                    return JsonResponse({'status':'error', 'message':'This investment is matured hence can\'t be terminated.'},400)
 
                 # Calculate interest up to termination date
                 current_date = timezone.now().date()
                 days_to_termination = (termination_date - current_date).days
-                if days_to_termination < 0:
-                    return JsonResponse({'status': 'error', 'message': 'Termination date cannot be in the past.'})
+                # check if termination date is outside of maturity date
+                if days_to_termination < 0 or termination_date>inv.interest_end_date:
+                    return JsonResponse({'status': 'error', 'message': 'Termination date cannot be in the past or after maturity date.'})
                 duration_of_inv_days = (termination_date - inv.interest_start_date).days
+                #############################
+                # INTEREST CALCULATION TO CHANGE
                 interest = (inv.interest_percentage / 100) * inv.principal_amount
+                #############################
                 new_interest = (interest / inv.tenure) * duration_of_inv_days
                 inv.interest_amount = new_interest
-                inv.status = 'Terminated'
+                inv.status = 'Expired'
                 inv.interest_end_date = termination_date
                 inv.termination_status = True
                 inv.save()
@@ -453,16 +461,14 @@ class RolloverPercentage(TemplateView):
         tenant_id = request.tenant.id
         scheme_id = request.scheme_name
 
-        # Collect all data in Post request
-        
-        rollover_rate = request.POST.get('rate')
-        
+        # Collect all data in Post request 
+        rollover_rate = request.POST.get('rate') 
         start_date_str = request.POST.get('start_date')
         maturity_date_str = request.POST.get('maturity_date')
-
+        rollover_amount_str = request.POST.get('principal') #Partial amount input or total amount
+        rollover_amount = float(rollover_amount_str)
         start_date=datetime.strptime(start_date_str, "%Y-%m-%d")
         maturity_date = datetime.strptime(maturity_date_str, "%Y-%m-%d")
-        
         account_number = request.POST.get('account_number')
         pk = kwargs['pk']
 
@@ -472,6 +478,11 @@ class RolloverPercentage(TemplateView):
         except:
             return JsonResponse({'status':'error', 'message':'Cannot rollover approved investments', 'redirect_url': self.get_success_url()})
 
+        # Prevent cases where rollover principal is greater than the return of the previous investment
+        print(f'New amount: {rollover_amount}')
+        if rollover_amount > inv.interest_amount:
+            message = f'New principal cannot be greater than {inv.interest_amount}'
+            return JsonResponse({'status':'error','message':message})
 
         counter = 0
         # Increment rollover count
@@ -480,7 +491,7 @@ class RolloverPercentage(TemplateView):
         else:
             counter = inv.rollover_count + 1
 
-
+        # adding R[] to investment before saving
         name_parts = ''
         if inv.rollover_count>=1:
             name_parts = inv.account_name.split()#split name on spaces
@@ -491,10 +502,15 @@ class RolloverPercentage(TemplateView):
         else:
             name_parts = inv.account_name            
 
+        # check if its a partial rollover
+        if rollover_amount < inv.interest_amount:
+            new_principal = rollover_amount
+        else:
+            new_principal = inv.interest_amount
 
         inv_name = f'{name_parts} R{counter}'
         inv_type = inv.investment_type
-        rollover_principal = inv.interest_amount
+        rollover_principal = new_principal
         account_type = inv.account_type
 
         required_fields = [
@@ -532,9 +548,9 @@ class RolloverPercentage(TemplateView):
             inv.save()
             return JsonResponse({'status':'success', 'redirect_url': self.get_success_url()})
         except ValidationError as e:
-            return JsonResponse({'status':'error', 'message':str(e.message)}, status=400)
+            return JsonResponse({'status':'error', 'message':str(e.message)})
         except Exception as e:
-            return JsonResponse({'status':'error', 'message':str(e)}, status=500)
+            return JsonResponse({'status':'error', 'message':str(e)})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -789,51 +805,57 @@ class InvestmentQuery(ListView):
             ).order_by('created_date')
         return InvestmentDetail.objects.none()
 
-    def get_filtered_queryset(self, queryset):
-        # Filtering logic
-        sort = self.request.GET.get('sort', '')
-        from_date = parse_date(self.request.GET.get('from-date', ''))
-        to_date = parse_date(self.request.GET.get('to-date', ''))
-        inv_type = self.request.GET.get('inv_type', '')
-        status = self.request.GET.get('status', '')
-        invoice_number = self.request.GET.get('invoice_number', '')
-
-        # Base query
-        if inv_type:
-            queryset = queryset.filter(investment_type=inv_type)
-
-        if invoice_number:
-            queryset = queryset.filter(invoice_number=invoice_number)
-
-        if status:
-            if status == 'matured':
-                queryset = queryset.filter(_status='Expired')
-            elif status == 'active':
-                queryset = queryset.filter(_status='Active')
-            elif status == 'Not started':
-                queryset = queryset.filter(_status='Not Start')
-
-        if from_date and to_date:
-            if sort == 'start_date':
-                queryset = queryset.filter(interest_start_date__range=(from_date, to_date))
-            elif sort == 'created_date':
-                queryset = queryset.filter(created_date__range=(from_date, to_date))
-        else:
-            # Default ordering
-            queryset = queryset.order_by(sort or 'interest_start_date')
-
-        return queryset
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Get the base queryset
         queryset = self.get_queryset()
-        # Apply filtering
-        filtered_queryset = self.get_filtered_queryset(queryset)
+
+        # Get filter parameters
+        sort = self.request.GET.get('sort')
+        from_date_str = self.request.GET.get('from-date')
+        to_date_str = self.request.GET.get('to-date')
+        inv_type = self.request.GET.get('inv_type')
+        status = self.request.GET.get('status')
+        invoice_number = self.request.GET.get('invoice_number')
+
+        from_date = parse_date(from_date_str) if from_date_str else None
+        to_date = parse_date(to_date_str) if to_date_str else None
+
+        # check if filters are applied
+        filters_applied = any([sort,from_date_str,to_date_str,inv_type,status,invoice_number])
+
+        if not filters_applied:
+            queryset = queryset.none()
+        
+        else:
+            # Apply filters incrementally
+            if inv_type:
+                queryset = queryset.filter(investment_type=inv_type)
+            
+            if invoice_number:
+                queryset = queryset.filter(invoice_number=invoice_number)
+
+            if status:
+                if status == 'matured':
+                    queryset = queryset.filter(_status='Expired')
+                elif status == 'active':
+                    queryset = queryset.filter(_status='Active')
+                elif status == 'Not started':
+                    queryset = queryset.filter(_status='Not Start')
+
+            if from_date and to_date:
+                if sort == 'start_date':
+                    queryset = queryset.filter(interest_start_date__range=(from_date, to_date))
+                elif sort == 'created_date':
+                    queryset = queryset.filter(created_date__range=(from_date, to_date))
+
+            # Apply sorting (default to 'interest_start_date' if no sort parameter is given)
+            sort_field = sort or 'interest_start_date'
+            queryset = queryset.order_by(sort_field)
 
         # Apply pagination
-        paginator = Paginator(filtered_queryset, self.paginate_by)
+        paginator = Paginator(queryset, self.paginate_by)
         page = self.request.GET.get('page')
+
         try:
             paginated_queryset = paginator.page(page)
         except PageNotAnInteger:
@@ -841,10 +863,17 @@ class InvestmentQuery(ListView):
         except EmptyPage:
             paginated_queryset = paginator.page(paginator.num_pages)
 
+        # Generate query parameters for pagination links
+        query_params = self.request.GET.copy()
+        if 'page' in query_params:
+            query_params.pop('page')
+        query_string = urlencode(query_params)
+
         # Add paginated results to context
         context['results'] = paginated_queryset
         context['paginator'] = paginator
         context['is_paginated'] = paginator.num_pages > 1
+        context['query_string'] = query_string
         return context
 
 
@@ -1168,7 +1197,7 @@ class InvestmentApproval(ListView):
                 actual_member_interest.delay(tenant_id,scheme_id,inv_id)
                 # print('returning success response')
 
-                return JsonResponse({'status':'success'})
+                return JsonResponse({'status':'success','message':'Investment approved successfully.'})
             else:
                 # Gather the error message
                 error_message = 'Closing amount does not match with expected amount'

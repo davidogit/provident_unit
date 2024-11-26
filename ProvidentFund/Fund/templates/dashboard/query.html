@@ -107,7 +107,7 @@
                                     
                                         <tr>
                                             <td>{{ forloop.counter0|add:results.start_index|default:forloop.counter }}</td>
-                                            <td>{{ inv.invoice_number }}</td>
+                                            <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=inv.pk %}">{{ inv.invoice_number }}</a></td>
                                             <td>{{ inv.created_date }}</td>
                                             <td>{{ inv.interest_start_date }}</td>
                                             <td>{{ inv.interest_end_date }}</td>
@@ -140,7 +140,7 @@
                     <li class="page-item">
                     <a
                         class="page-link"
-                        href="?page={{ results.previous_page_number }}"
+                        href="?page={{ results.previous_page_number }}&{{ query_string }}"
                         aria-label="Previous"
                     >
                         <span aria-hidden="true">&laquo;</span>
@@ -154,7 +154,7 @@
                     <li class="page-item">
                     <a
                         class="page-link"
-                        href="?page={{ results.next_page_number }}"
+                        href="?page={{ results.next_page_number }}&{{  query_string}}"
                         aria-label="Next"
                     >
                         <span aria-hidden="true">&raquo;</span>
@@ -162,7 +162,7 @@
                     </li>
 
                     <li class="page-link">
-                        <a href="?page={{ results.paginator.num_pages }}">&raquo;&raquo;</a>
+                        <a href="?page={{ results.paginator.num_pages }}&{{ query_string }}">&raquo;&raquo;</a>
                     </li>
                     {% endif %}
               </ul>

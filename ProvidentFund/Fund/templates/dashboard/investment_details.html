@@ -121,9 +121,14 @@
                         }
                     }
                 },
-                error: function(jqXHR, status, error){
+                error: function(jqXHR){
                     // Handle error scenario correctly
-                    $('.message-info').text('An error occurred: ' + jqXHR.status + ' ' + error).css('color', 'red');
+                    alert('An error occurred: ' + jqXHR.responseJSON.message);
+                    if (jqXHR.status === 400){
+                        $('.message-info').text('An error occurreddd: ' + jqXHR.responseJSON.message).css('color', 'red');
+                    }else{
+                        $('.message-info').text('An error occurredss: ' + jqXHR.responseJSON.message).css('color', 'red');
+                    }
                 }
             });
         });

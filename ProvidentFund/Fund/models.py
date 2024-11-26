@@ -11,7 +11,6 @@ from .generate_invoice import generate_invoice_number
 
 class InvestmentDetail(models.Model):
     invoice_number = models.CharField(max_length=6, unique=True,null=True,blank=True, editable=False)
-
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
     T_bill = 'Treasury Bill'
     F_dep = 'Fixed Deposit'
@@ -20,7 +19,6 @@ class InvestmentDetail(models.Model):
         (F_dep, 'Fixed Deposit')
     ]
     investment_type = models.CharField(max_length=50, choices=inv_type, default='')
-
     current = 'Current'
     checking ='Checking'
     savings = 'Savings'
@@ -35,7 +33,6 @@ class InvestmentDetail(models.Model):
         (premium_checking,'Premium Checking'),
         (business,'Business')
     ]
-
     account_type = models.CharField(max_length=50, choices=account, default=current)
     account_name = models.CharField(max_length=50)
     account_number = models.IntegerField(unique=False)
@@ -50,24 +47,27 @@ class InvestmentDetail(models.Model):
     rollover_count = models.IntegerField(default=0)
     _remaining_days = models.PositiveIntegerField(default=0)
     _status = models.CharField(max_length=20, default='Pending')
-
     approval_status = models.BooleanField(default=False)
     closing_amount = models.FloatField(default=0.0)
     termination_status = models.BooleanField(default=False)
     interest_amount = models.FloatField(default=0.0)
-    # History
-    # history = HistoricalRecords()
-
 
     def calculate_inv_interest(self):
+        # Calculation without factoring compound interest
         principal = self.principal_amount or 0.0
         rate = self.interest_percentage or 0.0
         interest = (((rate / 100.0) * principal))
+
+        # # Calculation involving compound interes
+        # p = self.principal_amount
+        # r = self.interest_percentage/100
+        # t = (self.interest_end_date - self.interest_start_date)/365
+        # n = self.componding_frequency # daily,monthly,quaterly,yearly
+
+        # c = p*(1+(r/n))**(n*t) #compound interest
+        # interest = c-p #interest amount only
+
         return interest
-    
-    # @property
-    # def interest_amount(self):
-    #     return self.calculate_inv_interest()
 
     def calculate_tenure(self):
         return (self.interest_end_date - self.interest_start_date).days
@@ -109,9 +109,7 @@ class InvestmentDetail(models.Model):
         # Prevent updates to investments after the status has changed to active
         if self.pk and self.status in ['Active',]:
             raise ValidationError('This investment is closed and can no longer be edited')
-
         super().save(*args, **kwargs)
-
 
     @property
     def rollover_principal(self):
@@ -155,10 +153,6 @@ class DelayedInterest(models.Model):
     remarks = models.CharField(max_length=50)
     _status = models.CharField(max_length=20, default='Not used')
 
-    # History
-    # history = HistoricalRecords()
-
-
     @property
     def status(self):
         return self._status
@@ -195,10 +189,6 @@ class BankInterest(models.Model):
     created_date = models.DateField(auto_now_add=True)
     remarks = models.CharField(max_length=50)
     _status = models.CharField(max_length=20, default='Not used')
-
-    # History
-    # history = HistoricalRecords()
-
     
     @property
     def status(self):

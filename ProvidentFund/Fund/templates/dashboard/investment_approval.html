@@ -171,7 +171,7 @@
                     {% if investment.investment_type == 'Treasury Bill' %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td>{{ investment.invoice_number }}</td>
+                        <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
                         <td>
                             <form class="approval-form d-flex" action="" method="post">
                                 {% csrf_token %}
@@ -184,7 +184,7 @@
                             </form>
                         </td>
                         
-                        <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
+                        <td>{{ investment.account_name }}</td>
                         <td>{{ investment.investment_type }}</td>
                         <td>{{ investment.account_type }}</td>
                         <td>{{ investment.account_number }}</td>

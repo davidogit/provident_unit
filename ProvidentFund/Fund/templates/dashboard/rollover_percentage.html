@@ -10,7 +10,7 @@
             <div class="card-body">
                 <div class="row g-5">
                     <div class="row card-value text-center">
-                        <h2 class="mb-5 mt-5 text-decoration-underline">
+                        <h2 class="mt-5 text-decoration-underline">
                             Rollover Detail
                         </h2>
                     </div>
@@ -19,7 +19,16 @@
                     <form method="POST" id="rollover-form">
                         {% csrf_token %}
                         <div class="row g-5">
+                            <div class="info text-center">
+                                <!-- Information to be displayed to user -->
+                            </div>
                             <div class="col-md-4">
+                                <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                    <input type="radio" class="btn-check" name="rollover_type" id="full" autocomplete="off" checked>
+                                    <label class="btn btn-outline-secondary" for="full">Full</label>
+                                    <input type="radio" class="btn-check" name="rollover_type" id="partial" autocomplete="off">
+                                    <label class="btn btn-outline-primary" for="partial">Partial</label>
+                                </div>
         
                                 <div class="form-group mb-3">
                                     <label for="principal" class="form-label">Rollover Principal: </label>
@@ -77,6 +86,18 @@
 </div>
 
 <script>
+    // make the principal amount field read only if the rollover type is full and vice versa
+    $(document).ready(function(){
+        $('#full').click(function(){
+            $('#principal').prop('disabled', true);
+        });
+        $('#partial').click(function(){
+            $('#principal').prop('disabled', false);
+        });
+    });
+
+
+
     $(document).ready(function(){
         $('#rollover-form').submit(function(e){
             e.preventDefault();
@@ -93,15 +114,14 @@
                         alert('Rollover Successful');
                         window.location.href = response.redirect_url;
                     }else{
-                        message = response.message;
-
-                        alert('Roll over failed '+ message);
+                        $('.info').text(response.message).css('color', 'red');
 
                     }
                 },
-                error: function(error){
-                    console.log(error);
-                    alert('Rollover Failed');
+                error: function(jqXHR,error){
+                    response = jqXHR.responseJSON;
+                    message = response.message;
+                    alert('An error occured. Please try again'+ message);
                 }
             });
         });

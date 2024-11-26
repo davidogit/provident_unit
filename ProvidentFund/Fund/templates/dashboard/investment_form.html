@@ -20,18 +20,26 @@
                         <option value="{{acc}}">{{ label }}</option>
                         {% endfor %}
                       </select>
-
-                      <div class="group mt-2" aria-hidden="true">
-                        <input class="form-input" type="radio" id="91_t_bill" name="t-bill-type">
-                        <label class="form-label" for="91_t_bill" class="form-label">91-day T-bill</label>
-                        <br>
-                        <input class="form-input" type="radio" id="91_t_bill" name="t-bill-type">
-                        <label class="form-label" for="91_t_bill" class="form-label">182-day T-bill</label>
-                        <br>
-                        <input class="form-input" type="radio" id="91_t_bill" name="t-bill-type">
-                        <label class="form-label" for="91_t_bill" class="form-label">364-day T-bill</label>
-                        <br>
+                      
+                      <div class="row group">
+                        <div class="col-md-6"><div class="mt-2" aria-hidden="true">
+                          <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                            <input type="radio" class="btn-check" name="t_bill_type" id="btnradio1" autocomplete="off" value="91">
+                            <label class="btn btn-outline-primary" for="btnradio1">91 days</label>
+                          
+                            <input type="radio" class="btn-check" name="t_bill_type" id="btnradio2" autocomplete="off" value="182">
+                            <label class="btn btn-outline-primary" for="btnradio2">182 days</label>
+                          
+                            <input type="radio" class="btn-check" name="t_bill_type" id="btnradio3" autocomplete="off" value="365">
+                            <label class="btn btn-outline-primary" for="btnradio3">365 days</label>
+                          </div>
+                        </div></div>
+                        <div class="col-md-6 daycount mt-2">
+                          <label for="day_count">Day Count</label>
+                          <input type="number" class="form-control" name="day_count" id="day_count">
+                        </div>
                       </div>
+                      
                     
 
                     </div>
@@ -96,12 +104,16 @@
           $('.group').show();
           
           //change required attribute to true
-          $('input[name="t-bill-type"]').attr('required', true);
+          $('input[name="t_bill_type"]').attr('required', true);
 
         }else{
           $('.group').hide();
           //change required attribute to false
-          $('input[name="t-bill-type"]').attr('required', false);
+          $('input[name="t_bill_type"]').attr('required', false);
+          //uncheck all radio buttons
+          $('input[name="t_bill_type"]').prop('checked', false);
+          //clear day count
+          $('input[name="day_count"]').val('');
         }
       });
     });

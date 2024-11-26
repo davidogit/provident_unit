@@ -165,8 +165,8 @@
                     {% for investment in t_bill_page %}
                     <tr>
                       <td>{{ forloop.counter0|add:t_bill_page.start_index|default:forloop.counter }}</td>
-                      <td>{{ investment.invoice_number }}</td>
-                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
+                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
+                      <td>{{ investment.account_name }}</td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
