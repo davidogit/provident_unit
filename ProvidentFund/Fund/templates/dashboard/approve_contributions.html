@@ -50,7 +50,7 @@
                                  </p>
                             </div>
 
-                            <button class="form-control btn btn-success" type="submit" name="" id="">Validate</button>
+                            <button class="form-control btn btn-outline-success btn-lg" type="submit" name="" id="">Validate</button>
 
                             <!-- Dynamic Data -->
 
@@ -73,10 +73,12 @@
     });
 
     //Handle from submission
+    const contributionInfo = document.getElementById('contribution-info');
     $(document).ready(function(){
         $('#approval-form').on('submit',function(event){
             event.preventDefault();
             var form = $(this);
+            
 
             $.ajax({
                 type: form.attr('method'),
@@ -87,7 +89,7 @@
                     if (response.status === 'success'){
                         contributionInfo.innerHTML = `
                         <div class="alert alert-success text-center">
-                            <span>contribution successfully validated</span> 
+                            <span>${response.message}</span> 
                         </div>`;
                     } else{
                         alert(response.message);
@@ -112,7 +114,6 @@
     // Dynamic Contribution Data
     const monthSelect = document.getElementById('month');
     //const yearInput = document.getElementById('year');
-    const contributionInfo = document.getElementById('contribution-info');
     
 
     // Function to fetch and display contribution info

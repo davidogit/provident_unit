@@ -1,4 +1,5 @@
 import json
+from typing import Iterable
 from django.db import models
 # from Fund.models import AuditTrail
 from django.db.models.signals import pre_delete,post_save
@@ -6,6 +7,7 @@ from django.utils.encoding import force_str
 # from Fund.middleware import get_current_user
 from django.utils import timezone
 from django.dispatch import receiver
+from django.core.validators import MinValueValidator,MaxValueValidator
 # Create your models here.
 
 # Tenanat model
@@ -41,33 +43,34 @@ class InvestmentScheme(models.Model):
     delayed_int = models.CharField(max_length=3, choices=options,default=No,null=True)
     bank_int = models.CharField(max_length=3, choices=options, default=No,null=True)
 
-    Daily = 'Daily'
-    Weekly = 'Weekly'
-    Monthly = 'Monthly'
-    frequency = [
-        (Daily,'Daiily'),
-        (Weekly,'Weekly'),
-        (Monthly,'Monthly')
-    ]
+    # Daily = 'Daily'
+    # Weekly = 'Weekly'
+    # Monthly = 'Monthly'
+    # frequency = [
+    #     (Daily,'Daiily'),
+    #     (Weekly,'Weekly'),
+    #     (Monthly,'Monthly')
+    # ]
     # contribution_frequency = models.CharField(max_length=20,choices=frequency,default='',null=True)
-    contribution_time = models.TimeField(null=True)
-    contribution_date = models.IntegerField(null=True, blank=True)
+    # contribution_time = models.TimeField(null=True)
+    # contribution_date = models.IntegerField(null=True, blank=True)
 
     # distribution_frequency = models.CharField(max_length=20, choices=frequency,default='', null=True)
     distribution_percentage = models.FloatField(null=True)
     eligibility_criteria_months = models.IntegerField(null=True)
 
-    every_six_months = '6 months'
-    every_year = '12 months'
-    every_eighteen_months = '18 months'
-    every_two_years = '24 months'
-    choices =[
-        (every_six_months,'6 months'),
-        (every_year, '12 months'),
-        (every_eighteen_months, '18 months'),
-        (every_two_years, '24 months')
-    ]
-    payout_frequency = models.CharField(max_length=20,choices=choices,default='', null=True)
+    # every_six_months = '6 months'
+    # every_year = '12 months'
+    # every_eighteen_months = '18 months'
+    # every_two_years = '24 months'
+    # choices =[
+    #     (every_six_months,'6 months'),
+    #     (every_year, '12 months'),
+    #     (every_eighteen_months, '18 months'),
+    #     (every_two_years, '24 months')
+    # ]
+    # payout_frequency = models.CharField(max_length=20,choices=choices,default='', null=True)
+
     description = models.TextField(blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
@@ -133,3 +136,43 @@ class InvestmentScheme(models.Model):
 #         timestamp = timezone.now(),
 #         name = user.username
 #     )
+
+
+class SchemeSettings(models.Model):
+    investment_scheme = models.OneToOneField(
+        'InvestmentScheme', 
+        on_delete=models.CASCADE, 
+        related_name='scheme_settings'
+    )
+    contribution_day = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        help_text="Day of the month for contributions (1-31)."
+    )
+    grace_period_contribution = models.PositiveSmallIntegerField(
+        default=0, 
+        validators=[MinValueValidator(0), MaxValueValidator(31)],
+        help_text="Grace period for contributions in days."
+    )
+    # grace_period_delayed_int = models.PositiveSmallIntegerField(
+    #     default=0,
+    #     validators=[MinValueValidator(0), MaxValueValidator(31)],
+    #     help_text="Grace period for delayed interest in days."
+    # )# Interest accumulation begins immediately after creating
+    # daily_d_int_rate = models.DecimalField(
+    #     max_digits=5, 
+    #     decimal_places=4,
+    #     validators=[MinValueValidator(0), MaxValueValidator(100)],
+    #     help_text="Daily delayed interest rate as a percentage (0-100)."
+    # )#we use same rate on delayed interest object
+    delayed_interest_rate = models.FloatField( 
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Delayed interest rate as a percentage (0-100)."
+    )
+    
+
+    def __str__(self):
+        return f"Settings for {self.investment_scheme.name}"
+
+    class Meta:
+        verbose_name = "Scheme Setting"
+        verbose_name_plural = "Scheme Settings"

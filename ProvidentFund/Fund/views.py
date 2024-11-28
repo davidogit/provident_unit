@@ -7,9 +7,9 @@ from django.views.generic import TemplateView, ListView,DetailView,UpdateView,Cr
 from ProvidentFund.settings import EMAIL_HOST_USER
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate
 from Member.models import Member
+from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings
 from MultiScheme.models import InvestmentScheme,Tenant
-from MultiScheme.models import InvestmentScheme,Tenant
-from contributions.models import StaffAPI
+from contributions.models import StaffAPI, Contribution
 from django.urls import reverse, reverse_lazy
 from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
@@ -22,7 +22,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Sum,F
 import logging
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils.dateparse import parse_date
 from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
@@ -328,7 +328,7 @@ class InvestmentDetailView(DetailView):
 @method_decorator(role_required(role=['Treasury User']), name='dispatch')
 class AddInvestment(CreateView):
     model=InvestmentDetail
-    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage')
+    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage','years','componding_frequency')
     template_name = 'dashboard/investment_form.html'
     # success_url = reverse_lazy('investment_list')
 
@@ -1368,16 +1368,14 @@ class ApproveContributions(TemplateView):
     def post(self,request,*args,**kwargs):
         tenant = request.tenant
         scheme_id = request.scheme_name
-
+        scheme = get_object_or_404(InvestmentScheme,id=scheme_id, tenant=tenant)
         # Collect filter parameters
         month = request.POST.get('month')
         year = request.POST.get('year')
 
-        # print(f'month={month}, year={year}')
-
+        message_1 = '' #holder for extra message to user
         if year and month:
             # Collect investments within the provided month
-            from contributions.models import Contribution
             contributions = Contribution.objects.filter(investment_scheme__tenant = tenant,investment_scheme__id=scheme_id,month=month,year=year, approved_contribution=False)
 
             if not contributions.exists():
@@ -1394,9 +1392,71 @@ class ApproveContributions(TemplateView):
                 year
             )
 
-            
+            # collect settings related to the scheme
+            settings = get_object_or_404(SchemeSettings, investment_scheme = scheme)
 
-            message = f'Successfully approved investments for {month} {year}'
+            contribution_day = settings.contribution_day
+            grace_period = settings.grace_period_contribution
+            rate = settings.delayed_interest_rate
+            # Check for Delayed Interest on Contribution
+            now = timezone.now()
+
+            # First day of month
+            first_day_of_month = now.replace(day=1,month=int(month),year=int(year))
+
+            print(first_day_of_month)
+            # expected payment date
+            due_date = first_day_of_month + timedelta(contribution_day)
+            # due date after grace period
+            grace_period_end = due_date + timedelta(grace_period)
+
+            # check if payment is delayed past grace period
+            if now > grace_period_end: #if payment date is over grace period
+                
+                # Calculate delayed interest principal = acrued interest on contributions until approval date after grace period
+
+                # monthly contribution total
+                month_contribution = Contribution.objects.filter(investment_scheme__tenant = tenant,investment_scheme__id=scheme_id,month=month,year=year, approved_contribution=True).aggregate(total = Sum('total_contribution'))['total'] or 0.0
+                print(f'Monthly = {month_contribution}')
+
+                # Calculate amount due after grace period
+                duration = (now - grace_period_end).days
+                print(f'Duration = {duration}')
+
+                # convert percentage --> decimal
+                daily_delayed_rate = (rate/100) 
+                # Simple calculation of delayed principal subject to change
+                # delayed_principal = (daily_delayed_rate*month_contribution)*duration
+
+                # Using compound interest to calculate the delayed Interest on contribution
+                t = ((duration/30)/12) #convert duration from days to years
+                print(f'value of t ={t}')
+                n = 365
+                print(f'value of n ={n}')
+                p = month_contribution
+                print(f'value of p ={p}')
+                r = daily_delayed_rate
+                print(f'value of r ={r}')
+                c = p*(1+(r/n))**(n*t) #compound interest asuming t=1 year
+                print(f'value of c = {c}')
+                delayed_principal = c-p
+                print(f'Delayed Interest = {delayed_principal}')
+
+
+                # create delayed interest object
+                DelayedInterest.objects.get_or_create(
+                    investment_scheme=scheme,
+                    remarks = f'Delayed Interest for {month} /{year}',
+                    rate_d_int = rate,
+                    principal = delayed_principal,
+                )
+
+                message_1 = (
+                    f'This payment is overdue hence a delayed interest entry is created for '
+                    f'the month of {month}/{year}'
+                )
+            
+            message = f'Successfully approved investments for {month}/{year}  NB:{message_1}'
             return JsonResponse({'status':'success', 'message':message})
         else:
             return JsonResponse({'status':'error', 'message':'No contributions for selected Year and Month'})
@@ -1409,7 +1469,7 @@ class FetchContributions(TemplateView):
         scheme_id = request.scheme_name
         month = request.GET.get('month')
         year = request.GET.get('year')
-        print(f'scheme_id={scheme_id},tenant={tenant},month={month}, year={year}')
+
         if not month or not year:
             return JsonResponse({'status': 'error', 'message': 'Month and year are required.'})
         try:
@@ -1424,17 +1484,11 @@ class FetchContributions(TemplateView):
 
 
             total_number = queryset.count()
-            total_amount = queryset.aggregate(total_amount=Sum(F('employee_amount')+F('employer_amount')+F('retro_employee_amount')+F('retro_employer_amount')))['total_amount'] or 0
+            total_amount = queryset.aggregate(total_amount=Sum('total_contribution'))['total_amount'] or 0
             contribution_date = queryset.first().contribution_date
             contribution_status = queryset.first().approved_contribution
-            # object response
-            contribution_data = {
-                'number_of_contributions':total_number,
-                'total_amount':total_amount,
-                'date_of_contribution':contribution_date,
-                'contribution_status':contribution_status,
-            }
 
+            # object response
             return JsonResponse({'number_of_contributions':total_number,
                 'total_amount':total_amount,
                 'date_of_contribution':contribution_date,

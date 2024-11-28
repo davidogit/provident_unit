@@ -21,10 +21,10 @@ class StaffAPI(models.Model):
     date_joined = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=20, blank=True, null=True, default='active')
     fund_type = models.CharField(max_length=50)
-    _amount = models.FloatField(null=True,blank=True,default=0.00)
+    _amount = models.FloatField(null=True,blank=True,default=0.00)#holds users accumulated contributions
     exited_date = models.DateField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
-    profit = models.FloatField(default=0.00) # Estimated interest to gain NB: does not include contributions
+    estimated_profit = models.FloatField(default=0.00) # Estimated interest to gain NB: does not include contributions
     actual_amount = models.FloatField(default=0.00) # holds contributions and interest
     subscription_date = models.DateField(null=True)
     updated_date = models.DateTimeField(auto_now=True)
@@ -107,7 +107,7 @@ class StaffAPI(models.Model):
 class Contribution(models.Model):
     # tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
-    member = models.ForeignKey(StaffAPI, on_delete=models.CASCADE)
+    member = models.ForeignKey(StaffAPI,related_name='contribution' ,on_delete=models.CASCADE)
     month = models.CharField(max_length=20)
     year = models.CharField(max_length=4)
     employee_amount = models.FloatField()
@@ -116,19 +116,7 @@ class Contribution(models.Model):
     retro_employer_amount = models.FloatField()
     contribution_date = models.DateField()
     approved_contribution = models.BooleanField(default=False)
-
-
-    def calculated_total_contributions(self):
-        a = self.employee_amount
-        b = self.employer_amount
-        c = self.retro_employee_amount
-        d = self.retro_employer_amount
-        
-        return (a + b + c + d)
-
-    @property
-    def total_contributions(self):
-        return self.calculated_total_contributions()
+    total_contribution = models.FloatField(null=True,blank=True)
 
     def __str__(self):
         return f"{self.member.last_name}'s - {self.month} {self.year}"
@@ -140,11 +128,19 @@ class Contribution(models.Model):
         if self.contribution_date:
             self.month = self.contribution_date.month
             self.year = self.contribution_date.year
+        
+        # calculate sum of contribution on save
+        self.total_contribution = (
+            self.employee_amount+
+            self.employer_amount+
+            self.retro_employee_amount+
+            self.retro_employer_amount
+        )
 
-    # Save the main object first to ensure total_contributions is saved
+        # Save the main object first to ensure total_contributions is saved
         super().save(*args, **kwargs)
 
-    # Check if member exists, then update member.amount field
+        # Check if member exists, then update member.amount field
         if self.member:
-           self.member.amount = self.total_contributions
+           self.member.amount = self.total_contribution
            self.member.save()

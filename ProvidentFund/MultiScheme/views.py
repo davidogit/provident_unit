@@ -1,7 +1,10 @@
 from typing import Any
+from django.forms import BaseModelForm
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import ListView,CreateView,DeleteView,UpdateView
-from MultiScheme.models import InvestmentScheme
+from MultiScheme.models import InvestmentScheme,SchemeSettings
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 # Custom Decorators
@@ -42,19 +45,19 @@ class SchemeList(ListView):
 class AddScheme(CreateView):
     template_name = 'multischeme/add_scheme.html'
     model = InvestmentScheme
-    fields = ('name','administrative_costs_percentage','distribution_percentage','eligibility_criteria_months','payout_frequency','description')
+    fields = ('name','administrative_costs_percentage','distribution_percentage','eligibility_criteria_months','description')
 
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
         tenant= self.request.tenant
 
         if tenant:
-            context['frequency'] = InvestmentScheme.frequency
-            context['payout_frequency'] = InvestmentScheme.choices
+            # context['frequency'] = InvestmentScheme.frequency
+            # context['payout_frequency'] = InvestmentScheme.choices
             context['options'] = InvestmentScheme.options
         else:
-            context['frequency'] = []
-            context['payout_frequency'] = []
+            # context['frequency'] = []
+            # context['payout_frequency'] = []
             context['options'] = []
 
         return context
@@ -72,6 +75,62 @@ class AddScheme(CreateView):
 
         return reverse('scheme_list', kwargs={'tenant_id':tenant.id})
 
+
+
+# Scheme Settings/Configuration
+class SchemeSettingsView(CreateView):
+    model = SchemeSettings
+    fields = ('contribution_day','grace_period_contribution','delayed_interest_rate') #include all fields from model
+    template_name = 'multischeme/scheme_settings.html'
+
+    def get_context_data(self, **kwargs: Any):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+
+        # get scheme object
+        scheme = get_object_or_404(InvestmentScheme, id=scheme_id,tenant=tenant)
+        # Try to get settings object
+        try:
+            settings = SchemeSettings.objects.get(investment_scheme=scheme)
+            context['settings'] = settings
+        except SchemeSettings.DoesNotExist:
+            context['settings'] = SchemeSettings.objects.none()
+        return context
+
+    # Return invalid form response using Json
+    def form_invalid(self, form: BaseModelForm) -> HttpResponse:
+        print(f'Error: {form.errors}')
+        return super().form_invalid(form)
+
+    def form_valid(self, form: BaseModelForm) -> HttpResponse:
+        # Get scheme and tenant
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+        print('Start')
+        # get scheme object
+        scheme = get_object_or_404(InvestmentScheme, id=scheme_id,tenant=tenant)
+
+        try:
+            settings = SchemeSettings.objects.get(investment_scheme=scheme)
+            
+            for field in form.cleaned_data:
+                setattr(settings,field,form.cleaned_data[field])
+            
+            settings.save()
+        except SchemeSettings.DoesNotExist:
+            # set scheme on form instance
+            form.instance.investment_scheme = scheme
+            print(f'Form: {form.instance}')
+            return super().form_valid(form)
+        
+        return HttpResponseRedirect(self.get_success_url())
+    
+    # After successful creation redirect to scheme list page
+    def get_success_url(self):
+        tenant =  self.request.tenant
+        scheme_id = self.request.scheme_name
+        return reverse('scheme_settings', kwargs={'tenant_id' : tenant.id, 'scheme_name':scheme_id})
 
 
 # API list view

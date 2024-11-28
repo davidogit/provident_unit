@@ -212,6 +212,14 @@
               </a>
             </nav>
           </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Scheme Settings</span></a>
+            <nav class="nav nav-sub">
+              <a href="{% url 'scheme_settings' tenant_id=request.tenant.id scheme_name=scheme.id %}"
+                class="nav-sub-link">Settings
+              </a>
+            </nav>
+          </li>
           {% endif %}
         </ul>
       </div><!-- nav-group -->

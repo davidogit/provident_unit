@@ -45,49 +45,59 @@
                     </div>
                     <div class="form-group mb-3">
                       <label for="investmentId" class="form-label">Investment Name</label>
-                      <input type="text" class="form-control" id="investmentId" min="1" name="account_name">
+                      <input type="text" class="form-control" id="investmentId" min="1" name="account_name" required>
                     </div>
 
                     <div class="form-group mb-3">
                       <label for="investmentName" class="form-label">Account Type</label>
-                      <select class="form-control" name="account_type" id="investmentName">
+                      <select class="form-control" name="account_type" id="investmentName" required>
                       {% for acc,label in account_type %}
                       <option value="{{acc}}">{{ label }}</option>
                       {% endfor %}
                       </select>
                     </div>
+                    
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="years">Time the money is invested for, in years. NB: convert months to years</label>
+                      <input type="number" step="0.01" class="form-control" id="years" name="years" required>
+                    </div>
+
                   </div>
           
                   <div class="col-md-4">
                     <div class="form-group mb-3">
                       <label class="form-label" for="principal_amount">Principal Amount</label>
-                      <input type="number" class="form-control" id="principal_amount" name="principal_amount">
+                      <input type="number" class="form-control" id="principal_amount" name="principal_amount" required>
                     </div>
 
                     <div class="form-group mb-3">
                       <label for="investmentDate" class="form-label">Account Number</label>
-                      <input type="number" class="form-control" id="investmentDate" name="account_number">
+                      <input type="number" class="form-control" id="investmentDate" name="account_number" required>
                     </div>
 
                     <div class="form-group mb-3">
                       <label for="maturityDate" class="form-label">Percentage Interest</label>
-                      <input type="number" min="1" step="0.01" class="form-control" id="maturityDate" name="interest_percentage">
+                      <input type="number" min="1" step="0.01" class="form-control" id="maturityDate" name="interest_percentage" required>
                     </div>
                   </div>
           
                   <div class="col-md-4">
                     <div class="form-group mb-3">
                       <label for="investmentAmount" class="form-label">Investment Start Date</label>
-                      <input type="date" class="form-control" id="investmentAmount" name="interest_start_date">
+                      <input type="date" class="form-control" id="investmentAmount" name="interest_start_date" required>
                     </div>
                     <div class="form-group mb-3">
                       <label for="investmentTerm" class="form-label">Investment End Date</label>
-                      <input type="date" class="form-control" id="investmentTerm" name="interest_end_date">
+                      <input type="date" class="form-control" id="investmentTerm" name="interest_end_date" required>
+                    </div>
+                    <div class="form-group mb-3">
+                      <label for="componding_frequency" class="form-label">Number of times the interest is compounded per year.</label>
+                      <input type="number" step="1" min="0" class="form-control" id="componding_frequency" name="componding_frequency" required>
                     </div>
 
                   </div>
               </div>
-              <input type="submit" class="btn btn-primary" value="Submit">
+              <input type="submit" class="btn btn-outline-primary btn-lg" value="Submit">
             </form>
           </div>
       </div>

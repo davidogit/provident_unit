@@ -1,0 +1,56 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Scheme Settings</title>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="row row-cols-auto g-4 g-xxl-5">
+    <!-- Scheme Settings -->
+    <div class="col-xl">
+      <div class="container border-bottom border-secondary border-5 rounded p-5">
+        <h2 class="mb-5 text-center">Scheme Settings</h2>
+
+        <form method="POST">
+          {% csrf_token %}
+            <div class="row g-5 justify-content-center">
+              <div class="col-md-4">
+
+                <div class="form-group mb-3">
+                  <label for="contribution_day" class="form-label">Contribution Day</label>
+                  <input class="form-control" type="number" step="1" min="1" max="31" name="contribution_day" id="contribution_day"  value="{{ settings.contribution_day }}" required>
+                </div>
+
+                <div class="form-group mb-3">
+                  <label for="grace_period_contribution" class="form-label">Grace Period for Contribution Deadline (Number of days) eg. 10</label>
+                  <input type="number" step="1" min="0" max="31" class="form-control"id="grace_period_contribution"name="grace_period_contribution" value="{{ settings.grace_period_contribution }}" required>
+                </div>
+                <div class="form-group mb-3">
+                  <label for="delayed_interest_rate" class="form-label">Current Rate: %</label>
+                  <input type="number" step="0.001" min="0" class="form-control"id="delayed_interest_rate"name="delayed_interest_rate" value="{{ settings.delayed_interest_rate }}" required>
+                </div>
+              </div>
+
+              <!-- <div class="col-md-4">
+                
+              </div>
+      
+              <div class="col-md-4">
+                
+              </div>
+      
+              <div class="col-md-4">
+
+              </div> -->
+              
+          </div>
+          <input type="submit" class="btn btn-outline-primary btn-lg" value="Submit">
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+  <!-- main -->
+{% endblock %}
+
