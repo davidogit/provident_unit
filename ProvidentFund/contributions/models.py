@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 from Fund import middleware
 
 class StaffAPI(models.Model):
-    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, related_name='staff_api')
     # Using Many-to-Many relationship to allow users to have multiple schemes
     investment_scheme = models.ManyToManyField(InvestmentScheme)
     Id = models.AutoField(primary_key=True, unique=True,editable=False)

@@ -71,20 +71,20 @@
                     {% if is_manager %}
                     {% if not investment_detail.status == 'Terminated' %}
                     <div class="col-1">
-                        <a class="btn btn-warning" href="" type="submit" data-bs-toggle="modal" data-bs-target="#terminateModal">Terminate</a>
+                        <a class="btn btn-outline-warning btn-lg" href="" type="submit" data-bs-toggle="modal" data-bs-target="#terminateModal">Terminate</a>
                     </div>
                     {% endif %}
                     {% endif %}
 
                     {% if is_treasury_user %}
                     <div class="col-1">
-                        <a class="btn btn-primary" href="{% url 'investment_update' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">update</a>
+                        <a class="btn btn-outline-primary btn-lg" href="{% url 'investment_update' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">update</a>
                     </div>
                     <div class="col-2">
-                        <a class="btn btn-primary" href="{% url 'rollover_percentage' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Roll Over</a>
+                        <a class="btn btn-outline-primary btn-lg" href="{% url 'rollover_percentage' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Roll Over</a>
                     </div>
                     <div class="col-1 justify-content-end">
-                        <a class="btn btn-danger" href="{% url 'delete_investment' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Delete</a>
+                        <a class="btn btn-outline-danger btn-lg" href="{% url 'delete_investment' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Delete</a>
                     </div>
                     {% endif %}
                 </div>

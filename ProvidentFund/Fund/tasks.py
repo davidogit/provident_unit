@@ -18,26 +18,27 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True)
 def member_interest(self):
     try:
-        tenants = Tenant.objects.all()
+        tenants = Tenant.objects.prefetch_related('investment_schemes__investments','staff_api') #prefetch schemes and staffs
         logger.info(f'Starting profit calculation for {tenants.count()} tenants.')
 
         for tenant in tenants:
-            schemes = InvestmentScheme.objects.filter(tenant=tenant)
+            schemes = tenant.investment_schemes.all() #get associated schemes to tenant
 
             for scheme in schemes:
                 # Get member allocation percentage
                 member_allocation_percentage = scheme.distribution_percentage
 
-                # Use reverse relationship b/n staff and contribution to calculate each members contribution 
-                members = StaffAPI.objects.filter(
-                    tenant=tenant,
+                # Use reverse relationship b/n staff and contribution to calculate each members contribution
+                members = tenant.staff_api.filter(
+                    # tenant=tenant,
                     investment_scheme=scheme,
                     exited_flag=False
                 ).annotate(total_contribution=Sum('contribution__total_contribution',filter=Q(contribution__approved_contribution=True,contribution__investment_scheme=scheme), output_field=FloatField()))
 
-                active_investments = InvestmentDetail.objects.filter(
-                    investment_scheme=scheme,
-                    investment_scheme__tenant = tenant,
+                #get investments associated with each scheme
+                active_investments = scheme.investments.filter(
+                    # investment_scheme=scheme,
+                    # investment_scheme__tenant = tenant,
                     _remaining_days__gt=0,
                     _status='Active',
                     approval_status=False,
@@ -55,39 +56,40 @@ def member_interest(self):
                 )
                                 
                 # Aggregate total approved contributions for the scheme and tenant
+                #prefetch staff_api in same query
                 total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or 0.0
 
                 # logger.info(f'TOTAL CONT {scheme.name} = {total_contribution}')
 
 
                 # with transaction.atomic():
-                # Distribute Delayed Interests
-                for d_int in delayed_interests:
-                    try:
-                        if total_contribution > 0:
-                            for member in members:
+                # # Distribute Delayed Interests
+                # for d_int in delayed_interests:
+                #     try:
+                #         if total_contribution > 0:
+                #             for member in members:
                                 
-                                # get staff's actual amount
-                                contribution = member.total_contribution or 0.0
+                #                 # get staff's actual amount
+                #                 contribution = member.total_contribution or 0.0
                                 
-                                # Find date at which user joined the scheme
-                                try:
-                                    scheme_subscription = SchemeApproval.objects.get(
-                                        staff=member, scheme=scheme, tenant=tenant, 
-                                        approved_by_hr=True)
-                                    subscription_date = scheme_subscription.approval_date
-                                except SchemeApproval.DoesNotExist:
-                                    subscription_date = None
+                #                 # Find date at which user joined the scheme
+                #                 try:
+                #                     scheme_subscription = SchemeApproval.objects.get(
+                #                         staff=member, scheme=scheme, tenant=tenant, 
+                #                         approved_by_hr=True)
+                #                     subscription_date = scheme_subscription.approval_date
+                #                 except SchemeApproval.DoesNotExist:
+                #                     subscription_date = None
 
-                                if subscription_date is not None and subscription_date.date() < d_int.created_date:
-                                    member.estimated_profit += (contribution / total_contribution) * d_int.amount
-                                else:
-                                    member.estimated_profit += 0.0
-                                member.save()
-                            d_int.status = 'Used'
-                            d_int.save()
-                    except Exception as e:
-                        logger.error(f'Error occured{e}')
+                #                 if subscription_date is not None and subscription_date.date() < d_int.created_date:
+                #                     member.estimated_profit += (contribution / total_contribution) * (d_int.principal + d_int.interest)
+                #                 else:
+                #                     member.estimated_profit += 0.0
+                #                 member.save()
+                #             d_int.status = 'Used'
+                #             d_int.save()
+                #     except Exception as e:
+                #         logger.error(f'Error occured{e}')
 
                 # Distribute Bank Interests
                 for b_int in bank_interests:
@@ -235,8 +237,9 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
                 else:
                     logger.info('Not working')
                     member.actual_amount += 0.0
-                
-            
+        else:
+            logger.info(f'No contribution found for {tenant.name} during actual interest calculation on {timezone.now}')
+                    
         logger.info(f'Actual profit calculated for: {tenant.name}\'s members at: {timezone.now()}')
 
     except Exception as e:
@@ -359,6 +362,8 @@ def rollover_inv_creation(self,**kwargs):
     counter = kwargs.get('counter')
 
     try:
+        # tenant = Tenant.objects.filter(id=tenant_id).prefetch_related('investment_schemes').first()
+        # scheme = tenant.investment_schemes.filter(id=scheme_id).first()#get scheme from prefetched data
         tenant = get_object_or_404(Tenant, id=tenant_id)
         scheme = get_object_or_404(InvestmentScheme,id=scheme_id,tenant=tenant)
     
@@ -424,3 +429,49 @@ def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
         logger.info(f'Updated {len(staff_updates)} staffs')
     else:
         logger.infor('No staff contributions to update')
+
+
+# Task to calculate daily penalty on delayed interest object
+@shared_task(bind=True)
+def delayed_interest_penalty(self):
+    # get tenants using prefetch related
+    tenants = Tenant.objects.prefetch_related('investment_schemes__delayed_interest')
+
+    import calendar
+    year = timezone.now().year
+    is_leap = calendar.isleap(year)
+    days_in_year = 366 if is_leap else 365
+
+    for tenant in tenants:
+        # get schemes
+        schemes = tenant.investment_schemes.all()
+        if schemes.exists():
+            logger.info(f'Schemes: {schemes}')
+            for scheme in schemes:
+                # Fetch DI objects
+                delayed_interests = scheme.delayed_interest.filter(approved=False)
+                logger.info(f'DI: {delayed_interests}')
+                if delayed_interests.exists():
+                    for di in delayed_interests:
+                        # Extraxt params
+                        p = di.principal #principal of DI
+                        r = (di.rate_d_int)/100 #convert percentage to decimal
+                        n=days_in_year #compound rate=daily
+                        t= di.period_of_interest_calculation/days_in_year #period by which money is owed in years
+                        logger.info(f'Principal ={p}, Rate= {r}, T= {t}')
+                        # Compound Interest calculation
+                        c = p*(1+(r/n))**(n*t)
+                        logger.info(f'Compound I= {c}')
+                        
+                        interest_per_day = (c - p)/n #interest
+                        logger.info(f'Interest Per day: {interest_per_day}')
+                        di.interest += interest_per_day
+                        di.save()
+
+                        logger.info(f'Tenant: {tenant.name} - Scheme: {scheme.name} - Daily Interest: {interest_per_day}')
+                else:
+                    logger.info(f'No Delayed Interest for {tenant.name} {scheme.name}')
+        else:
+            logger.info(f'No schemes available for {tenant.name}')
+
+

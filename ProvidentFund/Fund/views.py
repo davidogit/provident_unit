@@ -140,39 +140,16 @@ class InvestmentListView(ListView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = self.request.tenant
 
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        scheme_id = self.request.scheme_name
 
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme).order_by('-created_date')
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
         else:
             return InvestmentDetail.objects.none()
-        
-    # def get_filtered_queryset(self, queryset):
-    #     t_bill_page = self.request.GET.get('t_bill_page')
-    #     f_deposit_page = self.request.GET.get('f_deposit_page')
-
-    #     if t_bill_page:
-    #         queryset = queryset.filter(investment_type='Treasury Bill')
-    #         # print(f'T-bills = {queryset}')
-
-    #         return queryset
-    #     if f_deposit_page:
-    #         queryset = queryset.filter(investment_type='Fixed Deposit')
-    #         print(f'F-bills = {queryset}')
-    #         return queryset
-
-    #     else:
-    #         # Default ordering
-    #         queryset = queryset.order_by('-created_date')
-    #         print('NONE')
-
-    #     return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -223,22 +200,7 @@ class InvestmentListView(ListView):
         context['t_bill_page'] = paginated_queryset
         context['paginator'] = paginator
         context['is_paginated'] = paginator.num_pages > 1
-        # else:
-        #     print(f'Filtered F_dep = {filtered_queryset}')
-        #     paginator = Paginator(filtered_queryset, self.paginate_by)
-        #     page = self.request.GET.get('f_deposit_page')
-        #     try:
-        #         paginated_queryset = paginator.page(page)
-        #     except PageNotAnInteger:
-        #         paginated_queryset = paginator.page(1)
-        #     except EmptyPage:
-        #         paginated_queryset = paginator.page(paginator.num_pages)
 
-        #     # Add paginated results to context
-        #     context['f_deposit_page'] = paginated_queryset
-        #     context['paginator'] = paginator
-        #     context['is_paginated'] = paginator.num_pages > 1
-        
         return context
     
 
@@ -259,11 +221,10 @@ class InvestmentDetailView(DetailView):
 
         # Get scheme name
         scheme_id = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_id)
 
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
         else:
             return InvestmentDetail.objects.none()
 
@@ -383,19 +344,17 @@ class InvestmentUpdateView(UpdateView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = self.request.tenant
 
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
+        scheme_id = self.request.scheme_name
 
         # get inv pk
         pk = self.kwargs['pk']
 
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
         else:
             return InvestmentDetail.objects.none()
     
@@ -403,9 +362,8 @@ class InvestmentUpdateView(UpdateView):
     def form_valid(self, form):
         try:
             tenant = self.request.tenant
-            scheme_id = self.request.scheme_name
 
-            scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
+            scheme = self.get_queryset().first().investment_scheme
 
             if scheme:
                 form.instance.investment_scheme = scheme
@@ -554,22 +512,16 @@ class RolloverPercentage(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = get_object_or_404(Tenant,id=tenant_id)
-
+        tenant = self.request.tenant
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = get_object_or_404(InvestmentScheme,id=scheme_name)
-
+        scheme_id = self.request.scheme_name
         # Get inv pk
         pk = self.kwargs['pk']
 
         # Fetch investment
         if tenant:
-            inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=tenant,investment_scheme = scheme)
-            
+            inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)     
         
         context['rollover']= inv
         return context
@@ -592,26 +544,21 @@ class InvestmentDeleteView(DeleteView):
     template_name = 'dashboard/delete_investment.html'
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
-    def get_queryset(self):
-         
+    def get_queryset(self):   
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
-
+        tenant = self.request.tenant
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name)
-
+        scheme_id = self.request.scheme_name
         # Get inv pk
         pk=self.kwargs['pk']
+
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
         else:
             return InvestmentDetail.objects.none()
     
     def get_success_url(self):
-
         scheme = self.request.scheme_name
         tenant =  self.request.tenant
 
@@ -631,8 +578,7 @@ class MemberListView(ListView):
 
 
     # We override the get_queryset method to be able to filter the Members before its being accesed in this view
-    def get_queryset(self):
-         
+    def get_queryset(self):  
         # Get Tenant
         tenant = self.request.tenant
         scheme_id = self.request.scheme_name
@@ -672,8 +618,7 @@ class ExitedMembers(ListView):
 
 
     # We override the get_queryset method to be able to filter the Members before its being accesed in this view
-    def get_queryset(self):
-         
+    def get_queryset(self):  
         # Get Tenant
         tenant = self.request.tenant
         scheme_id = self.request.scheme_name
@@ -795,14 +740,13 @@ class InvestmentQuery(ListView):
 
         # Get scheme id
         scheme_id = self.request.scheme_name
-        scheme = InvestmentScheme.objects.filter(id=scheme_id, tenant=tenant).first()
+        #prefertch investments alongside Scheme
+        # scheme = InvestmentScheme.objects.filter(id=scheme_id, tenant=tenant).prefetch_related('investments').first()
 
         # Filtering Queryset by Tenant
-        if tenant and scheme:
-            return InvestmentDetail.objects.filter(
-                investment_scheme__tenant=tenant,
-                investment_scheme=scheme
-            ).order_by('created_date')
+        if tenant:
+            # return scheme.investments.all().order_by('created_date')
+            return InvestmentDetail.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant)
         return InvestmentDetail.objects.none()
 
     def get_context_data(self, **kwargs):
@@ -892,16 +836,13 @@ class DelayedInterestListView(ListView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
-
+        tenant = self.request.tenant
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name,tenant=tenant)
+        scheme_id = self.request.scheme_name
 
         # Filtering Queryset by Tenant
         if tenant:
-            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
         else:
             return DelayedInterest.objects.none()
 
@@ -952,16 +893,14 @@ class BankInterestListView(ListView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = self.request.tenant
 
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name,tenant=tenant)
+        scheme_id = self.request.scheme_name
 
         # Filtering Queryset by Tenant
         if tenant:
-            return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme)
+            return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
         else:
             return BankInterest.objects.none()
         
@@ -1028,16 +967,14 @@ class BankInterestQuery(ListView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = self.request.tenant
 
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name,tenant=tenant)
+        scheme_id = self.request.scheme_name
 
         # Filtering Queryset by Tenant
         if tenant:
-            return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme).order_by('-created_date')
+            return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
         else:
             return BankInterest.objects.none()
         
@@ -1101,16 +1038,14 @@ class DelayedInterestQuery(ListView):
     def get_queryset(self):
          
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = self.request.tenant
 
         # Get scheme name
-        scheme_name = self.request.scheme_name
-        scheme = InvestmentScheme.objects.get(id=scheme_name,tenant=tenant)
+        scheme_id = self.request.scheme_name
 
         # Filtering Queryset by Tenant
         if tenant:
-            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme = scheme).order_by('-created_date')
+            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
         else:
             return DelayedInterest.objects.none()
         
@@ -1176,7 +1111,7 @@ class InvestmentApproval(ListView):
             return JsonResponse({'status': 'error', 'message': 'Investment ID is required.'}, status=400)
 
         if form.is_valid():
-            investment = get_object_or_404(InvestmentDetail,id=inv_id,investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,approval_status=False, _status='Expired')
+            investment = self.get_queryset().filter(id=inv_id).first()
 
             closing_amount = form.cleaned_data.get('closing_amount')
             approval_status = form.cleaned_data.get('approval_status')
@@ -1253,7 +1188,7 @@ class ToBeApproved(ListView):
                 return SchemeApproval.objects.filter(tenant=tenant,approved_by_hr=False)
             except SchemeApproval.DoesNotExist:
                 return SchemeApproval.objects.none()
-        return super().get_queryset()
+        return super().get_queryset().none()
     
     
     # Using dispatch to be able to access the post method which is not directly in Listview
@@ -1271,7 +1206,7 @@ class ToBeApproved(ListView):
 
 
         try:
-            application = SchemeApproval.objects.get(tenant=tenant, id=application_id)
+            application = self.get_queryset().get(tenant=tenant, id=application_id)
             # Now we can approve useing the approve method on the SchemeApproval Model
             application.approve()
             # Notify applicant upon scheme approval
@@ -1448,6 +1383,7 @@ class ApproveContributions(TemplateView):
                     investment_scheme=scheme,
                     remarks = f'Delayed Interest for {month} /{year}',
                     rate_d_int = rate,
+                    period_of_interest_calculation =settings.period_of_delayed_calculation,
                     principal = delayed_principal,
                 )
 

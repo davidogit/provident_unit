@@ -80,7 +80,7 @@ class AddScheme(CreateView):
 # Scheme Settings/Configuration
 class SchemeSettingsView(CreateView):
     model = SchemeSettings
-    fields = ('contribution_day','grace_period_contribution','delayed_interest_rate') #include all fields from model
+    fields = ('contribution_day','grace_period_contribution','delayed_interest_rate','period_of_delayed_calculation') #include all fields from model
     template_name = 'multischeme/scheme_settings.html'
 
     def get_context_data(self, **kwargs: Any):
@@ -89,10 +89,10 @@ class SchemeSettingsView(CreateView):
         scheme_id = self.request.scheme_name
 
         # get scheme object
-        scheme = get_object_or_404(InvestmentScheme, id=scheme_id,tenant=tenant)
+        scheme = InvestmentScheme.objects.filter(id=scheme_id,tenant=tenant).prefetch_related('scheme_settings').first()
         # Try to get settings object
         try:
-            settings = SchemeSettings.objects.get(investment_scheme=scheme)
+            settings = scheme.scheme_settings
             context['settings'] = settings
         except SchemeSettings.DoesNotExist:
             context['settings'] = SchemeSettings.objects.none()
@@ -109,16 +109,19 @@ class SchemeSettingsView(CreateView):
         scheme_id = self.request.scheme_name
         print('Start')
         # get scheme object
-        scheme = get_object_or_404(InvestmentScheme, id=scheme_id,tenant=tenant)
+        # scheme = get_object_or_404(InvestmentScheme, id=scheme_id,tenant=tenant)
+        scheme = InvestmentScheme.objects.filter(id=scheme_id,tenant=tenant).prefetch_related('scheme_settings').first()
 
         try:
-            settings = SchemeSettings.objects.get(investment_scheme=scheme)
+            # get settings data from prefetched data
+            settings = scheme.scheme_settings
             
+            # Update fields
             for field in form.cleaned_data:
                 setattr(settings,field,form.cleaned_data[field])
             
             settings.save()
-        except SchemeSettings.DoesNotExist:
+        except:
             # set scheme on form instance
             form.instance.investment_scheme = scheme
             print(f'Form: {form.instance}')

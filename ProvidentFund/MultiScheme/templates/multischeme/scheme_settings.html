@@ -18,13 +18,17 @@
               <div class="col-md-4">
 
                 <div class="form-group mb-3">
-                  <label for="contribution_day" class="form-label">Contribution Day</label>
+                  <label for="contribution_day" class="form-label">Contribution Day of Month</label>
                   <input class="form-control" type="number" step="1" min="1" max="31" name="contribution_day" id="contribution_day"  value="{{ settings.contribution_day }}" required>
                 </div>
 
                 <div class="form-group mb-3">
-                  <label for="grace_period_contribution" class="form-label">Grace Period for Contribution Deadline (Number of days) eg. 10</label>
+                  <label for="grace_period_contribution" class="form-label">Grace Period for Contribution Deadline (days) eg. 10</label>
                   <input type="number" step="1" min="0" max="31" class="form-control"id="grace_period_contribution"name="grace_period_contribution" value="{{ settings.grace_period_contribution }}" required>
+                </div>
+                <div class="form-group mb-3">
+                  <label for="period_of_delayed_calculation" class="form-label">Period of delayed interest calculation (days)</label>
+                  <input type="number" step="1" min="0" class="form-control"id="period_of_delayed_calculation"name="period_of_delayed_calculation" value="{{ settings.period_of_delayed_calculation }}" required>
                 </div>
                 <div class="form-group mb-3">
                   <label for="delayed_interest_rate" class="form-label">Current Rate: %</label>
@@ -45,7 +49,7 @@
               </div> -->
               
           </div>
-          <input type="submit" class="btn btn-outline-primary btn-lg" value="Submit">
+          <input type="submit" class="btn btn-outline-primary btn-lg" value="Save">
         </form>
       </div>
     </div>

@@ -168,6 +168,9 @@ class SchemeSettings(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         help_text="Delayed interest rate as a percentage (0-100)."
     )
+    period_of_delayed_calculation = models.PositiveIntegerField(
+        help_text="Period over which DI interest is to be calculated."
+    ) #period over which interest is to be calculated.
     
 
     def __str__(self):

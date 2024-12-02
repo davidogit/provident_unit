@@ -42,26 +42,19 @@ def registrationView(request,tenant_id):
             # Making sure the person is a member of a tenant in our DB before registering them onto the system
             try:
                 # Assign tenant to user upon registration
-                tenant = Tenant.objects.get(id=tenant_id)
+                tenant = request.tenant
                 form1.instance.tenant = tenant
 
                 # Check from API to see if member is there
                 response = requests.get(tenant.api_endpoint_member)
                 response.raise_for_status() #if theres an error trying to get a response from endpoint
                 data = response.json()
-                print(data)
 
                 # loops and stops when it gets a match of a user and returns None if theres no match
                 api_user = next((api_user for api_user in data if str(api_user.get('staff_number')) == str(request.POST.get('staff_id'))), None)
-                # print(request.POST.get('staff_id'))
-                # for api_user in data:
-                    # print(api_user.get('staff_number'))
-                    
-                # print(request.POST.get('staff_id'))
+
                 # Checks if the differece between joined_date and current date is greter than eligibility criteria
                 if api_user:
-            
-
                     user = form1.save(commit=False)
                     cleaned_password = form1.cleaned_data['password']
                     user.set_password(cleaned_password)
@@ -101,7 +94,7 @@ def registrationView(request,tenant_id):
 @unauthenticated_user
 def loginView(request, tenant_id):
 
-    tenant = Tenant.objects.get(id=tenant_id)
+    tenant = request.tenant
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -110,7 +103,6 @@ def loginView(request, tenant_id):
         user = authenticate(request, username=username, password=password,tenant=tenant)
 
         if user is not None:
-
             # Redirect anyone with admin priviledge
             if user.groups.filter(name='Admin'):
                 return redirect('invalid_login_details', tenant_id=tenant_id)
@@ -118,10 +110,9 @@ def loginView(request, tenant_id):
             if user is not None:
                 if user.tenant == tenant:
                     # Generate OTP
-                    otp = generate_unique_code()
-
-                    
+ 
                     try:
+                        otp = generate_unique_code()
                         # Send OTP to user via email
                         send_otp_code.delay(user.email,EMAIL_HOST_USER,otp)
 
@@ -133,17 +124,22 @@ def loginView(request, tenant_id):
                         return render(request, 'login_error.html', {'error': 'Failed to send email'})
 
                     # Redirect to verify_otp view
-                    return redirect('verify_otp', user_id=user.id, tenant_id=tenant_id)
+                    # return redirect('verify_otp', user_id=user.id, tenant_id=tenant_id)
+                    redirect_url = reverse('verify_otp', kwargs={'user_id':user.id, 'tenant_id':tenant_id})
+                    return JsonResponse({'status':'success', 'redirect_url':redirect_url})
                 else:
                     # Redirect to invalid_login_details view
-                    return redirect('invalid_login_details', tenant_id=tenant_id)
+                    # return redirect('invalid_login_details', tenant_id=tenant_id)
+                    return JsonResponse({'status':'error', 'message':'Invalid Login, Try again.'})
             else:
                 # Redirect to invalid_login_details view
-                return redirect('invalid_login_details', tenant_id=tenant_id)
+                # return redirect('invalid_login_details', tenant_id=tenant_id)
+                return JsonResponse({'status':'error', 'message':'Invalid Login, Try again.'})
         
         else:
             # Redirect to invalid_login_details view
-            return redirect('invalid_login_details', tenant_id=tenant_id)
+            # return redirect('invalid_login_details', tenant_id=tenant_id)
+            return JsonResponse({'status':'error', 'message':'Invalid Login, Try again.'})
 
     return render(request, 'login.html')
 
@@ -154,54 +150,65 @@ class InvalidLoginDetails(TemplateView):
 
 
 
-
-
-def verifyOtpView(request,user_id, tenant_id):
+def verifyOtpView(request, user_id, tenant_id):
+    # Assign tenant_id to request for further use
     request.tenant = tenant_id
 
-    # Get user object
+    # Get user object or return a 404 if not found
     user = get_object_or_404(get_user_model(), id=user_id)
 
-    # Get user email from session
+    # Get user email from session for displaying in the template
     user_email = request.session.get('email')
+
+    # Handle POST request (when the form is submitted)
     if request.method == 'POST':
-        otp_1 = request.POST.get('otp-1','')
-        otp_2 = request.POST.get('otp-2','')
-        otp_3 = request.POST.get('otp-3','')
-        otp_4 = request.POST.get('otp-4','')
+        # Get the individual OTP digits from POST data
+        otp_1 = request.POST.get('otp-1', '')
+        otp_2 = request.POST.get('otp-2', '')
+        otp_3 = request.POST.get('otp-3', '')
+        otp_4 = request.POST.get('otp-4', '')
 
-        # concantenate otp
-        otp_combined = otp_1+otp_2+otp_3+otp_4
-        # convert otp from string to integer
-        otp = int(otp_combined)
+        # Concatenate OTP parts into one string and convert to integer
+        otp_combined = otp_1 + otp_2 + otp_3 + otp_4
+        try:
+            otp = int(otp_combined)  # Convert to integer
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid OTP format.'})
 
-        # Retrieve OTP from session
+        # Retrieve OTP stored in session
         session_otp = request.session.get('otp_token')
 
-        # Check if theres session_otp for cases where there is no session_otp
+        # If OTP is not set in the session, handle the expired or missing OTP case
         if session_otp is None:
-            return HttpResponse('OTP has expired or is not set', status=400)
+            return JsonResponse({'status': 'error', 'message': 'OTP has expired or is not set.'}, status=400)
 
+        # Validate OTP
         if otp == int(session_otp):
-            # we manually set the auth backend to our backend so it can authenticate based on the tenant
+            # Set the custom authentication backend for the tenant-based login
             user.backend = 'Member.backends.TenantAwareBackend'
+            login(request, user)  # Log the user in
 
-            login(request, user)
-            
-            # Clear session data after successful login
+            # Clear OTP from session after successful login
             del request.session['otp_token']
 
+            # Check if the user belongs to the 'Member' group
+            if user.groups.filter(name='Member').exists():
+                # Get the related member and staff_id
+                member = Member.objects.get(user=user)
+                redirect_url = reverse('member_dashboard', kwargs={'tenant_id': tenant_id, 'member_id': member.staff_id})
+                return JsonResponse({'status': 'success', 'redirect_url': redirect_url})
 
-            if user.groups.filter(name='Member'):
-                # Get related member to user and extract staff_id from Member
-                member = Member.objects.get(user=user)                
-                return redirect('member_dashboard', tenant_id=tenant_id, member_id=member.staff_id)
+            # Handle non-member users, assuming redirection to finance page
             else:
-                return redirect('finance_page', tenant_id)
-        else:
-            return HttpResponse('Invalid OTP')
+                redirect_url = reverse('finance_page', kwargs={'tenant_id': tenant_id})
+                return JsonResponse({'status': 'success', 'redirect_url': redirect_url})
 
-    return render(request, 'verify_otp.html',{'email':user_email})
+        else:
+            # Return error if OTP is incorrect
+            return JsonResponse({'status': 'error', 'message': 'Invalid OTP.'})
+
+    # For GET request, render the OTP form page
+    return render(request, 'verify_otp.html', {'email': user_email})
 
 
 @method_decorator(tenant_login_required, name="dispatch")

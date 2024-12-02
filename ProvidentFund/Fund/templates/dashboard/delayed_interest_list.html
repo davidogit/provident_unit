@@ -21,11 +21,10 @@
               <tr>
                 <th></th>
                 <!-- <th>Name</th> -->
-                <th>Amount</th>
-                <th>From</th>
-                <th>To</th>
+                <th>Princioal</th>
+                <th>Acrued interest</th>
                 <th>Status</th>
-                <th>Added Date</th>
+                <th>Date created</th>
                 <th>Remarks</th>
               </tr>
             </thead>
@@ -34,9 +33,8 @@
                 {% for int in delayed_interest %}
                   <tr>
                     <td>{{ forloop.counter }}</td>
-                    <td>{{ int.amount }}</td>
-                    <td>{{ int.from_date }}</td>
-                    <td>{{ int.to_date }}</td>
+                    <td>{{ int.principal| floatformat:2 }}</td>
+                    <td>{{ int.interest| floatformat:2 }}</td>
                     <td>{{ int.status }}</td>
                     <td>{{ int.created_date }}</td>
                     <td>{{ int.remarks }}</td>

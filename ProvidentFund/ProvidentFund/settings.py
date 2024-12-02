@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     
     'rest_framework',
+    "debug_toolbar",
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -71,6 +72,7 @@ MIDDLEWARE = [
     'Fund.middleware.URLTenantMiddleware',
     'Fund.middleware.TenantLoginUrlMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware', #django debug toolbar
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -221,3 +223,9 @@ EMAIL_USE_SSL = True
 
 # Settings for Auth User Model
 AUTH_USER_MODEL = 'Admin.User'
+
+INTERNAL_IPS = [
+    # ...
+    "127.0.0.1",
+    # ...
+]

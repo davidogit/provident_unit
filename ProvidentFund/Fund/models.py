@@ -11,7 +11,7 @@ from .generate_invoice import generate_invoice_number
 
 class InvestmentDetail(models.Model):
     invoice_number = models.CharField(max_length=6, unique=True,null=True,blank=True, editable=False)
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
+    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, related_name='investments')
     T_bill = 'Treasury Bill'
     F_dep = 'Fixed Deposit'
     inv_type = [
@@ -149,14 +149,15 @@ def set_invoice_number(sender,instance,**kwargs):
 
 class DelayedInterest(models.Model):
     invoice_number = models.CharField(max_length=8, unique=True,null=True,blank=True, editable=False)
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
+    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, related_name='delayed_interest')
     principal = models.FloatField()
     created_date = models.DateField(auto_now_add=True)
     remarks = models.CharField(max_length=50)
     _status = models.CharField(max_length=20, default='Not used')
     # due_date = models.DateField()
     rate_d_int = models.FloatField()
-    interest = models.FloatField(null=True,blank=True)
+    interest = models.FloatField(default=0.00)
+    period_of_interest_calculation = models.PositiveIntegerField() #period over which interest is to be calculated.
     approved = models.BooleanField(default=False)
     date_paid = models.DateField(null=True)
     @property
@@ -188,7 +189,7 @@ def set_invoice_number(sender, instance, **kwargs):
 
 
 class BankInterest(models.Model):
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
+    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, related_name='bank_interest')
     GCB ='GCB'
     ADB ='ADB'
     CBG = 'CBG'

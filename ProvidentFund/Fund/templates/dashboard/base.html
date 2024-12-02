@@ -120,8 +120,8 @@
           </li>
           {% endif %}
 
-          {% if scheme.delayed_int == 'Yes' %}
-            {% if is_manager_or_treasury_user %}
+          
+            {% if is_manager %}
             <li class="nav-item">
               <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Delayed
                   Interest</span></a>
@@ -130,9 +130,9 @@
                   class="nav-sub-link">View Delayed Interests
                 </a>
                 {% if is_treasury_user %}
-                <a href="{% url 'add_delayed_interest' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                <!-- <a href="{% url 'add_delayed_interest' scheme_name=scheme.id tenant_id=request.tenant.id %}"
                   class="nav-sub-link">Add Delayed Interest
-                </a>
+                </a> -->
                 {% endif %}
                 <a href="{% url 'delayed_interest_query' scheme_name=scheme.id tenant_id=request.tenant.id %}"
                   class="nav-sub-link">Generate Report
@@ -141,7 +141,7 @@
               
             </li>
             {% endif %}
-          {% endif %}
+          
 
           {% if scheme.bank_int == 'Yes' %}
             {% if is_manager_or_treasury_user %}
