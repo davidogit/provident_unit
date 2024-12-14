@@ -26,6 +26,7 @@ from datetime import datetime, timedelta
 from django.utils.dateparse import parse_date
 from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.core.exceptions import ObjectDoesNotExist
 
 logger = logging.getLogger(__name__)
 
@@ -61,39 +62,38 @@ class Invest(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
-
         # Get Tenant
-        tenant_id = self.request.tenant.id
-        tenant = Tenant.objects.get(id=tenant_id)
-
-        # Fetch schemes
-        schemes = InvestmentScheme.objects.filter(tenant=tenant)
-
-        # Total Interest - Estimated and Actual
-        try: 
+        tenant = Tenant.objects.prefetch_related('staff_api').get(id=self.request.tenant.id)
+        # Fetch schemes and related investments using prefetch
+        schemes = InvestmentScheme.objects.filter(tenant=tenant).prefetch_related('member')
+        try:
             interest_query = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant)
-            context['total_interest'] = sum(inv.interest_amount for inv in interest_query.prefetch_related('investment_scheme'))
         except:
-            context['total_interest'] = 0
+            interest_query.none()
+        # Total Interest - Estimated and Actual
+        try:
+            estimated_amount = interest_query.filter(approval_status=False).aggregate(total = Sum('interest_amount'))['total'] or 0.0
+            
+            context['total_interest'] = estimated_amount
+        except:
+            context['total_interest'] = 0.0
 
         try: 
-            actual_revenue = InvestmentDetail.objects.filter(approval_status=True, _status='Expired', investment_scheme__tenant=tenant)
-            context['actual_revenue'] = sum(inv.interest_amount for inv in actual_revenue.prefetch_related('investment_scheme'))
+            actual_revenue = interest_query.filter(approval_status=True, _status='Expired').aggregate(total = Sum('interest_amount'))['total'] or 0.0
+
+            context['actual_revenue'] =  actual_revenue
         except:
-            context['actual_revenue'] = 0
+            context['actual_revenue'] = 0.0
 
         # Active Investments
         try:
-            active_inv = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant)
-            context['active_inv'] = active_inv.count()
+            context['active_inv'] = interest_query.count()
         except:
             context['active_inv'] = 0
 
         # Active Members
-        active_members = StaffAPI.objects.filter(investment_scheme__tenant=tenant)
-        context['active_members'] = active_members.count()
+    
+        context['active_members'] = tenant.staff_api.count()
 
         # Bank Interest Rates
         try:
@@ -103,7 +103,7 @@ class Invest(TemplateView):
 
         # Available Investment Schemes
         try:
-            context['investment_scheme'] = InvestmentScheme.objects.filter(tenant=tenant)
+            context['investment_scheme'] = schemes
         except:
             context['investment_scheme'] = []
 
@@ -111,8 +111,7 @@ class Invest(TemplateView):
         gender_counts_by_scheme = {}
         for scheme in schemes:
             gender_counts = (
-                Member.objects.filter(investment_scheme=scheme)
-                .values('gender')
+                scheme.member.values('gender')
                 .annotate(count=Count('gender'))
             )
             gender_counts_by_scheme[scheme.name] = {
@@ -138,10 +137,8 @@ class InvestmentListView(ListView):
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
     def get_queryset(self):
-         
         # Get Tenant
         tenant = self.request.tenant
-
         # Get scheme name
         scheme_id = self.request.scheme_name
 
@@ -289,13 +286,12 @@ class InvestmentDetailView(DetailView):
 @method_decorator(role_required(role=['Treasury User']), name='dispatch')
 class AddInvestment(CreateView):
     model=InvestmentDetail
-    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage','years','componding_frequency')
+    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage','years','componding_frequency','type_of_tbill')
     template_name = 'dashboard/investment_form.html'
     # success_url = reverse_lazy('investment_list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         # Get tenant from request
         tenant = self.request.tenant
 
@@ -569,13 +565,11 @@ class InvestmentDeleteView(DeleteView):
 # Active Members List
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR','Manager','Finance Manager']), name='dispatch')
+@method_decorator(role_required(role=['Manager','Finance Manager']), name='dispatch')
 class MemberListView(ListView):
-    # model = Member
     model = StaffAPI
     template_name = 'dashboard/member_list.html'
     # context_object_name = 'member_list'
-
 
     # We override the get_queryset method to be able to filter the Members before its being accesed in this view
     def get_queryset(self):  
@@ -585,7 +579,7 @@ class MemberListView(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return StaffAPI.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id=scheme_id)
+            return StaffAPI.objects.filter(tenant=tenant,investment_scheme__id=scheme_id)
         else:
             return StaffAPI.objects.none()
 
@@ -647,7 +641,7 @@ class ExitedMembers(ListView):
 # Memeber detailed View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR','Manager','Finance Manager']), name='dispatch')
+@method_decorator(role_required(role=['Manager','Finance Manager']), name='dispatch')
 class MemberDetailView(DetailView):
     # model = Member
     model = StaffAPI
@@ -667,60 +661,60 @@ class MemberDetailView(DetailView):
             return StaffAPI.objects.none()
 
 
-# Updating an member's details
-@method_decorator(login_required, name='dispatch')
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR']), name='dispatch')
-class MemberUpdateView(UpdateView):
-    # model = Member
-    model = StaffAPI
-    fields = ('Staffnumber','status')
-    template_name = 'dashboard/member_form.html'
+# # Updating an member's details
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['HR']), name='dispatch')
+# class MemberUpdateView(UpdateView):
+#     # model = Member
+#     model = StaffAPI
+#     fields = ('Staffnumber','status')
+#     template_name = 'dashboard/member_form.html'
 
-    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
-    def get_queryset(self):
+#     # We override the get_queryset method to be able to filter the Members before its being accesed in this view
+#     def get_queryset(self):
          
-        # Get Tenant
-        tenant = self.request.tenant
+#         # Get Tenant
+#         tenant = self.request.tenant
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return StaffAPI.objects.filter(tenant=tenant)
-        else:
-            return StaffAPI.objects.none()
+#         # Filtering Queryset by Tenant
+#         if tenant:
+#             return StaffAPI.objects.filter(tenant=tenant)
+#         else:
+#             return StaffAPI.objects.none()
         
-    # Making sure we are updating details of a specific member related to a specific tenant   
-    def form_valid(self, form):
+#     # Making sure we are updating details of a specific member related to a specific tenant   
+#     def form_valid(self, form):
 
-        tenant = self.request.tenant
+#         tenant = self.request.tenant
 
-        if tenant:
-            form.instance.tenant = tenant
+#         if tenant:
+#             form.instance.tenant = tenant
 
-        return super().form_valid(form)
+#         return super().form_valid(form)
     
 
 # Deleting a member from Database
-@method_decorator(login_required, name='dispatch')
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR']), name='dispatch')
-class MemberDeleteView(DeleteView):
-    # model = Member
-    model = StaffAPI
-    template_name = 'dashboard/delete_member.html'
-    success_url = reverse_lazy('member_list')
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['HR']), name='dispatch')
+# class MemberDeleteView(DeleteView):
+#     # model = Member
+#     model = StaffAPI
+#     template_name = 'dashboard/delete_member.html'
+#     success_url = reverse_lazy('member_list')
 
-    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
-    def get_queryset(self):
+#     # We override the get_queryset method to be able to filter the Members before its being accesed in this view
+#     def get_queryset(self):
          
-        # Get Tenant
-        tenant = self.request.tenant
+#         # Get Tenant
+#         tenant = self.request.tenant
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return StaffAPI.objects.filter(tenant=tenant)
-        else:
-            return StaffAPI.objects.none()
+#         # Filtering Queryset by Tenant
+#         if tenant:
+#             return StaffAPI.objects.filter(tenant=tenant)
+#         else:
+#             return StaffAPI.objects.none()
 
 
 
@@ -746,7 +740,7 @@ class InvestmentQuery(ListView):
         # Filtering Queryset by Tenant
         if tenant:
             # return scheme.investments.all().order_by('created_date')
-            return InvestmentDetail.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant)
+            return InvestmentDetail.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant).order_by('-created_date')
         return InvestmentDetail.objects.none()
 
     def get_context_data(self, **kwargs):
@@ -760,12 +754,13 @@ class InvestmentQuery(ListView):
         inv_type = self.request.GET.get('inv_type')
         status = self.request.GET.get('status')
         invoice_number = self.request.GET.get('invoice_number')
+        type_of_tbill = self.request.GET.get('type_of_tbill')
 
         from_date = parse_date(from_date_str) if from_date_str else None
         to_date = parse_date(to_date_str) if to_date_str else None
 
         # check if filters are applied
-        filters_applied = any([sort,from_date_str,to_date_str,inv_type,status,invoice_number])
+        filters_applied = any([sort,from_date_str,to_date_str,inv_type,status,invoice_number,type_of_tbill])
 
         if not filters_applied:
             queryset = queryset.none()
@@ -774,6 +769,9 @@ class InvestmentQuery(ListView):
             # Apply filters incrementally
             if inv_type:
                 queryset = queryset.filter(investment_type=inv_type)
+
+            if type_of_tbill:
+                queryset = queryset.filter(type_of_tbill=type_of_tbill)
             
             if invoice_number:
                 queryset = queryset.filter(invoice_number=invoice_number)
@@ -842,185 +840,187 @@ class DelayedInterestListView(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
+            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
         else:
             return DelayedInterest.objects.none()
-
-
-@method_decorator(login_required, name='dispatch')
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User']), name='dispatch')
-class DelayedInterestCreateView(CreateView):
-    template_name = 'dashboard/delayed_interest_form.html'
-    model = DelayedInterest
-    fields = ('from_date','to_date','amount','remarks')
-
-    # Make sure we are updating details under the right tenant
-    def form_valid(self, form):
-
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-
-        scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
-
-        if scheme:
-            form.instance.investment_scheme = scheme
-
-        return super().form_valid(form)
     
-
-    def get_success_url(self):
-
-        scheme = self.request.scheme_name
-        tenant = self.request.tenant
-        return reverse('delayed_interest_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id})
-
-
-
-
-
-@method_decorator(login_required, name='dispatch')
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
-class BankInterestListView(ListView):
-    template_name = 'dashboard/bank_interest_list.html'
-    model = BankInterest
-    paginate_by = 10
-    context_object_name = 'bank_interest'
-
-
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
-    def get_queryset(self):
-         
-        # Get Tenant
-        tenant = self.request.tenant
-
-        # Get scheme name
-        scheme_id = self.request.scheme_name
-
-        # Filtering Queryset by Tenant
-        if tenant:
-            return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
-        else:
-            return BankInterest.objects.none()
-        
-
-
-
-
-@method_decorator(login_required, name='dispatch')
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User']), name='dispatch')
-class BankInterestCreateView(CreateView):
-    template_name = 'dashboard/bank_interest_form.html'
-    model = BankInterest
-    fields = ('bank_name','from_date','to_date','amount','remarks','branch','account_number')
-
-    # Make sure we are updating details under the right tenant
-    def form_valid(self, form):
-
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-
-        scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
-
-        if scheme:
-            form.instance.investment_scheme = scheme
-
-        return super().form_valid(form)
-    
-
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        # Get tenant
-        tenant = self.request.tenant
-
-        if tenant:
-            context['banks'] = BankInterest.names
-        else:
-            context['banks'] = []
-
+        context=super().get_context_data(**kwargs)
+        page_number = self.request.GET.get('page', 1)
+        start_index = (int(page_number) - 1) * self.paginate_by + 1
+        context['start_index'] = start_index
         return context
+
+
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['Treasury User']), name='dispatch')
+# class DelayedInterestCreateView(CreateView):
+#     template_name = 'dashboard/delayed_interest_form.html'
+#     model = DelayedInterest
+#     fields = ('from_date','to_date','amount','remarks')
+
+#     # Make sure we are updating details under the right tenant
+#     def form_valid(self, form):
+
+#         tenant = self.request.tenant
+#         scheme_id = self.request.scheme_name
+
+#         scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
+
+#         if scheme:
+#             form.instance.investment_scheme = scheme
+
+#         return super().form_valid(form)
     
-    def get_success_url(self):
 
-        scheme = self.request.scheme_name
-        tenant = self.request.tenant
-        return reverse('bank_interest_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id})
+#     def get_success_url(self):
 
-
-
-
-# Bank Interest Query
-@method_decorator(login_required, name='dispatch')
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
-class BankInterestQuery(ListView):
-    model = BankInterest
-    template_name = 'dashboard/bank_interest_query.html'
-    paginate_by = 20
+#         scheme = self.request.scheme_name
+#         tenant = self.request.tenant
+#         return reverse('delayed_interest_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id})
 
 
 
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
-    def get_queryset(self):
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
+# class BankInterestListView(ListView):
+#     template_name = 'dashboard/bank_interest_list.html'
+#     model = BankInterest
+#     paginate_by = 10
+#     context_object_name = 'bank_interest'
+
+
+#     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+#     def get_queryset(self):
          
-        # Get Tenant
-        tenant = self.request.tenant
+#         # Get Tenant
+#         tenant = self.request.tenant
 
-        # Get scheme name
-        scheme_id = self.request.scheme_name
+#         # Get scheme name
+#         scheme_id = self.request.scheme_name
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
-        else:
-            return BankInterest.objects.none()
+#         # Filtering Queryset by Tenant
+#         if tenant:
+#             return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
+#         else:
+#             return BankInterest.objects.none()
+
+
+
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['Treasury User']), name='dispatch')
+# class BankInterestCreateView(CreateView):
+#     template_name = 'dashboard/bank_interest_form.html'
+#     model = BankInterest
+#     fields = ('bank_name','from_date','to_date','amount','remarks','branch','account_number')
+
+#     # Make sure we are updating details under the right tenant
+#     def form_valid(self, form):
+
+#         tenant = self.request.tenant
+#         scheme_id = self.request.scheme_name
+
+#         scheme = get_object_or_404(InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id))
+
+#         if scheme:
+#             form.instance.investment_scheme = scheme
+
+#         return super().form_valid(form)
+    
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+
+#         # Get tenant
+#         tenant = self.request.tenant
+
+#         if tenant:
+#             context['banks'] = BankInterest.names
+#         else:
+#             context['banks'] = []
+
+#         return context
+    
+#     def get_success_url(self):
+
+#         scheme = self.request.scheme_name
+#         tenant = self.request.tenant
+#         return reverse('bank_interest_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id})
+
+
+
+# # Bank Interest Query
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
+# class BankInterestQuery(ListView):
+#     model = BankInterest
+#     template_name = 'dashboard/bank_interest_query.html'
+#     paginate_by = 20
+
+
+
+#     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+#     def get_queryset(self):
+         
+#         # Get Tenant
+#         tenant = self.request.tenant
+
+#         # Get scheme name
+#         scheme_id = self.request.scheme_name
+
+#         # Filtering Queryset by Tenant
+#         if tenant:
+#             return BankInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
+#         else:
+#             return BankInterest.objects.none()
         
 
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
 
-        # Get tenant
-        tenant = self.request.tenant
+#         # Get tenant
+#         tenant = self.request.tenant
 
-        if tenant:
-            context['banks'] = BankInterest.names
-        else:
-            context['banks'] = []
+#         if tenant:
+#             context['banks'] = BankInterest.names
+#         else:
+#             context['banks'] = []
 
-        from_date = self.request.GET.get('from-date')
-        to_date = self.request.GET.get('to-date')
-        bank = self.request.GET.get('bank_name')
+#         from_date = self.request.GET.get('from-date')
+#         to_date = self.request.GET.get('to-date')
+#         bank = self.request.GET.get('bank_name')
 
-        # convert 'date' to date format
-        from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
+#         # convert 'date' to date format
+#         from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
 
-        to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
+#         to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
 
-        # get all bank interest data
-        queryset = self.get_queryset()
+#         # get all bank interest data
+#         queryset = self.get_queryset()
 
-        query =[]
-        if from_date and to_date:
-            # Lookup all bank interest within a specified period
-            for interest in queryset:
-                if bank == 'all':
-                    if from_date <= (interest.from_date and interest.to_date) <= to_date:
-                        query.append(interest)
+#         query =[]
+#         if from_date and to_date:
+#             # Lookup all bank interest within a specified period
+#             for interest in queryset:
+#                 if bank == 'all':
+#                     if from_date <= (interest.from_date and interest.to_date) <= to_date:
+#                         query.append(interest)
 
-                    # Returns an empty list
-                    # else:
-                    #     query.append('')
-                elif interest.bank_name == bank:
-                    if from_date <= (interest.from_date and interest.to_date) <= to_date:
-                        query.append(interest)
+#                     # Returns an empty list
+#                     # else:
+#                     #     query.append('')
+#                 elif interest.bank_name == bank:
+#                     if from_date <= (interest.from_date and interest.to_date) <= to_date:
+#                         query.append(interest)
                 
-            context['results'] = query
+#             context['results'] = query
 
-        return context
+#         return context
     
 
 # Delayed Interest Query
@@ -1031,12 +1031,8 @@ class DelayedInterestQuery(ListView):
     model = DelayedInterest
     template_name = 'dashboard/delayed_interest_query.html'
     paginate_by = 20
-
-
-
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
     def get_queryset(self):
-         
         # Get Tenant
         tenant = self.request.tenant
 
@@ -1052,32 +1048,39 @@ class DelayedInterestQuery(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        # Get search elements from user
-
-        from_date = self.request.GET.get('from-date')
-        to_date = self.request.GET.get('to-date')
-
-        # convert 'date' to date format
-        from_date = datetime.strptime(from_date,"%Y-%m-%d").date() if from_date else None
-
-        to_date = datetime.strptime(to_date,"%Y-%m-%d").date() if to_date else None
-
-        # Fetch all Delayed Interest
         queryset = self.get_queryset()
 
-        # List to append related search results
-        query = []
+        # Get search parameters from the request
+        invoice_number = self.request.GET.get('invoice_number','').strip()
+        from_date, to_date = None, None
+        print(invoice_number)
+        # Safely parse dates
+        try:
+            from_date = datetime.strptime(self.request.GET.get('from-date'), "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            pass
+        try:
+            to_date = datetime.strptime(self.request.GET.get('to-date'), "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            pass
+
+        # Apply filters if any search parameter is provided
+        if invoice_number:
+            queryset = queryset.filter(invoice_number=invoice_number)
         if from_date and to_date:
-            for d_interest in queryset:
-                if from_date <= d_interest.from_date and d_interest.to_date <= to_date:
-                    query.append(d_interest)
+            queryset = queryset.filter(created_date__range=(from_date, to_date))
+        elif from_date:
+            queryset = queryset.filter(created_date__gte=from_date)
+        elif to_date:
+            queryset = queryset.filter(created_date__lte=to_date)
+        # Set queryset to none if no filters were applied
+        if not (invoice_number or from_date or to_date):
+            queryset = queryset.none() 
+ 
+        context['results'] = queryset
 
-            context['results'] = query
-
-        else:
-            context['results'] = query
         return context
+
     
 
 
@@ -1127,10 +1130,8 @@ class InvestmentApproval(ListView):
                 investment.closing_amount = closing_amount
                 investment.save()
 
-
                 # After saving changes now we calculate members actual profit using tasks
                 actual_member_interest.delay(tenant_id,scheme_id,inv_id)
-                # print('returning success response')
 
                 return JsonResponse({'status':'success','message':'Investment approved successfully.'})
             else:
@@ -1138,7 +1139,7 @@ class InvestmentApproval(ListView):
                 error_message = 'Closing amount does not match with expected amount'
                 return JsonResponse({'status':'error', 'message':error_message}, status=400)
 
-        return JsonResponse({'status':'error'}, status=400)
+        # return JsonResponse({'status':'error'}, status=400)
 
 
     def get_context_data(self, **kwargs):
@@ -1207,7 +1208,7 @@ class ToBeApproved(ListView):
 
         try:
             application = self.get_queryset().get(tenant=tenant, id=application_id)
-            # Now we can approve useing the approve method on the SchemeApproval Model
+            # Now we can approve using the approve method on the SchemeApproval Model
             application.approve()
             # Notify applicant upon scheme approval
             applicant_email = application.member.user.email
@@ -1360,8 +1361,6 @@ class ApproveContributions(TemplateView):
 
                 # convert percentage --> decimal
                 daily_delayed_rate = (rate/100) 
-                # Simple calculation of delayed principal subject to change
-                # delayed_principal = (daily_delayed_rate*month_contribution)*duration
 
                 # Using compound interest to calculate the delayed Interest on contribution
                 t = ((duration/30)/12) #convert duration from days to years
@@ -1471,13 +1470,18 @@ class ApproveExitedMembers(TemplateView):
                         staff.investment_scheme.remove(scheme_to_remove)
                         staff.save()
 
+                        # Delete Previous application to scheme
+                        try:
+                            SchemeApproval.objects.get(tenant=tenant,scheme=scheme_to_remove,member=member).delete()
+                        except:
+                            return JsonResponse({'status':'error','message':'Application approved but Member cannot apply to this scheme in the future. Contact Management to resolve this issue.'})
+
 
                         # Notify member of successful exit
-
-
                     except Exception as e:
                         return JsonResponse({'status':'error','message':'Application cannot be approved at the moment'})
-                    return JsonResponse({'status':'success', 'message':'Application approve successfully'})
+                    
+                    return JsonResponse({'status':'success', 'message':'Exit Application approved successfully'})
                 else:
                     return JsonResponse({'status':'error', 'message':'Application cannot be approved at the moment'})
             else:
@@ -1486,6 +1490,136 @@ class ApproveExitedMembers(TemplateView):
     def get_context_data(self, **kwargs):
         tenant = self.request.tenant
         context = super().get_context_data(**kwargs)
-        context['exiting_members']= ExitApproval.objects.filter(tenant=tenant)
+        context['exiting_members']= ExitApproval.objects.filter(tenant=tenant,approved=False)
 
         return context
+
+
+# Create an Exception to be called when theres Missing IDs in member scheme ID list
+class MissingSchemeIdError(Exception):
+    def __init__(self, missing_ids, message = 'Scheme with ID(s) ', *args):
+        self.missing_ids = missing_ids
+        self.message = f'{message}: {missing_ids}'
+        super().__init__(self.message)
+
+# MASS MEMBER UPLOAD
+import openpyxl
+from django.db import transaction
+class MassMemberUpload(CreateView ):
+    model= StaffAPI
+    fields =('__all__')
+    template_name = 'dashboard/mass_enroll.html'
+    
+    def post(self, request, *args, **kwargs):
+        print('There was a post request to this view')
+        if request.FILES["excel_sheet"]:
+            tenant = request.tenant
+            excel_file = request.FILES["excel_sheet"]
+            # Try creating users
+            try:
+                # Secutity check on file before processing
+                try:
+                    wb = openpyxl.load_workbook(excel_file,read_only=True,data_only=True) #load file
+                    sheet = wb.active #read file
+                except Exception:
+                    return JsonResponse({
+                        'status':'error',
+                        'message':'Unsuported File Format'
+                    })
+
+                # scheme list
+                member_scheme_ids = []
+                # Members list
+                all_members=[]
+                # Accumulate error messages when assigning schemes
+                error_message = ''
+
+                for row in sheet.iter_rows(min_row=2,values_only=True):
+                    if all(cell in (None,'') for cell in row):
+                        continue #skip empty rows
+                    else:   
+                        try:
+                            # Get data from rows --> fields
+                            staff_number,first_name,last_name,scheme_id,_amount,actual_amount,subscription_date = row
+                            # Convert scheme ids to a list
+                            if isinstance(scheme_id,str):
+                                scheme_id = scheme_id.split(',')
+                            elif isinstance(scheme_id,int):
+                                scheme_id = [scheme_id]
+                            else:
+                                return JsonResponse({
+                                    'status':'error',
+                                    'message':f'Invalid data type for scheme id for staff: {staff_number}'
+                                })
+
+                            # create member instance
+                            member_instance = StaffAPI(
+                                tenant=tenant,
+                                staff_number=staff_number,
+                                first_name= first_name,
+                                last_name=last_name,
+                                _amount=_amount,
+                                actual_amount=actual_amount,
+                                subscription_date=subscription_date
+                            )
+                            # Add member to list
+                            all_members.append(member_instance)
+                            # Get all scheme id's
+                            member_scheme_ids.append(scheme_id if scheme_id else []) #split scheme ids
+
+                        except Exception as e:
+                            return JsonResponse({
+                                'status':'error',
+                                'message':f'Error processing rows{row}: {str(e)}\n'
+                            })
+                try:
+                    with transaction.atomic():
+                        # Save members without schemes
+                        created_members = StaffAPI.objects.bulk_create(all_members)
+
+                        # Refresh created_members after bulk create to assign pks to them
+                        created_members = StaffAPI.objects.filter(staff_number__in=[member.staff_number for member in all_members])
+
+                        # Now set schemes on all members
+                        for member,scheme_id in zip(created_members,member_scheme_ids):
+                            # Fetch related schemes
+                            try:
+                                # Fetch related schemes
+                                schemes = InvestmentScheme.objects.filter(tenant=tenant, id__in=scheme_id)
+
+                                # Assign scheme to member
+                                member.investment_scheme.add(*schemes) #use list upacking to pass objects one by one
+
+                                # Catch missing schemes in scheme_id provided
+                                if len(scheme_id) != len(schemes):
+                                    missing_ids = set(scheme_id)- set(schemes.values_list('id', flat=True))
+                                    print(missing_ids)
+                                    raise MissingSchemeIdError(missing_ids) #raise custom error
+                            except MissingSchemeIdError as e:
+                                error_message += f'{e.message} not found for: {member.last_name} {member.first_name} || \n'
+                                continue
+                            except Exception as e:
+                                print(e)
+                                error_message += f'{e} for: {member.last_name} {member.first_name} || \n'
+                except Exception as e:
+                    return JsonResponse({
+                        'status':'error',
+                        'message':f'An error occured: {e}'
+                    })
+                
+                return JsonResponse({
+                    'status':'success',
+                    'message': f'Members uploaded successfully\n {"" if error_message=="Invalid scheme ID for: " else error_message}'
+                })
+            
+            except Exception as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'An error occured: {str(e)}'
+                })
+            
+        else:
+            return JsonResponse({
+                'status':'error',
+                'message':'Couldnt Find File'
+            })

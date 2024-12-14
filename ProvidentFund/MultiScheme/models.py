@@ -42,35 +42,8 @@ class InvestmentScheme(models.Model):
     ]
     delayed_int = models.CharField(max_length=3, choices=options,default=No,null=True)
     bank_int = models.CharField(max_length=3, choices=options, default=No,null=True)
-
-    # Daily = 'Daily'
-    # Weekly = 'Weekly'
-    # Monthly = 'Monthly'
-    # frequency = [
-    #     (Daily,'Daiily'),
-    #     (Weekly,'Weekly'),
-    #     (Monthly,'Monthly')
-    # ]
-    # contribution_frequency = models.CharField(max_length=20,choices=frequency,default='',null=True)
-    # contribution_time = models.TimeField(null=True)
-    # contribution_date = models.IntegerField(null=True, blank=True)
-
-    # distribution_frequency = models.CharField(max_length=20, choices=frequency,default='', null=True)
     distribution_percentage = models.FloatField(null=True)
     eligibility_criteria_months = models.IntegerField(null=True)
-
-    # every_six_months = '6 months'
-    # every_year = '12 months'
-    # every_eighteen_months = '18 months'
-    # every_two_years = '24 months'
-    # choices =[
-    #     (every_six_months,'6 months'),
-    #     (every_year, '12 months'),
-    #     (every_eighteen_months, '18 months'),
-    #     (every_two_years, '24 months')
-    # ]
-    # payout_frequency = models.CharField(max_length=20,choices=choices,default='', null=True)
-
     description = models.TextField(blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
@@ -146,12 +119,13 @@ class SchemeSettings(models.Model):
     )
     contribution_day = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(31)],
-        help_text="Day of the month for contributions (1-31)."
+        help_text="Day of the month for contributions (1-31).",
+        null=True
     )
-    grace_period_contribution = models.PositiveSmallIntegerField(
-        default=0, 
+    grace_period_contribution = models.PositiveSmallIntegerField( 
         validators=[MinValueValidator(0), MaxValueValidator(31)],
-        help_text="Grace period for contributions in days."
+        help_text="Grace period for contributions in days.",
+        null=True
     )
     # grace_period_delayed_int = models.PositiveSmallIntegerField(
     #     default=0,
@@ -166,10 +140,12 @@ class SchemeSettings(models.Model):
     # )#we use same rate on delayed interest object
     delayed_interest_rate = models.FloatField( 
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        help_text="Delayed interest rate as a percentage (0-100)."
+        help_text="Delayed interest rate as a percentage (0-100).",
+        null=True
     )
     period_of_delayed_calculation = models.PositiveIntegerField(
-        help_text="Period over which DI interest is to be calculated."
+        help_text="Period over which DI interest is to be calculated.",
+        null=True
     ) #period over which interest is to be calculated.
     
 

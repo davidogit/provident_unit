@@ -27,19 +27,19 @@ class Member(models.Model):
     male='Male'
     female = 'Female'
     other ='Other'
-    gender = [
+    gender_choice = [
         (select ,'select'),
         (male ,'Male'),
         (female, 'Female'),
         (other,'Other'),
     ]
-    gender = models.CharField(choices=gender, default='', max_length=10)
+    gender = models.CharField(choices=gender_choice, default='', max_length=10)
     employment_date = models.DateField(auto_now=False,auto_now_add=False, null=True)
     department = models.CharField(max_length = 200,blank=True, null=True)
     job_title = models.CharField(max_length = 200,blank=True, null=True)
     registration_date = models.DateTimeField(null=True)
     scheme_approval = models.BooleanField(default=False)
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, blank=True)
+    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, blank=True, related_name='member')
 
 
     def __str__(self):

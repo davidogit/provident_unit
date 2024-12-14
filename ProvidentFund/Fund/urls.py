@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 from . import views
-from django.contrib.auth.decorators import login_required
 
 urlpatterns =[
     path('', views.LandingPage.as_view(), name='landing_page'),
@@ -20,17 +19,17 @@ urlpatterns =[
     path('<int:scheme_name>/investment_query/', views.InvestmentQuery.as_view(), name='query'),
 
     # Member URLS
-    path('<int:scheme_name>/memberUpdate/<int:pk>/', views.MemberUpdateView.as_view(), name='member_update'),
-    path('<int:scheme_name>/deleteMember/<int:pk>/', views.MemberDeleteView.as_view(), name='delete_member'),
+    # path('<int:scheme_name>/memberUpdate/<int:pk>/', views.MemberUpdateView.as_view(), name='member_update'),
+    # path('<int:scheme_name>/deleteMember/<int:pk>/', views.MemberDeleteView.as_view(), name='delete_member'),
     path('<int:scheme_name>/exited-members/', views.ExitedMembers.as_view(), name='exited_members'),
 
     # Bank Interest Related URLS
-    path('<int:scheme_name>/add_bank_interest/', views.BankInterestCreateView.as_view(), name='add_bank_interest'),
-    path('<int:scheme_name>/bank_interest_list/', views.BankInterestListView.as_view(), name='bank_interest_list'),
-    path('<int:scheme_name>/bank-interest-query/', views.BankInterestQuery.as_view(), name='bank_interest_query'),
+    # path('<int:scheme_name>/add_bank_interest/', views.BankInterestCreateView.as_view(), name='add_bank_interest'),
+    # path('<int:scheme_name>/bank_interest_list/', views.BankInterestListView.as_view(), name='bank_interest_list'),
+    # path('<int:scheme_name>/bank-interest-query/', views.BankInterestQuery.as_view(), name='bank_interest_query'),
 
     #Delayed Interest Related URLS 
-    path('<int:scheme_name>/add_delayed_interest/', views.DelayedInterestCreateView.as_view(), name='add_delayed_interest'),
+    # path('<int:scheme_name>/add_delayed_interest/', views.DelayedInterestCreateView.as_view(), name='add_delayed_interest'),
     path('<int:scheme_name>/delayed_interest_list/', views.DelayedInterestListView.as_view(), name='delayed_interest_list'),
     path('<int:scheme_name>/delayed-interest-query/', views.DelayedInterestQuery.as_view(), name='delayed_interest_query'),
 
@@ -51,5 +50,9 @@ urlpatterns =[
 
     # Exit Meber approval url
     path('exiting_members/', views.ApproveExitedMembers.as_view(), name='approve_exit_members'),
+
+
+    # Mass Member Upload
+    path('mass_upload/', views.MassMemberUpload.as_view(), name='mass_enroll'),
     
 ]

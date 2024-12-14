@@ -126,14 +126,14 @@
         //var tenant_id = 1;
         var tenant_id = "{{ request.tenant.id }}";
         console.log(tenant_id);
-        var app_base_url = "http://127.0.0.1:8000";
+        //var app_base_url = "http://127.0.0.1:8000";
 
         // Ensure both fields are filled
         if (month && year.length === 4) {
             // Simulate fetching data (replace with an actual fetch request)
             
             try {
-                var response = await fetch(`${app_base_url}/${tenant_id}/fund/${scheme_id}/fetch_contributions/?month=${month}&year=${year}`, {
+                var response = await fetch(`/${tenant_id}/fund/${scheme_id}/fetch_contributions/?month=${month}&year=${year}`, {
                     method: 'GET',
                     credentials: 'include', //Ensures cookies are sent to the server to allow user authentication upon request
                 })

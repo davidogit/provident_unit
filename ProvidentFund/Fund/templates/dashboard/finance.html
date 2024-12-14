@@ -99,49 +99,53 @@
   <div class="row mt-5">
 
     <!-- Current Bank Interest Rates -->
+    {% if interest_rates %}
     <div class="col-md-4">
       <div class="card">
         <div class="card-header">
           <h4 class="text-dark">Current Bank Interest Rates</h4>
         </div>
-        <div class="card-body">
+        <div class="card-body overflow-auto p-1" style="max-height: 400px;">
           {% for rate in interest_rates %}
             <div class="p-3 mb-3 rounded">
               <h5 class="fw-semibold">Bank Name: {{ rate.bank_name }}</h5>
               <p class="text-secondary mb-0">Interest Rate: {{ rate.interest_rate }}%</p>
-            </div
+            </div>
           {% endfor %}
         </div>
       </div>
     </div>
+    {% endif %}
 
     <!-- Available Investment Schemes -->
+     {% if schemes %}
     <div class="col-md-4">
-      <div class="card">
+      <div class="card card-one">
         <div class="card-header">
-          <h4 class="text-dark">Available Investment Schemes</h4>
+          <h4 class="text-dark">Investment Schemes</h4>
         </div>
-        <div class="card-body">
+        <div class="card-body overflow-auto p-1" style="max-height: 400px;">
           {% for scheme in schemes %}
-            <div class="p-3 mb-3 rounded">
+            <div class="p-3 mb-3">
               <h5 class="fw-semibold">{{ scheme.name }}</h5>
-              <p class="text-secondary mb-1">Investment Type: {{ scheme.eligibility_criteria_months }}</p>
-              <p class="text-secondary mb-1">Minimum Investment: {{ scheme.created_date }}</p>
+              <p class="text-secondary mb-1">Date Created: {{ scheme.created_date }}</p>
               <p class="text-secondary mb-1">Description: {{ scheme.description }}</p>
             </div>
           {% endfor %}
         </div>
       </div>
     </div>
+    {% endif %}
 
     <!-- Gender Enrollment -->
+    {% if gender_counts_by_scheme %}
     <div class="col-md-4">
       <div class="card card-one">
         <div class="card-header">
-          <h4 class="text-dark">Gender Enrollment</h4>
+          <h4 class="text-dark">Human Resource</h4>
         </div>
-        <div class="card-body">
-          <div class="table-responsive">
+        <div class="card-body overflow-auto" style="max-height: 400px;">
+          <div class="table-responsive p-3">
             <table class="table table-one">
               <thead>
                 <tr>
@@ -169,6 +173,7 @@
         </div>
       </div>
     </div>
+    {% endif %}
     
   </div> <!-- End of Row -->
 

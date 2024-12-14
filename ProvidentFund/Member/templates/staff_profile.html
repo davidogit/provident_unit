@@ -16,8 +16,8 @@
             </div><!-- media-img -->
             <div class="media-body">
               <h5 class="media-name">{{ user.first_name }} {{ user.last_name }}</h5>
-              <p class="d-flex gap-2 mb-4"><i class="ri-map-pin-line"></i> San Francisco, California</p>
-              <p class="mb-0">Redhead, Innovator, Saviour of Mankind, Hopeless Romantic, Attractive 20-something Yogurt Enthusiast. You can replace this with any content and adjust it as needed... <a href="#">Read more</a></p>
+              <p class="d-flex gap-2 mb-4"><i class="ri-map-pin-line"></i>Location</p>
+              <p class="mb-0"></a></p>
             </div><!-- media-body -->
           </div><!-- media-profile -->
 
@@ -127,10 +127,10 @@
 
           <h5 class="section-title mb-4">Contact Information</h5>
           <ul class="list-contact-info">
-            <li><i class="ri-building-fill"></i><span>East Legon, Accra, Ghana</span></li>
-            <li><i class="ri-home-8-fill"></i><span>{{ staff_member.address }}, Accra</span></li>
+            <!-- <li><i class="ri-building-fill"></i><span>East Legon, Accra, Ghana</span></li> -->
+            <li><i class="ri-home-8-fill"></i><span>{{ staff_member.address }}</span></li>
             <li><i class="ri-phone-fill"></i><span>{{ staff_member.tel_number }}</span></li>
-            <li><i class="ri-mail-fill"></i><span>davido@gmail.com</span></li>
+            <li><i class="ri-mail-fill"></i><span>{{ staff_member.user.email }}</span></li>
           </ul>
 
           <hr class="my-4 opacity-0">

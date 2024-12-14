@@ -21,9 +21,8 @@
             >
               {% csrf_token %}
               <button
-                type="button"
+                type="submit"
                 class="btn btn-danger"
-                onclick="confirmOptOut()"
               >
                 Opt Out
               </button>
@@ -41,11 +40,38 @@
 </div>
 
 <script>
-  function confirmOptOut() {
-    const confirmation = confirm("Are you sure you want to opt out?");
-    if (confirmation) {
-      document.getElementById("opt-out-form").submit();
-    }
-  }
+  $(document).ready(function () {
+    $("#opt-out-form").on('submit', function(event){
+      event.preventDefault();
+      var form = $(this);
+
+      $.ajax({
+        type: form.attr('method'),
+        url: form.attr('action'),
+        data: form.serialize(),
+        success: function (response) {
+          console.log(response);
+          if (response.status == 'success') {
+            alert(response.message);
+            window.location.href = response.redirect_url;
+          } else {
+            $('.message-info').html(
+              '<div class="alert alert-danger" role="alert">' +
+                response.message +
+                '</div>'
+            );
+          }
+        },
+        error: function (response) {
+          console.log(response);
+          $('.message-info').html(
+            '<div class="alert alert-danger" role="alert">' +
+              response.message +
+              '</div>'
+          );
+        },
+      });
+    });
+  });
 </script>
 {% endblock %}

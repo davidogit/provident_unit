@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from .generate_invoice import generate_invoice_number
 
 class InvestmentDetail(models.Model):
-    invoice_number = models.CharField(max_length=6, unique=True,null=True,blank=True, editable=False)
+    invoice_number = models.CharField(max_length=8, unique=True,null=True,blank=True, editable=False)
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, related_name='investments')
     T_bill = 'Treasury Bill'
     F_dep = 'Fixed Deposit'
@@ -53,6 +53,7 @@ class InvestmentDetail(models.Model):
     interest_amount = models.FloatField(default=0.0)
     years = models.FloatField(null=False) #Time the money is invested or borrowed for, in years.
     componding_frequency = models.PositiveIntegerField(null=False) # Number of times the interest is compounded per year.
+    type_of_tbill = models.CharField(max_length=10, default='')#specifies if 91,182,365 day for only Tbill
 
 
     def calculate_inv_interest(self):
@@ -140,10 +141,14 @@ class InvestmentDetail(models.Model):
 def set_invoice_number(sender,instance,**kwargs):
     if not instance.invoice_number:
         while True:
+            obj = instance.investment_type
+            obj_prefix = 'TB' if obj=='Treasury Bill' else 'FD'
             invoice_number = generate_invoice_number()
+            new_invoice_number = f'{obj_prefix}{invoice_number}'
+            
 
-            if not InvestmentDetail.objects.filter(invoice_number=invoice_number).exists():
-                instance.invoice_number = invoice_number
+            if not InvestmentDetail.objects.filter(invoice_number=new_invoice_number).exists():
+                instance.invoice_number = new_invoice_number
                 break
 
 

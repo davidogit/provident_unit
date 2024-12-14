@@ -20,8 +20,10 @@
               </tr> -->
               <tr>
                 <th></th>
+                <th>Invoice No.</th>
                 <!-- <th>Name</th> -->
                 <th>Princioal</th>
+                <th>Rate %</th>
                 <th>Acrued interest</th>
                 <th>Status</th>
                 <th>Date created</th>
@@ -32,8 +34,10 @@
               <tbody>
                 {% for int in delayed_interest %}
                   <tr>
-                    <td>{{ forloop.counter }}</td>
+                    <td>{{ forloop.counter0|add:start_index|default:forloop.counter }}</td>
+                    <td>{{ int.invoice_number }}</td>
                     <td>{{ int.principal| floatformat:2 }}</td>
+                    <td>{{ int.rate_d_int }}</td>
                     <td>{{ int.interest| floatformat:2 }}</td>
                     <td>{{ int.status }}</td>
                     <td>{{ int.created_date }}</td>

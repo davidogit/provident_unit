@@ -61,10 +61,11 @@
         <a href="#" class="nav-label">Configuration</a>
         <ul class="nav nav-sidebar">
 
-          {% if is_manager %}
+          {% if is_manager_or_hr %}
           <li class="nav-item">
+            {% if is_manager %}
             <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Scheme Configuration</span></a>
-            <nav class="nav nav-sub">
+            <nav class="nav nav-sub"> 
               <a href="{% url 'scheme_list' tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Active Schemes
               </a>
@@ -72,21 +73,44 @@
               <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Add Scheme
               </a>
-
               
-
             </nav>
+            {% endif %}
+          </li>
+
+          <li class="nav-item">
+            {% if is_manager %}
+            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Mass Enroll</span></a>
+            <nav class="nav nav-sub"> 
+              <a href="{% url 'mass_enroll' tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Upload File
+              </a>
+              <a href="{% url 'add_chart_of_account' tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Chart of Accounts
+              </a>
+
+              <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Recent Uploads
+              </a>
+              
+            </nav>
+            {% endif %}
           </li>
 
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Scheme Apllications</span></a>
               <nav class="nav nav-sub">
+                {% if is_manager %}
                 <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
                 class="nav-sub-link">View Applications
                 </a>
+                {% endif %}
+
+                {% if is_hr_user %}
                 <a href="{% url 'approve_exit_members'  tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Exiting Members Applications
                 </a>
+                {% endif %}
               </nav>
 
           </li>
@@ -226,17 +250,8 @@
       {% endfor %}
 
 
-
-
-
-
       <div class="nav-group show">
 
-
-        </nav>
-        </li>
-
-        </ul>
       </div><!-- nav-group -->
 
     </div><!-- sidebar-body -->
@@ -280,8 +295,8 @@
 
   <div class="header-main px-3 px-lg-4">
     <a id="menuSidebar" href="#" class="menu-link me-3 me-lg-4"><i class="ri-menu-2-fill"></i></a>
-    <div id="search-bar" class="me-auto">
-      {% block search %}
+    <div id="search-bar" class="m-auto">
+      {% block header %}
 
       {% endblock %}
     </div><!-- form-search -->

@@ -24,13 +24,13 @@
                       <div class="row group">
                         <div class="col-md-6"><div class="mt-2" aria-hidden="true">
                           <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                            <input type="radio" class="btn-check" name="t_bill_type" id="btnradio1" autocomplete="off" value="91">
+                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio1" autocomplete="off" value="91 days">
                             <label class="btn btn-outline-primary" for="btnradio1">91 days</label>
                           
-                            <input type="radio" class="btn-check" name="t_bill_type" id="btnradio2" autocomplete="off" value="182">
+                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio2" autocomplete="off" value="182 days">
                             <label class="btn btn-outline-primary" for="btnradio2">182 days</label>
                           
-                            <input type="radio" class="btn-check" name="t_bill_type" id="btnradio3" autocomplete="off" value="365">
+                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio3" autocomplete="off" value="365 days">
                             <label class="btn btn-outline-primary" for="btnradio3">365 days</label>
                           </div>
                         </div></div>
@@ -114,14 +114,14 @@
           $('.group').show();
           
           //change required attribute to true
-          $('input[name="t_bill_type"]').attr('required', true);
+          $('input[name="type_of_tbill"]').attr('required', true);
 
         }else{
           $('.group').hide();
           //change required attribute to false
-          $('input[name="t_bill_type"]').attr('required', false);
+          $('input[name="type_of_tbill"]').attr('required', false);
           //uncheck all radio buttons
-          $('input[name="t_bill_type"]').prop('checked', false);
+          $('input[name="type_of_tbill"]').prop('checked', false);
           //clear day count
           $('input[name="day_count"]').val('');
         }

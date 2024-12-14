@@ -23,6 +23,8 @@
         <div class="col-md-12 col-xl-10">
             <form method="GET" class="justify-content-center">
                 <div class="form-search d-flex align-items-center justify-content-center">
+                    Invoice Number:
+                    <input type="text" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="invoice_number">
 
                     From:
                     <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="from-date">
@@ -57,25 +59,26 @@
                             <thead>
                                 <tr>
                                     <th></th>
-                                    <th scope="col">Bank Name</th>
-                                    <th scope="col">Account Number</th>
-                                    <th scope="col">Branch</th>
-                                    <th scope="col">Start Month</th>
-                                    <th scope="col">End Month</th>
-                                    <th scope="col">Amount</th>
+                                    <th scope="col">Invoice Number</th>
+                                    <th scope="col">Principal</th>
+                                    <th scope="col">Acrued Interest</th>
+                                    <th scope="col">Paid</th>
+                                    <th scope="col">Date Created</th>
+                                    <th scope="col">Date Paid</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% if results %}
                                     {% for b_interest in results %}
                                         <tr>
-                                            <td>{{ b_interest.id }}</td>
-                                            <td>{{ b_interest.bank_name }}</td>
-                                            <td>{{ b_interest.branch }}</td>
-                                            <td>{{ b_interest.account_number }}</td>
-                                            <td>{{ b_interest.from_date }}</td>
-                                            <td>{{ b_interest.to_date }}</td>
-                                            <td>{{ b_interest.amount }}</td>
+                                            <td> {{ forloop.counter }} </td>
+                                            <td>{{ b_interest.invoice_number }}</td>
+                                            <td>{{ b_interest.principal|floatformat:2 }}</td>
+                                            <td>{{ b_interest.interest|floatformat:2 }}</td>
+                                            <td>{{ b_interest.approved }}</td>
+                                            <td>{{ b_interest.created_date }}</td>
+                                            <td>{{ b_interest.date_paid }}</td>
+                                            
 
                                         </tr>
                                     {% endfor %}

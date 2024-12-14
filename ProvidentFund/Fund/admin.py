@@ -21,6 +21,11 @@ admin.site.register(InvestmentDetail, InvestmentDetailAdmin)
 # admin.site.register(Member,MemberAdmin)
 
 admin.site.register(BankInterest)
-admin.site.register(DelayedInterest)
+class DelayedInterestAdmin(admin.ModelAdmin):
+    list_display=('invoice_number',)
+
+
+    readonly_fields = ('invoice_number','created_date','principal','status','created_date','rate_d_int')
+admin.site.register(DelayedInterest,DelayedInterestAdmin)
 admin.site.register(AuditTrail)
 admin.site.register(BankInterestRate)

@@ -18,17 +18,19 @@
                         <p class="mb-5 h5">Invoice No.: <strong>{{ investment_detail.invoice_number }}</strong></p>
                         <p class="mb-5 h5">Investment Name: {{ investment_detail.account_name }}</p>
                         <p class="mb-5 h5">Account Number: {{ investment_detail.account_number }}</p>
+                        <p class="mb-5 h5">Category: {{ investment_detail.investment_type }}</p>
                     </div>
                     <div class="col-md-4">
                         <!-- <p class="mb-5 h5">Name of Investment: {{ investment_detail.account_type }}</p> -->
-                        <p class="mb-5 h5">Investment Type: {{ investment_detail.investment_type }}</p>
+                        <p class="mb-5 h5">Type: {{ investment_detail.type_of_tbill }}</p>
                         <p class="mb-5 h5">Interest Percentage: {{ investment_detail.interest_percentage }}%</p>
                         <p class="mb-5 h5">Account Type: {{ investment_detail.account_type }}</p>
+                        <p class="mb-5 h5">Start Date: {{ investment_detail.interest_start_date }}</p>
                     </div>
                     <div class="col-md-4">
                         <p class="mb-5 h5">Maturity Date: {{ investment_detail.interest_end_date }}</p>
-                        <p class="mb-5 h5">Principal: {{ investment_detail.principal_amount }}</p>
-                        <p class="mb-5 h5">Total Interest: {{ investment_detail.interest_amount }}</p>
+                        <p class="mb-5 h5">Principal: {{ investment_detail.principal_amount|floatformat:2 }}</p>
+                        <p class="mb-5 h5">Total Interest: {{ investment_detail.interest_amount|floatformat:2 }}</p>
                         <p class="mb-5 h5">Date of Investment: {{ investment_detail.created_date }}</p>
                         
                     </div>
@@ -78,7 +80,7 @@
 
                     {% if is_treasury_user %}
                     <div class="col-1">
-                        <a class="btn btn-outline-primary btn-lg" href="{% url 'investment_update' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">update</a>
+                        <a class="btn btn-outline-success btn-lg" href="{% url 'investment_update' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">update</a>
                     </div>
                     <div class="col-2">
                         <a class="btn btn-outline-primary btn-lg" href="{% url 'rollover_percentage' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Roll Over</a>

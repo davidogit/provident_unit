@@ -1,6 +1,6 @@
 from typing import Any
 from django.forms import BaseModelForm
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import ListView,CreateView,DeleteView,UpdateView
@@ -67,13 +67,27 @@ class AddScheme(CreateView):
         tenant = self.request.tenant
         if tenant:
             form.instance.tenant = tenant
-        return super().form_valid(form)
-    
-    # reverse url after a succesful save
-    def get_success_url(self):
-        tenant = self.request.tenant
+            instance = form.save()
+            message = 'scheme created successfully, proceed to settings'
 
-        return reverse('scheme_list', kwargs={'tenant_id':tenant.id})
+            # Create associated setting obj
+            SchemeSettings.objects.create(
+                investment_scheme = instance,
+            )
+
+            redirect_url = reverse('scheme_settings', kwargs={
+                'tenant_id':tenant.id,
+                'scheme_name':instance.id
+            })
+            return JsonResponse({'status':'success',
+                                  'message':message, 'scheme_id':instance.id, 'redirect_url':redirect_url})
+        else:
+            return JsonResponse({'status':'error',
+                                  'message':'An error occured'})
+    
+    def form_invalid(self, form):
+        return JsonResponse({'status':'error',
+                             'message':'An error occured'})
 
 
 
@@ -101,33 +115,37 @@ class SchemeSettingsView(CreateView):
     # Return invalid form response using Json
     def form_invalid(self, form: BaseModelForm) -> HttpResponse:
         print(f'Error: {form.errors}')
-        return super().form_invalid(form)
+        return JsonResponse({'status':'error',
+                              'message':'An error occured'})
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         # Get scheme and tenant
         tenant = self.request.tenant
         scheme_id = self.request.scheme_name
-        print('Start')
-        # get scheme object
-        # scheme = get_object_or_404(InvestmentScheme, id=scheme_id,tenant=tenant)
+
         scheme = InvestmentScheme.objects.filter(id=scheme_id,tenant=tenant).prefetch_related('scheme_settings').first()
 
         try:
             # get settings data from prefetched data
             settings = scheme.scheme_settings
-            
+
+            if not settings:
+                return JsonResponse({'status':'error','message':'No settings file was found'})
             # Update fields
             for field in form.cleaned_data:
                 setattr(settings,field,form.cleaned_data[field])
-            
             settings.save()
-        except:
-            # set scheme on form instance
-            form.instance.investment_scheme = scheme
-            print(f'Form: {form.instance}')
-            return super().form_valid(form)
+            print('Saved successfully')
+            redirect_url = reverse('scheme_settings', kwargs={'tenant_id' : tenant.id, 'scheme_name':scheme_id})
+            return JsonResponse({'status':'success',
+                                  'message':'Settings updated successfully.',
+                                  'redirect_url':redirect_url})
+        except Exception as e:
+            return JsonResponse({'status':'error',
+                                  'message':f'An error occured: {e}'})
+
         
-        return HttpResponseRedirect(self.get_success_url())
+        # return HttpResponseRedirect(self.get_success_url())
     
     # After successful creation redirect to scheme list page
     def get_success_url(self):

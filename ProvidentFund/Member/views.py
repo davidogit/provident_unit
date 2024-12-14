@@ -242,13 +242,13 @@ class MemberPortal(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        tenant = self.request.tenant
+        # tenant = self.request.tenant
         member_id = kwargs.get('member_id')
         member = self.request.user.member
 
         if member.staff_id == member_id:
-            user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
-            context['staff_member'] = user
+            # user = get_object_or_404(Member, tenant=tenant, staff_id=member_id)
+            context['staff_member'] = member
         else:
             context['staff_member'] = None
 
@@ -277,14 +277,9 @@ class EditMemberProfileView(UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_object(self, queryset=None):
-        member_id = self.kwargs.get('member_id')
-        return get_object_or_404(Member, staff_id=member_id)
+        member = self.request.user.member
+        return member
 
-    # def get_form_kwargs(self):
-    #     kwargs = super().get_form_kwargs()
-    #     kwargs['instance'] = self.get_object()
-    #     kwargs['user_instance'] = self.request.user  # Passing user separately
-    #     return kwargs
 
     def form_valid(self, form):
         form.save()
@@ -320,20 +315,9 @@ class MemberDashboard(TemplateView):
 
             days_since_joined = (timezone.now().date()-staff.date_joined).days
 
-
-            # APPROVED SCHEMES
-            
-            ################################################
-            # approved_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff,approved_by_hr=True).values_list('scheme_id', flat=True)
-
-            # schemes = InvestmentScheme.objects.filter(tenant=tenant)
             active_schemes = staff.investment_scheme.count()
-
-
             #################################################
-
             # PENDING SCHEMES
-
             ################################################
             pending_schemes = SchemeApproval.objects.filter(tenant=tenant,staff=staff,approved_by_hr=False).values_list('scheme_id', flat=True)
 
@@ -541,8 +525,8 @@ class ActiveSchemes(ListView):
                 active_schemes = staff.investment_scheme.all()
                 
                 context['active_schemes'] = active_schemes
-            except SchemeApproval.DoesNotExist:
-                return None
+            except Exception:
+                context['active_schemes'] = []
         return context
     
     # Using dispatch to access post request in listview
@@ -597,7 +581,7 @@ class ActiveSchemes(ListView):
                 # member.investment_scheme.remove(scheme)
 
                 # Check database if user has an application sent already
-                potential_application = ExitApproval.objects.filter(member=user,staff=member,tenant=tenant,scheme=scheme,approved=False)
+                potential_application = ExitApproval.objects.filter(member=user,staff=member,tenant=tenant,scheme=scheme,approved=False).exists()
 
                 # Prevent user from sending more than one exit application
                 if potential_application:

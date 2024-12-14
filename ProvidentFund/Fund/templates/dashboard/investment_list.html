@@ -141,7 +141,8 @@
                       <th></th>
                       <th>Invoice No.</th>
                       <th>Investment Name</th>
-                      <th>Investment Type</th>
+                      <th>Category</th>
+                      <th>Type</th>
                       <th>Account Type</th>
                       <th>Account Number</th>
                       <th>Principal Amount</th>
@@ -168,6 +169,7 @@
                       <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
                       <td>{{ investment.account_name }}</td>
                       <td>{{ investment.investment_type }}</td>
+                      <td>{{ investment.type_of_tbill }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
                       <td>{{ investment.principal_amount|floatformat:2 }}</td>
@@ -292,8 +294,8 @@
                     {% for investment in f_deposit_page %}
                     <tr>
                       <td>{{ forloop.counter0|add:f_deposit_page.start_index|default:forloop.counter }}</td>
-                      <td>{{ investment.invoice_number }}</td>
-                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
+                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
+                      <td>{{ investment.account_name }}</td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>

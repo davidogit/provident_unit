@@ -30,12 +30,17 @@
 
                   <!-- Account Type -->
                   <div class="form-group mb-3">
-                    <label for="{{ form.account_type.id_for_label }}" class="form-label">Account Type</label>
+                    <label for="{{ form.account_type.id_for_label }}" class="form-label">Categoty</label>
                     {{ form.account_type }}
                   </div>
                 </div>
                 
                 <div class="col-md-4">
+                  <!-- Type -->
+                  <div class="form-group mb-3">
+                    <label for="{{ form.account_type.id_for_label }}" class="form-label">Type</label>
+                    {{ form.type_of_tbill }}
+                  </div>
                   <!-- Principal Amount -->
                   <div class="form-group mb-3">
                     <label for="{{ form.principal_amount.id_for_label }}" class="form-label">Principal Amount</label>
@@ -71,7 +76,7 @@
               </div>
 
               <!-- Submit Button -->
-              <input type="submit" class="btn btn-primary" value="Save changes">
+              <button type="submit" class="btn btn-outline-primary btn-lg">Save changes</button>
             </form>
           </div>
       </div>

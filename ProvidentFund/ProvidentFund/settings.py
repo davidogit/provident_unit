@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'Member',
     'Admin',
     'MultiScheme',
+    'Chart_of_Accounts',
 
     'django_celery_beat',
     'django_celery_results',

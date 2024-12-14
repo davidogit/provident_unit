@@ -1,0 +1,174 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}
+<title>Chart of Accounts</title>
+{% endblock %}
+{% block header %}
+<h3 class="text-center">Chart of Account</h3>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-xl">
+            <div class="container">
+                <h2 class="mb-1 text-center"></h2>
+                <form method="POST" id="chart_of_account_form">
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        <!-- Left Column -->
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="accountName" class="form-label">Account Name</label>
+                                <input type="text" class="form-control" id="accountName" name="name" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="accountType" class="form-label">Account Parent</label>
+                                <select class="form-control" name="parent" id="accountType">
+                                    <option value=""></option>
+                                    {% for acc in parent_accounts %}
+                                    <option value="{{acc.id}}">{{ acc.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="accountType" class="form-label">Account Type</label>
+                                <select class="form-control" name="account_type" id="accountType" required>
+                                    <option value=""></option>
+                                    {% for acc,label in account_types %}
+                                    <option value="{{acc}}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Right Column -->
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="accountCode" class="form-label">Account Code</label>
+                                <input type="text" class="form-control" id="accountCode" name="account_code" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="accountDescription" class="form-label">Account Description</label>
+                                <textarea name="description" id="accountDescription" class="form-control" placeholder="" rows="1"></textarea>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="accountStatus" class="form-label">Account Status</label>
+                                <select class="form-control" name="account_status" id="accountStatus" required>
+                                    <option value=""></option>
+                                    {% for acc,label in account_status %}
+                                    <option value="{{acc}}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <button type="submit" class="btn btn-outline-primary btn-lg w-100">save</button>
+                        </div>
+                    </div>
+                </form>
+
+
+                <!-- Table to display existing Chart of Accounts -->
+                <h3 class="mt-5 text-center">Existing Chart of Accounts</h3>
+                <div class="table-responsive overflow-auto" style="max-height: 400px;">
+                    <table class="table table-bordered table-striped">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Account Name</th>
+                                <th>Account Code</th>
+                                <th>Account Type</th>
+                                <th>Parent Account</th>
+                                <th>Status</th>
+                                <!-- <th>Description</th> -->
+                            </tr>
+                        </thead>
+                        <tbody id="accounts_table">
+                            {% for account in chart_of_accounts %}
+                            <tr>
+                                <td>{{ account.name }}</td>
+                                <td>{{ account.account_code }}</td>
+                                <td>{{ account.account_type }}</td>
+                                <td>{{ account.parent.name }}</td>
+                                <td>{{ account.account_status }}</td>
+                                <!-- <td>{{ account.description }}</td> -->
+                                <td class="text-center text-nowrap">
+                                    <button class="btn btn-warning btn-sm delete-account">
+                                        <input id="accountId" type="text" value="{{ account.id }}" hidden>
+                                        <input id="accountName" type="text" value="{{ account.name }}" hidden>
+                                        <i class="ri-delete-bin-2-line"></i>
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm update-account">
+                                        <input id="accountId" type="text" value="{{ account.id }}" hidden>
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No accounts available.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>    
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('#chart_of_account_form').on('submit', function(e){
+            e.preventDefault()
+
+            var formData = $(this).serialize();
+
+            $.ajax({
+                url:'',
+                type:'POST',
+                data: formData,
+
+                success: function(response){
+                    if (response.status === 'success'){
+                        window.location.reload()
+                    }else{
+                        alert(response.message)
+                    }
+                },
+                error: function(error){
+                    alert('An error occured')
+                },
+
+            });
+
+        });
+
+        //Delete account submission
+        $('.delete-account').on('click', function(){
+            //confirm action
+            var account_name = $(this).find('#accountName').val();
+            var confirm_delete = confirm(`Are you sure you want to delete ${account_name}?`);
+            if (confirm_delete){
+                var account_id = $(this).find('#accountId').val();
+
+                var tenantId = "{{ request.tenant.id }}";
+                $.ajax({
+                    url: `/${tenantId}/accounts/delete-account/${account_id}/`,
+                    type: 'POST',
+                    data: {
+                        'action': 'delete',
+                        'account_id': account_id,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response){
+                        window.location.reload()
+                    },
+                    error: function(error){
+                        alert('An error occured')
+                    },
+                });
+            }
+        });
+    });
+</script>
+
+{% endblock %}
