@@ -1,5 +1,5 @@
 from django.contrib import admin
-from Chart_of_Accounts.models import ChartOfAccounts
+from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping
 # Register your models here.
 
 class ChartOfAccountsAdmin(admin.ModelAdmin):
@@ -10,3 +10,4 @@ class ChartOfAccountsAdmin(admin.ModelAdmin):
         'current_balance',
     )
 admin.site.register(ChartOfAccounts,ChartOfAccountsAdmin)
+admin.site.register(AccountMapping)

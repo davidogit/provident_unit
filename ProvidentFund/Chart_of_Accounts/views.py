@@ -1,12 +1,12 @@
-import json
-from django.db import IntegrityError
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.views.generic import CreateView,TemplateView,DeleteView
+from django.views.generic import TemplateView,DeleteView
 from Chart_of_Accounts.models import ChartOfAccounts
-from Chart_of_Accounts.forms import ChartOfAccountsForm
-from django.db.models import F
+from Chart_of_Accounts.models import AccountMapping
+from MultiScheme.models import InvestmentScheme
+from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 # Create your views here.
 
 class AddChartOfAccounts(TemplateView):
@@ -14,6 +14,7 @@ class AddChartOfAccounts(TemplateView):
 
     def post(self, request, *args, **kwargs):
         tenant = request.tenant
+        user = request.user
         parent_id = request.POST.get('parent','')
         account_name = request.POST.get('name','')
         account_type = request.POST.get('account_type','')
@@ -55,6 +56,7 @@ class AddChartOfAccounts(TemplateView):
                 account_type=account_type,
                 account_status=account_status,
                 account_code=account_code,
+                created_by=user,
             )
         except Exception as e:
             return JsonResponse({
@@ -115,3 +117,64 @@ class DeleteChartOfAccount(DeleteView):
         tenant_id = self.request.tenant.id
 
         return reverse('add_chart_of_account', kwargs={'tenant_id':tenant_id})
+
+class AccountMappingView(TemplateView):
+    template_name='account_mapping.html'
+
+    def post(self,request, *args, **kwargs):
+        if request.method == 'POST':
+            tenant = request.tenant
+            event_name = request.POST.get('event')
+            scheme_id = request.POST.get('scheme_id')
+            debit_code = request.POST.get('debit_id')
+            credit_code = request.POST.get('credit_id')
+
+            fields = [scheme_id,debit_code,credit_code,event_name]
+            if not all(fields):
+                return JsonResponse({
+                    'status':'error',
+                    'message':'some fields are missing'
+                })
+            
+            # fetch debit and credit account
+            debit_account = ChartOfAccounts.objects.get(tenant=tenant,account_code=debit_code)
+            credit_account = ChartOfAccounts.objects.get(tenant=tenant,account_code=credit_code)
+            scheme = InvestmentScheme.objects.get(tenant=tenant,id=scheme_id)
+
+            try:
+                AccountMapping.objects.create(
+                    tenant=tenant,
+                    scheme =scheme,
+                    name = event_name,
+                    debit_acc = debit_account,
+                    credit_acc = credit_account,
+                    created_by = self.request.user
+                )
+                return JsonResponse({
+                    'status':'success',
+                    'message':'Added successfully'
+                })
+            except IntegrityError as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Entry already exist'
+                })
+            except ValidationError as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'{e}'
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'An error occured: {e}'
+                })
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        context['actions']=AccountMapping.ACTIONS
+        context['accounts'] = ChartOfAccounts.objects.filter(tenant=tenant)
+        context['schemes'] = InvestmentScheme.objects.filter(tenant=tenant)
+        context['mappings'] = AccountMapping.objects.filter(tenant=tenant)
+        return context

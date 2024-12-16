@@ -1,0 +1,148 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}
+<h5>Account Mapping</h5>
+{% endblock %}
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-xl">
+            <div class="container">
+                <!--  -->
+                <div class="row g-4">
+                    
+                    <div class="col-xl">
+                        <div class="transaction-form border p-3 rounded position-relative">
+                            <span class="transaction-name position-absolute top-0 end-0 translate-middle bg-white fw-bold">
+                                {{ act }}
+                            </span>
+                            <form action="{% url 'map_account' tenant_id=request.tenant.id %}" method="POST" id="account_mapping">
+                                {% csrf_token %}
+                                <div class="form-floating mb-3 d-flex justify-content-between">
+                            
+                                    <div class="form-floating">
+                                        <select name="event" id="event" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for action,act in actions %}
+                                            <option value="{{ act }}">{{ act }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="event">Events</label>
+                                    </div>
+                                    <div class="form-floating">
+                                        <select name="scheme_id" id="scheme_id" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for scheme in schemes %}
+                                            <option value="{{ scheme.id }}">{{ scheme }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="scheme_id">Scheme</label>
+                                    </div>
+
+    
+                                
+                                
+                                    <div class="form-floating d-block mb-2">
+                                        <select name="debit_id" id="debitAccount" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for acc in accounts %}
+                                            <option value="{{ acc.account_code }}">{{ acc }}</option>
+                                            {% endfor %}
+                                            </select>
+                                            <label for="debitAccount">Debit Account</label>
+                                    </div>
+
+
+                                    <div class="form-floating d-block">
+                                        <select name="credit_id" id="creditAccount" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for acc in accounts %}
+                                            <option value="{{ acc.account_code }}">{{ acc }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="creditAccount" class="form-label">Credit Account</label>
+                                    </div>
+                                </div>
+                                <!-- submit button -->
+                                <div class="d-grid gap
+                                -2">
+                                    <button class="btn btn-outline-primary btn-lg save_mapping" type="submit">save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!--  -->
+
+                <div class="row g-4 mt-5">
+                    <!-- table for previous account mappings -->
+                    <h3 class="mt-5 text-center">Existing Account Mappings</h3>
+                <div class="table-responsive overflow-auto" style="max-height: 400px;">
+                    <table class="table table-bordered table-striped">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Scheme</th>
+                                <th>Debit Account</th>
+                                <th>Credit Account</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts_table">
+                            {% for mapping in mappings %}
+                            <tr>
+                                <td>{{ mapping.name }}</td>
+                                <td>{{ mapping.scheme }}</td>
+                                <td>{{ mapping.debit_acc }}</td>
+                                <td>{{ mapping.credit_acc }}</td>
+                                <td class="text-center text-nowrap">
+                                    <button class="btn btn-warning btn-sm delete-account">
+                                        <input id="accountId" type="text" value="{{ account.id }}" hidden>
+                                        <input id="accountName" type="text" value="{{ account.name }}" hidden>
+                                        <i class="ri-delete-bin-2-line"></i>
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm update-account" data-bs-toggle="modal" data-bs-target="#updateAccountModal" id="updateButton">
+                                        <input id="accountId" type="text" value="{{ account.id }}" hidden>
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No accounts available.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Save account mapping
+    $('#account_mapping').on('submit',function(e) {
+        e.preventDefault();
+        var form = $(this);
+
+        $.ajax({
+            url: form.attr('action'),
+            type: form.attr('method'),
+            data: form.serialize(),
+            success: function(response) {
+                if (response.status === 'success'){
+                    alert(response.message)
+                }else{
+                    alert(response.message)
+                }
+                console.log(response);
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    });
+</script>
+{% endblock %}

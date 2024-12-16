@@ -3,6 +3,9 @@
 {% block title %}
 <title>Contribution Approval</title>
 {% endblock %}
+{% block header %}
+<h3>Contribution Approval</h3>
+{% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
@@ -10,14 +13,21 @@
         <div class="col-md-12 col-xl-10">
             <div class="card card-one">
                 <div class="card-body">
-                    <h2 class="card-title text-center">
-                        Contribution Approval
-                    </h2>
+                    <h2 class="card-title text-center"></h2>
                     
                     <div class="container">
                         <form action="" method="POST" id="approval-form">
                             {% csrf_token %}
                             <div class="row g-3">
+                                <div class="col m-3">
+                                    <label for="bank" class="form-label">Bank Account</label>
+                                    <select class="form-control form-control-lg" name="bank" id="bank">
+                                        <option value="">--select account--</option>
+                                        {% for asset in asset_accounts %}
+                                        <option value="{{asset.id}}">{{ asset.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                                 <div class="col m-3">
                                     <label for="month" class="form-label">Month:</label>
                                     <select id="month" name="month" class="form-control form-control-lg" name="month">

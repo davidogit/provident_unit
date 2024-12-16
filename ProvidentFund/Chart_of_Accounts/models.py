@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
-from MultiScheme.models import Tenant
+from MultiScheme.models import Tenant,InvestmentScheme
+from django.db.models import UniqueConstraint
 # Create your models here.
 
 class ChartOfAccounts(models.Model):
@@ -89,4 +90,68 @@ class ChartOfAccounts(models.Model):
             parent = parent.parent
         return reversed(hierarchy) #returns a top-down tree of account tree
 
+from django.core.exceptions import ValidationError
+class AccountMapping(models.Model):
+    ACTIONS = [
+        ('Contribution','Contribution'),
+        ('Investment','Investment'),
+        ('Earned Revenue','Earned Revenue'),
+        ('Approved Revenue','Approved Revenue'),
+        ('Delayed Interest','Delayed Interest'),
+        ('Approved Delayed Interest','Approved Delayed Interest'),
+        ('Benefit Payout','Benefit Payout'),
+        ('Benefit Accrued','Benefit Accrued'),
+        ('Exit Payout','Exit Payout'),
+        ('Redeem Investment','Redeem Investment'),
+        ('Investment Roll Over','Investment Roll Over')
+    ]
+    name = models.CharField(
+        max_length=255,
+        choices=ACTIONS,
+        default=''
+    )
+    debit_acc = models.ForeignKey(
+        ChartOfAccounts,
+        on_delete=models.CASCADE,
+        related_name='debit_mapping'
+    )
+    credit_acc = models.ForeignKey(
+        ChartOfAccounts,
+        on_delete=models.CASCADE,
+        related_name='credit_mapping'
+    )
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=True,
+        blank= True
+    )
+    created_on = models.DateTimeField(auto_now_add=True,null=True)
+    updated_on = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
 
+    # Prevent duplicate events for a single tenant
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['tenant','name'], name='unique_name_per_tenant')
+        ]
+
+
+    def clean(self):
+        if self.debit_acc == self.credit_acc:
+            raise ValidationError('Debits and Credits account cannot be the same')
+        
+    def save(self,*args,**kwargs):
+        self.clean()
+        super().save(*args,**kwargs)

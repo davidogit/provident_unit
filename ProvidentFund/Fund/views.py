@@ -27,6 +27,7 @@ from django.utils.dateparse import parse_date
 from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
+from Chart_of_Accounts.models import ChartOfAccounts
 
 logger = logging.getLogger(__name__)
 
@@ -1395,6 +1396,17 @@ class ApproveContributions(TemplateView):
             return JsonResponse({'status':'success', 'message':message})
         else:
             return JsonResponse({'status':'error', 'message':'No contributions for selected Year and Month'})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        if tenant:
+            # Fetch Asset Accounts
+            asset_accounts = ChartOfAccounts.objects.filter(tenant=tenant,account_type='Asset')
+            print(asset_accounts)
+        context['asset_accounts'] = asset_accounts
+            
+        return context
 
 @method_decorator(tenant_login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')

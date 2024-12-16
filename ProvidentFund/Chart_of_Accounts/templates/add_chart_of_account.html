@@ -77,6 +77,7 @@
                                 <th>Account Code</th>
                                 <th>Account Type</th>
                                 <th>Parent Account</th>
+                                <th>Account Category</th>
                                 <th>Status</th>
                                 <!-- <th>Description</th> -->
                             </tr>
@@ -88,6 +89,7 @@
                                 <td>{{ account.account_code }}</td>
                                 <td>{{ account.account_type }}</td>
                                 <td>{{ account.parent.name }}</td>
+                                <td></td>
                                 <td>{{ account.account_status }}</td>
                                 <!-- <td>{{ account.description }}</td> -->
                                 <td class="text-center text-nowrap">
@@ -96,7 +98,7 @@
                                         <input id="accountName" type="text" value="{{ account.name }}" hidden>
                                         <i class="ri-delete-bin-2-line"></i>
                                     </button>
-                                    <button class="btn btn-secondary btn-sm update-account">
+                                    <button class="btn btn-secondary btn-sm update-account" data-bs-toggle="modal" data-bs-target="#updateAccountModal" id="updateButton">
                                         <input id="accountId" type="text" value="{{ account.id }}" hidden>
                                         <i class="ri-edit-line"></i>
                                     </button>
@@ -109,6 +111,81 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Update Modal -->
+                <div class="modal fade" id="updateAccountModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modalTitle">
+                                    Update Account
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- info message box -->
+                                <div class="message-info">
+                                    <!-- Messages from response show in here -->
+                                </div>
+
+                                <form method="POST" id="update_chart_of_account_form">
+                                    {% csrf_token %}
+                                    <div class="row g-4">
+                                        <!-- Left Column -->
+                                        <div class="col-md-6">
+                                            <div class="form-group mb-3">
+                                                <label for="accountName" class="form-label">Account Name</label>
+                                                <input type="text" class="form-control" id="accountName" name="name" required>
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label for="accountType" class="form-label">Account Parent</label>
+                                                <select class="form-control" name="parent" id="accountType">
+                                                    <option value=""></option>
+                                                    {% for acc in parent_accounts %}
+                                                    <option value="{{acc.id}}">{{ acc.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label for="accountType" class="form-label">Account Type</label>
+                                                <select class="form-control" name="account_type" id="accountType" required>
+                                                    <option value=""></option>
+                                                    {% for acc,label in account_types %}
+                                                    <option value="{{acc}}">{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <!-- Right Column -->
+                                        <div class="col-md-6">
+                                            <div class="form-group mb-3">
+                                                <label for="accountCode" class="form-label">Account Code</label>
+                                                <input type="text" class="form-control" id="accountCode" name="account_code" required>
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label for="accountDescription" class="form-label">Account Description</label>
+                                                <textarea name="description" id="accountDescription" class="form-control" placeholder="" rows="1"></textarea>
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label for="accountStatus" class="form-label">Account Status</label>
+                                                <select class="form-control" name="account_status" id="accountStatus" required>
+                                                    <option value=""></option>
+                                                    {% for acc,label in account_status %}
+                                                    <option value="{{acc}}">{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <button type="submit" class="btn btn-outline-primary btn-lg w-100">update</button>
+                                        </div>
+                                    </div>
+                                </form>
+                
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>    
@@ -167,6 +244,30 @@
                     },
                 });
             }
+        });
+    });
+
+
+    //Fetch account details for update
+    $('.update-account').on('click', function(){
+        var account_id = $(this).find('#accountId').val();
+        var tenantId = "{{ request.tenant.id }}";
+        $.ajax({
+            url: `/${tenantId}/accounts/fetch-account/${account_id}/`,
+            type: 'GET',
+            success: function(response){
+                var account = response.account;
+                $('#update_chart_of_account_form').find('#accountName').val(account.name);
+                $('#update_chart_of_account_form').find('#accountCode').val(account.account_code);
+                $('#update_chart_of_account_form').find('#accountDescription').val(account.description);
+                $('#update_chart_of_account_form').find('#accountStatus').val(account.account_status);
+                $('#update_chart_of_account_form').find('#accountType').val(account.account_type);
+                $('#update_chart_of_account_form').find('#accountType').val(account.account_type);
+                $('#update_chart_of_account_form').find('#accountType').val(account.account_type);
+            },
+            error: function(error){
+                alert('Unable to fetch account details')
+            },
         });
     });
 </script>

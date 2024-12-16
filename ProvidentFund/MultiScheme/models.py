@@ -32,6 +32,7 @@ class Tenant(models.Model):
 
 class InvestmentScheme(models.Model):
     id = models.AutoField(primary_key=True, editable=False)
+    code = models.CharField(max_length=3,default='')
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='investment_schemes',null=True)
     name = models.CharField(max_length=50,null=True)
     Yes = 'Yes'
@@ -53,7 +54,7 @@ class InvestmentScheme(models.Model):
     # history = HistoricalRecords()
 
     def __str__(self):
-        return f'{self.name} Scheme'
+        return f'{self.code} - {self.name}'
     
 
 # Signals for StaffAPI
