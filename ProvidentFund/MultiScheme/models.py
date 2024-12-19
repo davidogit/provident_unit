@@ -43,12 +43,22 @@ class InvestmentScheme(models.Model):
     ]
     delayed_int = models.CharField(max_length=3, choices=options,default=No,null=True)
     bank_int = models.CharField(max_length=3, choices=options, default=No,null=True)
-    distribution_percentage = models.FloatField(null=True)
+    distribution_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        null=True
+        )
     eligibility_criteria_months = models.IntegerField(null=True)
     description = models.TextField(blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
-    administrative_costs_percentage = models.FloatField(null=True)
+    administrative_costs_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        null=True
+        )
 
     # HISTORY
     # history = HistoricalRecords()
@@ -139,7 +149,10 @@ class SchemeSettings(models.Model):
     #     validators=[MinValueValidator(0), MaxValueValidator(100)],
     #     help_text="Daily delayed interest rate as a percentage (0-100)."
     # )#we use same rate on delayed interest object
-    delayed_interest_rate = models.FloatField( 
+    delayed_interest_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         help_text="Delayed interest rate as a percentage (0-100).",
         null=True

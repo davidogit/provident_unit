@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db.models import Q,Count
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, JsonResponse
@@ -28,6 +29,7 @@ from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
 from Chart_of_Accounts.models import ChartOfAccounts
+from Fund.tasks import calculate_staff_contribution
 
 logger = logging.getLogger(__name__)
 
@@ -229,10 +231,42 @@ class InvestmentDetailView(DetailView):
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
             try:
+                print('START')
                 tenant = request.tenant
                 scheme_id = request.scheme_name
                 inv_id = request.POST.get('inv_id')
                 termination_date_str = request.POST.get('termination_date')
+                termination_interest_str = request.POST.get('termination_interest')
+                termination_interest = Decimal(termination_interest_str)
+
+                try:
+                    scheme = InvestmentScheme.objects.filter(
+                        tenant=tenant,
+                        id = scheme_id
+                    ).prefetch_related('account_mapping').first()
+                except Exception:
+                    return JsonResponse({
+                        'status':'error',
+                        'message':'Investment scheme not found.'
+                    })
+                
+                try:
+                    mapping = scheme.account_mapping.get(name='Redeem Investment')
+                except Exception:
+                    return JsonResponse({
+                        'status':'error',
+                        'message':'No account mapping for "Redeem Investment" found. Please create a mapping for this event and try again.'
+                    })
+                
+                # fetch debit and credit accounts
+                debit_account = mapping.debit_acc
+                credit_account = mapping.credit_acc
+
+                if not debit_account or not credit_account:
+                    return JsonResponse({
+                        'status':'error',
+                        'message':'Debit or Credit accounts not properly configured'
+                    })
 
                 if not inv_id or not termination_date_str:
                     return JsonResponse({'status': 'error', 'message': 'Missing required parameters.'})
@@ -247,38 +281,44 @@ class InvestmentDetailView(DetailView):
                     inv = InvestmentDetail.objects.get(
                         id=inv_id,
                         investment_scheme__tenant=tenant,
-                        investment_scheme__id=scheme_id,
-                        _status = 'Expired'
+                        investment_scheme__id=scheme_id
                     )
-                except Exception:
-                    return JsonResponse({'status':'error', 'message':'This investment is matured hence can\'t be terminated.'},400)
+
+                except InvestmentDetail.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': "Couldn\'t find investment object"})
+
+                current_date = timezone.now().date()
+                if current_date>inv.interest_end_date:
+                    return JsonResponse({
+                        'status':'error',
+                        'message':'This investment is matured hence can\'t be terminated.'
+                    })
 
                 # Calculate interest up to termination date
-                current_date = timezone.now().date()
                 days_to_termination = (termination_date - current_date).days
-                # check if termination date is outside of maturity date
-                if days_to_termination < 0 or termination_date>inv.interest_end_date:
+                if days_to_termination < 0 or termination_date > inv.interest_end_date:
                     return JsonResponse({'status': 'error', 'message': 'Termination date cannot be in the past or after maturity date.'})
-                duration_of_inv_days = (termination_date - inv.interest_start_date).days
-                #############################
-                # INTEREST CALCULATION TO CHANGE
-                interest = (inv.interest_percentage / 100) * inv.principal_amount
-                #############################
-                new_interest = (interest / inv.tenure) * duration_of_inv_days
-                inv.interest_amount = new_interest
-                inv.status = 'Expired'
-                inv.interest_end_date = termination_date
-                inv.termination_status = True
-                inv.save()
+                
+                with transaction.atomic():
+                    inv.interest_amount = termination_interest
+                    inv.status = 'Expired'
+                    inv.interest_end_date = termination_date
+                    inv.termination_status = True
+                    inv.save()
 
-                return JsonResponse({'status': 'success', 'message': 'Termination successful'})
+                    # Perform debit and credit operations
+                    debit_account.current_balance -= termination_interest
+                    credit_account.current_balance += termination_interest
 
+                    # Save debit and credit operaions
+                    debit_account.save()
+                    credit_account.save()
+                
+                return JsonResponse({'status': 'success', 'message': 'Investment terminated successfully.'})
             except InvestmentDetail.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'Investment not found.'})
-
             except Exception as e:
-                print(f"Unhandled exception: {e}")
-                return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'})
+                return JsonResponse({'status': f'error', 'message': 'An unexpected error occurred.: {e}'})
 
 
 # Adding an investment
@@ -307,14 +347,55 @@ class AddInvestment(CreateView):
     
     # Make sure we are updating details under the right tenant
     def form_valid(self, form):
-        
         tenant = self.request.tenant
         scheme_name = self.request.scheme_name
 
-        scheme = get_object_or_404(InvestmentScheme.objects.filter(id=scheme_name, tenant=tenant))
+        scheme = InvestmentScheme.objects.filter(id=scheme_name, tenant=tenant).prefetch_related('account_mapping').first()
 
-        if scheme:
-            form.instance.investment_scheme = scheme
+        if not scheme:
+            return JsonResponse({
+                'status':'error',
+                'message':'Investment scheme not found'
+            })
+        
+        mapping = scheme.account_mapping.get(name='Investment')
+        if not mapping:
+            return JsonResponse({
+                'status':'error',
+                'message':''
+            })
+        
+        # Fetch investment principal
+        investment_amount = form.cleaned_data['principal_amount']
+        
+        with transaction.atomic():
+            # Fetch debit and credit accounts from mapping obj
+            debit_account = mapping.debit_acc
+            credit_account = mapping.credit_acc
+
+            if not debit_account and credit_account:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Debit and Credit accounts not properly configured'
+                })
+            
+            # Prevent cases of insufficient balance when trying to debit an account
+            if debit_account.current_balance < investment_amount:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Insufficient balance for {debit_account}'
+                })
+            
+            # perform debit anf credit operations
+            debit_account.current_balance -= investment_amount
+            credit_account.current_balance += investment_amount
+
+            # save account balances
+            debit_account.save()
+            credit_account.save()
+
+        # set scheme on investment object
+        form.instance.investment_scheme = scheme
 
         return super().form_valid(form)
     
@@ -371,7 +452,7 @@ class InvestmentUpdateView(UpdateView):
                 return JsonResponse({'status':'success', 'redirect_url':self.get_success_url()})
 
         except ValidationError as e:
-            return JsonResponse({'status':'error', 'message':str(e.message)},status=400)
+            return JsonResponse({'status':'error', 'message':str(e.message)})
         return response
     
     # Form instance
@@ -420,7 +501,8 @@ class RolloverPercentage(TemplateView):
         rollover_rate = request.POST.get('rate') 
         start_date_str = request.POST.get('start_date')
         maturity_date_str = request.POST.get('maturity_date')
-        rollover_amount_str = request.POST.get('principal') #Partial amount input or total amount
+        rollover_amount_str = request.POST.get('principal')
+        rollover_type = request.POST.get('rollover_type') #Principal,Interest or full rollover
         rollover_amount = float(rollover_amount_str)
         start_date=datetime.strptime(start_date_str, "%Y-%m-%d")
         maturity_date = datetime.strptime(maturity_date_str, "%Y-%m-%d")
@@ -431,7 +513,7 @@ class RolloverPercentage(TemplateView):
         try:
             inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=request.tenant,investment_scheme__id=scheme_id,approval_status=False,termination_status=False)
         except:
-            return JsonResponse({'status':'error', 'message':'Cannot rollover approved investments', 'redirect_url': self.get_success_url()})
+            return JsonResponse({'status':'error', 'message':'Investment object not found', 'redirect_url': self.get_success_url()})
 
         # Prevent cases where rollover principal is greater than the return of the previous investment
         print(f'New amount: {rollover_amount}')
@@ -1110,35 +1192,70 @@ class InvestmentApproval(ListView):
         scheme_id = request.scheme_name
         tenant_id = tenant.id
 
+        scheme = InvestmentScheme.objects.filter(tenant=tenant,id=scheme_id).prefetch_related('account_mapping').first()
+
         # Check if 'investment_id' is provided
         if not inv_id:
-            return JsonResponse({'status': 'error', 'message': 'Investment ID is required.'}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'Investment ID is required.'})
 
         if form.is_valid():
             investment = self.get_queryset().filter(id=inv_id).first()
-
             closing_amount = form.cleaned_data.get('closing_amount')
             approval_status = form.cleaned_data.get('approval_status')
 
             # Validate that 'closing_amount' and 'approval_status' are provided
             if closing_amount is None or approval_status is None:
-                return JsonResponse({'status': 'error', 'message': 'Closing amount and approval status are required.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': 'Closing amount and approval status are required.'})
+            
+            # Fetch related mapping obj
+            if not scheme:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Investment scheme not found.'
+                })
+            
+            try:
+                mapping = scheme.account_mapping.get(name='Approved Revenue')
+            except Exception as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Account mapping not found for Approved Revenue event: Please create a mapping for this event and try again.'
+                })
+            
+            # fetch debit and credit accounts
+            debit_account = mapping.debit_acc
+            credit_account = mapping.credit_acc
+
+            if not debit_account or not credit_account:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Debit or Credit accounts not set for "Approved Revenue" mapping'
+                })
 
             # Check if closing amount == expected amount
-            if investment.interest_amount==closing_amount:
-                # Alter fields of approval
-                investment.approval_status = approval_status
-                investment.closing_amount = closing_amount
-                investment.save()
+            with transaction.atomic():
+                if investment.interest_amount==closing_amount:
+                    # Alter fields of approval and save
+                    investment.approval_status = approval_status
+                    investment.closing_amount = closing_amount
+                    investment.save()
 
-                # After saving changes now we calculate members actual profit using tasks
-                actual_member_interest.delay(tenant_id,scheme_id,inv_id)
+                    # perform debit and credit operation
+                    debit_account.current_balance -= investment.interest_amount
+                    credit_account.current_balance += investment.interest_amount
 
-                return JsonResponse({'status':'success','message':'Investment approved successfully.'})
-            else:
-                # Gather the error message
-                error_message = 'Closing amount does not match with expected amount'
-                return JsonResponse({'status':'error', 'message':error_message}, status=400)
+                    # Save accounts
+                    debit_account.save()
+                    credit_account.save()
+
+                    # After saving changes now we calculate members actual profit using tasks
+                    actual_member_interest.delay(tenant_id,scheme_id,inv_id)
+
+                    return JsonResponse({'status':'success','message':'Investment approved successfully and accounts updated.'})
+                else:
+                    # Gather the error message
+                    error_message = 'Closing amount does not match with expected amount'
+                    return JsonResponse({'status':'error', 'message':error_message})
 
         # return JsonResponse({'status':'error'}, status=400)
 
@@ -1304,109 +1421,198 @@ class ApproveContributions(TemplateView):
 
     def post(self,request,*args,**kwargs):
         tenant = request.tenant
+        tenant_id = tenant.id
         scheme_id = request.scheme_name
-        scheme = get_object_or_404(InvestmentScheme,id=scheme_id, tenant=tenant)
-        # Collect filter parameters
         month = request.POST.get('month')
         year = request.POST.get('year')
-
         message_1 = '' #holder for extra message to user
-        if year and month:
-            # Collect investments within the provided month
-            contributions = Contribution.objects.filter(investment_scheme__tenant = tenant,investment_scheme__id=scheme_id,month=month,year=year, approved_contribution=False)
 
-            if not contributions.exists():
-                return JsonResponse({'status': 'error', 'message': 'No contributions found for the given month.'})
-            
-            # Mark all contributions as approved
-            contributions.update(approved_contribution=True)
-            tenant_id = tenant.id
-            from Fund.tasks import calculate_staff_contribution
-            calculate_staff_contribution.delay(
-                scheme_id,
-                tenant_id,
-                month,
-                year
+        scheme = InvestmentScheme.objects.filter(
+            id=scheme_id,
+            tenant=tenant).prefetch_related('account_mapping').first()
+        
+        if not scheme:
+            return JsonResponse({
+                'status':'error',
+                'message':'Investment scheme not found.'
+            })
+        
+        try:
+            # Mapping for contribution
+            mapping = scheme.account_mapping.get(name='Contribution')
+        except Exception:
+            return JsonResponse({
+                'status':'error',
+                'message':'No account mapping for "contributioin" found. Please create a mapping for this event and try again.'
+            })
+        
+        try:
+            # Mappingh for Delayed Interest
+            delayed_int_mapping = scheme.account_mapping.get(name='Delayed Interest')
+        except Exception:
+            return JsonResponse({
+                'status':'error',
+                'message':'No account mapping for "Delayed Interest" found. Please create a mapping for this event and try again.'
+            })
+        
+        if not month and year:
+            return JsonResponse({
+                'status':'error',
+                'message':'Month and Year are required'
+            })
+        
+        # collect settings related to the scheme
+        settings = SchemeSettings.objects.get(
+            investment_scheme=scheme,
+            investment_scheme__tenant=tenant
             )
 
-            # collect settings related to the scheme
-            settings = get_object_or_404(SchemeSettings, investment_scheme = scheme)
+        if not settings:
+            return JsonResponse({
+                'status':'error',
+                'message':'Ensure scheme settings is configured and try again'
+            })
+       
+        # Collect investments within the provided month
+        contributions = Contribution.objects.filter(
+            investment_scheme__tenant=tenant,
+            investment_scheme=scheme,
+            month=month,
+            year=year,
+            approved_contribution=False)
 
-            contribution_day = settings.contribution_day
-            grace_period = settings.grace_period_contribution
-            rate = settings.delayed_interest_rate
-            # Check for Delayed Interest on Contribution
-            now = timezone.now()
+        if not contributions.exists():
+            return JsonResponse({'status': 'error', 'message': 'No contributions found for the given month.'})
+        
+        # Aggregtae total_contributions
+        total_contribution = contributions.aggregate(
+                total=Sum('total_contribution')
+                )['total'] or 0
+        if total_contribution == 0:
+            return JsonResponse({
+                'status':'error',
+                'message':'Total contributions is zero.'
+            })
+        
+        # Approve contributions and peform debit and credit operations
+        with transaction.atomic():
+            # Fetch debit and credit accounts from mapping obj
+            debit_account = mapping.debit_acc
+            credit_account = mapping.credit_acc
 
-            # First day of month
-            first_day_of_month = now.replace(day=1,month=int(month),year=int(year))
+            if not debit_account or not credit_account:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Debit or Credit accounts not properly configured'
+                })
+            
+            # update contributions
+            contributions.update(approved_contribution=True)
+            
+            # perform debit anf credit operations
+            debit_account.current_balance -= total_contribution
+            credit_account.current_balance += total_contribution
 
-            print(first_day_of_month)
-            # expected payment date
-            due_date = first_day_of_month + timedelta(contribution_day)
-            # due date after grace period
-            grace_period_end = due_date + timedelta(grace_period)
+            # save account balances
+            debit_account.save()
+            credit_account.save()
 
-            # check if payment is delayed past grace period
-            if now > grace_period_end: #if payment date is over grace period
+
+        # update staff contributions using task
+        calculate_staff_contribution.delay(
+            scheme_id,
+            tenant_id,
+            month,
+            year
+        )
+
+        contribution_day = settings.contribution_day
+        grace_period = settings.grace_period_contribution
+        rate = settings.delayed_interest_rate
+        # Check for Delayed Interest on Contribution
+        now = timezone.now()
+
+        # First day of month
+        first_day_of_month = now.replace(day=1,month=int(month),year=int(year))
+
+        print(first_day_of_month)
+        # expected payment date
+        due_date = first_day_of_month + timedelta(contribution_day)
+        # due date after grace period
+        grace_period_end = due_date + timedelta(grace_period)
+
+        # check if payment is delayed past grace period
+        if now > grace_period_end: #if payment date is over grace period
+            
+            # Calculate delayed interest principal = acrued interest on contributions until approval date after grace period
+
+            # monthly contribution total
+            month_contribution = Contribution.objects.filter(
+                investment_scheme__tenant=tenant,
+                investment_scheme__id=scheme_id,
+                month=month,
+                year=year,
+                approved_contribution=True).aggregate(
+                    total=Sum('total_contribution')
+                    )['total'] or 0.0
+            
+            print(f'Monthly = {month_contribution}')
+
+            # Calculate amount due after grace period
+            duration = (now - grace_period_end).days
+
+            print(f'Duration = {duration}')
+
+            # convert percentage --> decimal
+            daily_delayed_rate = (rate/100) 
+
+            # Using compound interest to calculate the delayed Interest on contribution
+            t = Decimal((duration/30)/12) #convert duration from days to years
+            n = 365
+            p = month_contribution
+            r = daily_delayed_rate
+            c = p*(1+(r/n))**(n*t) #compound interest asuming t=1 year
+            delayed_principal = c-p
+
+            # create delayed interest object
+            DelayedInterest.objects.create(
+                investment_scheme=scheme,
+                remarks = f'Delayed Interest for {month} /{year}',
+                rate_d_int = rate,
+                period_of_interest_calculation =settings.period_of_delayed_calculation,
+                principal = delayed_principal,
+            )
+
+            # After creating delayed interest perform debit and credit operations
+
+            with transaction.atomic():
+                # Fetch debit and credit accounts from mapping obj
+                debit_account_delayed = delayed_int_mapping.debit_acc
+                credit_account_delayed = delayed_int_mapping.credit_acc
+
+                if not debit_account_delayed or not credit_account_delayed:
+                    return JsonResponse({
+                        'status':'error',
+                        'message':'Debit or Credit accounts not properly configured'
+                    })
                 
-                # Calculate delayed interest principal = acrued interest on contributions until approval date after grace period
+                # perform debit anf credit operations
+                debit_account_delayed.current_balance -= delayed_principal
+                credit_account_delayed.current_balance += delayed_principal
 
-                # monthly contribution total
-                month_contribution = Contribution.objects.filter(investment_scheme__tenant = tenant,investment_scheme__id=scheme_id,month=month,year=year, approved_contribution=True).aggregate(total = Sum('total_contribution'))['total'] or 0.0
-                print(f'Monthly = {month_contribution}')
-
-                # Calculate amount due after grace period
-                duration = (now - grace_period_end).days
-                print(f'Duration = {duration}')
-
-                # convert percentage --> decimal
-                daily_delayed_rate = (rate/100) 
-
-                # Using compound interest to calculate the delayed Interest on contribution
-                t = ((duration/30)/12) #convert duration from days to years
-                print(f'value of t ={t}')
-                n = 365
-                print(f'value of n ={n}')
-                p = month_contribution
-                print(f'value of p ={p}')
-                r = daily_delayed_rate
-                print(f'value of r ={r}')
-                c = p*(1+(r/n))**(n*t) #compound interest asuming t=1 year
-                print(f'value of c = {c}')
-                delayed_principal = c-p
-                print(f'Delayed Interest = {delayed_principal}')
+                # save account balances
+                debit_account_delayed.save()
+                credit_account_delayed.save()
 
 
-                # create delayed interest object
-                DelayedInterest.objects.get_or_create(
-                    investment_scheme=scheme,
-                    remarks = f'Delayed Interest for {month} /{year}',
-                    rate_d_int = rate,
-                    period_of_interest_calculation =settings.period_of_delayed_calculation,
-                    principal = delayed_principal,
-                )
+            message_1 = (
+                f'This payment is overdue hence a delayed interest entry is created for '
+                f'the month of {month}/{year}'
+            )
+        
+        message = f'Successfully approved investments for {month}/{year}, and Accounts updated successfully  NB:{message_1}'
+        return JsonResponse({'status':'success', 'message':message})
 
-                message_1 = (
-                    f'This payment is overdue hence a delayed interest entry is created for '
-                    f'the month of {month}/{year}'
-                )
-            
-            message = f'Successfully approved investments for {month}/{year}  NB:{message_1}'
-            return JsonResponse({'status':'success', 'message':message})
-        else:
-            return JsonResponse({'status':'error', 'message':'No contributions for selected Year and Month'})
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        tenant = self.request.tenant
-        if tenant:
-            # Fetch Asset Accounts
-            asset_accounts = ChartOfAccounts.objects.filter(tenant=tenant,account_type='Asset')
-            print(asset_accounts)
-        context['asset_accounts'] = asset_accounts
-            
-        return context
 
 @method_decorator(tenant_login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
@@ -1507,7 +1713,7 @@ class ApproveExitedMembers(TemplateView):
         return context
 
 
-# Create an Exception to be called when theres Missing IDs in member scheme ID list
+# Create an Exception to be called when theres Missing IDs in member scheme ID list when uploading members
 class MissingSchemeIdError(Exception):
     def __init__(self, missing_ids, message = 'Scheme with ID(s) ', *args):
         self.missing_ids = missing_ids

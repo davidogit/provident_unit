@@ -21,11 +21,24 @@ class StaffAPI(models.Model):
     date_joined = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=20, blank=True, null=True, default='active')
     fund_type = models.CharField(max_length=50)
-    _amount = models.FloatField(null=True,blank=True,default=0.00)#holds users accumulated contributions
+    _amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=0.00)#holds users accumulated contributions
     exited_date = models.DateField(null=True, blank=True)
     exited_flag = models.BooleanField(default=False)
-    estimated_profit = models.FloatField(default=0.00) # Estimated interest to gain NB: does not include contributions
-    actual_amount = models.FloatField(default=0.00) # holds contributions and interest
+    estimated_profit = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    ) # Estimated interest to gain NB: does not include contributions
+    actual_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    ) # holds contributions and interest
     subscription_date = models.DateField(null=True)
     updated_date = models.DateTimeField(auto_now=True)
 
@@ -110,13 +123,35 @@ class Contribution(models.Model):
     member = models.ForeignKey(StaffAPI,related_name='contribution' ,on_delete=models.CASCADE)
     month = models.CharField(max_length=20)
     year = models.CharField(max_length=4)
-    employee_amount = models.FloatField()
-    employer_amount = models.FloatField()
-    retro_employee_amount = models.FloatField()
-    retro_employer_amount = models.FloatField()
+    employee_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
+    employer_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
+    retro_employee_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
+    retro_employer_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
     contribution_date = models.DateField()
     approved_contribution = models.BooleanField(default=False)
-    total_contribution = models.FloatField(null=True,blank=True)
+    total_contribution = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00,
+        null=True,
+        blank=True
+        )
 
     def __str__(self):
         return f"{self.member.last_name}'s - {self.month} {self.year}"

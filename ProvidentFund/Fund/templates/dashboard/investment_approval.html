@@ -1,7 +1,5 @@
 {% extends 'dashboard/base.html' %}
 
-{% block content %}
-<div class="main main-app p-3 p-lg-4">
 {% block css %}
 <style>
   .nav-tabs {
@@ -70,10 +68,17 @@
   }
 
 </style>
-  {% endblock %}
+{% endblock %}
 
-  
+{% block title %}
+<title>Investment Approval</title>
+{% endblock %}
+{% block header %}
+<h5>Investment Approval</h5>
+{% endblock %}
 
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
     <div class="row g-3 justify-content-center">
        
         <div class="col-md-12 col-xl-10">
@@ -150,7 +155,7 @@
                       
 
                       <th></th>
-                      <th>Invoice No.</th>
+                      <th>Invoice No:</th>
                       <th>Approve</th>
                       <th>Investment Name</th>
                       <th>Investment Type</th>
@@ -175,12 +180,16 @@
                         <td>
                             <form class="approval-form d-flex" action="" method="post">
                                 {% csrf_token %}
-                                <input type="hidden" name="investment_id" value="{{ investment.id }}">
+                                <input type="hidden" name="investment_id" value="{{ investment.id }}" hidden>
                                 <input type="checkbox" class="form-check-input m-1" name="approval_status" id="approve-checkbox-{{ investment.id }}" 
                                        {% if investment.is_approved %}checked{% endif %}
                                        onchange="toggleApproveButton('{{ investment.id }}');">
-                                <input class="form-control m-1" style="width: 95px" type="number" step="0.01" name="closing_amount" required placeholder="closing bal.">
-                                <button type="submit" class="btn btn-success" id="approve-button-{{ investment.id }}" disabled>Approve</button>
+                                <div class="form-floating mb-1">
+                                  <input class="form-control m-1" style="width: 95px; height:70%" type="number" step="0.01" name="closing_amount" required placeholder="" id="closing_amount-{{ investment.id }}">
+                                  <label for="closing_amount-{{ investment.id }}">closing bal.</label>
+                                </div>
+
+                                <button type="submit" class="btn btn-success" id="approve-button-{{ investment.id }}" style="height: 50%;" disabled>Approve</button>
                             </form>
                         </td>
                         
@@ -266,6 +275,7 @@
                     
                     <tr>
                       <th></th>
+                      <th>Invoice No:</th>
                       <th>Approve</th>
                       <th>Investment Name</th>
                       <th>Investment Type</th>
@@ -286,6 +296,7 @@
                     {% if investment.investment_type == 'Fixed Deposit' %}
                     <tr>
                       <td>{{ forloop.counter }}</td>
+                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
                       <td>
                         <form class="approval-form-2 d-flex" action="" method="post">
                           {% csrf_token %}
@@ -293,12 +304,15 @@
                           <input type="checkbox" class="form-check-input m-1" name="approval_status" id="approve-checkbox-{{ investment.id }}" 
                                  {% if investment.is_approved %}checked{% endif %}
                                  onchange="toggleApproveButton2('{{ investment.id }}');">
-                          <input class="form-control m-1" style="width: 95px" type="number" step="0.01" name="closing_amount" required required placeholder="closing bal.">
-                          <button type="submit" class="btn btn-success" id="approve-button-2-{{ investment.id }}" disabled>Approve</button>
+                          <div class="form-floating mb-1">
+                            <input class="form-control m-1" style="width: 95px; height:70%" type="number" step="0.01" name="closing_amount" required required placeholder="closing bal." id="closing_amount-{{ investment.id }}">
+                            <label for="closing_amount-{{ investment.id }}">closing bal.</label>
+                          </div>
+                          <button type="submit" class="btn btn-success" id="approve-button-2-{{ investment.id }}" style="height: 50%;" disabled>Approve</button>
                       </form>
                       </td>
                       
-                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
+                      <td>{{ investment.account_name }}</td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
@@ -393,11 +407,13 @@
                 data: form.serialize(),
                 success: function(response) {
                     if (response.status === 'success') {
-                        alert('Investment approved successfully.');
+                        alert(response.message);
                         //form.find('button').attr('disabled', true); // Disable the button after approval
                         // Remove the investment from the list after approval
                         form.closest('tr').remove();
                         
+                    }else{
+                        alert(response.message);
                     }
                 },
                 error: function(jqXHR,) {
@@ -427,11 +443,13 @@
                 data: form.serialize(),
                 success: function(response) {
                     if (response.status === 'success') {
-                        alert('Investment approved successfully.');
+                        alert(response.message);
                         //form.find('button').attr('disabled', true); // Disable the button after approval
                         // Remove the investment from the list after approval
                         form.closest('tr').remove();
                         
+                    }else{
+                        alert(response.message);
                     }
                 },
                 error: function(jqXHR,) {

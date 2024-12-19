@@ -40,11 +40,12 @@
 {% block title %}
 <title>Mass Enroll</title>
 {% endblock %}
+{% block header %}
+<h5>Mass Enrollment</h5>
+{% endblock %}
 
 <div class="main main-app p-3 p-lg-4">
     <div class="d-md-flex align-items-center justify-content-between mb-4">
-        <h1>Mass Enrollment</h1>
-
         <form method="post" action="" enctype="multipart/form-data" id="file-form">
             {% csrf_token %}
             <div class="form-group" style="display: in-line;">

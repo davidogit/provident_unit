@@ -1,7 +1,14 @@
 {% extends 'dashboard/base.html' %}
 
-{% block content %}
+{% block title %}
+<title>Investment Detail</title>
+{% endblock %}
 
+{% block header %}
+<h5>Investment Detail</h5>
+{% endblock %}
+
+{% block content %}
 <div class="main main-app p-4 p-lg-4">
     <div class="row g-3 justify-content-center">
        
@@ -9,11 +16,6 @@
           <div class="card card-one">
             <div class="card-body">
                 <div class="row g-5">
-                    <div class="row card-value text-center">
-                        <h2 class="mb-5 mt-5 text-decoration-underline">
-                            Investment Detail
-                        </h2>
-                    </div>
                     <div class="col-md-4">
                         <p class="mb-5 h5">Invoice No.: <strong>{{ investment_detail.invoice_number }}</strong></p>
                         <p class="mb-5 h5">Investment Name: {{ investment_detail.account_name }}</p>
@@ -42,7 +44,7 @@
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="modalTitle">
-                                    Terminate
+                                    Terminate Investment
                                 </h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
@@ -55,12 +57,20 @@
                                 <form class="terminate-form" action="" method="POST">
                                     {% csrf_token %}
                                     <input type="number" name="inv_id" value="{{ investment_detail.id }}" hidden>
-
-                                    <!-- termination date -->
-                                     <label class="form-label" for="date">Termination date</label>
-                                     <input type="date" id="date" name="termination_date" class="form-control">
-
-                                    <button class="btn btn-primary mt-2" type="submit" id="confirm-terminate">confirm</button>
+                                    <div class="row g-3">
+                                        <div class="form-floating col-md-6">
+                                            <!-- termination date -->
+                                            <input type="date" id="date" name="termination_date" class="form-control">
+                                            <label class="form-label" for="date">Termination date</label>         
+                                        </div>
+                                        <div class="form-floating col-md-6">
+                                            <!-- termination date -->
+                                            <input type="number" id="termination_interest" name="termination_interest" class="form-control" placeholder="">
+                                            <label class="form-label" for="termination_interest">Interest at termination</label>         
+                                        </div>
+                                    </div>
+  
+                                    <button class="btn btn-outline-warning btn-lg mt-4" type="submit" id="confirm-terminate">confirm</button>
 
                                 </form>
                             </div>
@@ -129,7 +139,7 @@
                     if (jqXHR.status === 400){
                         $('.message-info').text('An error occurreddd: ' + jqXHR.responseJSON.message).css('color', 'red');
                     }else{
-                        $('.message-info').text('An error occurredss: ' + jqXHR.responseJSON.message).css('color', 'red');
+                        $('.message-info').text('An error occurred: ' + jqXHR.responseJSON.message).css('color', 'red');
                     }
                 }
             });

@@ -288,6 +288,44 @@ def reduce_date(self):
 
         updates.append(inv)
 
+        # Check if today is inv maturity_date if True peform debit and credit for interest earned
+        if current_date == inv.interest_end_date:
+            from Chart_of_Accounts.models import AccountMapping
+            scheme = inv.investment_scheme
+            tenant = scheme.tenant
+            # fetch related mapping
+            try:
+                mapping = AccountMapping.objects.get(tenant=tenant,scheme=scheme)
+            except Exception as e:
+                mapping = None
+                logger.info(f'No mapping of "Interest Earned" for {tenant.name} - {scheme.name}')
+            # Fetch debit and credit accounts
+
+            debit_account = mapping.debit_acc
+            credit_account = mapping.credit_acc
+
+            if not debit_account or not credit_account:
+                logger.info(f'Tenant: {tenant.name} Scheme: {scheme.name} missing debit or credit accounts')
+                continue
+            
+            if debit_account.current_balance < inv.interest_amount:
+                logger.info(f'Tenant: {tenant.name} Scheme: {scheme.name} Insufficient amount in {debit_account} account')
+                continue
+
+            try:
+                with transaction.atomic():
+                    # perform credit and debit
+                    debit_account.current_balance -= inv.interest_amount
+                    credit_account.current_balance += inv.interest_amount
+
+                    # Save accounts 
+                    debit_account.save()
+                    credit_account.save()
+                    logger.info(f'Interest transaction successful completed for: Tenant: {tenant.name} Scheme: {scheme.name}')
+            except Exception as e:
+                logger.info(f'Transaction failed for: Tenant: {tenant.name} Scheme: {scheme.name}')
+
+
         ###########################################################################
         # Send Email to tenant
         try:

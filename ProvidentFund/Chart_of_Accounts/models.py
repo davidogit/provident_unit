@@ -2,19 +2,21 @@ from django.db import models
 from django.conf import settings
 from MultiScheme.models import Tenant,InvestmentScheme
 from django.db.models import UniqueConstraint
+from django.core.exceptions import ValidationError
+
 # Create your models here.
 
 class ChartOfAccounts(models.Model):
     ACCOUNT_TYPES =[
-        ('ASSET', 'Asset'),
-        ('REVENUE', 'Revenue'),
-        ('CAPITAL', 'Capital'),
-        ('EXPENSE', 'Expense'),
-        ('LIABILITY', 'Liability'),
+        ('ASSET', 'ASSET'),
+        ('REVENUE', 'REVENUE'),
+        ('CAPITAL', 'CAPITAL'),
+        ('EXPENSE', 'EXPENSE'),
+        ('LIABILITY', 'LIABILITY'),
     ]
     ACCOUNT_STATUS =[
-        ('ACTIVE','Active'),
-        ('CLOSED','Closed')
+        ('ACTIVE','ACTIVE'),
+        ('CLOSED','CLOSED')
     ]
     tenant = models.ForeignKey(
         Tenant,
@@ -82,15 +84,27 @@ class ChartOfAccounts(models.Model):
     
     # We can use this to get the hierarchy  of an instance
     def get_hierarchy(self):
-        hierarchy = []
-        parent = self.parent
+        
+        children = self.children.all()
+        hierarchy =list(children)
 
-        while parent:
-            hierarchy.append(parent)
-            parent = parent.parent
-        return reversed(hierarchy) #returns a top-down tree of account tree
+        #referencing the related name on the parent field
+        for child in children: 
+            hierarchy.extend(child.get_hierarchy())
 
-from django.core.exceptions import ValidationError
+        return hierarchy #returns a down-top(child to highest parent) tree of account tree
+    
+    def calculate_total_balance(self):
+        """
+        calculates total balance for the account, including individual balance of its children
+        """
+        total_balance = self.current_balance
+        # call hierachy on obj to return its 
+        children = self.get_hierarchy()
+        for child in children:
+            total_balance += child.current_balance
+        return total_balance
+
 class AccountMapping(models.Model):
     ACTIONS = [
         ('Contribution','Contribution'),
@@ -130,7 +144,8 @@ class AccountMapping(models.Model):
         InvestmentScheme,
         on_delete=models.CASCADE,
         null=True,
-        blank= True
+        blank= True,
+        related_name='account_mapping'
     )
     created_on = models.DateTimeField(auto_now_add=True,null=True)
     updated_on = models.DateTimeField(auto_now=True)
@@ -144,9 +159,11 @@ class AccountMapping(models.Model):
     # Prevent duplicate events for a single tenant
     class Meta:
         constraints = [
-            UniqueConstraint(fields=['tenant','name'], name='unique_name_per_tenant')
+            UniqueConstraint(fields=['tenant','scheme','name'], name='unique_name_per_tenant')
         ]
 
+    def __str__(self):
+        return f'{self.tenant.name} - {self.scheme} - {self.name}'
 
     def clean(self):
         if self.debit_acc == self.credit_acc:

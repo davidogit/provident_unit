@@ -1,0 +1,80 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}
+<title>Accounts</title>
+{% endblock %}
+{% block header %}
+<h5>Accounts</h5>
+{% endblock %}
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-xl">
+            <div class="container">
+                <div class="row g-4">
+                    
+                    <div class="col-xl">
+                        <div class="border p-3 rounded position-relative">
+                            <div class="form-floating mb-3 d-flex justify-content-center">
+                            
+                                <div class="form-floating m-2">
+                                    <select name="natural_accounts" id="natural_accounts" class="form-select">
+                                        <option value="">-select-</option>
+                                        {% for account in natural_accounts %}
+                                        <option value="{{ account.account.id }}">{{ account.account }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label for="natural_accounts">Natutal Accounts</label>
+                                </div>
+                                <div class="form-floating m-2">
+                                    <select name="child_accounts" id="child_accounts" class="form-select">
+                                        <option value="">-select-</option>
+                                        {% for account in child_accounts %}
+                                        <option value="{{ account.id }}">{{ account.account }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label for="child_accounts">Other Accounts</label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- cards to hold each account and balances -->
+                 <div class="container mt-5">
+                    <h5 class="text-center mb-3">Natural Accounts</h5>
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                        {% for account in natural_accounts %}
+                        <div class="col">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ account.account }}</h5>
+                                    <p class="card-text">{{ account.account_balance }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                 </div>
+                <!-- cards to hold each account and balances -->
+                 <div class="container mt-5">
+                    <h5 class="text-center mb-3">Other Accounts</h5>
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                        {% for account in child_accounts %}
+                        <div class="col">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ account.account }}</h5>
+                                    <p class="card-text">{{ account.account_balance }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                 </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,5 +1,8 @@
 {% extends 'dashboard/base.html' %}
 
+{% block title %}
+<title>Account Mapping</title>
+{% endblock %}
 {% block header %}
 <h5>Account Mapping</h5>
 {% endblock %}
@@ -76,7 +79,7 @@
 
                 <div class="row g-4 mt-5">
                     <!-- table for previous account mappings -->
-                    <h3 class="mt-5 text-center">Existing Account Mappings</h3>
+                    <h5 class="mt-2 text-center">Existing Account Mappings</h5>
                 <div class="table-responsive overflow-auto" style="max-height: 400px;">
                     <table class="table table-bordered table-striped">
                         <thead class="thead-light">
@@ -96,8 +99,11 @@
                                 <td>{{ mapping.credit_acc }}</td>
                                 <td class="text-center text-nowrap">
                                     <button class="btn btn-warning btn-sm delete-account">
-                                        <input id="accountId" type="text" value="{{ account.id }}" hidden>
-                                        <input id="accountName" type="text" value="{{ account.name }}" hidden>
+                                        <input id="mapping_id" type="text" value="{{ mapping.id }}" hidden>
+
+                                        <input id="scheme_id" type="text" value="{{ mapping.scheme.id }}" hidden>
+
+                                        <input id="mappingName" type="text" value="{{ mapping.name }}" hidden>
                                         <i class="ri-delete-bin-2-line"></i>
                                     </button>
                                     <button class="btn btn-secondary btn-sm update-account" data-bs-toggle="modal" data-bs-target="#updateAccountModal" id="updateButton">
@@ -133,7 +139,7 @@
             data: form.serialize(),
             success: function(response) {
                 if (response.status === 'success'){
-                    alert(response.message)
+                    window.location.reload();
                 }else{
                     alert(response.message)
                 }
@@ -141,6 +147,35 @@
             },
             error: function(error) {
                 console.log(error);
+            }
+        });
+    });
+
+    // Delete account mapping
+    $('.delete-account').on('click', function(){
+        var mapping_id = $(this).find('#mapping_id').val();
+        var scheme_id = $(this).find('#scheme_id').val();
+        var mapping_name = $(this).find('#mappingName').val();
+        var tenant = '{{ request.tenant.id }}';
+        var confirmDelete = confirm(`Are you sure you want to delete ${mapping_name}?`);
+        if (!confirmDelete){
+            return;
+        }
+        $.ajax({
+            url: `/${tenant}/accounts/delete-mapping/${mapping_id}/`,
+            type: 'POST',
+            data: {
+                'mapping_id': mapping_id,
+                'scheme_id': scheme_id,
+                'mapping_name': mapping_name,
+                'tenant': tenant,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response){
+                window.location.reload();
+            },
+            error: function(error){
+                alert('An error occurred. Please try again later.');
             }
         });
     });

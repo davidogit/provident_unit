@@ -67,8 +67,13 @@
               <a href="{% url 'add_chart_of_account' tenant_id=request.tenant.id %}"
               class="nav-sub-link">Chart of Accounts
               </a>
+
               <a href="{% url 'map_account' tenant_id=request.tenant.id %}"
               class="nav-sub-link">Map Accounts
+              </a>
+
+              <a href="{% url 'account_balances' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Accountn Balances
               </a>
             </nav>
           </li>
@@ -98,7 +103,7 @@
                 class="nav-sub-link">Upload File
               </a>
 
-              <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}"
+              <a href=""
                 class="nav-sub-link">Recent Uploads
               </a>
               

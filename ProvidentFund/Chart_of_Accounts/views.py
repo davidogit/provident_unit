@@ -1,12 +1,14 @@
+import json
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.views.generic import TemplateView,DeleteView
+from django.views.generic import TemplateView,DeleteView,UpdateView,View
 from Chart_of_Accounts.models import ChartOfAccounts
 from Chart_of_Accounts.models import AccountMapping
 from MultiScheme.models import InvestmentScheme
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
+from django.db.models import Sum
 # Create your views here.
 
 class AddChartOfAccounts(TemplateView):
@@ -82,6 +84,88 @@ class AddChartOfAccounts(TemplateView):
         context['account_types'] = account_types
         context['account_status'] = account_status
         return context
+
+# Update Chart of Accounts
+class UpdateChartOfAccounts(UpdateView):
+    model = ChartOfAccounts
+    template_name = ''
+    fields = ('parent','name','description','account_type','account_status','account_code')
+
+    def get_object(self, queryset = ...):
+        tenant = self.request.tenant
+        account_id = self.kwargs.get('pk')
+        print('START UPDATE')
+
+        try:
+            obj = ChartOfAccounts.objects.get(tenant=tenant,id=account_id)
+        except Exception:
+            return JsonResponse({
+                'status':'error',
+                'message': 'Account not found.'
+            })
+        return obj
+    
+    def form_valid(self, form):
+        # Save the form instance
+        self.object = form.save()
+
+
+        # Return a JSON success response
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Account updated successfully.'
+        })
+
+    def form_invalid(self, form):
+        # Return a JSON error response if the form is invalid
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Failed to update account. Please check the input and try again. {form.errors}'
+        })
+    
+    def get_success_url(self):
+        tenant_id = self.request.tenant.id
+        url = reverse('add_chart_of_account', kwargs={'tenant_id':tenant_id})
+        return url
+
+
+# Fetch Chart of Account Data
+class FetchChartOfAccounts(View):
+    def get(self,request,*args,**kwargs):
+        if self.request.method == 'GET':
+            print('START')
+            tenant = self.request.tenant
+            # account_code = self.request.GET.get('account_code')
+            account_id = self.kwargs.get('pk')
+
+            fields = [tenant,account_id]
+            if not all(fields):
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Missing some fields'
+                })
+            
+            # fetch account
+            try:
+                account = ChartOfAccounts.objects.get(tenant=tenant,id=account_id)
+                print(account)
+                return JsonResponse({
+                    'status':'success',
+                    'account':{
+                        'id':account.id,
+                        'name':account.name,
+                        'account_code': account.account_code,
+                        'description':account.description,
+                        'account_status':account.account_status,
+                        'account_type':account.account_type,
+                        'parent':account.parent.id if account.parent else None
+                    }
+                })
+            except Exception:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Account not found'
+                })
 
 
 
@@ -177,4 +261,73 @@ class AccountMappingView(TemplateView):
         context['accounts'] = ChartOfAccounts.objects.filter(tenant=tenant)
         context['schemes'] = InvestmentScheme.objects.filter(tenant=tenant)
         context['mappings'] = AccountMapping.objects.filter(tenant=tenant)
+        return context
+
+
+# Delete View for Account Mapping
+class AccountMappingDeleteView(DeleteView):
+    model = AccountMapping
+    template_name = ''
+
+    def get_object(self, queryset = ...):
+        tenant = self.request.tenant
+        scheme_id = self.request.POST.get('scheme_id')
+        mapping_id = self.request.POST.get('mapping_id')
+        mapping_name = self.request.POST.get('mapping_name')
+
+        fields = [tenant,scheme_id,mapping_id,mapping_name]
+        if not all(fields):
+            return JsonResponse({
+                'status':'error',
+                'message':'Missing some fields'
+            })
+        
+        try:
+            obj = AccountMapping.objects.get(tenant=tenant,scheme__id=scheme_id,id=mapping_id,name=mapping_name)
+            return obj
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':'Cannot find Mapping'
+            })
+        
+    def get_success_url(self):
+        tenant = self.request.tenant
+        url = reverse('map_account', kwargs={'tenant_id':tenant.id})
+        return url
+
+
+
+# ACCOUNT BALANCE QUERY
+class AccountBalanceQuery(TemplateView):
+    template_name = 'account_balance.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        natural_accounts_set = ChartOfAccounts.objects.filter(tenant=tenant,parent=None)
+        child_accounts = ChartOfAccounts.objects.filter(tenant=tenant).exclude(parent=None)
+        
+        natural_accounts=[]
+        other_accounts = []
+        for account in natural_accounts_set:
+            natural_accounts.append(
+                {
+                    'account':account,
+                    'account_balance':account.calculate_total_balance()
+                }
+            )
+
+
+        for other in child_accounts:
+            other_accounts.append(
+                {
+                    'account':other,
+                    'account_balance':other.calculate_total_balance()
+                }
+                )
+
+        context['natural_accounts'] = natural_accounts
+        context['child_accounts'] = other_accounts
+
         return context

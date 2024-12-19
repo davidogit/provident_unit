@@ -34,11 +34,26 @@ class InvestmentDetail(models.Model):
         (business,'Business')
     ]
     account_type = models.CharField(max_length=50, choices=account, default=current)
-    account_name = models.CharField(max_length=50)
-    account_number = models.IntegerField(unique=False)
-    principal_amount = models.FloatField()
-    interest_percentage = models.FloatField(null=False,blank=False)
-    rollover_interest_percentage = models.FloatField(null=True, blank=True, default=0.0)
+    account_name = models.CharField(max_length=255)
+    account_number = models.CharField(max_length=255)
+    principal_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
+    interest_percentage = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00,
+        null=False,
+        blank=False
+        )
+    rollover_interest_percentage = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=0.00)
     interest_start_date = models.DateField(null=False, blank=False)
     interest_end_date = models.DateField(null=False, blank=False)
     created_date = models.DateField(auto_now_add=True)
@@ -48,20 +63,27 @@ class InvestmentDetail(models.Model):
     _remaining_days = models.PositiveIntegerField(default=0)
     _status = models.CharField(max_length=20, default='Pending')
     approval_status = models.BooleanField(default=False)
-    closing_amount = models.FloatField(default=0.0)
+    closing_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+        )
     termination_status = models.BooleanField(default=False)
-    interest_amount = models.FloatField(default=0.0)
-    years = models.FloatField(null=False) #Time the money is invested or borrowed for, in years.
+    interest_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+        )
+    years = models.DecimalField(
+        max_digits=4,
+        decimal_places=0,
+        null=False
+        ) #Time the money is invested or borrowed for, in years.
     componding_frequency = models.PositiveIntegerField(null=False) # Number of times the interest is compounded per year.
     type_of_tbill = models.CharField(max_length=10, default='')#specifies if 91,182,365 day for only Tbill
 
 
     def calculate_inv_interest(self):
-        # Calculation without factoring compound interest
-        # principal = self.principal_amount or 0.0
-        # rate = self.interest_percentage or 0.0
-        # interest = (((rate / 100.0) * principal))
-
         # # Calculation involving compound interest
         p = self.principal_amount
         r = self.interest_percentage/100
@@ -131,7 +153,7 @@ class InvestmentDetail(models.Model):
         return self.calculate_rollover_accumulated_amount()
 
     def __str__(self):
-        return f"{self.account_name}'s account"
+        return f"{self.account_name}'s Investment"
     
     def get_absolute_url(self):
         return reverse('investment_detail', kwargs={'pk': self.pk},) 
@@ -155,13 +177,25 @@ def set_invoice_number(sender,instance,**kwargs):
 class DelayedInterest(models.Model):
     invoice_number = models.CharField(max_length=8, unique=True,null=True,blank=True, editable=False)
     investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, related_name='delayed_interest')
-    principal = models.FloatField()
+    principal = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
     created_date = models.DateField(auto_now_add=True)
     remarks = models.CharField(max_length=50)
     _status = models.CharField(max_length=20, default='Not used')
     # due_date = models.DateField()
-    rate_d_int = models.FloatField()
-    interest = models.FloatField(default=0.00)
+    rate_d_int = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00
+    )
+    interest = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+        )
     period_of_interest_calculation = models.PositiveIntegerField() #period over which interest is to be calculated.
     approved = models.BooleanField(default=False)
     date_paid = models.DateField(null=True)
@@ -214,7 +248,11 @@ class BankInterest(models.Model):
     account_number = models.PositiveIntegerField()
     from_date = models.DateField()
     to_date = models.DateField()
-    amount = models.FloatField()
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
     created_date = models.DateField(auto_now_add=True)
     remarks = models.CharField(max_length=50)
     _status = models.CharField(max_length=20, default='Not used')
@@ -255,7 +293,11 @@ class AuditTrail(models.Model):
 
 class BankInterestRate(models.Model):
     bank_name = models.CharField(max_length=100)
-    interest_rate = models.DecimalField(max_digits=5, decimal_places=2)  
+    interest_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00
+        )  
     effective_date = models.DateField()  # Date from when this interest rate is effective
 
     class Meta:

@@ -114,7 +114,10 @@ class TransactionHistory(models.Model):
         (BANK_TRANSFER,'Bank Transfer')
     ]
     payment_method = models.CharField(max_length=20, choices=payment_method, default=MOBILE_MONEY)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00)
     reference = models.TextField(max_length=255, blank=True)
     def __str__(self):
        return f"{self.transaction_type} - {self.amount} on {self.transaction_date}"
