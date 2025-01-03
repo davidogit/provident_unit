@@ -117,7 +117,7 @@ class AccountMapping(models.Model):
         ('Benefit Accrued','Benefit Accrued'),
         ('Exit Payout','Exit Payout'),
         ('Redeem Investment','Redeem Investment'),
-        ('Investment Roll Over','Investment Roll Over')
+        ('Roll Over','Roll Over')
     ]
     name = models.CharField(
         max_length=255,
@@ -172,3 +172,51 @@ class AccountMapping(models.Model):
     def save(self,*args,**kwargs):
         self.clean()
         super().save(*args,**kwargs)
+
+
+class BankAccount(models.Model):
+    CURRENCY = [
+        ('GHS','GHS'),
+        ('USD','USD'),
+        ('EUR','EUR')
+    ]
+    ACCOUNT_TYPE = [
+        ('current','Current'),
+        ('checking','Checking'),
+        ('savings','Savings'),
+        ('fixed deposit','Fixed Deposit'),
+        ('business','Business')
+    ]
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='bank_accounts'
+    )
+    account_number = models.CharField(
+        max_length=255
+    )
+    bank_name = models.CharField(
+        max_length=255
+    )
+    account_holder_name = models.CharField(
+        max_length=255
+    )
+    branch = models.CharField(
+        max_length=255
+    )
+    account_type = models.CharField(
+        max_length=255,
+        choices=ACCOUNT_TYPE,
+        default='business'
+    )
+    parent_Account = models.ForeignKey(
+        ChartOfAccounts,
+        on_delete=models.SET_NULL,
+        related_name='bank_accounts',
+        null=True
+    )
+    currency = models.CharField(
+        max_length=255,
+        choices=CURRENCY,
+        default='GHS'
+    )

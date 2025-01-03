@@ -79,7 +79,7 @@ class InvestmentDetail(models.Model):
         decimal_places=0,
         null=False
         ) #Time the money is invested or borrowed for, in years.
-    componding_frequency = models.PositiveIntegerField(null=False) # Number of times the interest is compounded per year.
+    compounding_frequency = models.PositiveIntegerField(null=False) # Number of times the interest is compounded per year.
     type_of_tbill = models.CharField(max_length=10, default='')#specifies if 91,182,365 day for only Tbill
 
 
@@ -88,7 +88,7 @@ class InvestmentDetail(models.Model):
         p = self.principal_amount
         r = self.interest_percentage/100
         t = self.years
-        n = self.componding_frequency # daily,monthly,quaterly,yearly
+        n = self.compounding_frequency # daily,monthly,quaterly,yearly
 
         c = p*(1+(r/n))**(n*t) #compound interest
         interest = c-p #interest amount only
@@ -199,6 +199,7 @@ class DelayedInterest(models.Model):
     period_of_interest_calculation = models.PositiveIntegerField() #period over which interest is to be calculated.
     approved = models.BooleanField(default=False)
     date_paid = models.DateField(null=True)
+    
     @property
     def status(self):
         return self._status

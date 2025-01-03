@@ -199,7 +199,6 @@
                 data: formData,
                 success: function (response) {
                     if (response.status === 'success') {
-                        // Optionally add the new account to the table dynamically
                         window.location.reload();
                     } else {
                         alert(response.message);

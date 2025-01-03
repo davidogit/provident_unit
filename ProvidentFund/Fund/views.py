@@ -28,7 +28,7 @@ from django.utils.dateparse import parse_date
 from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
-from Chart_of_Accounts.models import ChartOfAccounts
+from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping
 from Fund.tasks import calculate_staff_contribution
 
 logger = logging.getLogger(__name__)
@@ -362,7 +362,7 @@ class AddInvestment(CreateView):
         if not mapping:
             return JsonResponse({
                 'status':'error',
-                'message':''
+                'message':'Mapping not found. Make sure a mapping is created for this event then try again.'
             })
         
         # Fetch investment principal
@@ -494,20 +494,38 @@ class RolloverPercentage(TemplateView):
     template_name = 'dashboard/rollover_percentage.html'
 
     def post(self, request, *args, **kwargs):
+        print(self.request.POST)
+        tenant = self.request.tenant
         tenant_id = request.tenant.id
         scheme_id = request.scheme_name
-
         # Collect all data in Post request 
-        rollover_rate = request.POST.get('rate') 
+        rollover_rate_str = request.POST.get('rate') 
         start_date_str = request.POST.get('start_date')
         maturity_date_str = request.POST.get('maturity_date')
-        rollover_amount_str = request.POST.get('principal')
+        rollover_amount_str = self.request.POST.get('principal')
         rollover_type = request.POST.get('rollover_type') #Principal,Interest or full rollover
-        rollover_amount = float(rollover_amount_str)
+        rollover_rate = Decimal(rollover_rate_str)
+        rollover_amount = Decimal(rollover_amount_str)
         start_date=datetime.strptime(start_date_str, "%Y-%m-%d")
         maturity_date = datetime.strptime(maturity_date_str, "%Y-%m-%d")
         account_number = request.POST.get('account_number')
         pk = kwargs['pk']
+
+        # Make sure mappings exist before we proceed further
+        scheme = InvestmentScheme.objects.filter(id=scheme_id,tenant=tenant).prefetch_related('account_mapping').first()
+
+        if not scheme:
+            return JsonResponse({
+                'status':'error',
+                'message':'Investment scheme not found'
+            })
+        
+        mapping = scheme.account_mapping.get(name='Roll Over')
+        if not mapping:
+            return JsonResponse({
+                'status':'error',
+                'message':'Mapping not found. Make sure a mapping is created for this event then try again.'
+            })
 
         # Increment rollover count of original investment
         try:
@@ -515,10 +533,10 @@ class RolloverPercentage(TemplateView):
         except:
             return JsonResponse({'status':'error', 'message':'Investment object not found', 'redirect_url': self.get_success_url()})
 
-        # Prevent cases where rollover principal is greater than the return of the previous investment
+        # Prevent cases where rollover principal is greater than the return of the previous investment interest+principal
         print(f'New amount: {rollover_amount}')
-        if rollover_amount > inv.interest_amount:
-            message = f'New principal cannot be greater than {inv.interest_amount}'
+        if rollover_amount > (inv.interest_amount + inv.principal_amount):
+            message = f'Roll over principal cannot be greater than {(inv.interest_amount + inv.principal_amount)}'
             return JsonResponse({'status':'error','message':message})
 
         counter = 0
@@ -539,16 +557,19 @@ class RolloverPercentage(TemplateView):
         else:
             name_parts = inv.account_name            
 
-        # check if its a partial rollover
-        if rollover_amount < inv.interest_amount:
-            new_principal = rollover_amount
-        else:
-            new_principal = inv.interest_amount
-
         inv_name = f'{name_parts} R{counter}'
         inv_type = inv.investment_type
-        rollover_principal = new_principal
+        rollover_principal = rollover_amount
         account_type = inv.account_type
+
+        # Check if rollover is principal only or principal+interest
+        debit_or_credit = None
+        debit_or_credit_amount = None
+        if rollover_type == 'principal':
+            debit_or_credit = False
+        else:
+            debit_or_credit = True
+            debit_or_credit_amount = inv.interest_amount
 
         required_fields = [
             tenant_id,
@@ -568,18 +589,23 @@ class RolloverPercentage(TemplateView):
             return JsonResponse({'status':'error', 'message':'Some fields are missing'})
         # Call task to handle investment creation
         try:
+            # Debit and Credit operations to be done in tasks after succesful entry of DI object
             rollover_inv_creation.delay(
                 tenant_id=tenant_id,
                 scheme_id=scheme_id,
                 inv_name=inv_name,
-                inv_type=inv_type,  # No need for list() if it's just a single value
+                inv_type=inv_type,
                 rollover_rate=rollover_rate,
                 rollover_principal=rollover_principal,
                 start_date=start_date,
                 maturity_date=maturity_date,
                 account_number=account_number,
-                account_type=account_type,  # No need for list() here either
-                counter=counter
+                account_type=account_type,
+                counter=counter,
+                compounding_frequency=inv.compounding_frequency,
+                duration = inv.years,
+                debit_or_credit =debit_or_credit , #determins if a debit or credit operation is needed
+                debit_or_credit_amount = debit_or_credit_amount, #amount to be credited or debited based on full or partial rollover
             )
             inv.roll_over = True
             inv.save()

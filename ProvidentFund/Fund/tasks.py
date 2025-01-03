@@ -1,3 +1,4 @@
+from decimal import Decimal
 from celery import shared_task
 from django.http import JsonResponse
 from .models import InvestmentDetail,BankInterest,DelayedInterest
@@ -398,32 +399,58 @@ def rollover_inv_creation(self,**kwargs):
     account_type = kwargs.get('account_type')
     account_number = kwargs.get('account_number')
     counter = kwargs.get('counter')
+    debit_or_credit = kwargs.get('debit_or_credit')
+    debit_or_credit_amount = kwargs.get('debit_or_credit_amount')
+    compounding_frequency = kwargs.get('compounding_frequency')
+    duration = kwargs.get('duration')
 
     try:
-        # tenant = Tenant.objects.filter(id=tenant_id).prefetch_related('investment_schemes').first()
-        # scheme = tenant.investment_schemes.filter(id=scheme_id).first()#get scheme from prefetched data
         tenant = get_object_or_404(Tenant, id=tenant_id)
-        scheme = get_object_or_404(InvestmentScheme,id=scheme_id,tenant=tenant)
+        scheme = InvestmentScheme.objects.filter(id=scheme_id,tenant=tenant).prefetch_related('account_mapping').first()
     
     except Tenant.DoesNotExist as e:
         logger.info(e)
     except InvestmentScheme.DoesNotExist as e:
         logger.info(e)
+
+    logger.info(type(rollover_rate))
+    logger.info(type(rollover_principal))
     
     try:
-        InvestmentDetail.objects.create(
-            investment_scheme = scheme,
-            account_name=inv_name,
-            investment_type=inv_type,
-            interest_percentage=rollover_rate,
-            principal_amount=rollover_principal,
-            interest_start_date=start_date,
-            interest_end_date=maturity_date,
-            account_number=account_number,
-            account_type=account_type,
-            rollover_count = counter
-        )
-        logger.info(f'Roll over for inv {inv_name} added')
+        with transaction.atomic():
+            logger.info('Start')
+            InvestmentDetail.objects.create(
+                investment_scheme = scheme,
+                account_name=inv_name,
+                investment_type=inv_type,
+                interest_percentage=rollover_rate,
+                principal_amount=rollover_principal,
+                interest_start_date=start_date,
+                interest_end_date=maturity_date,
+                account_number=account_number,
+                account_type=account_type,
+                rollover_count = counter,
+                compounding_frequency=compounding_frequency,
+                years=duration,
+            )
+            logger.info('Start 1')
+            # Debit and Credit operations
+            if debit_or_credit:
+                mapping = scheme.account_mapping.get(name='Roll Over')
+
+                # Fetch debit and credit accounts from mapping obj
+                debit_account = mapping.debit_acc
+                credit_account = mapping.credit_acc
+                logger.info('Start debit and credit operations')
+                # perform debit anf credit operations
+                debit_account.current_balance -= Decimal(debit_or_credit_amount)
+                credit_account.current_balance += Decimal(debit_or_credit_amount)
+                logger.info('Done with debit and credit operations')
+
+                # save account balances
+                debit_account.save()
+                credit_account.save()
+            logger.info(f'Roll over for inv {inv_name} added')
     except Exception as e:
         logger.info(f'Inv Adding Error: {e}')
 
@@ -470,46 +497,46 @@ def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
 
 
 # Task to calculate daily penalty on delayed interest object
-@shared_task(bind=True)
-def delayed_interest_penalty(self):
-    # get tenants using prefetch related
-    tenants = Tenant.objects.prefetch_related('investment_schemes__delayed_interest')
+# @shared_task(bind=True)
+# def delayed_interest_penalty(self):
+#     # get tenants using prefetch related
+#     tenants = Tenant.objects.prefetch_related('investment_schemes__delayed_interest')
 
-    import calendar
-    year = timezone.now().year
-    is_leap = calendar.isleap(year)
-    days_in_year = 366 if is_leap else 365
+#     import calendar
+#     year = timezone.now().year
+#     is_leap = calendar.isleap(year)
+#     days_in_year = 366 if is_leap else 365
 
-    for tenant in tenants:
-        # get schemes
-        schemes = tenant.investment_schemes.all()
-        if schemes.exists():
-            logger.info(f'Schemes: {schemes}')
-            for scheme in schemes:
-                # Fetch DI objects
-                delayed_interests = scheme.delayed_interest.filter(approved=False)
-                logger.info(f'DI: {delayed_interests}')
-                if delayed_interests.exists():
-                    for di in delayed_interests:
-                        # Extraxt params
-                        p = di.principal #principal of DI
-                        r = (di.rate_d_int)/100 #convert percentage to decimal
-                        n=days_in_year #compound rate=daily
-                        t= di.period_of_interest_calculation/days_in_year #period by which money is owed in years
-                        logger.info(f'Principal ={p}, Rate= {r}, T= {t}')
-                        # Compound Interest calculation
-                        c = p*(1+(r/n))**(n*t)
-                        logger.info(f'Compound I= {c}')
+#     for tenant in tenants:
+#         # get schemes
+#         schemes = tenant.investment_schemes.all()
+#         if schemes.exists():
+#             logger.info(f'Schemes: {schemes}')
+#             for scheme in schemes:
+#                 # Fetch DI objects
+#                 delayed_interests = scheme.delayed_interest.filter(approved=False)
+#                 logger.info(f'DI: {delayed_interests}')
+#                 if delayed_interests.exists():
+#                     for di in delayed_interests:
+#                         # Extraxt params
+#                         p = di.principal #principal of DI
+#                         r = (di.rate_d_int)/100 #convert percentage to decimal
+#                         n=days_in_year #compound rate=daily
+#                         t= di.period_of_interest_calculation/days_in_year #period by which money is owed in years
+#                         logger.info(f'Principal ={p}, Rate= {r}, T= {t}')
+#                         # Compound Interest calculation
+#                         c = p*(1+(r/n))**(n*t)
+#                         logger.info(f'Compound I= {c}')
                         
-                        interest_per_day = (c - p)/n #interest
-                        logger.info(f'Interest Per day: {interest_per_day}')
-                        di.interest += interest_per_day
-                        di.save()
+#                         interest_per_day = (c - p)/n #interest
+#                         logger.info(f'Interest Per day: {interest_per_day}')
+#                         di.interest += interest_per_day
+#                         di.save()
 
-                        logger.info(f'Tenant: {tenant.name} - Scheme: {scheme.name} - Daily Interest: {interest_per_day}')
-                else:
-                    logger.info(f'No Delayed Interest for {tenant.name} {scheme.name}')
-        else:
-            logger.info(f'No schemes available for {tenant.name}')
+#                         logger.info(f'Tenant: {tenant.name} - Scheme: {scheme.name} - Daily Interest: {interest_per_day}')
+#                 else:
+#                     logger.info(f'No Delayed Interest for {tenant.name} {scheme.name}')
+#         else:
+#             logger.info(f'No schemes available for {tenant.name}')
 
 

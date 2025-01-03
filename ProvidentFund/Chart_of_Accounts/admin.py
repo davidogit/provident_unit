@@ -1,5 +1,5 @@
 from django.contrib import admin
-from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping
+from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount
 # Register your models here.
 
 class ChartOfAccountsAdmin(admin.ModelAdmin):
@@ -11,3 +11,4 @@ class ChartOfAccountsAdmin(admin.ModelAdmin):
     )
 admin.site.register(ChartOfAccounts,ChartOfAccountsAdmin)
 admin.site.register(AccountMapping)
+admin.site.register(BankAccount)
