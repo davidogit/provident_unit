@@ -176,7 +176,12 @@ def set_invoice_number(sender,instance,**kwargs):
 
 class DelayedInterest(models.Model):
     invoice_number = models.CharField(max_length=8, unique=True,null=True,blank=True, editable=False)
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, related_name='delayed_interest')
+    investment_scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='delayed_interest'
+    )
     principal = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -184,7 +189,7 @@ class DelayedInterest(models.Model):
     )
     created_date = models.DateField(auto_now_add=True)
     remarks = models.CharField(max_length=50)
-    _status = models.CharField(max_length=20, default='Not used')
+    _status = models.CharField(max_length=20, default='Not paid')
     # due_date = models.DateField()
     rate_d_int = models.DecimalField(
         max_digits=5,
@@ -198,7 +203,13 @@ class DelayedInterest(models.Model):
         )
     period_of_interest_calculation = models.PositiveIntegerField() #period over which interest is to be calculated.
     approved = models.BooleanField(default=False)
-    date_paid = models.DateField(null=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    date_paid = models.DateTimeField(auto_now=True,null=True)
     
     @property
     def status(self):

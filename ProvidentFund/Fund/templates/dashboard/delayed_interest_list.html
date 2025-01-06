@@ -1,11 +1,37 @@
 {% extends 'dashboard/base.html' %}
 
 {% block content %}
-
+{% block title %}
+<title>Delayed Interest</title>
+{% endblock %}
+{% load number_filter %}
+{% block header %}
+<h5>Delayed Interest</h5>
+{% endblock %}
 
 <div class="main main-app p-3 p-lg-4">
   
   <div class="row g-3 justify-content-center">
+    <div class="col-md-12 col-xl-8">
+      <div class="card card-one">
+        <div class="card-body">
+          <div class="row justify-content-center">
+            <div class="col-4 d-flex flex-column align-items-center justify-content-center">
+              <h3 class="card-value">
+                {{ delayed_int_count }}
+              </h3>
+              <p class="card-label">Outstanding Delayed Interests</p>
+            </div>
+            <div class="col-4 d-flex flex-column align-items-center justify-content-center">
+              <h3 class="card-value">
+                {{ total_amount|abbreviate_number }}
+              </h3>
+              <p class="card-label">Total Amount</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   
     <div class="card card-one mt-3">
       <div class="card-body p-3">
@@ -19,29 +45,40 @@
                 <th colspan="1">Status</th>
               </tr> -->
               <tr>
-                <th></th>
-                <th>Invoice No.</th>
-                <!-- <th>Name</th> -->
-                <th>Princioal</th>
-                <th>Rate %</th>
-                <th>Acrued interest</th>
-                <th>Status</th>
-                <th>Date created</th>
-                <th>Remarks</th>
+                <th class="text-center"></th>
+                <th class="text-center">Invoice No.</th>
+                <th class="text-center">Princioal</th>
+                <th class="text-center">Rate %</th>
+                <!-- <th class="text-center">Acrued interest</th> -->
+                <th class="text-center">Status</th>
+                <th class="text-center">Date created</th>
+                <th class="text-center">Remarks</th>
+                <th class="text-center">Confirm</th>
               </tr>
             </thead>
       
               <tbody>
                 {% for int in delayed_interest %}
-                  <tr>
-                    <td>{{ forloop.counter0|add:start_index|default:forloop.counter }}</td>
-                    <td>{{ int.invoice_number }}</td>
-                    <td>{{ int.principal| floatformat:2 }}</td>
-                    <td>{{ int.rate_d_int }}</td>
-                    <td>{{ int.interest| floatformat:2 }}</td>
-                    <td>{{ int.status }}</td>
-                    <td>{{ int.created_date }}</td>
-                    <td>{{ int.remarks }}</td>
+                  <tr class="">
+                    <td class="text-center">{{ forloop.counter0|add:start_index|default:forloop.counter }}</td>
+                    <td class="text-start">{{ int.invoice_number }}</td>
+                    <td class="text-start">{{ int.principal| floatformat:2 }}</td>
+                    <!-- <td class="text-start">{{ int.rate_d_int }}</td> -->
+                    <td class="text-start">{{ int.interest| floatformat:2 }}</td>
+                    <td class="text-start">{{ int.status }}</td>
+                    <td class="text-start">{{ int.created_date }}</td>
+                    <td class="text-start">{{ int.remarks }}</td>
+                    <td class="text-center">
+                      <button class="btn btn-outline-success approve-button">Paid
+                        <!-- Delayed Interest ID -->
+                        <input type="text" name="int_id" value="{{ int.id }}" hidden readonly>
+                        <!-- Invoice Number -->
+                        <input type="text" name="invoice_number" value="{{ int.invoice_number }}" hidden readonly>
+                        <!-- Scheme ID -->
+                        <input type="text" name="invoice_number" value="{{ int.invoice_number }}" hidden readonly>
+                        
+                      </button>
+                    </td>
                   </tr>
                 {% endfor %}
               </tbody>
@@ -97,7 +134,41 @@
         </div>
       </div><!-- card-body -->
     </div><!-- card -->
-  
+
+
+<script>
+  $(document).ready(function(){
+    $('.approve-button').on('click', function(e){
+      e.preventDefault();
+      var d_int_id = $(this).find('input[name="int_id"]').val();
+      var invoice_number = $(this).find('input[name="invoice_number"]').val();
+      var prompt = confirm(`Are you sure you want to confirm this payment for ${invoice_number}?`);
+
+
+      if(prompt){
+        $.ajax({
+          type: 'POST',
+          url: '',
+          data: {
+            'd_int_id': d_int_id,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+          },
+          success: function(response){
+            if(response.status === 'success'){
+              alert('Payment confirmed successfully');
+              location.reload();
+            }else{
+              alert(response.message);
+            }
+          },
+          error: function(response){
+            alert('Payment confirmation failed');
+          }
+        });
+      }
+    });
+  });
+</script>
 
 
 {% endblock %}

@@ -1,7 +1,9 @@
 {% extends 'dashboard/base.html' %}
-
-{% block search %}
-
+{% block title %}
+<title>Delayed Interest</title>
+{% endblock %}
+{% block header %}
+<h5>Delayed Interest</h5>
 {% endblock %}
 
 
@@ -61,24 +63,25 @@
                                     <th></th>
                                     <th scope="col">Invoice Number</th>
                                     <th scope="col">Principal</th>
-                                    <th scope="col">Acrued Interest</th>
+                                    <!-- <th scope="col">Acrued Interest</th> -->
                                     <th scope="col">Paid</th>
                                     <th scope="col">Date Created</th>
                                     <th scope="col">Date Paid</th>
+                                    <th scope="col">Approved by</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% if results %}
-                                    {% for b_interest in results %}
+                                    {% for d_int in results %}
                                         <tr>
                                             <td> {{ forloop.counter }} </td>
-                                            <td>{{ b_interest.invoice_number }}</td>
-                                            <td>{{ b_interest.principal|floatformat:2 }}</td>
-                                            <td>{{ b_interest.interest|floatformat:2 }}</td>
-                                            <td>{{ b_interest.approved }}</td>
-                                            <td>{{ b_interest.created_date }}</td>
-                                            <td>{{ b_interest.date_paid }}</td>
-                                            
+                                            <td>{{ d_int.invoice_number }}</td>
+                                            <td>{{ d_int.principal|floatformat:2 }}</td>
+                                            <!-- <td>{{ d_int.interest|floatformat:2 }}</td> -->
+                                            <td>{{ d_int.approved }}</td>
+                                            <td>{{ d_int.created_date }}</td>
+                                            <td>{{ d_int.date_paid }}</td>
+                                            <td>{{ d_int.approved_by }}</td>
 
                                         </tr>
                                     {% endfor %}

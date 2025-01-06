@@ -54,5 +54,9 @@ urlpatterns =[
 
     # Mass Member Upload
     path('mass_upload/', views.MassMemberUpload.as_view(), name='mass_enroll'),
+
+
+    # Payout URLs
+    path('general-payout/', views.GeneralPayoutView.as_view(), name='general_payout'),
     
 ]
