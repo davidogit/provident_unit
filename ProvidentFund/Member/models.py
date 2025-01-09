@@ -243,6 +243,18 @@ class TransactionHistory(models.Model):
         max_length=255,
         blank=True
     )
+    STATUS_CHOICES = [
+        ('pending','Pending'),
+        ('failed','Failed'),
+        ('completed','Completed')
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+        help_text='Current status of the transaction'
+    )
 
     def __str__(self):
         return f"{self.transaction_type} - {self.amount} on {self.transaction_date}"
