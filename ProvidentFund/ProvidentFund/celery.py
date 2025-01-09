@@ -41,7 +41,11 @@ app.conf.beat_schedule = {
     'delete_users_without_schemes':{
         'task': 'Member.tasks.delete_inactive_users',
         'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
-    }
+    },
+    # 'delayed_interest_penalty':{
+    #     'task': 'Fund.tasks.delayed_interest_penalty',
+    #     'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
+    # }
 }
 
 

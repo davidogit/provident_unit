@@ -3,6 +3,9 @@
 {% block title %}
 <title>Contribution Approval</title>
 {% endblock %}
+{% block header %}
+<h5>Contribution Approval</h5>
+{% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
@@ -10,35 +13,43 @@
         <div class="col-md-12 col-xl-10">
             <div class="card card-one">
                 <div class="card-body">
-                    <h2 class="card-title text-center">
-                        Contribution Approval
-                    </h2>
+                    <h2 class="card-title text-center"></h2>
                     
                     <div class="container">
                         <form action="" method="POST" id="approval-form">
                             {% csrf_token %}
                             <div class="row g-3">
-                                <div class="col m-3">
-                                    <label for="month" class="form-label">Month:</label>
-                                    <select id="month" name="month" class="form-control form-control-lg" name="month">
-                                    <option value="1">January</option>
-                                    <option value="2">February</option>
-                                    <option value="3">March</option>
-                                    <option value="4">April</option>
-                                    <option value="5">May</option>
-                                    <option value="6">June</option>
-                                    <option value="7">July</option>
-                                    <option value="8">August</option>
-                                    <option value="9">September</option>
-                                    <option value="10">October</option>
-                                    <option value="11">November</option>
-                                    <option value="12">December</option>
+                                <!-- <div class="col m-3">
+                                    <label for="bank" class="form-label">Bank Account</label>
+                                    <select class="form-control form-control-lg" name="bank" id="bank">
+                                        <option value="">--select account--</option>
+                                        {% for asset in asset_accounts %}
+                                        <option value="{{asset.id}}">{{ asset.name }}</option>
+                                        {% endfor %}
                                     </select>
+                                </div> -->
+                                <div class="form-floating col m-3">
+                                    <select id="month" name="month" class="form-select form-control-lg" name="month">
+                                        <option value="">--select--</option>
+                                        <option value="1">January</option>
+                                        <option value="2">February</option>
+                                        <option value="3">March</option>
+                                        <option value="4">April</option>
+                                        <option value="5">May</option>
+                                        <option value="6">June</option>
+                                        <option value="7">July</option>
+                                        <option value="8">August</option>
+                                        <option value="9">September</option>
+                                        <option value="10">October</option>
+                                        <option value="11">November</option>
+                                        <option value="12">December</option>
+                                    </select>
+                                    <label for="month" class="form-label">Month:</label>
 
                                 </div>
-                                <div class="col m-3">
-                                    <label for="year" class="form-label">Year</label>
+                                <div class="form-floating col m-3">
                                     <input type="number" class="form-control form-control-lg" placeholder="YYYY" id="year" name="year">
+                                    <label for="year" class="form-label">Year</label>
                                 </div>
                                 
                             </div>
@@ -50,7 +61,7 @@
                                  </p>
                             </div>
 
-                            <button class="form-control btn btn-success" type="submit" name="" id="">Validate</button>
+                            <button class="form-control btn btn-outline-success btn-lg" type="submit" name="" id="">Validate</button>
 
                             <!-- Dynamic Data -->
 
@@ -73,10 +84,12 @@
     });
 
     //Handle from submission
+    const contributionInfo = document.getElementById('contribution-info');
     $(document).ready(function(){
         $('#approval-form').on('submit',function(event){
             event.preventDefault();
             var form = $(this);
+            
 
             $.ajax({
                 type: form.attr('method'),
@@ -87,7 +100,7 @@
                     if (response.status === 'success'){
                         contributionInfo.innerHTML = `
                         <div class="alert alert-success text-center">
-                            <span>contribution successfully validated</span> 
+                            <span>${response.message}</span> 
                         </div>`;
                     } else{
                         alert(response.message);
@@ -112,7 +125,6 @@
     // Dynamic Contribution Data
     const monthSelect = document.getElementById('month');
     //const yearInput = document.getElementById('year');
-    const contributionInfo = document.getElementById('contribution-info');
     
 
     // Function to fetch and display contribution info
@@ -125,14 +137,14 @@
         //var tenant_id = 1;
         var tenant_id = "{{ request.tenant.id }}";
         console.log(tenant_id);
-        var app_base_url = "http://127.0.0.1:8000";
+        //var app_base_url = "http://127.0.0.1:8000";
 
         // Ensure both fields are filled
         if (month && year.length === 4) {
             // Simulate fetching data (replace with an actual fetch request)
             
             try {
-                var response = await fetch(`${app_base_url}/${tenant_id}/fund/${scheme_id}/fetch_contributions/?month=${month}&year=${year}`, {
+                var response = await fetch(`/${tenant_id}/fund/${scheme_id}/fetch_contributions/?month=${month}&year=${year}`, {
                     method: 'GET',
                     credentials: 'include', //Ensures cookies are sent to the server to allow user authentication upon request
                 })

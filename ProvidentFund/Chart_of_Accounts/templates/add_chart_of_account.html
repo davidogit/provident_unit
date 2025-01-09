@@ -1,0 +1,305 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}
+<title>Chart of Accounts</title>
+{% endblock %}
+{% block header %}
+<h5 class="text-center">Chart of Account</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-xl">
+            <div class="container">
+                <h2 class="mb-1 text-center"></h2>
+                <form method="POST" id="chart_of_account_form">
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        <!-- Left Column -->
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="accountName" name="name"  placeholder="" required>
+                                <label for="accountName">Account Name</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <select class="form-select" name="parent" id="parentAccount">
+                                    <option value="">-select-</option>
+                                    {% for acc in parent_accounts %}
+                                    <option value="{{ acc.id }}">{{ acc.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="parentAccount" class="form-label">Account Parent</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <select class="form-select" name="account_type" id="accountType" required>
+                                    <option value="">-select-</option>
+                                    {% for acc, label in account_types %}
+                                    <option value="{{ acc }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="accountType" class="form-label">Account Type</label>
+                            </div>
+                        </div>
+                        <!-- Right Column -->
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="accountCode" name="account_code" placeholder="" required>
+                                <label for="accountCode" class="form-label">Account Code</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <textarea name="description" id="accountDescription" class="form-control" rows="1" placeholder=""></textarea>
+                                <label for="accountDescription" class="form-label">Account Description</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <select class="form-select" name="account_status" id="accountStatus" required>
+                                    <option value="">-select-</option>
+                                    {% for acc, label in account_status %}
+                                    <option value="{{ acc }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="accountStatus">Account Status</label>
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <button type="submit" class="btn btn-outline-primary btn-lg w-100">Save</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Table to display existing Chart of Accounts -->
+                <h5 class="mt-3 text-center">Existing Chart of Accounts</h5>
+                <div class="table-responsive overflow-auto" style="max-height: 400px;">
+                    <table class="table table-bordered table-striped">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Account Name</th>
+                                <th>Account Code</th>
+                                <th>Account Type</th>
+                                <th>Parent Account</th>
+                                <!-- <th>Balance</th> -->
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts_table">
+                            {% for account in chart_of_accounts %}
+                            <tr>
+                                <td>{{ account.name }}</td>
+                                <td>{{ account.account_code }}</td>
+                                <td>{{ account.account_type }}</td>
+                                <td>{{ account.parent.name }}</td>
+                                <!-- <td>{{ account.current_balance }}</td> -->
+                                <td>{{ account.account_status }}</td>
+                                <td class="text-center text-nowrap">
+                                    <button class="btn btn-warning btn-sm delete-account">
+                                        <input class="account-id" type="text" value="{{ account.id }}" hidden>
+                                        <input class="account-name" type="text" value="{{ account.name }}" hidden>
+                                        <i class="ri-delete-bin-2-line"></i>
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm update-account" data-bs-toggle="modal" data-bs-target="#updateAccountModal">
+                                        <input class="account-id" type="text" value="{{ account.id }}" hidden>
+                                        <input class="account-code" type="text" value="{{ account.account_code }}" hidden>
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">No accounts available.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Update Modal -->
+                <div class="modal fade" id="updateAccountModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modalTitle">Update Account</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form method="POST" id="update_chart_of_account_form">
+                                    {% csrf_token %}
+                                    <div class="row g-4">
+                                        <!-- Left Column -->
+                                        <div class="col-md-6">
+                                            <div class="form-floating mb-3">
+                                                <input type="text" class="form-control" id="update_accountName" name="name" required>
+                                                <label for="update_accountName" class="form-label">Account Name</label>
+                                                <!-- hidden input for account id -->
+                                                <input type="number" id="update_accountId" name="account_id" value="{{ account.id }}" hidden disabled>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <select class="form-select" name="parent" id="update_parentAccount">
+                                                    <option value="">-select-</option>
+                                                    {% for acc in parent_accounts %}
+                                                    <option value="{{ acc.id }}">{{ acc.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <label for="update_parentAccount" class="form-label">Account Parent</label>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <select class="form-select" name="account_type" id="update_accountType" required>
+                                                    <option value="">-select-</option>
+                                                    {% for acc, label in account_types %}
+                                                    <option value="{{ acc }}">{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <label for="update_accountType" class="form-label">Account Type</label>
+                                            </div>
+                                        </div>
+                                        <!-- Right Column -->
+                                        <div class="col-md-6">
+                                            <div class="form-floating mb-3">
+                                                <input type="text" class="form-control" id="update_accountCode" name="account_code" placeholder="" required>
+                                                <label for="update_accountCode" class="form-label">Account Code</label>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <textarea name="description" id="update_accountDescription" class="form-control" rows="1" placeholder=""></textarea>
+                                                <label for="update_accountDescription" class="form-label">Account Description</label>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <select class="form-select" name="account_status" id="update_accountStatus" required>
+                                                    <option value="">-select-</option>
+                                                    {% for acc, label in account_status %}
+                                                    <option value="{{ acc }}">{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <label for="update_accountStatus" class="form-label">Account Status</label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <button type="submit" class="btn btn-outline-primary btn-lg w-100">Update</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // Submit new account form
+        $('#chart_of_account_form').on('submit', function (e) {
+            e.preventDefault();
+    
+            var formData = $(this).serialize();
+    
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                success: function (response) {
+                    if (response.status === 'success') {
+                        window.location.reload();
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function (error) {
+                    alert('An error occurred');
+                },
+            });
+        });
+    
+        // Delete account
+        $('.delete-account').on('click', function () {
+            var account_name = $(this).find('.account-name').val();
+            var confirm_delete = confirm(`Are you sure you want to delete ${account_name}?`);
+    
+            if (confirm_delete) {
+                var account_id = $(this).find('.account-id').val();
+                var tenantId = "{{ request.tenant.id }}";
+    
+                $.ajax({
+                    url: `/${tenantId}/accounts/delete-account/${account_id}/`,
+                    type: 'POST',
+                    data: {
+                        action: 'delete',
+                        account_id: account_id,
+                        csrfmiddlewaretoken: '{{ csrf_token }}',
+                    },
+                    success: function (response) {
+                        // Remove the account row dynamically
+                        alert('Account deleted successfully.');
+                        location.reload();
+                    },
+                    error: function (error) {
+                        alert('An error occurred');
+                    },
+                });
+            }
+        });
+    
+        // Fetch account details for update
+        $('.update-account').on('click', function () {
+            var account_id = $(this).find('.account-id').val();
+            var tenantId = "{{ request.tenant.id }}";
+    
+            $.ajax({
+                url: `/${tenantId}/accounts/fetch-account/${account_id}/`,
+                type: 'GET',
+                success: function (response) {
+                    var account = response.account;
+                    console.log(account);
+                    // Populate modal fields with fetched data
+                    $('#update_chart_of_account_form #update_accountName').val(account.name);
+                    $('#update_chart_of_account_form #update_accountCode').val(account.account_code);
+                    $('#update_chart_of_account_form #update_accountDescription').val(account.description);
+                    $('#update_chart_of_account_form #update_accountStatus').val(account.account_status);
+                    $('#update_chart_of_account_form #update_accountType').val(account.account_type);
+                    $('#update_chart_of_account_form #update_parentAccount').val(account.parent);
+
+                    // set hidden input update_accountId value
+                    $('#update_chart_of_account_form #update_accountId').val(account.id);
+                    console.log(account.id);
+                },
+                error: function (error) {
+                    alert('Unable to fetch account details');
+                },
+            });
+        });
+
+        // Update account
+        $('#update_chart_of_account_form').on('submit', function (e) {
+            e.preventDefault();
+            console.log('Form submitted');
+
+            var formData = $(this).serialize();
+            var csrf_token = '{{ csrf_token }}';
+            var tenant = '{{ request.tenant.id }}';
+            var account_id = $('#update_chart_of_account_form #update_accountId').val();
+            console.log(account_id)
+            $.ajax({
+                url: `/${tenant}/accounts/update-account/${account_id}/`,
+                type: 'POST',
+                headers:{
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                data: formData,
+                success: function (response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        window.location.reload();
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function (jxhr, status, error) {
+                    alert('An error occurred: ');
+                },
+            });
+        });
+    });
+    
+</script>
+
+{% endblock %}

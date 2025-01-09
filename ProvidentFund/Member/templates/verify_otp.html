@@ -13,7 +13,7 @@
   <!-- Meta -->
   <meta name="description" content="">
   <meta name="author" content="Themepixels">
-
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <!-- Favicon -->
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
 
@@ -32,7 +32,8 @@
     <div class="card-header">
       <!-- <a href="../index.html" class="header-logo mb-4">dashbyte</a> -->
       <h3 class="h6">An OTP has been sent to: <em>{{ email }}</em> </h3>
-      <p class="card-text">Please enter code to continue.</p>
+      <p class="card-text text-center">Please enter code to continue.</p>
+      <p class="message-info text-danger text-center"></p>
     </div><!-- card-header -->
 
     <form action="" method="POST" id="otpForm">
@@ -70,6 +71,35 @@
         } else if (e.key === 'Backspace') {
           $(this).prev('.otp-input').focus();
         }
+      });
+
+      $('#otpForm').on('submit', function(event) {
+        event.preventDefault(); // Prevent default form submission
+        var form = $(this);
+        var formData = form.serialize(); // Serialize form data
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+    
+        // Add CSRF token to the serialized data
+        formData += '&csrfmiddlewaretoken=' + encodeURIComponent(csrfToken);
+    
+        $.ajax({
+          type: 'POST',
+          url: form.attr('action'),  // Your endpoint
+          data: formData,
+          success: function(response) {
+              if (response.status === 'success') {
+                  // Redirect to the URL returned by the server
+                  window.location.href = response.redirect_url;
+              } else {
+                  // Handle error message display
+                  $('.message-info').text(response.message);
+              }
+          },
+          error: function(xhr, status, error) {
+              // Handle AJAX error
+              $('.message-info').text('An error occurred. Please try again.');
+          }
+        });
       });
     });
 

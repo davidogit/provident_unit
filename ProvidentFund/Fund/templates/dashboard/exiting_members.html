@@ -193,7 +193,7 @@
                 data: form.serialize(),
                 success: function(response) {
                     if (response.status === 'success') {
-                        alert('Application approved successfully.');
+                        alert(response.message);
                         form.closest('tr').remove();
 
                     }

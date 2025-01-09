@@ -1,70 +1,109 @@
 {% extends 'dashboard/base.html' %}
-
+{% block title %}
+<title>Investment Detail</title>
+{% endblock %}
+{% block header %}
+<h5>Investment Detail</h5>
+{% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
   <div class="row row-cols-auto g-4 g-xxl-5">
       <div class="col-xl">
           <div class="container">
-            <h2 class="mb-5">Investment Detail</h2>
+            <!-- <h2 class="mb-5">Investment Detail</h2> -->
 
             <form method="POST">
               {% csrf_token %}
                 <div class="row g-5">
                   <div class="col-md-4">
-                    <div class="form-group mb-3">
-                      <label for="investmentType" class="form-label">Investment Type</label>
+                    <div class="form-floating mb-3">
                       <select class="form-control" name="investment_type" id="investmentType">
+                        <option value="">--select--</option>
                         {% for acc,label in inv_type %}
                         <option value="{{acc}}">{{ label }}</option>
                         {% endfor %}
                       </select>
+                      <label for="investmentType" class="form-label">Investment Type</label>
+                      
+                      <div class="row group">
+                        <div class="col-md-6"><div class="mt-2" aria-hidden="true">
+                          <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio1" autocomplete="off" value="91 days">
+                            <label class="btn btn-outline-primary" for="btnradio1">91 days</label>
+                          
+                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio2" autocomplete="off" value="182 days">
+                            <label class="btn btn-outline-primary" for="btnradio2">182 days</label>
+                          
+                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio3" autocomplete="off" value="365 days">
+                            <label class="btn btn-outline-primary" for="btnradio3">365 days</label>
+                          </div>
+                        </div></div>
+                        <div class="form-floating col-md-6 daycount mt-2">
+                          <input type="number" class="form-control" name="day_count" id="day_count" placeholder="">
+                          <label for="day_count">Day Count</label>
+                        </div>
+                      </div>
+                      
+                    
+
                     </div>
-                    <div class="form-group mb-3">
+                    <div class="form-floating mb-3">
+                      <input type="text" class="form-control" id="investmentId" min="1" name="account_name" placeholder="" required>
                       <label for="investmentId" class="form-label">Investment Name</label>
-                      <input type="text" class="form-control" id="investmentId" min="1" name="account_name">
                     </div>
 
-                    <div class="form-group mb-3">
-                      <label for="investmentName" class="form-label">Account Type</label>
-                      <select class="form-control" name="account_type" id="investmentName">
+                    <div class="form-floating mb-3">
+                      <select class="form-control" name="account_type" id="investmentName" required>
+                        <option value="">--select--</option>
                       {% for acc,label in account_type %}
                       <option value="{{acc}}">{{ label }}</option>
                       {% endfor %}
                       </select>
+                      <label for="investmentName" class="form-label">Account Type</label>
                     </div>
+                    
+                    <div class="form-floating mb-3">
+                      <input type="number" step="0.01" class="form-control" id="years" name="years" placeholder="convert months to years" required>
+                      <label class="form-label" for="years">Investment duration (years)</label>
+                    </div>
+
                   </div>
           
                   <div class="col-md-4">
-                    <div class="form-group mb-3">
+                    <div class="form-floating mb-3">
+                      <input type="number" class="form-control" id="principal_amount" name="principal_amount" placeholder="" required>
                       <label class="form-label" for="principal_amount">Principal Amount</label>
-                      <input type="number" class="form-control" id="principal_amount" name="principal_amount">
                     </div>
 
-                    <div class="form-group mb-3">
+                    <div class="form-floating mb-3">
+                      <input type="number" class="form-control" id="investmentDate" name="account_number" placeholder="" required>
                       <label for="investmentDate" class="form-label">Account Number</label>
-                      <input type="number" class="form-control" id="investmentDate" name="account_number">
                     </div>
 
-                    <div class="form-group mb-3">
+                    <div class="form-floating mb-3">
+                      <input type="number" min="1" step="0.01" class="form-control" id="maturityDate" name="interest_percentage" placeholder="" required>
                       <label for="maturityDate" class="form-label">Percentage Interest</label>
-                      <input type="number" min="1" step="0.01" class="form-control" id="maturityDate" name="interest_percentage">
                     </div>
                   </div>
           
                   <div class="col-md-4">
-                    <div class="form-group mb-3">
+                    <div class="form-floating mb-3">
+                      <input type="date" class="form-control" id="investmentAmount" name="interest_start_date" placeholder="" required>
                       <label for="investmentAmount" class="form-label">Investment Start Date</label>
-                      <input type="date" class="form-control" id="investmentAmount" name="interest_start_date">
                     </div>
-                    <div class="form-group mb-3">
+                    <div class="form-floating mb-3">
+                      <input type="date" class="form-control" id="investmentTerm" name="interest_end_date" placeholder="" required>
                       <label for="investmentTerm" class="form-label">Investment End Date</label>
-                      <input type="date" class="form-control" id="investmentTerm" name="interest_end_date">
+                    </div>
+                    <div class="form-floating mb-3">
+                      <input type="number" step="1" min="0" class="form-control" id="componding_frequency" name="componding_frequency" placeholder="" required>
+                      <label for="componding_frequency" class="form-label">Compounding frequency per year</label>
                     </div>
 
                   </div>
               </div>
-              <input type="submit" class="btn btn-primary" value="Submit">
+              <input type="submit" class="btn btn-outline-primary btn-lg" value="create">
             </form>
           </div>
       </div>
@@ -72,5 +111,28 @@
   </div>
 
   <!-- main -->
+   <script>
+    $(document).ready(function(){
+      $('.group').hide();
+      $('#investmentType').change(function(){
+        var investmentType = $(this).val();
+        if(investmentType == 'Treasury Bill'){
+          $('.group').show();
+          
+          //change required attribute to true
+          $('input[name="type_of_tbill"]').attr('required', true);
+
+        }else{
+          $('.group').hide();
+          //change required attribute to false
+          $('input[name="type_of_tbill"]').attr('required', false);
+          //uncheck all radio buttons
+          $('input[name="type_of_tbill"]').prop('checked', false);
+          //clear day count
+          $('input[name="day_count"]').val('');
+        }
+      });
+    });
+   </script>
 {% endblock %}
 

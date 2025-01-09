@@ -1,7 +1,14 @@
 {% extends 'dashboard/base.html' %}
 
-{% block content %}
+{% block title %}
+<title>Investment Detail</title>
+{% endblock %}
 
+{% block header %}
+<h5>Investment Detail</h5>
+{% endblock %}
+
+{% block content %}
 <div class="main main-app p-4 p-lg-4">
     <div class="row g-3 justify-content-center">
        
@@ -9,46 +16,135 @@
           <div class="card card-one">
             <div class="card-body">
                 <div class="row g-5">
-                    <div class="row card-value text-center">
-                        <h2 class="mb-5 mt-5 text-decoration-underline">
-                            Investment Detail
-                        </h2>
-                    </div>
                     <div class="col-md-4">
                         <p class="mb-5 h5">Invoice No.: <strong>{{ investment_detail.invoice_number }}</strong></p>
                         <p class="mb-5 h5">Investment Name: {{ investment_detail.account_name }}</p>
                         <p class="mb-5 h5">Account Number: {{ investment_detail.account_number }}</p>
+                        <p class="mb-5 h5">Category: {{ investment_detail.investment_type }}</p>
                     </div>
                     <div class="col-md-4">
                         <!-- <p class="mb-5 h5">Name of Investment: {{ investment_detail.account_type }}</p> -->
-                        <p class="mb-5 h5">Investment Type: {{ investment_detail.investment_type }}</p>
+                        <p class="mb-5 h5">Type: {{ investment_detail.type_of_tbill }}</p>
                         <p class="mb-5 h5">Interest Percentage: {{ investment_detail.interest_percentage }}%</p>
                         <p class="mb-5 h5">Account Type: {{ investment_detail.account_type }}</p>
+                        <p class="mb-5 h5">Start Date: {{ investment_detail.interest_start_date }}</p>
                     </div>
                     <div class="col-md-4">
                         <p class="mb-5 h5">Maturity Date: {{ investment_detail.interest_end_date }}</p>
-                        <p class="mb-5 h5">Principal: {{ investment_detail.principal_amount }}</p>
-                        <p class="mb-5 h5">Total Interest: {{ investment_detail.interest_amount }}</p>
+                        <p class="mb-5 h5">Principal: {{ investment_detail.principal_amount|floatformat:2 }}</p>
+                        <p class="mb-5 h5">Total Interest: {{ investment_detail.interest_amount|floatformat:2 }}</p>
                         <p class="mb-5 h5">Date of Investment: {{ investment_detail.created_date }}</p>
                         
                     </div>
                 </div>
-                <!-- <input class="btn btn-primary" type="submit" value="update"> -->
+                
+                <!-- Modal for termination -->
+                <div class="modal fade" id="terminateModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modalTitle">
+                                    Terminate Investment
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- info message box -->
+                                <div class="message-info">
+                                    <!-- Messages from response show in here -->
+                                </div>
+
+                                <form class="terminate-form" action="" method="POST">
+                                    {% csrf_token %}
+                                    <input type="number" name="inv_id" value="{{ investment_detail.id }}" hidden>
+                                    <div class="row g-3">
+                                        <div class="form-floating col-md-6">
+                                            <!-- termination date -->
+                                            <input type="date" id="date" name="termination_date" class="form-control">
+                                            <label class="form-label" for="date">Termination date</label>         
+                                        </div>
+                                        <div class="form-floating col-md-6">
+                                            <!-- termination date -->
+                                            <input type="number" id="termination_interest" name="termination_interest" class="form-control" placeholder="">
+                                            <label class="form-label" for="termination_interest">Interest at termination</label>         
+                                        </div>
+                                    </div>
+  
+                                    <button class="btn btn-outline-warning btn-lg mt-4" type="submit" id="confirm-terminate">confirm</button>
+
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 
                 <div class="row g-2 d-flex justify-content-between">
+                    {% if is_manager %}
+                    {% if not investment_detail.status == 'Terminated' %}
                     <div class="col-1">
-                        <a class="btn btn-primary" href="{% url 'investment_update' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">update</a>
+                        <a class="btn btn-outline-warning btn-lg" href="" type="submit" data-bs-toggle="modal" data-bs-target="#terminateModal">Terminate</a>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if is_treasury_user %}
+                    <div class="col-1">
+                        <a class="btn btn-outline-success btn-lg" href="{% url 'investment_update' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">update</a>
                     </div>
                     <div class="col-2">
-                        <a class="btn btn-primary" href="{% url 'rollover_percentage' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Roll Over</a>
+                        <a class="btn btn-outline-primary btn-lg" href="{% url 'rollover_percentage' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Roll Over</a>
                     </div>
                     <div class="col-1 justify-content-end">
-                        <a class="btn btn-danger" href="{% url 'delete_investment' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Delete</a>
+                        <a class="btn btn-outline-danger btn-lg" href="{% url 'delete_investment' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">Delete</a>
                     </div>
+                    {% endif %}
                 </div>
             </div><!-- card-body -->
           </div><!-- card-one -->
     </div>
 </div>
+
+<script>
+    $(document).ready(function(){
+        $('.terminate-form').on('submit', function(event){
+            event.preventDefault(); // Prevent default form submission
+            var form = $(this);
+
+            $.ajax({
+                type: 'POST',
+                url: form.attr('action'),
+                data: form.serialize(),
+                success: function(response){
+                    if (response.status === 'success'){
+                        $('.message-info').text(response.message).css('color', 'green');
+
+                        //render the submit button inactive
+                        $('#confirm-terminate').attr('disabled', true);
+                        
+                        // Hide the modal after 2 seconds
+                        setTimeout(function(){
+                            $('#terminateModal').modal('hide');
+                        }, 3000);
+
+                    } else {
+                        if (response.status === 'error'){
+                            $('.message-info').text(response.message).css('color', 'red');
+                        }
+                    }
+                },
+                error: function(jqXHR){
+                    // Handle error scenario correctly
+                    alert('An error occurred: ' + jqXHR.responseJSON.message);
+                    if (jqXHR.status === 400){
+                        $('.message-info').text('An error occurreddd: ' + jqXHR.responseJSON.message).css('color', 'red');
+                    }else{
+                        $('.message-info').text('An error occurred: ' + jqXHR.responseJSON.message).css('color', 'red');
+                    }
+                }
+            });
+        });
+    });
+</script>
+
 {% endblock %}

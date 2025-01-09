@@ -1,0 +1,310 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Account Mapping</title>
+{% endblock %}
+{% block header %}
+<h5>Account Mapping</h5>
+{% endblock %}
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-xl">
+            <div class="container">
+                <!--  -->
+                <div class="row g-4">
+                    
+                    <div class="col-xl">
+                        <div class="transaction-form border p-3 rounded position-relative">
+                            <span class="transaction-name position-absolute top-0 end-0 translate-middle bg-white fw-bold">
+                                {{ act }}
+                            </span>
+                            <form action="{% url 'map_account' tenant_id=request.tenant.id %}" method="POST" id="account_mapping">
+                                {% csrf_token %}
+                                <div class="form-floating mb-3 d-flex justify-content-between">
+                            
+                                    <div class="form-floating">
+                                        <select name="event" id="event" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for action,act in actions %}
+                                            <option value="{{ act }}">{{ act }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="event">Events</label>
+                                    </div>
+                                    <div class="form-floating">
+                                        <select name="scheme_id" id="scheme_id" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for scheme in schemes %}
+                                            <option value="{{ scheme.id }}">{{ scheme }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="scheme_id">Scheme</label>
+                                    </div>
+
+    
+                                
+                                
+                                    <div class="form-floating d-block mb-2">
+                                        <select name="debit_id" id="debitAccount" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for acc in accounts %}
+                                            <option value="{{ acc.account_code }}">{{ acc }}</option>
+                                            {% endfor %}
+                                            </select>
+                                            <label for="debitAccount">Debit Account</label>
+                                    </div>
+
+
+                                    <div class="form-floating d-block">
+                                        <select name="credit_id" id="creditAccount" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for acc in accounts %}
+                                            <option value="{{ acc.account_code }}">{{ acc }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="creditAccount" class="form-label">Credit Account</label>
+                                    </div>
+                                </div>
+                                <!-- submit button -->
+                                <div class="d-grid gap
+                                -2">
+                                    <button class="btn btn-outline-primary btn-lg save_mapping" type="submit">save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mt-5">
+                    <!-- table for previous account mappings -->
+                    <h5 class="mt-2 text-center">Existing Account Mappings</h5>
+                    <div class="table-responsive overflow-auto" style="max-height: 400px;">
+                        <table class="table table-bordered table-striped">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Event Name</th>
+                                    <th>Scheme</th>
+                                    <th>Debit Account</th>
+                                    <th>Credit Account</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accounts_table">
+                                {% for mapping in mappings %}
+                                <tr>
+                                    <td>{{ mapping.name }}</td>
+                                    <td>{{ mapping.scheme }}</td>
+                                    <td>{{ mapping.debit_acc }}</td>
+                                    <td>{{ mapping.credit_acc }}</td>
+                                    <td class="text-center text-nowrap">
+                                        <!-- Delete button -->
+                                        <button class="btn btn-warning btn-sm delete-account">
+                                            <input id="mapping_id" type="text" value="{{ mapping.id }}" hidden>
+
+                                            <input id="scheme_id" type="text" value="{{ mapping.scheme.id }}" hidden>
+
+                                            <input id="mappingName" type="text" value="{{ mapping.name }}" hidden>
+                                            <i class="ri-delete-bin-2-line"></i>
+                                        </button>
+                                        <!-- Update button -->
+                                        <button class="btn btn-secondary btn-sm update-mapping" data-bs-toggle="modal" data-bs-target="#updateMappingModal" id="updateButton">
+                                            <!-- Hidden inputs for update form -->
+                                            <input id="mapping_id" type="text" value="{{ mapping.id }}" hidden>
+                                            <input id="scheme_id" type="text" value="{{ mapping.scheme.id }}" hidden>
+                                            <input id="mapping_name" type="text" value="{{ mapping.name }}" hidden>
+                                            <input id="debit_id" type="text" value="{{ mapping.debit_acc.id }}" hidden>
+                                            <input id="credit_id" type="text" value="{{ mapping.credit_acc.id }}" hidden>
+                                            
+                                            <i class="ri-edit-line"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No accounts available.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+
+                    <!-- Update Modal -->
+
+                    <div class="modal fade" id="updateMappingModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="modalTitle">Update Mapping</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+
+                                    <form action="" method="POST" id="updateMappingForm">
+                                        {%csrf_token%}            
+                                        <div class="form-floating mb-2">
+                                            <select name="name" id="update_event" class="form-select">
+                                                <option value="">-select-</option>
+                                                {% for action,act in actions %}
+                                                <option value="{{ act }}">{{ act }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <label for="update_event">Events</label>
+                                        </div>
+                                        <div class="form-floating mb-2">
+                                            <select name="scheme" id="update_scheme_id" class="form-select">
+                                                <option value="">-select-</option>
+                                                {% for scheme in schemes %}
+                                                <option value="{{ scheme.id }}">{{ scheme }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <label for="update_scheme_id">Scheme</label>
+                                        </div>
+
+                                        <div class="form-floating d-block mb-2">
+                                            <select name="debit_acc" id="update_debitAccount" class="form-select">
+                                                <option value="">-select-</option>
+                                                {% for acc in accounts %}
+                                                <option value="{{ acc.id }}">{{ acc }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <label for="update_debitAccount">Debit Account</label>
+                                                
+                                        </div>
+
+                                        <div class="form-floating d-block  mb-2">
+                                            <select name="credit_acc" id="update_creditAccount" class="form-select">
+                                                <option value="">-select-</option>
+                                                {% for acc in accounts %}
+                                                <option value="{{ acc.id }}">{{ acc }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <label for="update_creditAccount" class="form-label">Credit Account</label>
+                                        </div>
+
+                                        <!-- Hidden inputs -->
+                                        <input name="mapping_id" id="update_mapping_id" type="text" value="" hidden>
+                                        <!--  -->
+
+                                        <div class="d-grid gap-2">
+                                            <button type="submit" class="btn btn-primary">Update</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>                            
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    $(document).ready(function(){
+        // Save account mapping
+        $('#account_mapping').on('submit',function(e) {
+            e.preventDefault();
+            var form = $(this);
+
+            $.ajax({
+                url: form.attr('action'),
+                type: form.attr('method'),
+                data: form.serialize(),
+                success: function(response) {
+                    console.log(response);
+                    if (response.status === 'success'){
+                        window.location.reload();
+                    }else{
+                        alert(response.message)
+                    }  
+                },
+                error: function(error) {
+                    alert('An error occurred. Please try again later.');
+                }
+            });
+        });
+
+        // Delete account mapping
+        $('.delete-account').on('click', function(){
+            var mapping_id = $(this).find('#mapping_id').val();
+            var scheme_id = $(this).find('#scheme_id').val();
+            var mapping_name = $(this).find('#mappingName').val();
+            var tenant = '{{ request.tenant.id }}';
+            var confirmDelete = confirm(`Are you sure you want to delete ${mapping_name} mapping?`);
+            if (!confirmDelete){
+                return;
+            }
+            $.ajax({
+                url: `/${tenant}/accounts/delete-mapping/${mapping_id}/`,
+                type: 'POST',
+                data: {
+                    'mapping_id': mapping_id,
+                    'scheme_id': scheme_id,
+                    'mapping_name': mapping_name,
+                    'tenant': tenant,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    window.location.reload();
+                },
+                error: function(error){
+                    alert('An error occurred. Please try again later.');
+                }
+            });
+        });
+
+        // Preload update modal with data
+        $('.update-mapping').on('click', function(){
+
+            var row = $(this);
+            //get the values of the row
+            var eventName = row.find('#mapping_name').val();
+            var schemeId = row.find('#scheme_id').val();
+            var debitId = row.find('#debit_id').val();
+            var creditId = row.find('#credit_id').val();
+            var mappingId = row.find('#mapping_id').val();
+            console.log(eventName, schemeId, debitId, creditId, mappingId);
+            //set the values to the modal
+            $('#update_event').val(eventName);
+            $('#update_scheme_id').val(schemeId);
+            $('#update_debitAccount').val(debitId);
+            $('#update_creditAccount').val(creditId);
+            $('#update_mapping_id').val(mappingId);
+            //show the modal
+            $('#updateMappingModal').modal('show');
+
+        });
+
+        // Update account mapping
+        $('#updateMappingForm').on('submit', function(e){
+            e.preventDefault();
+            var form = $(this);
+            var mapping_id = $('#update_mapping_id').val();
+            var tenantId = '{{ request.tenant.id }}';
+
+            $.ajax({
+                url: `/${tenantId}/accounts/update-mapping/${mapping_id}/`,
+                type: form.attr('method'),
+                headers:{
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                data: form.serialize(),
+
+                success: function(response){
+                    if (response.status === 'success'){
+                        window.location.reload();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    alert('An error occurred. Please try again later.');
+                }
+            });
+        });
+    })
+
+</script>
+{% endblock %}

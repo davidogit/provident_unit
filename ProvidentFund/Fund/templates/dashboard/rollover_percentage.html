@@ -1,5 +1,13 @@
 {% extends 'dashboard/base.html' %}
 
+{% block title %}
+<title>Rollover Detail</title>
+{% endblock %}
+
+{% block header %}
+<h5>Rollover Detail</h5>
+{% endblock %}
+
 {% block content %}
 
 <div class="main main-app p-4 p-lg-4">
@@ -9,78 +17,106 @@
           <div class="card card-one">
             <div class="card-body">
                 <div class="row g-5">
-                    <div class="row card-value text-center">
-                        <h2 class="mb-5 mt-5 text-decoration-underline">
-                            Rollover Detail
-                        </h2>
-                    </div>
-
-                    
                     <form method="POST" id="rollover-form">
                         {% csrf_token %}
                         <div class="row g-5">
+                            <div class="info text-center">
+                                <!-- Information to be displayed to user -->
+                            </div>
+                            <div class="btn-group mb-1" role="group" aria-label="Basic radio toggle button group">
+                                <input type="radio" class="form-control btn-check" name="rollover_type" id="full" autocomplete="off" value="full" checked>
+                                <label class="btn btn-outline-secondary" for="full">Full</label>
+
+                                <input type="radio" class="form-control btn-check" name="rollover_type" id="partial" autocomplete="off" value="principal">
+                                <label class="btn btn-outline-primary" for="partial">Principal</label>
+
+                                <input type="radio" class="form-control btn-check" name="rollover_type" id="interest" autocomplete="off" value="interest">
+                                <label class="btn btn-outline-success" for="interest">Interest</label>
+                            </div>
                             <div class="col-md-4">
-        
-                                <div class="form-group mb-3">
+                                <div class="form-floating mb-3">
+                                    <input class="form-control" id="principal" name="principal" type="number" step="0.01" placeholder="{{ rollover.interest_amount }}" value="{{ rollover.rollover_principal }}" readonly>
                                     <label for="principal" class="form-label">Rollover Principal: </label>
-                                    <input class="form-control" id="principal" name="principal" type="number" step="0.01" placeholder="{{ rollover.interest_amount }}" value="{{ rollover.interest_amount }}" disabled>
                                 </div>
-                                <div class="form-group mb-3">
+                                <div class="form-floating mb-3">
+                                    <input class="form-control" id="rate" name="rate" type="number" step="0.01" placeholder="" value="{{ rollover.interest_percentage }}" required>
                                     <label for="rate" class="form-label">New Rate (%): </label>
-                                    <input class="form-control" id="rate" name="rate" type="number" step="0.01" placeholder="{{ rollover.interest_percentage }}" required>
                                 </div>
-                                <div class="form-group mb-3">
+                                <div class="form-floating mb-3">
+                                    <input class="form-control" id="scheme" name="scheme" type="text" placeholder="{{ rollover.investment_scheme.name }}" value="{{ rollover.investment_scheme.name }}" readonly>
                                     <label for="scheme" class="form-label">Scheme: </label>
-                                    <input class="form-control" id="scheme" name="scheme" type="text" placeholder="{{ rollover.investment_scheme.name }}" value="{{ rollover.investment_scheme.name }}" disabled>
-                                    <!-- <input type="number" name="scheme_id" hidden value="{{ rollover.investment_scheme.id }}"> -->
+
                                 </div>
         
                             </div>
 
                             <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label for="start_date" class="form-label">Start Date: </label>
+                                <div class="form-floating mb-3">
                                     <input class="form-control" id="start_date" name="start_date" type="date" required>
+                                    <label for="start_date" class="form-label">Start Date: </label>
                                 </div>
-                                <div class="form-group mb-3">
-                                    <label for="maturity_date" class="form-label">Maturity Date: </label>
+                                <div class="form-floating mb-3">
                                     <input class="form-control" id="maturity_date" name="maturity_date" type="date" required>
+                                    <label for="maturity_date" class="form-label">Maturity Date: </label>
                                 </div>
-                                <div class="form-group mb-3">
-                                    <label for="inv_type" class="form-label">Investment Type: </label>
+                                <div class="form-floating mb-3">
                                     <input class="form-control" id="inv_type" name="inv_type" type="text" placeholder="{{ rollover.investment_type }}" value="{{ rollover.investment_type }}" readonly>
+                                    <label for="inv_type" class="form-label">Investment Type: </label>
                                 </div>
                             </div>
                     
                             <div class="col-md-4">
-                                <div class="form-group mb-3">
+                                <div class="form-floating mb-3">
+                                    <input class="form-control" id="inv_name" name="inv_name" type="text" placeholder="{{ rollover.account_name }}" value="{{ rollover.account_name }}" readonly>
                                     <label for="maturity_date" class="form-label"> Name: </label>
-                                    <input class="form-control" id="inv_name" name="inv_name" type="text" placeholder="{{ rollover.account_name }}" value="{{ rollover.account_name }}" disabled>
                                 </div>
-                                <div class="form-group mb-3">
+                                <div class="form-floating mb-3">
+                                    <input class="form-control" id="account_type" name="account_type" type="text" placeholder="{{ rollover.account_type }}" value="{{ rollover.account_type }}" readonly>
                                     <label for="account_type" class="form-label"> Account Type: </label>
-                                    <input class="form-control" id="account_type" name="account_type" type="text" placeholder="{{ rollover.account_type }}" value="{{ rollover.account_type }}" disabled>
                                 </div>
-                                <div class="form-group mb-3">
+                                <div class="form-floating mb-3">
+                                    <input class="form-control" id="account_number" readonly name="account_number" type="number" value="{{rollover.account_number}}" placeholder="{{ rollover.account_number }}" readonly>
                                     <label for="account_number" class="form-label"> Account Number: </label>
-                                    <input class="form-control" id="account_number" readonly name="account_number" type="number" value="{{rollover.account_number}}" placeholder="{{ rollover.account_number }}">
                                 </div>
                             </div>
                 
                         </div>
-                        <input type="submit" class="btn btn-primary" value="Submit">
+                        <input type="submit" class="btn btn-outline-primary btn-lg" value="Submit">
                     </form>                    
                 </div>
             </div><!-- card-body -->
           </div><!-- card-one -->
     </div>
 </div>
+<input type="number" id="principalAmount" value="{{ rollover.principal_amount }}" hidden disabled>
+<input type="number" id="interestAmount" value="{{ rollover.interest_amount }}" hidden disabled>
+<input type="number" id="rolloverAmount" value="{{ rollover.rollover_principal }}" hidden disabled>
 
 <script>
+    //fetch the principal amount based on the rollover type
     $(document).ready(function(){
+        //get the principal amount and interest amount
+        var principal = $('#principalAmount').val();
+        var interest = $('#interestAmount').val();
+        var rollover = $('#rolloverAmount').val();
+
+        $('input[type=radio][name=rollover_type]').change(function(){
+            if(this.value === 'full'){
+                $('#principal').val(rollover);
+            }else if(this.value === 'principal'){
+                $('#principal').val(principal);
+            }else if(this.value === 'interest'){
+                $('#principal').val(interest);
+            }
+        });
+
+
+        //rollover form submission
         $('#rollover-form').submit(function(e){
             e.preventDefault();
             var form = $(this);
+            var principal = form.find('#principal').val();
+            console.log(principal);
             var url = form.attr('action');
             var data = form.serialize();
             $.ajax({
@@ -93,15 +129,14 @@
                         alert('Rollover Successful');
                         window.location.href = response.redirect_url;
                     }else{
-                        message = response.message;
-
-                        alert('Roll over failed '+ message);
+                        $('.info').text(response.message).css('color', 'red');
 
                     }
                 },
-                error: function(error){
-                    console.log(error);
-                    alert('Rollover Failed');
+                error: function(jqXHR,error){
+                    response = jqXHR.responseJSON;
+                    message = response.message;
+                    alert('An error occured. Please try again'+ message);
                 }
             });
         });

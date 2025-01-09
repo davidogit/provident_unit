@@ -14,6 +14,8 @@
   <meta name="description" content="">
   <meta name="author" content="Themepixels">
 
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
   <!-- Favicon -->
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
 
@@ -32,10 +34,11 @@
     <div class="card-header">
       <!-- <a href="../index.html" class="header-logo mb-4">dashbyte</a> -->
       <h3 class="card-title text-center">Log In</h3>
-      <p class="card-text">Welcome back! Please login to continue.</p>
+      <p class="card-text text-center">Welcome back! Please login to continue.</p>
+      <p class="message-info text-danger text-center"></p>
     </div><!-- card-header -->
 
-    <form action="" method="POST">
+    <form class="login-form" action="" method="POST">
       {% csrf_token %}
       <div class="card-body">
         <div class="mb-4">
@@ -48,7 +51,7 @@
           <input type="password" class="form-control" placeholder="Enter your password" name="password">
         </div>
         <!-- <button>OTP</button> -->
-        <input type="submit" class="btn btn-primary btn-sign" value="Login">
+        <input id="submit" type="submit" class="btn btn-primary btn-sign" value="Login">
 
         <div class="divider">Dont have an account?</div>
 
@@ -75,7 +78,44 @@
     var skinMode = localStorage.getItem('skin-mode');
     if (skinMode) {
       $('html').attr('data-skin', 'dark');
-    }
+    };
+
+    $(document).ready(function(){
+      // Get CSRF token from the meta tag
+      var csrfToken = $('meta[name="csrf-token"]').attr('content');
+
+      $('.login-form').on('submit', function(event){
+        event.preventDefault();
+        var form = $(this);
+
+        // Serialize the form data, including the CSRF token
+        var formData = form.serialize();
+        
+        // Add CSRF token manually to the form data
+        formData += '&csrfmiddlewaretoken=' + encodeURIComponent(csrfToken);
+
+        $.ajax({
+          type: 'POST',
+          url: form.attr('action'),
+          data: formData,  // Send the serialized form data along with CSRF token
+          success: function(response){
+            if (response.status === 'error'){
+              $('.message-info').text(response.message); // Display error message
+            } else {
+              window.location.href = response.redirect_url; // Redirect to the dashboard
+            }
+          },
+          error: function(xhr, status, error){
+            // Handle AJAX error
+            $('.message-info').text('An error occurred. Please try again.');
+          }
+        });
+      });
+    });
+
+
+
+
   </script>
 </body>
 </html>

@@ -1,77 +1,87 @@
 {% extends 'dashboard/base.html' %}
+{% block title %}
+<title>Update Investment Detail</title>
+{% endblock %}
+{% block header %}
+<h5>Update Investment Detail</h5>
+{% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
   <div class="row row-cols-auto g-4 g-xxl-5">
       <div class="col-xl">
           <div class="container">
-            <h2 class="mb-5">Update Investment Detail</h2>
-
             <form method="POST" id="inv_update_form">
               {% csrf_token %}
 
               <div class="row g-5">
                 <div class="col-md-4">
                   <!-- Investment Type -->
-                  <div class="form-group mb-3">
+                  <div class="form-floating">
+                    <input id="invoice_number" class="form-control" type="text" value="{{ invoice_number }}" placeholder="" disabled>
                     <label for="invoice_number" class="form-label">Invoice No. </label><br>
-                    <strong id="invoice_number">{{ invoice_number }}</strong>
                   </div>
-                  <div class="form-group mb-3">
-                    <label for="{{ form.investment_type.id_for_label }}" class="form-label">Investment Type</label>
+
+                  <div class="form-floating mb-3">
                     {{ form.investment_type }}
+                    <label for="{{ form.investment_type.id_for_label }}" class="form-label">Investment Type</label>
                   </div>
 
                   <!-- Account Name -->
-                  <div class="form-group mb-3">
-                    <label for="{{ form.account_name.id_for_label }}" class="form-label">Account Name</label>
+                  <div class="form-floating mb-3">
                     {{ form.account_name }}
+                    <label for="{{ form.account_name.id_for_label }}" class="form-label">Account Name</label>
                   </div>
 
                   <!-- Account Type -->
-                  <div class="form-group mb-3">
-                    <label for="{{ form.account_type.id_for_label }}" class="form-label">Account Type</label>
+                  <div class="form-floating mb-3">
                     {{ form.account_type }}
+                    <label for="{{ form.account_type.id_for_label }}" class="form-label">Account Type</label>
                   </div>
                 </div>
                 
                 <div class="col-md-4">
+                  <!-- Type -->
+                  <div class="form-floating mb-3">
+                    {{ form.type_of_tbill }}
+                    <label for="{{ form.account_type.id_for_label }}" class="form-label">Investment Type</label>
+                  </div>
                   <!-- Principal Amount -->
-                  <div class="form-group mb-3">
-                    <label for="{{ form.principal_amount.id_for_label }}" class="form-label">Principal Amount</label>
+                  <div class="form-floating mb-3">
                     {{ form.principal_amount }}
+                    <label for="{{ form.principal_amount.id_for_label }}" class="form-label">Principal Amount</label>
                   </div>
 
                   <!-- Account Number -->
-                  <div class="form-group mb-3">
-                    <label for="{{ form.account_number.id_for_label }}" class="form-label">Account Number</label>
+                  <div class="form-floating mb-3">
                     {{ form.account_number }}
+                    <label for="{{ form.account_number.id_for_label }}" class="form-label">Account Number</label>
                   </div>
 
                   <!-- Percentage Interest -->
-                  <div class="form-group mb-3">
-                    <label for="{{ form.interest_percentage.id_for_label }}" class="form-label">Percentage Interest</label>
+                  <div class="form-floating mb-3">
                     {{ form.interest_percentage }}
+                    <label for="{{ form.interest_percentage.id_for_label }}" class="form-label">Percentage Interest</label>
                   </div>
                 </div>
                 
                 <div class="col-md-4">
                   <!-- Investment Start Date -->
-                  <div class="form-group mb-3">
-                    <label for="{{ form.interest_start_date.id_for_label }}" class="form-label">Investment Start Date</label>
+                  <div class="form-floating mb-3">
                     {{ form.interest_start_date }}
+                    <label for="{{ form.interest_start_date.id_for_label }}" class="form-label">Investment Start Date</label>
                   </div>
 
                   <!-- Investment End Date -->
-                  <div class="form-group mb-3">
-                    <label for="{{ form.interest_end_date.id_for_label }}" class="form-label">Investment End Date</label>
+                  <div class="form-floating mb-3">
                     {{ form.interest_end_date }}
+                    <label for="{{ form.interest_end_date.id_for_label }}" class="form-label">Investment End Date</label>
                   </div>
                 </div>
               </div>
 
               <!-- Submit Button -->
-              <input type="submit" class="btn btn-primary" value="Save changes">
+              <button type="submit" class="btn btn-outline-primary btn-lg">Save changes</button>
             </form>
           </div>
       </div>
@@ -86,8 +96,9 @@
       var data = form.serialize();
 
       $.ajax({
-        type: 'Post',
+        type: 'POST',
         url: url,
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
         data: data,
 
         success: function(response){
@@ -97,14 +108,12 @@
             if (response.redirect_url){
               window.location.href=response.redirect_url;
             }
-           
+          }else{
+            alert(response.message);
           }
-            
-          
         },
         error: function(jqXHR){
           var response = jqXHR.responseJSON;
-
           if(response && response.message){
             var errorMessage = response.message;
             alert(errorMessage);

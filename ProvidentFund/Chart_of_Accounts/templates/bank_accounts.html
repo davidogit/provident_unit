@@ -1,0 +1,314 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Bank Accounts</title>
+{% endblock %}
+{% block header %}
+<h5>Bank Accounts</h5>
+{% endblock %}
+
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-xl">
+            <div class="container">
+                <h2 class="mb-1 text-center"></h2>
+                <form method="POST" id="bank_form">
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        <!-- Left Column -->
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="bank_name" name="bank_name"  placeholder="" required>
+                                <label for="bank_name">Bank Name</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="branch" name="branch"  placeholder="" required>
+                                <label for="branch">Branch</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="account_number" name="account_number" placeholder="" required>
+                                <label for="account_number" class="form-label">Account Number</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="account_holder_name" name="account_holder_name"  placeholder="" required>
+                                <label for="account_holder_name">Account Holder Name</label>
+                            </div>
+                        </div>
+                        <!-- Right Column -->
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <select class="form-select" name="parent_Account" id="parentAccount">
+                                    <option value="">-select-</option>
+                                    {% for acc in parent_accounts %}
+                                    <option value="{{ acc.id }}">{{ acc }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="parentAccount" class="form-label">Bank Account Parent</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <select class="form-select" name="account_type" id="accountType" required>
+                                    <option value="">-select-</option>
+                                    {% for acc, label in account_types %}
+                                    <option value="{{ acc }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="accountType" class="form-label">Bank Account Type</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <select class="form-select" name="currency" id="currency" required>
+                                    <option value="">-select-</option>
+                                    {% for acc, label in currency %}
+                                    <option value="{{ acc }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="currency">Currency</label>
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <button type="submit" class="btn btn-outline-primary btn-lg w-100">Save</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Table to display existing Chart of Accounts -->
+                <h5 class="mt-3 text-center">Existing Bank Accounts</h5>
+                <div class="table-responsive overflow-auto" style="max-height: 400px;">
+                    <table class="table table-bordered table-striped">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Bank Name</th>
+                                <th>Account Number</th>
+                                <th>Account Type</th>
+                                <th>Parent Account</th>
+                                <!-- <th>Balance</th> -->
+                                <th>Curremcy</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts_table">
+                            {% for account in bank_accounts %}
+                            <tr>
+                                <td>{{ account.bank_name }}</td>
+                                <td>{{ account.account_number }}</td>
+                                <td>{{ account.account_type }}</td>
+                                <td>{{ account.parent_Account.name }}</td>
+                                <!-- <td>{{ account.current_balance }}</td> -->
+                                <td>{{ account.currency }}</td>
+                                <td class="text-center text-nowrap">
+                                    <button class="btn btn-warning btn-sm delete-account">
+                                        <input class="account-id" type="text" value="{{ account.id }}" hidden>
+                                        <input class="account-name" type="text" value="{{ account.bank_name }}" hidden>
+                                        <i class="ri-delete-bin-2-line"></i>
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm update-account" data-bs-toggle="modal" data-bs-target="#updateAccountModal">
+                                        <input class="account-id" type="text" value="{{ account.id }}" hidden>
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">No accounts available.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Update Modal -->
+                <div class="modal fade" id="updateAccountModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modalTitle">Update Account</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form method="POST" id="update_bank_account_form">
+                                    {% csrf_token %}
+                                    <div class="row g-4">
+                                        <!-- Left Column -->
+                                        <div class="col-md-6">
+                                            <div class="form-floating mb-3">
+                                                <input type="text" class="form-control" id="update_bank_name" name="bank_name"  placeholder="" required>
+                                                <label for="update_bank_name">Bank Name</label>
+
+                                                <!-- Hidden field for bank id -->
+                                                 <input type="number" id="update_bank_id" name="bank_id" value="" hidden>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <input type="text" class="form-control" id="update_branch" name="branch"  placeholder="" required>
+                                                <label for="update_branch">Branch</label>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <input type="text" class="form-control" id="update_account_number" name="account_number" placeholder="" required>
+                                                <label for="update_account_number" class="form-label">Account Number</label>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <input type="text" class="form-control" id="update_account_holder_name" name="account_holder_name"  placeholder="" required>
+                                                <label for="update_account_holder_name">Account Holder Name</label>
+                                            </div>
+                                        </div>
+                                        <!-- Right Column -->
+                                        <div class="col-md-6">
+                                            <div class="form-floating mb-3">
+                                                <select class="form-select" name="parent_Account" id="update_parentAccount">
+                                                    <option value="">-select-</option>
+                                                    {% for acc in parent_accounts %}
+                                                    <option value="{{ acc.id }}">{{ acc }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <label for="update_parentAccount" class="form-label">Bank Account Parent</label>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <select class="form-select" name="account_type" id="update_accountType" required>
+                                                    <option value="">-select-</option>
+                                                    {% for acc, label in account_types %}
+                                                    <option value="{{ acc }}">{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <label for="update_accountType" class="form-label">Bank Account Type</label>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <select class="form-select" name="currency" id="update_currency" required>
+                                                    <option value="">-select-</option>
+                                                    {% for acc, label in currency %}
+                                                    <option value="{{ acc }}">{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <label for="update_currency">Currency</label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <button type="submit" class="btn btn-outline-primary btn-lg w-100">Save</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function (){
+        //Add bank account
+        $('#bank_form').on('submit', function(e){
+            e.preventDefault();
+            var form = $(this);
+
+            $.ajax({
+                type: form.attr('method'),
+                url: form.attr('action'),
+                data: form.serialize(),
+
+                success: function(response){
+                    if (response.status === 'success'){
+                        alert('ALERT:' + response.message); 
+                        window.location.reload();
+                    }else{
+                        alert('An error occured: ' + response.message);
+                    }
+                },
+                error: function(response){
+                    alert('An error occured');
+                }
+            });
+        });
+
+        // Delete Bank Account
+        $(".delete-account").on('click', function(){
+            var bank_id = $(this).find('.account-id').val();
+            var bank_name = $(this).find('.account-name').val();
+            var tenantID = '{{ request.tenant.id }}';
+            confirmDelete = confirm('Are you sure you want to delete ' + bank_name + ' account?');
+
+            if (confirmDelete){
+                $.ajax({
+                    url: `/${tenantID}/accounts/delete-bank-account/${bank_id}/`,
+                    type: 'POST',
+                    data: {
+                        action: 'delete',
+                        'bank_id': bank_id,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response){
+                        console.log(response);
+                        alert('Bank Account Deleted');
+                        location.reload();
+                    },
+                    error: function(response){
+                        alert('An error occured');
+                    }
+                });
+            }
+        });
+
+
+        //Fetch bank account to be updated
+        $(".update-account").on('click', function(){
+            var bank_id = $(this).find('.account-id').val();
+            var tenantID = '{{ request.tenant.id }}';
+
+            $.ajax({
+                url: `/${tenantID}/accounts/fetch-bank-account/${bank_id}/`,
+                type: 'GET',
+                data: {
+                    'bank_id': bank_id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    console.log(response);
+                    $('#update_bank_name').val(response.bank.bank_name);
+                    $('#update_branch').val(response.bank.branch);
+                    $('#update_account_number').val(response.bank.account_number);
+                    $('#update_account_holder_name').val(response.bank.account_holder_name);
+                    $('#update_parentAccount').val(response.bank.parent);
+                    $('#update_accountType').val(response.bank.account_type);
+                    $('#update_currency').val(response.bank.currency);
+                    $('#update_bank_id').val(response.bank.id);
+                },
+                error: function(response){
+                    alert('An error occured');
+                }
+            });
+        });
+
+
+
+        // Update Bank Account
+        $("#update_bank_account_form").on('submit', function(e){
+            e.preventDefault();
+            var form = $(this);
+            var tenantId = '{{ request.tenant.id }}';
+            var bank_id = $(this).find('#update_bank_id').val();
+
+            $.ajax({
+                url: `/${tenantId}/accounts/update-bank-account/${bank_id}/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                data: form.serialize(),
+
+                success: function(response){
+                    if (response.status === 'success'){
+                        alert('Bank Account Updated');
+                        location.reload();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(response){
+                    alert('An error occured');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

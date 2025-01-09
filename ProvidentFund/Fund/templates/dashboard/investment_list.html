@@ -1,7 +1,14 @@
 {% extends 'dashboard/base.html' %}
 
+{% block title %}
+<title>Investments</title>
+{% endblock %}
+
+{% block header %}
+<h5>Investments</h5>
+{% endblock %}
+
 {% block content %}
-<div class="main main-app p-3 p-lg-4">
 {% block css %}
 <style>
   .nav-tabs {
@@ -64,7 +71,7 @@
   {% endblock %}
 
   
-
+<div class="main main-app p-3 p-lg-4">
     <div class="row g-3 justify-content-center">
        
         <div class="col-md-12 col-xl-10">
@@ -102,10 +109,10 @@
 
 
 
-<!---Tabs for investments-->
+  <!---Tabs for investments-->
 
 
-<div class="container mt-5">
+  <div class="container mt-5">
   <!-- Nav tabs -->
   <ul class="nav nav-tabs d-flex justify-content-between" role="tablist">
       <li class="nav-item flex-fill text-center">
@@ -138,40 +145,41 @@
                     </tr> -->
                     
                     <tr>
-                      <th></th>
-                      <th>Invoice No.</th>
-                      <th>Investment Name</th>
-                      <th>Investment Type</th>
-                      <th>Account Type</th>
-                      <th>Account Number</th>
-                      <th>Principal Amount</th>
-                      <th>Percentage Interest (%)</th>
-                      <th>Accumulated Interest</th>
-                      <th>Investment start Date</th>
-                      <th>Maturity Date</th>
-                      <th>Tenure</th>
-                      <th>Days Left</th>
-                      <th>Status</th>
-                      <th>Date Created</th>
-                      <th>Last Updated</th>
-                      <th>Roll Over</th>
-                      <!-- <th>Roll Over Interest Percentage (%)</th> -->
-                      <!-- <th>Roll Over Accumulated Amount</th> -->
-                      <!-- <th>Rate</th> -->
+                      <th class="text-center"></th>
+                      <th class="text-center">Invoice No.</th>
+                      <th class="text-center">Investment Name</th>
+                      <th class="text-center">Category</th>
+                      <th class="text-center">Type</th>
+                      <th class="text-center">Account Type</th>
+                      <th class="text-center">Account Number</th>
+                      <th class="text-center">Principal Amount</th>
+                      <th class="text-center">Percentage Interest (%)</th>
+                      <th class="text-center">Accumulated Interest</th>
+                      <th class="text-center">Closing Balance</th>
+                      <th class="text-center">Investment start Date</th>
+                      <th class="text-center">Maturity Date</th>
+                      <th class="text-center">Tenure</th>
+                      <th class="text-center">Days Left</th>
+                      <th class="text-center">Status</th>
+                      <th class="text-center">Date Created</th>
+                      <th class="text-center">Last Updated</th>
+                      <th class="text-center">Roll Over</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {% for investment in inv_type_t_bill %}
+                    {% for investment in t_bill_page %}
                     <tr>
-                      <td>{{ forloop.counter }}</td>
-                      <td>{{ investment.invoice_number }}</td>
-                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
+                      <td>{{ forloop.counter0|add:t_bill_page.start_index|default:forloop.counter }}</td>
+                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
+                      <td>{{ investment.account_name }}</td>
                       <td>{{ investment.investment_type }}</td>
+                      <td>{{ investment.type_of_tbill }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
-                      <td>{{ investment.principal_amount }}</td>
+                      <td>{{ investment.principal_amount|floatformat:2 }}</td>
                       <td>{{ investment.interest_percentage }}</td>
-                      <td>{{ investment.interest_amount }}</td>
+                      <td>{{ investment.interest_amount|floatformat:2 }}</td>
+                      <td>{{ investment.closing_amount|floatformat:2 }}</td>
                       <td>{{ investment.interest_start_date }}</td>
                       <td>{{ investment.interest_end_date }}</td>
                       <td>{{ investment.tenure }} days</td>
@@ -206,6 +214,7 @@
           <!-- PAGINATION -->
           
           <nav aria-label="Page navigation">
+            {% if is_paginated %}
             <ul class="pagination justify-content-center">
               {% if t_bill_page.has_previous %}
               <li class="page-item">
@@ -241,6 +250,7 @@
               </li>
               {% endif %}
             </ul>
+            {% endif %}
           </nav>
       
 
@@ -262,40 +272,37 @@
                     </tr> -->
                     
                     <tr>
-                      <th></th>
-                      <th>Invoice No.</th>
-                      <th>Investment Name</th>
-                      <th>Investment Type</th>
-                      <th>Account Type</th>
-                      <th>Account Number</th>
-                      <th>Principal Amount</th>
-                      <th>Percentage Interest (%)</th>
-                      <th>Accumulated Interest</th>
-                      <th>Investment start Date</th>
-                      <th>Maturity Date</th>
-                      <th>Tenure</th>
-                      <th>Days Left</th>
-                      <th>Status</th>
-                      <th>Date Created</th>
-                      <th>Last Updated</th>
-                      <th>Roll Over</th>
-                      <!-- <th>Roll Over Interest Percentage (%)</th>
-                      <th>Roll Over Accumulated Amount</th> -->
-                      <!-- <th>Rate</th> -->
+                      <th class="text-center"></th>
+                      <th class="text-center">Invoice No.</th>
+                      <th class="text-center">Investment Name</th>
+                      <th class="text-center">Investment Type</th>
+                      <th class="text-center">Account Type</th>
+                      <th class="text-center">Account Number</th>
+                      <th class="text-center">Principal Amount</th>
+                      <th class="text-center">Percentage Interest (%)</th>
+                      <th class="text-center">Accumulated Interest</th>
+                      <th class="text-center">Investment start Date</th>
+                      <th class="text-center">Maturity Date</th>
+                      <th class="text-center">Tenure</th>
+                      <th class="text-center">Days Left</th>
+                      <th class="text-center">Status</th>
+                      <th class="text-center">Date Created</th>
+                      <th class="text-center">Last Updated</th>
+                      <th class="text-center">Roll Over</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {% for investment in inv_type_f_dep %}
+                    {% for investment in f_deposit_page %}
                     <tr>
-                      <td>{{ forloop.counter }}</td>
-                      <td>{{ investment.invoice_number }}</td>
-                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
+                      <td>{{ forloop.counter0|add:f_deposit_page.start_index|default:forloop.counter }}</td>
+                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
+                      <td>{{ investment.account_name }}</td>
                       <td>{{ investment.investment_type }}</td>
                       <td>{{ investment.account_type }}</td>
                       <td>{{ investment.account_number }}</td>
-                      <td>{{ investment.principal_amount }}</td>
+                      <td>{{ investment.principal_amount|floatformat:2 }}</td>
                       <td>{{ investment.interest_percentage }}</td>
-                      <td>{{ investment.interest_amount }}</td>
+                      <td>{{ investment.interest_amount|floatformat:2 }}</td>
                       <td>{{ investment.interest_start_date }}</td>
                       <td>{{ investment.interest_end_date }}</td>
                       <td>{{ investment.tenure }}</td>
@@ -332,6 +339,7 @@
           
           <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center">
+              {% if fixed_is_paginated %}
               {% if f_deposit_page.has_previous %}
               <li class="page-item">
                 <a class="page-link" href="?f_deposit_page=1" aria-label="First">
@@ -366,12 +374,13 @@
               </li>
               {% endif %}
             </ul>
+            {% endif %}
           </nav>      
           <!-- PAGINATION -->
       </div>
   </div>
+</div>
   <!-- Tab panes -->
 <!--Tabs for investments-->
-
 {% endblock %}
 <!-- main -->

@@ -1,4 +1,9 @@
 {% extends 'member_base.html' %}
+
+{% block title %}
+<title>contributions</title>
+{% endblock %}
+
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
   <div class="d-md-flex align-items-center justify-content-between mb-4">
@@ -47,9 +52,9 @@
                   {% if contribution.contribution_date|date:"Y" == selected_year %}
                   <tr>
                     
-                      <td>{{ contribution.contribution_date|date:"F" }}</td>
-                      <td>{{ contribution.total_contributions|floatformat:2 }}</td>
-                      <td>{{ contribution.contribution_date|date:"Y-m-d" }}</td>
+                    <td>{{ contribution.contribution_date|date:"F" }}</td>
+                    <td>{{ contribution.total_contribution|floatformat:2 }}</td>
+                    <td>{{ contribution.contribution_date|date:"Y-m-d" }}</td>
                     
                   </tr>
                   {% endif %}
