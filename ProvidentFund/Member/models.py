@@ -10,6 +10,8 @@ from contributions.models import StaffAPI
 from MultiScheme.models import InvestmentScheme
 from django.utils import timezone
 from django.core.validators import FileExtensionValidator
+import random
+from django.db import IntegrityError
 
 # Create your models here.
 
@@ -179,6 +181,7 @@ class SchemeApproval(models.Model):
         self.staff.investment_scheme.add(self.scheme)
 
 
+
 class TransactionHistory(models.Model):
     transaction_id  =models.UUIDField(
         default = uuid.uuid4,
@@ -212,23 +215,24 @@ class TransactionHistory(models.Model):
     DEPOSIT = 'Deposit'
     WITHDRAWAL = 'Withdrawal'
     transaction_type_choices = [
-        (DEPOSIT,'Deposit'),
-        (WITHDRAWAL,'Withdrawal')
+        (DEPOSIT, 'Deposit'),
+        (WITHDRAWAL, 'Withdrawal')
     ]
     transaction_type = models.CharField(
         max_length=20,
         choices=transaction_type_choices,
-        default=DEPOSIT
+         default=DEPOSIT
     )
+
     MOBILE_MONEY = 'MobileMoney'
     BANK_TRANSFER = 'BankTransfer'
-    payment_method = [
-        (MOBILE_MONEY,'Mobile Money'),
-        (BANK_TRANSFER,'Bank Transfer')
+    payment_method_choices = [
+        (MOBILE_MONEY, 'Mobile Money'),
+        (BANK_TRANSFER, 'Bank Transfer')
     ]
     payment_method = models.CharField(
         max_length=20,
-        choices=payment_method,
+        choices=payment_method_choices,
         default=MOBILE_MONEY
     )
     amount = models.DecimalField(
@@ -241,12 +245,14 @@ class TransactionHistory(models.Model):
     )
 
     def __str__(self):
-       return f"{self.transaction_type} - {self.amount} on {self.transaction_date}"
-    
-    def save(self, *args, **kwargs):
-        if not self.transaction_id:
-            self.transaction_id = uuid.uuid4()
-        super().save(*args, **kwargs)
+        return f"{self.transaction_type} - {self.amount} on {self.transaction_date}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['transaction_date']),
+            models.Index(fields=['status']),
+        ]
+
 
 
 

@@ -1,55 +1,111 @@
 {%  extends "member_base.html" %}
 {% block content %}
+
 <div class="main main-app p-3 p-lg-4">
-  <div class="d-md-flex align-items-center justify-content-between mb-4">
-<table class="table table-striped">
-  <thead>
-      <tr>
-          <th>Transaction ID</th>
-          <th>Date</th>
-          <th>Amount</th>
-          <th>Type</th>
-      </tr>
-  </thead>
-  <tbody>
-      {% for transaction in transactions %}
-      <tr>
-          <td>{{ transaction.transaction_id }}</td>
-          <td>{{ transaction.transaction_date|date:"F d, Y, h:i A" }}</td>
-          <td>{{ transaction.amount }}</td>
-          <td>{{ transaction.transaction_type }}</td>
-          <td>{{ transaction.payment_method }}</td>
-      </tr>
-      {% empty %}
-      <tr>
-          <td colspan="4">No transactions found.</td>
-      </tr>
-      {% endfor %}
-  </tbody>
-</table>
-<div class="pagination">
-  <span class="step-links">
+    <h1 class="mb-4">Transaction History</h1>
+
+    <div class="d-md-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="h5 mb-2">Member: {{ member.full_name }}</h2>
+            <p>Staff ID: {{ member.staff_id }}</p>
+        </div>
+        <a href="{% url 'create_transaction' tenant_id=request.tenant.id staff_id=request.user.member.staff_id %}" class="btn btn-primary">Create New Transaction</a>
+    </div>
+
+    <div class="mb-4">
+        <h3 class="h5 mb-2">Filters</h3>
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="scheme" class="form-label">Scheme</label>
+                <select name="scheme_id" id="scheme" class="form-select">
+                    <option value="">All Schemes</option>
+                    {% for scheme in schemes %}
+                    <option value="{{ scheme.id }}" >{{ scheme.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select">
+                    <option value="" >All</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                    
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="sort" class="form-label">Sort By</label>
+                <select name="sort" id="sort" class="form-select">
+                    <option value="-transaction_date">Date (Newest First)</option>
+                    <option value="transaction_date">Date (Oldest First)</option>
+                    <option value="-amount">Amount (Highest First)</option>
+                    <option value="amount" >Amount (Lowest First)</option>
+                    <option value="transaction_type">Transaction Type</option>
+                </select>
+            </div>
+            
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.transaction_id }}</td>
+                    <td>{{ transaction.transaction_date|date:"F d, Y, h:i A" }}</td>
+                    <td>{{ transaction.amount|floatformat:2 }}</td>
+                    <td>{{ transaction.transaction_type }}</td>
+                    <td>{{ transaction.payment_method }}</td>
+                    <td>{{ transaction.status|title }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center">No transactions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     {% if is_paginated %}
-      {% if transactions.has_previous %}
-          <a href="?page=1">&laquo; first</a>
-          <a href="?page={{ transactions.previous_page_number }}">previous</a>
-      {% endif %}
-
-      <span class="current">
-          Page {{ transactions.number }} of {{ transactions.paginator.num_pages }}.
-      </span>
-
-      {% if transactions.has_next %}
-          <a href="?page={{ transactions.next_page_number }}">next</a>
-          <a href="?page={{ transactions.paginator.num_pages }}">last &raquo;</a>
-      {% endif %}
-      {% endif %}
-  </span>
+    <nav aria-label="Transaction history pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if transactions.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.scheme_id %}&scheme_id={{ request.GET.scheme_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.show_test %}&show_test=on{% endif %}" aria-label="First page">&laquo; First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ transactions.previous_page_number }}{% if request.GET.scheme_id %}&scheme_id={{ request.GET.scheme_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.show_test %}&show_test=on{% endif %}" aria-label="Previous page">Previous</a>
+                </li>
+            {% endif %}
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">Page {{ transactions.number }} of {{ transactions.paginator.num_pages }}</span>
+            </li>
+            {% if transactions.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ transactions.next_page_number }}{% if request.GET.scheme_id %}&scheme_id={{ request.GET.scheme_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.show_test %}&show_test=on{% endif %}" aria-label="Next page">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ transactions.paginator.num_pages }}{% if request.GET.scheme_id %}&scheme_id={{ request.GET.scheme_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.show_test %}&show_test=on{% endif %}" aria-label="Last page">Last &raquo;</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
 </div>
-<a href="?sort=amount">Sort by Amount</a>
-<a href="?sort=date">Sort by Date</a>
-<a href="?sort=type">Sort by Type</a>
-</div>
-</div>
-
 {% endblock %}

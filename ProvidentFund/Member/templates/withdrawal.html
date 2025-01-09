@@ -1,0 +1,80 @@
+{% extends "member_base.html" %}
+{% block title %}Withdraw Funds{% endblock %}
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header text-center bg-primary text-white">
+          <h4>Withdraw Funds</h4>
+        </div>
+        <div class="card-body">
+          <form id="withdrawalForm">
+            {% csrf_token %}
+            <div class="form-group mb-3">
+              <label for="scheme-type" class="form-label">Select Scheme</label>
+              <select name="scheme_id" id="scheme-type" class="form-control" required>
+                <option value="" disabled selected>Choose scheme type</option>
+                {% for scheme in schemes %}
+                <option value="{{ scheme.id }}">{{ scheme.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group mb-3">
+              <label for="amount" class="form-label">Amount</label>
+              <input
+                name="amount"
+                type="number"
+                id="amount"
+                class="form-control"
+                placeholder="Enter amount in GHS"
+                required
+              />
+            </div>
+            <div class="form-submit text-center">
+              <button type="button" id="withdrawButton" class="btn btn-primary btn-block">
+                Request Withdrawal
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.getElementById("withdrawButton").addEventListener("click", function () {
+    const schemeId = document.getElementById("scheme-type").value;
+    const amount = document.getElementById("amount").value;
+
+    if (!schemeId || !amount) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    fetch("", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}",
+      },
+      body: JSON.stringify({
+        scheme_id: schemeId,
+        amount: amount,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          alert(data.message);
+        } else {
+          alert("Error: " + data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while processing the request.");
+      });
+  });
+</script>
+{% endblock %}
