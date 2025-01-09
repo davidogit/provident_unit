@@ -4,21 +4,36 @@ from django.db import IntegrityError, models,transaction
 from django.dispatch import receiver
 from django.db.models.signals import pre_save
 from django.urls import reverse
-from MultiScheme.models import InvestmentScheme
+from MultiScheme.models import InvestmentScheme,Tenant
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from .generate_invoice import generate_invoice_number
 
 class InvestmentDetail(models.Model):
-    invoice_number = models.CharField(max_length=8, unique=True,null=True,blank=True, editable=False)
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, related_name='investments')
+    invoice_number = models.CharField(
+        max_length=8,
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False
+    )
+    investment_scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='investments'
+    )
     T_bill = 'Treasury Bill'
     F_dep = 'Fixed Deposit'
     inv_type = [
         (T_bill,'Treasury Bill'),
         (F_dep, 'Fixed Deposit')
     ]
-    investment_type = models.CharField(max_length=50, choices=inv_type, default='')
+    investment_type = models.CharField(
+        max_length=50,
+        choices=inv_type,
+        default=''
+    )
     current = 'Current'
     checking ='Checking'
     savings = 'Savings'
@@ -33,9 +48,17 @@ class InvestmentDetail(models.Model):
         (premium_checking,'Premium Checking'),
         (business,'Business')
     ]
-    account_type = models.CharField(max_length=50, choices=account, default=current)
-    account_name = models.CharField(max_length=255)
-    account_number = models.CharField(max_length=255)
+    account_type = models.CharField(
+        max_length=50,
+        choices=account,
+        default=current
+    )
+    account_name = models.CharField(
+        max_length=255
+    )
+    account_number = models.CharField(
+        max_length=255
+    )
     principal_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -47,40 +70,68 @@ class InvestmentDetail(models.Model):
         default=0.00,
         null=False,
         blank=False
-        )
+    )
     rollover_interest_percentage = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         null=True,
         blank=True,
         default=0.00)
-    interest_start_date = models.DateField(null=False, blank=False)
-    interest_end_date = models.DateField(null=False, blank=False)
-    created_date = models.DateField(auto_now_add=True)
-    updated_date = models.DateTimeField(auto_now=True)
-    roll_over = models.BooleanField(default=False)
-    rollover_count = models.IntegerField(default=0)
-    _remaining_days = models.PositiveIntegerField(default=0)
-    _status = models.CharField(max_length=20, default='Pending')
-    approval_status = models.BooleanField(default=False)
+    interest_start_date = models.DateField(
+        null=False,
+        blank=False
+    )
+    interest_end_date = models.DateField(
+        null=False,
+        blank=False
+    )
+    created_date = models.DateField(
+        auto_now_add=True
+    )
+    updated_date = models.DateTimeField(
+        auto_now=True
+    )
+    roll_over = models.BooleanField(
+        default=False
+    )
+    rollover_count = models.IntegerField(
+        default=0
+    )
+    _remaining_days = models.PositiveIntegerField(
+        default=0
+    )
+    _status = models.CharField(
+        max_length=20,
+        default='Pending'
+    )
+    approval_status = models.BooleanField(
+        default=False
+    )
     closing_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         default=0.00
-        )
-    termination_status = models.BooleanField(default=False)
+    )
+    termination_status = models.BooleanField(
+        default=False
+    )
     interest_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         default=0.00
-        )
+    )
     years = models.DecimalField(
         max_digits=4,
         decimal_places=0,
         null=False
-        ) #Time the money is invested or borrowed for, in years.
-    compounding_frequency = models.PositiveIntegerField(null=False) # Number of times the interest is compounded per year.
-    type_of_tbill = models.CharField(max_length=10, default='')#specifies if 91,182,365 day for only Tbill
+    ) #Time the money is invested or borrowed for, in years.
+    compounding_frequency = models.PositiveIntegerField(
+        null=False
+    ) # Number of times the interest is compounded per year.
+    type_of_tbill = models.CharField(
+        max_length=10,
+        default=''
+    )#specifies if 91,182,365 day for only Tbill
 
 
     def calculate_inv_interest(self):
@@ -175,7 +226,13 @@ def set_invoice_number(sender,instance,**kwargs):
 
 
 class DelayedInterest(models.Model):
-    invoice_number = models.CharField(max_length=8, unique=True,null=True,blank=True, editable=False)
+    invoice_number = models.CharField(
+        max_length=8,
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False
+    )
     investment_scheme = models.ForeignKey(
         InvestmentScheme,
         on_delete=models.CASCADE,
@@ -187,9 +244,16 @@ class DelayedInterest(models.Model):
         decimal_places=2,
         default=0.00
     )
-    created_date = models.DateField(auto_now_add=True)
-    remarks = models.CharField(max_length=50)
-    _status = models.CharField(max_length=20, default='Not paid')
+    created_date = models.DateField(
+        auto_now_add=True
+    )
+    remarks = models.CharField(
+        max_length=50
+    )
+    _status = models.CharField(
+        max_length=20,
+        default='Not paid'
+    )
     # due_date = models.DateField()
     rate_d_int = models.DecimalField(
         max_digits=5,
@@ -202,14 +266,19 @@ class DelayedInterest(models.Model):
         default=0.00
         )
     period_of_interest_calculation = models.PositiveIntegerField() #period over which interest is to be calculated.
-    approved = models.BooleanField(default=False)
+    approved = models.BooleanField(
+        default=False
+    )
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
-    date_paid = models.DateTimeField(auto_now=True,null=True)
+    date_paid = models.DateTimeField(
+        auto_now=True,
+        null=True
+    )
     
     @property
     def status(self):
@@ -238,9 +307,14 @@ def set_invoice_number(sender, instance, **kwargs):
 
 
 
-
+# NOT IN USE ATM
 class BankInterest(models.Model):
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True, related_name='bank_interest')
+    investment_scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='bank_interest'
+    )
     GCB ='GCB'
     ADB ='ADB'
     CBG = 'CBG'
@@ -255,8 +329,14 @@ class BankInterest(models.Model):
         (Ecobank,'Ecobank'),
         (ABSA,'ABSA'),
     ]
-    bank_name = models.CharField(max_length=20, choices=names, default=GCB)
-    branch = models.CharField(max_length=50)
+    bank_name = models.CharField(
+        max_length=20,
+        choices=names,
+        default=GCB
+    )
+    branch = models.CharField(
+        max_length=50
+    )
     account_number = models.PositiveIntegerField()
     from_date = models.DateField()
     to_date = models.DateField()
@@ -265,9 +345,16 @@ class BankInterest(models.Model):
         decimal_places=2,
         default=0.00
     )
-    created_date = models.DateField(auto_now_add=True)
-    remarks = models.CharField(max_length=50)
-    _status = models.CharField(max_length=20, default='Not used')
+    created_date = models.DateField(
+        auto_now_add=True
+    )
+    remarks = models.CharField(
+        max_length=50
+    )
+    _status = models.CharField(
+        max_length=20,
+        default='Not used'
+    )
     
     @property
     def status(self):
@@ -290,13 +377,28 @@ class AuditTrail(models.Model):
         ('deleted','Deleted'),
         ('visited','Visit')
     ]
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL, null=True,blank=True)
-    action = models.CharField(max_length=10, choices=ACTIONS)
-    model_name = models.CharField(max_length=255)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    action = models.CharField(
+        max_length=10,
+        choices=ACTIONS
+    )
+    model_name = models.CharField(
+        max_length=255
+    )
     timestamp = models.DateTimeField()
-    object_id = models.CharField(max_length=255)
+    object_id = models.CharField(
+        max_length=255
+    )
     changes = models.TextField() #description of changes made
-    name = models.CharField(max_length=255, default='')
+    name = models.CharField(
+        max_length=255,
+        default=''
+    )
 
     def __str__(self):
         return f'{self.name} {self.action} at {self.timestamp}'
@@ -317,3 +419,190 @@ class BankInterestRate(models.Model):
 
     def __str__(self):
         return f"{self.bank_name} - {self.interest_rate}%"
+
+
+
+# Schedule dates for General Payment Model
+class ScheduledPaymentDates(models.Model):
+    date_of_payment = models.DateField(null=False)
+    payout_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=False,
+        blank=False
+    )
+    scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name='scheduledPaymentDate'
+    )
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name='scheduledPaymentDate'
+    )
+    approved = models.BooleanField(
+        default=False
+    )
+
+    def __str__(self):
+        return f'{self.tenant} - {self.scheme} - {self.date_of_payment.month} Scheduled Payment'
+
+
+
+# SUPPLIERS
+class Suppliers(models.Model):
+    name = models.CharField(
+        max_length=255,
+        null=False
+    )
+    account_number = models.CharField(
+        max_length=20,
+        null=False
+    )
+    email = models.EmailField(null=False)
+    phone = models.CharField(max_length=10)
+    location = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f'{self.name}'
+
+
+# Requisition Model (Header)
+class Requisition(models.Model):
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name='requisitions'
+    )
+    supplier = models.ForeignKey(
+        Suppliers,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='requisitions'
+    )
+    description = models.TextField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+    total_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
+    date_created = models.DateTimeField(
+        auto_now_add=True
+    )
+    approved = models.BooleanField(
+        default=False
+    )
+
+    def update_total_amount(self):
+        self.total_amount = sum(item.total_cost for item in self.items.all())
+        self.save()
+
+    def __str__(self):
+        return f'{self.tenant} - {self.supplier}'
+
+
+# Requisition Items Model
+class RequisitionItem(models.Model):
+    requisition = models.ForeignKey(
+        Requisition,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    item_name = models.CharField(
+        max_length=255,
+        null=False
+    )
+    quantity = models.IntegerField()
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=False
+    )
+    total_cost = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=False
+    )
+
+    def save(self, *args, **kwargs):
+        self.total_cost = self.quantity * self.amount
+        super().save(*args, **kwargs)
+        # Update the total_amount of the related requisition
+        self.requisition.update_total_amount()
+
+    def delete(self, *args, **kwargs):
+        # Update the total_amount before deletion
+        requisition = self.requisition
+        super().delete(*args, **kwargs)
+        requisition.update_total_amount()
+
+    def __str__(self):
+        return f'{self.item_name} - {self.requisition}'
+
+
+# Purchase Order Model
+class PurchaseOrder(models.Model):
+    order_number = models.AutoField(
+        primary_key=True,
+        unique=True,
+        editable=False
+    )
+    requisition = models.ForeignKey(
+        Requisition,
+        on_delete=models.DO_NOTHING,
+        null=False,
+        related_name='purchase_orders'
+    )
+    date_created = models.DateTimeField(
+        auto_now_add=True,
+        null=False
+    )
+    received = models.BooleanField(
+        default=False
+    )
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00
+    )
+
+    def save(self,*args,**kwargs):
+        self.amount = self.requisition.update_total_amount()
+        return super().save(*args,**kwargs)
+    
+    def __str__(self):
+        return f'{self.requisition.tenant} - {self.order_number}'
+
+
+# Purchase Payment Invoice
+class PaymentInvoice(models.Model):
+    invoice_number = models.CharField(
+        max_length=255
+    )
+    purchase_order = models.OneToOneField(
+        PurchaseOrder,
+        on_delete=models.DO_NOTHING,
+        null=False,
+    )
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=False
+    )
+    supplier = models.ForeignKey(
+        Suppliers,
+        on_delete=models.DO_NOTHING,
+        null=False
+    )
+
+    def save(self,*args,**kwargs):
+        self.supplier = self.purchase_order.requisition.supplier
+        return super().save(*args,**kwargs)

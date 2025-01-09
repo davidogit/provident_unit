@@ -1,4 +1,5 @@
 from decimal import Decimal
+import json
 from django.db.models import Q,Count
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, JsonResponse
@@ -1729,4 +1730,141 @@ class MassMemberUpload(CreateView ):
 # General Payout View
 class GeneralPayoutView(TemplateView):
     template_name = 'dashboard/general_payout.html'
+
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        scheme_id = self.request.POST.get('scheme_id')
+        staff_ids = self.request.POST.getlist('staff_ids[]')#List of selected staffs to be processed
+        payout_type = self.request.POST.get('payout_type') #custom or default
+        print(f'{staff_ids} {payout_type}')
+        
+        if not tenant or not scheme_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid Tenant or Scheme ID'
+            }, status = 400) #Bad Request
+
+        fields = [staff_ids,payout_type]
+        if not all(fields):
+            return JsonResponse({
+                'status':'error',
+                'message':'Select a staff and payout type'
+            })
+
+        # Fetch selected scheme to be processed
+        try:
+            scheme = InvestmentScheme.objects.filter(
+                id=scheme_id,
+                tenant=tenant,
+            ).prefetch_related('staff_api').first()
+
+            if not scheme:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Scheme not found'
+                }, status = 404) #Not Found
+            
+            # Get all selected mebers to be processed
+            staff_members_to_be_processed = scheme.staff_api.filter(
+                Id__in=staff_ids,
+                tenant=tenant,
+                status='active',
+                exited_flag=False
+            )
+
+            # Perform Payment Processing task for selected members
+            print(staff_members_to_be_processed)
+            # Create Payout invoice
+            # create transaction for each member
+            # Perform Debit and Credit operations
+
+            return JsonResponse({
+                'status':'success',
+                'message':'Payout invoice created successfully.'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured: {str(e)}'
+            },status = 500) #Internat Server Error
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        scheme_id = self.request.POST.get('scheme_id')
+        # Get selected Payout scheme
+        try:
+            scheme = InvestmentScheme.objects.get(
+                tenant=tenant,
+                id=scheme_id
+            )
+        except ObjectDoesNotExist:
+            scheme = InvestmentScheme.objects.none()
+        # Get active members on selected scheme
+        members = None
+        if scheme:
+            try:
+                members = StaffAPI.objects.filter(
+                    tenant=tenant,
+                    investment_scheme=scheme,
+                    status='active',
+                    exited_flag=False
+                )
+            except StaffAPI.DoesNotExist:
+                members=StaffAPI.objects.none()
+        
+        context['members'] = members
+        context['schemes'] = InvestmentScheme.objects.filter(
+            tenant=tenant
+        )
+
+        return context
+
+# Fetch Scheme Members for Payout
+class FetchSchemeMembers(View):
+    def get(self, request, *args, **kwargs):
+        tenant = request.tenant
+        scheme_id = self.request.GET.get('scheme_id')
+
+        print(f'{tenant} and {scheme_id}')
+        if not tenant or not scheme_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid Tenant or Scheme ID'
+            }, status = 400) #Bad Request
+        
+        try:
+            scheme = InvestmentScheme.objects.filter(
+                id=scheme_id,
+                tenant=tenant
+            ).prefetch_related('staff_api').first()
+
+            if not scheme:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Scheme not found'
+                }, status = 404) #Not Found
+            
+            staff_members = scheme.staff_api.filter(
+                tenant=tenant,
+                status = 'active',
+                exited_flag = False
+             ).values('Id','staff_number','first_name','last_name','actual_amount')
+            
+            return JsonResponse({
+                'status':'success',
+                'message':'Success',
+                'members': list(staff_members)
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured: {str(e)}'
+            }, status = 500) #Internal Server Error
+
+        
+
+        
+

@@ -58,5 +58,6 @@ urlpatterns =[
 
     # Payout URLs
     path('general-payout/', views.GeneralPayoutView.as_view(), name='general_payout'),
+    path('fetch-members/', views.FetchSchemeMembers.as_view(), name='fetch-members'),
     
 ]

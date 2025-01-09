@@ -5,6 +5,187 @@
 {% block header %}
 <h5>General Payout</h5>
 {% endblock %}
-{% block content %}
 
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-12">
+            <div class="container">
+                <div class="row g-5 mb-1">
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <span>Payout Type</span>:
+                            <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                <input type="radio" class="btn-check" name="payout_type" id="btnradio1" autocomplete="off" value="default" checked>
+                                <label class="btn btn-outline-secondary" for="btnradio1">Default</label>
+                                
+                                <input type="radio" class="btn-check" name="payout_type" id="btnradio2" autocomplete="off" value="custom">
+                                <label class="btn btn-outline-secondary" for="btnradio2">Custom</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex justify-content-end">
+                        <!-- Payout button -->
+                        <button type="button" class="btn btn-outline-secondary btn-lg" id="payout">Process Payout</button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-3">
+                        <div class="form-floating mb-2">
+                            <select class="form-select" name="scheme" id="scheme" aria-placeholder="">
+                                <option value="">--select--</option>
+                                {% for scheme in schemes %}
+                                <option value="{{ scheme.id }}">{{ scheme }}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="scheme">Scheme</label>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Table to hold list of members payments to be processed -->
+                <div class="table-responsive overflow-auto" style="height: 500px;">
+                    <table class="table table-bordered table-striped" id="members_table">
+                        <thead class="thead-light text-center">
+                            <th>
+                                <input type="checkbox" name="select_all" id="select_all">
+                            </th>
+                            <th>Staff Number</th>
+                            <th>Name</th>
+                            <th>Balance</th>
+                            <th>Last Payment Date</th>
+                        </thead>
+                        <tbody>
+                            <!-- Data Populated Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>  
+
+<!-- Script -->
+ <script>
+    $(document).ready(function(){
+        // Select all checkbox
+        $('#select_all').click(function(){
+            if(this.checked){
+                $('input[name=staff_id]').each(function(){
+                    this.checked = true;
+                });
+            }else{
+                $('input[name=staff_id]').each(function(){
+                    this.checked = false;
+                });
+            }
+        });
+
+        //Fetch Members 
+        $('#scheme').on('change', function(e){
+            e.preventDefault();
+            var schemeId = $(this).val();
+            var tenantId = '{{ request.tenant.id }}';
+            $.ajax({
+                url:`/${tenantId}/fund/fetch-members`,
+                type: 'GET',
+                data: {
+                    'scheme_id': schemeId
+                },
+                success: function(response){
+                    console.log(response);
+                    if(response.status === 'success'){
+                        var members = response.members
+                        var table = $('#members_table tbody');
+
+                        //clear existing data
+                        table.empty();
+
+                        //If no records found
+                        if(members.length === 0){
+                            var row = `
+                                <tr>
+                                    <td colspan="5" class="text-center">No records found</td>
+                                </tr>
+                            `;
+                            table.append(row);
+                            return;
+                        }
+
+                        //Populate with new data
+                        members.forEach(member => {
+                            var row = `
+                                <tr class="text-center">
+                                <td>
+                                    <input type="checkbox" name="staff_id" id="staff_id" value="${ member.Id }">
+                                </td>
+                                <td>${ member.staff_number }</td>
+                                <td>${ member.first_name } ${ member.last_name }</td>
+                                <td>${ member.actual_amount }</td>
+                            </tr>
+                            `;
+                            console.log(row);
+                            //Append row to table
+                            table.append(row);
+
+                        });
+
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                }
+            }); 
+        });
+
+
+        //Payout Function to post data to the server
+        $('#payout').on('click', function(e){
+            e.preventDefault();
+            var tenantId = '{{ request.tenant.id }}';
+            var schemeId = $('#scheme').val();
+            var payoutType = $('input[name=payout_type]:checked').val();
+            var staffIds = [];
+            $('input[name=staff_id]:checked').each(function(){
+                staffIds.push($(this).val());
+            });
+
+            console.log(staffIds);
+            //Check if staff ids are empty
+            if(staffIds.length === 0){
+                alert('Please select at least one member');
+                return;
+            }
+
+            //Post data to the server
+            $.ajax({
+                url:``,
+                type: 'POST',
+                //traditional:true, //This is to allow array to be sent to the server
+                data: {
+                    'scheme_id': schemeId,
+                    'payout_type': payoutType,
+                    'staff_ids': staffIds,
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                },
+                success: function(response){
+                    console.log(response);
+                    if(response.status === 'success'){
+                        alert(response.message);
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                }
+            });
+        })
+    });
+ </script>
 {% endblock %}

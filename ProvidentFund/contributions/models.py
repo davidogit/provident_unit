@@ -11,24 +11,59 @@ logger = logging.getLogger(__name__)
 from Fund import middleware
 
 class StaffAPI(models.Model):
-    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, related_name='staff_api')
-    # Using Many-to-Many relationship to allow users to have multiple schemes
-    investment_scheme = models.ManyToManyField(InvestmentScheme)
-    Id = models.AutoField(primary_key=True, unique=True,editable=False)
-    first_name = models.CharField(max_length=255, null=True, blank=True)
-    last_name = models.CharField(max_length=255, null=True, blank=True)
-    staff_number = models.IntegerField(unique=True)
-    date_joined = models.DateField(auto_now_add=True)
-    status = models.CharField(max_length=20, blank=True, null=True, default='active')
-    fund_type = models.CharField(max_length=50)
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='staff_api'
+    )
+    investment_scheme = models.ManyToManyField(
+        InvestmentScheme,
+        related_name='staff_api'
+    )
+    Id = models.AutoField(
+        primary_key=True,
+        unique=True,
+        editable=False
+    )
+    first_name = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+    last_name = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+    staff_number = models.IntegerField(
+        unique=True
+    )
+    date_joined = models.DateField(
+        auto_now_add=True
+    )
+    status = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        default='active'
+    )
+    fund_type = models.CharField(
+        max_length=50
+    )
     _amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         null=True,
         blank=True,
         default=0.00)#holds users accumulated contributions
-    exited_date = models.DateField(null=True, blank=True)
-    exited_flag = models.BooleanField(default=False)
+    exited_date = models.DateField(
+        null=True,
+        blank=True
+    )
+    exited_flag = models.BooleanField(
+        default=False
+    )
     estimated_profit = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -39,8 +74,12 @@ class StaffAPI(models.Model):
         decimal_places=2,
         default=0.00
     ) # holds contributions and interest
-    subscription_date = models.DateField(null=True)
-    updated_date = models.DateTimeField(auto_now=True)
+    subscription_date = models.DateField(
+        null=True
+    )
+    updated_date = models.DateTimeField(
+        auto_now=True
+    )
 
 
     def __str__(self):

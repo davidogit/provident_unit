@@ -17,13 +17,12 @@ distlib==0.3.8
 Django==5.0.7
 django-celery-beat==2.6.0
 django-celery-results==2.5.1
-# django-extensions==3.2.3
-# django-otp==1.5.1
-# django-simple-history==3.7.0
+django-debug-toolbar==4.4.6
 django-timezone-field==7.0
-djangorestframework==3.15.1
+djangorestframework==3.15.2
 dnspython==2.6.1
 email_validator==2.1.1
+et_xmlfile==2.0.0
 exceptiongroup==1.2.2
 fastapi==0.111.0
 fastapi-cli==0.0.3
@@ -39,6 +38,7 @@ markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 mdurl==0.1.2
 mysqlclient==2.2.4
+openpyxl==3.1.5
 orjson==3.10.3
 pillow==10.3.0
 platformdirs==4.2.2

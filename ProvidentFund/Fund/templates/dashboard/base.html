@@ -62,7 +62,7 @@
         <a href="#" class="nav-label">Payout & Benefits</a>
         <ul class="nav nav-sidebar">
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>General
+            <a href="#" class="nav-link has-sub"><i class="ri-wallet-line fs-32 lh-1 me-3"></i> <span>General
                 Payout</span></a>
             <nav class="nav nav-sub">
               <a href="{% url 'general_payout' tenant_id=request.tenant.id %}" class="nav-sub-link">General Payout</a>
@@ -80,7 +80,7 @@
         <ul class="nav nav-sidebar">
 
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Accounts</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-book-2-line fs-32 lh-1 me-3"></i> <span>Accounts</span></a>
             <nav class="nav nav-sub"> 
               <a href="{% url 'add_chart_of_account' tenant_id=request.tenant.id %}"
               class="nav-sub-link">Chart of Accounts
@@ -103,7 +103,7 @@
           {% if is_manager_or_hr %}
           <li class="nav-item">
             {% if is_manager %}
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Scheme Configuration</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Configuration</span></a>
             <nav class="nav nav-sub"> 
               <a href="{% url 'scheme_list' tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Active Schemes
@@ -119,7 +119,7 @@
 
           <li class="nav-item">
             {% if is_manager %}
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Mass Enroll</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-group-line fs-32 lh-1 me-3"></i> <span>Mass Enroll</span></a>
             <nav class="nav nav-sub"> 
               <a href="{% url 'mass_enroll' tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Upload File
@@ -134,7 +134,7 @@
           </li>
 
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Scheme Apllications</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-survey-line fs-32 lh-1 me-3"></i> <span>Scheme Apllications</span></a>
               <nav class="nav nav-sub">
                 {% if is_manager %}
                 <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
@@ -162,7 +162,7 @@
         <ul class="nav nav-sidebar">
           {% if is_manager_or_treasury_user %}
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i>
+            <a href="#" class="nav-link has-sub"><i class="ri-line-chart-line fs-32 lh-1 me-3"></i>
               <span>Investments</span></a>
             <nav class="nav nav-sub">
               <a href="{% url 'investment_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
@@ -221,7 +221,7 @@
 
           {% if is_manager_or_hr %}
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-account-circle-line"></i> <span>Members</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-group-2-line fs-32 lh-1 me-3"></i> <span>Members</span></a>
             <nav class="nav nav-sub">
               {% if is_manager %}
               <a href="{% url 'member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
@@ -256,19 +256,19 @@
           
           {% if is_manager %}
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Approvals</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-check-double-line fs-32 lh-1 me-3"></i> <span>Approvals</span></a>
             <nav class="nav nav-sub">
               <a href="{% url 'investment_approval' tenant_id=request.tenant.id scheme_name=scheme.id %}"
-                class="nav-sub-link">Investments approvals
+                class="nav-sub-link">Investment approval
               </a>
 
               <a href="{% url 'approved_investments'  tenant_id=request.tenant.id scheme_name=scheme.id %}"
-                class="nav-sub-link">Approved nnvestments
+                class="nav-sub-link">Approved investments
               </a>
             </nav>
           </li>
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Scheme Settings</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Settings</span></a>
             <nav class="nav nav-sub">
               <a href="{% url 'scheme_settings' tenant_id=request.tenant.id scheme_name=scheme.id %}"
                 class="nav-sub-link">Settings
