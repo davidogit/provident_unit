@@ -1,11 +1,14 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+import json,uuid
 import smtplib
 from typing import Any
 from django.contrib.auth import authenticate, login, logout
+from django.forms import ValidationError
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse, JsonResponse
 from django.urls import reverse, reverse_lazy
+from django.views import View
 import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
 from .forms import UserForm, MemberForm
@@ -29,6 +32,11 @@ from django.core.exceptions import ObjectDoesNotExist
 # Import task to send otp via email
 from .tasks import send_otp_code,gen_send_email
 from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+from django.views.decorators.http import require_GET
+from django.db import models
 
 
 @unauthenticated_user
@@ -750,62 +758,107 @@ class Contributed(ListView):
 
         return context
 
-
+import requests
+import logging
+from django.db import transaction
+logger = logging.getLogger(__name__)
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
-class CreateTransactionView(CreateView):
-    model = TransactionHistory
-    fields = ('transaction_type', 'amount', 'reference','payment_method')
+class CreateTransactionView(View):
     template_name = 'create_transaction.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        tenant = self.request.tenant
-        member = self.request.user.member
-        
+    def get(self, request, *args, **kwargs):
+        tenant = request.tenant
+        schemes = InvestmentScheme.objects.filter(tenant=tenant)
+        reference = str(uuid.uuid4())  # Pre-generate a unique reference
+
+        context = {
+            'schemes': schemes,
+            'PAYSTACK_PUBLIC_KEY': settings.PAYSTACK_PUBLIC_KEY,
+            'reference': reference,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
         try:
-        # Fetch staff schemes related to the member
-            staff_schemes = StaffAPI.objects.filter(staff_number=member.staff_id).values_list('investment_scheme__id', flat=True)
-            schemes = InvestmentScheme.objects.filter(tenant=tenant, id__in=staff_schemes)
-        # Pass schemes to the template
-            context['schemes'] = schemes 
-        except StaffAPI.DoesNotExist: 
-            print("Error:StaffAPI entry not found for the given member.")
-        return context
+            data = json.loads(request.body)
+            tenant = request.tenant
+            member = request.user.member
+            scheme_id = data.get('scheme_id')
+            amount = data.get('amount')
+            email = data.get('email')
+            reference = data.get('reference')
 
-    def form_valid(self, form):
-        tenant = self.request.tenant
-        member = self.request.user.member
-        scheme_id = self.request.POST.get('scheme_id')  # Get scheme_id from form POST data
-        amount = self.request.POST.get('amount')
-        payment_method = self.request.POST.get('payment_method')
-        staff_id = self.kwargs.get('staff_id') or member.staff_id
+            if not all([scheme_id, amount, email, reference]):
+                return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
-        try:
-            # Fetch the staff and scheme instances
-            staff = get_object_or_404(StaffAPI, staff_number=staff_id)
-            scheme = get_object_or_404(InvestmentScheme, tenant=tenant, id=scheme_id)
+            with transaction.atomic():
+                scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id)
+                staff = StaffAPI.objects.get(staff_number=member.staff_id)
 
-            # Set additional fields on the form instance
-            form.instance.scheme = scheme
-            form.instance.member = member
-            form.instance.amount = amount
-            form.instance.staff = staff
-            form.instance.payment_method = payment_method
-            
-            # Proceed with form save
-            return super().form_valid(form)
+                if TransactionHistory.objects.filter(reference=reference).exists():
+                    return JsonResponse({'status': 'error', 'message': 'Duplicate reference detected.'}, status=400)
 
+                amount_in_kobo = int(float(amount) * 100)
+                transaction_obj = TransactionHistory.objects.create(
+                    tenant=tenant,
+                    staff=staff,
+                    member=member,
+                    scheme=scheme,
+                    amount=amount,
+                    reference=reference
+                )
+
+                history_url = reverse('transaction_history', kwargs={
+                    'tenant_id': tenant.id,
+                    'staff_id':  staff.staff_number
+                })
+
+                return JsonResponse({
+                    'status': 'success',
+                    'transaction_reference': transaction_obj.reference,
+                    'amount': amount_in_kobo,
+                    'email': email,
+                    'redirect_url': history_url
+                })
+
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON in request body")
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON in request body'}, status=400)
+        except InvestmentScheme.DoesNotExist:
+            logger.error(f"Invalid scheme ID: {scheme_id}")
+            return JsonResponse({'status': 'error', 'message': 'Invalid scheme ID.'}, status=400)
+        except StaffAPI.DoesNotExist:
+            logger.error(f"Staff not found for member: {member.id}")
+            return JsonResponse({'status': 'error', 'message': 'Staff not found.'}, status=400)
         except Exception as e:
-            print(f"Error: {e}")  # Print error for debugging
-            return JsonResponse({'status': 'error', 'message': 'Transaction was unsuccessful'})
+            logger.error(f"Unexpected error in CreateTransactionView: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
 
-    def get_success_url(self):
-        return reverse_lazy('transaction_history', kwargs={
-            'tenant_id': self.kwargs.get('tenant_id'),
-            'staff_id': self.kwargs.get('staff_id')
-        })
+    @staticmethod
+    def verify_transaction(reference):
+        headers = {
+            "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+            "Content-Type": "application/json"
+        }
+        response = requests.get(f"https://api.paystack.co/transaction/verify/{reference}", headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+
+
+@require_GET
+def verify_transaction(request, reference):
+    try:
+        response = CreateTransactionView.verify_transaction(reference)
+        if response['data']['status'] == 'success':
+            # Update your transaction status in the database here
+            return JsonResponse({'status': 'success', 'message': 'Payment verified successfully'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Payment verification failed'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
 
 
 @method_decorator(tenant_login_required, name="dispatch")
@@ -814,39 +867,100 @@ class CreateTransactionView(CreateView):
 class TransactionHistoryView(ListView):
     model = TransactionHistory
     template_name = 'transaction_history.html'
+    paginate_by = 10
     context_object_name = 'transactions'
 
     def get_queryset(self):
-        tenant_id = self.request.tenant.id  # Retrieve tenant info from the request
-        staff_id = self.kwargs.get('staff_id')  # Using staff_id based on your updated `CreateTransactionView`
-        scheme_id = self.kwargs.get('scheme_id')
-        sort = self.request.GET.get('sort','-transaction_date')
-
-        if sort not in ['amount', '-amount', 'transaction_date', '-transaction_date', 'transaction_type', '-transaction_type']:
-            sort = '-transaction_date' 
-        
-        # Fetch the member associated with the staff ID and tenant
-        member = get_object_or_404(Member, staff_id=staff_id, tenant_id=tenant_id)
-        
-        return TransactionHistory.objects.filter(
-            member=member,  # Filter by the member object
-            scheme__tenant_id=tenant_id  # Ensure the scheme is related to the tenant
-        ).order_by(sort)
+        tenant = self.request.tenant
+        member = self.request.user.member
+        return TransactionHistory.objects.filter(member=member, tenant=tenant).order_by('-transaction_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        transactions = self.get_queryset()
-        paginator = Paginator(transactions, 10)  # Set the number of transactions per page
-        page_number = self.request.GET.get('page')
-        context['is_paginated'] = paginator.get_page(page_number).has_other_pages()
-        context['transactions'] = paginator.get_page(page_number)
-        # Pass the member and related schemes to the context
-        tenant_id = self.request.tenant.id
+        tenant = self.request.tenant
         staff_id = self.kwargs.get('staff_id')
-        
-        member = get_object_or_404(Member, staff_id=staff_id, tenant_id=tenant_id)
-        schemes = InvestmentScheme.objects.filter(tenant_id=tenant_id, transactions__member=member).distinct()
-        
-        context['member'] = member
-        context['schemes'] = schemes
+        sort = self.request.GET.get('sort', '-transaction_date')
+        scheme_id = self.request.GET.get('scheme_id')
+        status = self.request.GET.get('status')
+
+        try:
+            staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
+            context['schemes'] = staff.investment_scheme.all()
+
+            queryset = self.get_queryset().order_by(sort)
+
+            if scheme_id:
+                queryset = queryset.filter(scheme__id=scheme_id)
+
+            if status:
+                queryset = queryset.filter(status=status)
+
+            context['transactions'] = queryset
+
+        except StaffAPI.DoesNotExist:
+            context['error'] = 'No transaction data available for this user'
+
         return context
+    
+
+logger = logging.getLogger(__name__)
+
+class WithdrawalView(View):
+    template_name = 'withdrawal.html'
+
+    def get(self, request, *args, **kwargs):
+        tenant = request.tenant
+        schemes = InvestmentScheme.objects.filter(tenant=tenant)
+        
+        context = {
+            'schemes': schemes,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            tenant = request.tenant
+            member = request.user.member
+            scheme_id = data.get('scheme_id')
+            amount = float(data.get('amount'))
+
+            if not all([scheme_id, amount]):
+                return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
+
+            with transaction.atomic():
+                scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id)
+                staff = StaffAPI.objects.get(staff_number=member.staff_id)
+
+                # Check if the user has sufficient balance
+                balance = TransactionHistory.objects.filter(
+                    tenant=tenant,
+                    staff=staff,
+                    scheme=scheme
+                ).aggregate(balance=models.Sum('amount'))['balance'] or 0
+
+                if balance < amount:
+                    return JsonResponse({'status': 'error', 'message': 'Insufficient balance.'}, status=400)
+
+                # Create a withdrawal request with status 'pending_approval'
+                TransactionHistory.objects.create(
+                    tenant=tenant,
+                    staff=staff,
+                    member=member,
+                    scheme=scheme,
+                    amount=-amount,
+                    transaction_type='withdrawal',
+                    status='pending_approval',
+                )
+
+                # Notify the manager (e.g., send an email or update a dashboard)
+                # notify_manager_of_withdrawal_request(member, amount, scheme)
+
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Withdrawal request submitted for approval.'
+                })
+
+        except Exception as e:
+            logger.error(f"Unexpected error in WithdrawalView: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)

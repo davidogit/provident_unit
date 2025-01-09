@@ -126,7 +126,7 @@ DATABASES = {
         'OPTIONS': {
             'init_command': 'SET default_storage_engine=INNODB',
         },
-        'NAME': 'provident_fund',
+        'NAME': 'Fund_Management',
         'USER': 'root',
         'PASSWORD': 'collinsxzibit1?',
         'HOST': 'localhost',
@@ -221,3 +221,39 @@ EMAIL_USE_SSL = True
 
 # Settings for Auth User Model
 AUTH_USER_MODEL = 'Admin.User'
+
+
+PAYSTACK_SECRET_KEY = 'sk_test_7bc2565b498e1a4677bc639dc60ed02fe3d62dd4'
+# EXPRESSPAY_MERCHANT_KEY = 'your_merchant_key'
+# EXPRESSPAY_ENVIRONMENT = 'sandbox'  # Change to 'production' for live transactions
+
+# ... other settings ...
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+PAYSTACK_SECRET_KEY = 'sk_test_7bc2565b498e1a4677bc639dc60ed02fe3d62dd4'
+PAYSTACK_PUBLIC_KEY = 'pk_test_d07e3b0e3a2c21e754a416c9b79ad62350794394'
+

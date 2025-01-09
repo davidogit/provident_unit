@@ -10,6 +10,8 @@ from contributions.models import StaffAPI
 from MultiScheme.models import InvestmentScheme
 from django.utils import timezone
 from django.core.validators import FileExtensionValidator
+import random
+from django.db import IntegrityError
 
 # Create your models here.
 
@@ -93,36 +95,55 @@ class SchemeApproval(models.Model):
         self.staff.investment_scheme.add(self.scheme)
 
 
+
 class TransactionHistory(models.Model):
-    transaction_id  =models.UUIDField(default = uuid.uuid4,unique = True)
-    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE,null = True)
-    staff = models.ForeignKey(StaffAPI, on_delete=models.CASCADE,null=True)
-    member = models.ForeignKey(Member,on_delete=models.CASCADE,related_name="transactions")
-    scheme = models.ForeignKey(InvestmentScheme, on_delete= models.CASCADE,related_name ="transactions")
-    transaction_date = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    transaction_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
+    staff = models.ForeignKey(StaffAPI, on_delete=models.CASCADE, null=True)
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="transactions")
+    scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, related_name="transactions")
+    transaction_date = models.DateTimeField(auto_now_add=True, db_index=True)
+    
     DEPOSIT = 'Deposit'
     WITHDRAWAL = 'Withdrawal'
     transaction_type_choices = [
-        (DEPOSIT,'Deposit'),
-        (WITHDRAWAL,'Withdrawal')
+        (DEPOSIT, 'Deposit'),
+        (WITHDRAWAL, 'Withdrawal')
     ]
-    transaction_type = models.CharField(max_length=20, choices=transaction_type_choices,default=DEPOSIT)
+    transaction_type = models.CharField(max_length=20, choices=transaction_type_choices, default=DEPOSIT)
+
     MOBILE_MONEY = 'MobileMoney'
     BANK_TRANSFER = 'BankTransfer'
-    payment_method = [
-        (MOBILE_MONEY,'Mobile Money'),
-        (BANK_TRANSFER,'Bank Transfer')
+    payment_method_choices = [
+        (MOBILE_MONEY, 'Mobile Money'),
+        (BANK_TRANSFER, 'Bank Transfer')
     ]
-    payment_method = models.CharField(max_length=20, choices=payment_method, default=MOBILE_MONEY)
+    payment_method = models.CharField(max_length=20, choices=payment_method_choices, default=MOBILE_MONEY)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    reference = models.TextField(max_length=255, blank=True)
+    reference = models.CharField(max_length=255, default='')
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('failed', 'Failed'),
+        ('completed', 'Completed'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+        help_text="Current status of the transaction"
+    )
+
     def __str__(self):
-       return f"{self.transaction_type} - {self.amount} on {self.transaction_date}"
-    
-    def save(self, *args, **kwargs):
-        if not self.transaction_id:
-            self.transaction_id = uuid.uuid4()
-        super().save(*args, **kwargs)
+        return f"{self.transaction_type} - {self.amount} on {self.transaction_date}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['transaction_date']),
+            models.Index(fields=['status']),
+        ]
+
 
 
 
