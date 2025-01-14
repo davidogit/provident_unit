@@ -9,31 +9,12 @@
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5">
+    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
         <div class="col-12">
             <div class="container">
-                <div class="row g-5 mb-1">
-                    <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            <span>Payout Type</span>:
-                            <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                                <input type="radio" class="btn-check" name="payout_type" id="btnradio1" autocomplete="off" value="default" checked>
-                                <label class="btn btn-outline-secondary" for="btnradio1">Default</label>
-                                
-                                <input type="radio" class="btn-check" name="payout_type" id="btnradio2" autocomplete="off" value="custom">
-                                <label class="btn btn-outline-secondary" for="btnradio2">Custom</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 d-flex justify-content-end">
-                        <!-- Payout button -->
-                        <button type="button" class="btn btn-outline-secondary btn-lg" id="payout">Process Payout</button>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-3">
-                        <div class="form-floating mb-2">
+                <div class="col-12 d-flex justify-content-between align-items-center mb-3">
+                    <div class="col-6 col-md-3 col-lg-2 justify-content-start align-items-center">
+                        <div class="form-floating">
                             <select class="form-select" name="scheme" id="scheme" aria-placeholder="">
                                 <option value="">--select--</option>
                                 {% for scheme in schemes %}
@@ -42,6 +23,10 @@
                             </select>
                             <label for="scheme">Scheme</label>
                         </div>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2 d-flex justify-content-end align-items-center">
+                        <!-- Payout button -->
+                        <button type="button" class="btn btn-outline-secondary btn-lg" id="payout">Pay</button>
                     </div>
                 </div>
 

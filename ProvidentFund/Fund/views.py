@@ -1823,7 +1823,7 @@ class GeneralPayoutView(TemplateView):
         return context
 
 # Fetch Scheme Members for Payout
-class FetchSchemeMembers(View):
+class FetchWithdrawalRequests(View):
     def get(self, request, *args, **kwargs):
         tenant = request.tenant
         scheme_id = self.request.GET.get('scheme_id')

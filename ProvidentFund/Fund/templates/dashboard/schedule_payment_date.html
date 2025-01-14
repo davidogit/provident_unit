@@ -13,15 +13,15 @@
     <div class="row row-cols-auto g-4 g-xxl-5">
         <div class="col-xl">
             <div class="container">
-                <div class="row g-4">
+                <div class="row g-4 d-flex flex-column justify-content-center align-items-center">
                     
-                    <div class="col-xl">
+                    <div class="col-md-12 col-xl-12">
                         <div class="transaction-form border p-3 rounded position-relative">
                             <form action="" method="POST" id="add_payout_date">
                                 {% csrf_token %}
-                                <div class="form-floating mb-3 d-flex justify-content-between">
+                                <div class="form-floating mb-3 d-flex justify-content-between align-items-center">
                             
-                                    <div class="form-floating">
+                                    <div class="form-floating col-4">
                                         <select name="scheme_id" id="scheme_id" class="form-select">
                                             <option value="">-select-</option>
                                             {% for scheme in available_schemes %}
@@ -31,12 +31,12 @@
                                         <label for="scheme_id">Scheme</label>
                                     </div>
                                 
-                                    <div class="form-floating d-block mb-2">
+                                    <div class="form-floating col-4">
                                         <input type="date" name="payment_date" id="payment_date" class="form-control">
                                         <label for="payment_date">Payment Date</label>
                                     </div>
 
-                                    <div class="form-floating d-block">
+                                    <div class="form-floating col-4">
                                         <input type="number" name="payout_percentage" step="0.01" id="payout_percentage" class="form-control" placeholder="">
                                         <label for="payout_percentage" class="form-label">Payout Percentage</label>
                                     </div>
