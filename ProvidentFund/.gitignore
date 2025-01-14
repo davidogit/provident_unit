@@ -6,3 +6,17 @@ db.sqlite3
 **/migrations/
 
 .venv/
+
+**/tests/
+
+debug.log
+
+celerybeat-schedule.bak
+
+celerybeat-schedule.dat
+
+celerybeat-schedule.dir
+
+backup.json
+
+**/tests/
