@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import  StaffAPI, Contribution
+from .models import  StaffAPI, Contribution,Membership
 
 class StaffAPIAdmin(admin.ModelAdmin):
     readonly_fields = (
@@ -28,3 +28,4 @@ admin.site.register(StaffAPI,StaffAPIAdmin)
 
 
 admin.site.register(Contribution)
+admin.site.register(Membership)

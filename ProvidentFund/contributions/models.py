@@ -9,6 +9,8 @@ from django.utils.encoding import force_str
 import logging
 logger = logging.getLogger(__name__)
 from Fund import middleware
+from django.db.models import Sum
+from decimal import Decimal
 
 class StaffAPI(models.Model):
     tenant = models.ForeignKey(
@@ -51,7 +53,7 @@ class StaffAPI(models.Model):
     fund_type = models.CharField(
         max_length=50
     )
-    _amount = models.DecimalField(
+    contributions = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         null=True,
@@ -73,12 +75,16 @@ class StaffAPI(models.Model):
         max_digits=15,
         decimal_places=2,
         default=0.00
-    ) # holds contributions and interest
+    ) # holds recorgnised interest only
     subscription_date = models.DateField(
         null=True
     )
     updated_date = models.DateTimeField(
         auto_now=True
+    )
+    last_withdrawal_date = models.DateTimeField(
+        null=True,
+        blank=True
     )
 
 
@@ -86,12 +92,16 @@ class StaffAPI(models.Model):
         return f'{self.last_name} {self.first_name}'
     
     @property
-    def amount(self):
-        return self._amount
+    def total_amount(self):
+        return (self.contributions+self.actual_amount)
     
-    @amount.setter
-    def amount(self,value):
-        self._amount += value
+    # @property
+    # def amount(self):
+    #     return self._amount
+    
+    # @amount.setter
+    # def amount(self,value):
+    #     self._amount += value
 
 
 
@@ -218,3 +228,66 @@ class Contribution(models.Model):
         if self.member:
            self.member.amount = self.total_contribution
            self.member.save()
+
+
+# MEMBERSHIP MODEL FOR STAFF
+class Membership(models.Model):
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name='membership'
+    )
+    staff = models.ForeignKey(
+        StaffAPI,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name='membership'
+    )
+    scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name='membership'
+    )
+    total_earnings = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.0,
+        null=True,
+        blank=True,
+    )
+    estimated_profit = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.0,
+        null=True,
+        blank=True
+    )
+    enrolled_at = models.DateTimeField(
+        auto_now_add=True,
+        null=False,
+        blank=False
+    )
+
+    class Meta:
+        unique_together = ('staff','scheme') #Ensures staff can be enrolled once
+
+    def __str__(self):
+        return f'{self.staff.first_name} - Membership'
+    
+    # Update both membership and corresponding staff balances(total_amount)
+    def save(self,*args,**kwargs):
+        super().save(*args,**kwargs) #save membership update
+        # Update the amount field on the parent StaffApi model to reflect change in amount
+        total_earnings = Membership.objects.filter(
+            staff=self.staff,
+        ).aggregate(total=Sum('total_earnings'))['total'] or Decimal(0.0)
+
+        estimated_profit = Membership.objects.filter(
+            staff=self.staff,
+        ).aggregate(total=Sum('estimated_profit'))['total'] or Decimal(0.0)
+        self.staff.actual_amount = total_earnings
+        self.staff.estimated_profit = estimated_profit
+        # save staff update
+        self.staff.save()

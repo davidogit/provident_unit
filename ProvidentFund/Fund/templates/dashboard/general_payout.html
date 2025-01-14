@@ -55,7 +55,9 @@
                             </th>
                             <th>Staff Number</th>
                             <th>Name</th>
-                            <th>Balance</th>
+                            <th>Withdrawal Amount</th>
+                            <th>Request Date</th>
+                            <th>Reference Number</th>
                             <th>Last Payment Date</th>
                         </thead>
                         <tbody>
@@ -70,6 +72,36 @@
 
 <!-- Script -->
  <script>
+    // Function to format and display a datetime string
+    function formatDateTime(dateString, elementId) {
+        if (!dateString) {
+            return 'N/A';
+        }
+        // Create a Date object from the given string
+        const date = new Date(dateString);
+
+        // Check if the date is invalid
+        if (isNaN(date.getTime())) {
+            return 'N/A';  // Return error message if the date is invalid
+        }
+
+        // Use toLocaleString() to format the date into a readable format
+        const formattedDate = date.toLocaleString('en-US', { 
+            //weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric', 
+            hour: 'numeric', 
+            minute: 'numeric', 
+            //second: 'numeric',
+            //timeZoneName: 'short'
+        });
+
+        //return the formatted date
+        return formattedDate;
+    }
+
+
     $(document).ready(function(){
         // Select all checkbox
         $('#select_all').click(function(){
@@ -90,7 +122,7 @@
             var schemeId = $(this).val();
             var tenantId = '{{ request.tenant.id }}';
             $.ajax({
-                url:`/${tenantId}/fund/fetch-members`,
+                url:`/${tenantId}/fund/fetch-members/`,
                 type: 'GET',
                 data: {
                     'scheme_id': schemeId
@@ -108,7 +140,7 @@
                         if(members.length === 0){
                             var row = `
                                 <tr>
-                                    <td colspan="5" class="text-center">No records found</td>
+                                    <td colspan="7" class="text-center">No records found</td>
                                 </tr>
                             `;
                             table.append(row);
@@ -120,11 +152,16 @@
                             var row = `
                                 <tr class="text-center">
                                 <td>
-                                    <input type="checkbox" name="staff_id" id="staff_id" value="${ member.Id }">
+                                    <input type="checkbox" name="staff_id" id="staff_id" value="${ member.staff_id }">
+
+                                    <input type="checkbox" name="ref_number" id="ref_number" value="${ member.ref_number }" hidden>
                                 </td>
                                 <td>${ member.staff_number }</td>
                                 <td>${ member.first_name } ${ member.last_name }</td>
-                                <td>${ member.actual_amount }</td>
+                                <td>${ member.amount }</td>
+                                <td>${ formatDateTime(member.request_date) }</td>
+                                <td>${ member.ref_number }</td>
+                                <td>${ formatDateTime(member.last_withdrawal_date) }</td>
                             </tr>
                             `;
                             console.log(row);
@@ -151,11 +188,15 @@
             var schemeId = $('#scheme').val();
             var payoutType = $('input[name=payout_type]:checked').val();
             var staffIds = [];
+            var ref_ids = [];
+
             $('input[name=staff_id]:checked').each(function(){
                 staffIds.push($(this).val());
+                // append corresponding ref number to the ref_ids array
+                ref_ids.push($(this).next().val());
             });
 
-            console.log(staffIds);
+            console.log(staffIds, ref_ids);
             //Check if staff ids are empty
             if(staffIds.length === 0){
                 alert('Please select at least one member');
@@ -171,6 +212,7 @@
                     'scheme_id': schemeId,
                     'payout_type': payoutType,
                     'staff_ids': staffIds,
+                    'ref_ids': ref_ids,
                     csrfmiddlewaretoken: '{{ csrf_token }}',
                 },
                 success: function(response){

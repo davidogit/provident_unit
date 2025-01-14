@@ -7,8 +7,8 @@ from django.http.response import HttpResponse as HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 from ProvidentFund.settings import EMAIL_HOST_USER
-from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate
-from Member.models import Member
+from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates
+from Member.models import Member,WithdrawalRequest
 from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings
 from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI, Contribution
@@ -21,7 +21,7 @@ from .forms import InvestmentUpdateForm,InvestmentApprovalForm
 from Fund.tasks import actual_member_interest,rollover_inv_creation
 from Member.tasks import gen_send_email
 from django.core.exceptions import ValidationError
-from django.db.models import Sum,F
+from django.db.models import Sum,F,Prefetch
 import logging
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -76,24 +76,24 @@ class Invest(TemplateView):
             interest_query.none()
         # Total Interest - Estimated and Actual
         try:
-            estimated_amount = interest_query.filter(approval_status=False).aggregate(total = Sum('interest_amount'))['total'] or 0.0
+            estimated_amount = interest_query.filter(approval_status=False).aggregate(total = Sum('interest_amount'))['total'] or Decimal(0.0)
             
             context['total_interest'] = estimated_amount
         except:
-            context['total_interest'] = 0.0
+            context['total_interest'] = Decimal(0.0)
 
         try: 
-            actual_revenue = interest_query.filter(approval_status=True, _status='Expired').aggregate(total = Sum('interest_amount'))['total'] or 0.0
+            actual_revenue = interest_query.filter(approval_status=True, _status='Expired').aggregate(total = Sum('interest_amount'))['total'] or Decimal(0.0)
 
             context['actual_revenue'] =  actual_revenue
         except:
-            context['actual_revenue'] = 0.0
+            context['actual_revenue'] = Decimal(0.0)
 
         # Active Investments
         try:
             context['active_inv'] = interest_query.count()
         except:
-            context['active_inv'] = 0
+            context['active_inv'] = Decimal(0.0)
 
         # Active Members
     
@@ -985,7 +985,7 @@ class DelayedInterestListView(ListView):
         start_index = (int(page_number) - 1) * self.paginate_by + 1
         queryset = self.get_queryset()
         context['delayed_int_count'] = queryset.count()
-        context['total_amount'] = queryset.all().aggregate(total=Sum('principal'))['total'] or 0.00
+        context['total_amount'] = queryset.all().aggregate(total=Sum('principal'))['total'] or Decimal(0.0)
         context['start_index'] = start_index
         return context
 
@@ -1210,8 +1210,18 @@ class ToBeApproved(ListView):
 
         try:
             application = self.get_queryset().get(tenant=tenant, id=application_id)
+
             # Now we can approve using the approve method on the SchemeApproval Model
             application.approve()
+
+            from contributions.models import Membership
+            # Create MEMBERSHIP
+            Membership.objects.create(
+                tenant=application.tenant,
+                staff=application.staff,
+                scheme = application.scheme,
+            )
+
             # Notify applicant upon scheme approval
             applicant_email = application.member.user.email
             try:
@@ -1438,7 +1448,7 @@ class ApproveContributions(TemplateView):
                 year=year,
                 approved_contribution=True).aggregate(
                     total=Sum('total_contribution')
-                    )['total'] or 0.0
+                    )['total'] or Decimal(0.0)
             
             print(f'Monthly = {month_contribution}')
 
@@ -1642,7 +1652,7 @@ class MassMemberUpload(CreateView ):
                     else:   
                         try:
                             # Get data from rows --> fields
-                            staff_number,first_name,last_name,scheme_id,_amount,actual_amount,subscription_date = row
+                            staff_number,first_name,last_name,scheme_id,contributions,actual_amount,subscription_date = row
                             # Convert scheme ids to a list
                             if isinstance(scheme_id,str):
                                 scheme_id = scheme_id.split(',')
@@ -1660,7 +1670,7 @@ class MassMemberUpload(CreateView ):
                                 staff_number=staff_number,
                                 first_name= first_name,
                                 last_name=last_name,
-                                _amount=_amount,
+                                contributions=contributions,
                                 actual_amount=actual_amount,
                                 subscription_date=subscription_date
                             )
@@ -1735,6 +1745,7 @@ class GeneralPayoutView(TemplateView):
         tenant = self.request.tenant
         scheme_id = self.request.POST.get('scheme_id')
         staff_ids = self.request.POST.getlist('staff_ids[]')#List of selected staffs to be processed
+        withdrawal_request_ids = self.request.POST.getlist('ref_ids[]')
         payout_type = self.request.POST.get('payout_type') #custom or default
         print(f'{staff_ids} {payout_type}')
         
@@ -1744,36 +1755,26 @@ class GeneralPayoutView(TemplateView):
                 'message':'Invalid Tenant or Scheme ID'
             }, status = 400) #Bad Request
 
-        fields = [staff_ids,payout_type]
+        fields = [staff_ids,payout_type,withdrawal_request_ids]
         if not all(fields):
             return JsonResponse({
                 'status':'error',
                 'message':'Select a staff and payout type'
             })
+        
+        # Fetch related account mapping for processing payouts
+
 
         # Fetch selected scheme to be processed
         try:
-            scheme = InvestmentScheme.objects.filter(
-                id=scheme_id,
-                tenant=tenant,
-            ).prefetch_related('staff_api').first()
-
-            if not scheme:
-                return JsonResponse({
-                    'status':'error',
-                    'message':'Scheme not found'
-                }, status = 404) #Not Found
-            
-            # Get all selected mebers to be processed
-            staff_members_to_be_processed = scheme.staff_api.filter(
-                Id__in=staff_ids,
-                tenant=tenant,
-                status='active',
-                exited_flag=False
-            )
+            # Get withdrawal requests
+            withdrawals = WithdrawalRequest.objects.none()
+            for staff_id,ref_id in zip(staff_ids,withdrawal_request_ids):
+                print(ref_id)
+                withdrawals |= WithdrawalRequest.objects.filter(tenant=tenant,ref_number=ref_id,staff__Id=staff_id)
 
             # Perform Payment Processing task for selected members
-            print(staff_members_to_be_processed)
+            print(withdrawals)
             # Create Payout invoice
             # create transaction for each member
             # Perform Debit and Credit operations
@@ -1827,7 +1828,6 @@ class FetchSchemeMembers(View):
         tenant = request.tenant
         scheme_id = self.request.GET.get('scheme_id')
 
-        print(f'{tenant} and {scheme_id}')
         if not tenant or not scheme_id:
             return JsonResponse({
                 'status':'error',
@@ -1838,7 +1838,7 @@ class FetchSchemeMembers(View):
             scheme = InvestmentScheme.objects.filter(
                 id=scheme_id,
                 tenant=tenant
-            ).prefetch_related('staff_api').first()
+            ).first()
 
             if not scheme:
                 return JsonResponse({
@@ -1846,16 +1846,38 @@ class FetchSchemeMembers(View):
                     'message':'Scheme not found'
                 }, status = 404) #Not Found
             
-            staff_members = scheme.staff_api.filter(
+            # Filter only unapproved requests
+            filtered_withdrawals = WithdrawalRequest.objects.filter(
                 tenant=tenant,
-                status = 'active',
-                exited_flag = False
-             ).values('Id','staff_number','first_name','last_name','actual_amount')
-            
+                approved=False
+            )
+
+            # Fetch member withdrawal applications
+            staffs = StaffAPI.objects.filter(
+                tenant=tenant,
+                investment_scheme__id=scheme_id,
+                exited_flag=False
+            ).prefetch_related(Prefetch('withdrawal_request', queryset=filtered_withdrawals))
+            withdrawal_list = []
+            for staff in staffs:
+                withdrawals = staff.withdrawal_request.all()
+                for w in withdrawals:
+                    withdrawal_list.append(
+                        {
+                            'staff_id':w.staff.Id,
+                            'staff_number':w.staff.staff_number,
+                            'ref_number':w.ref_number,
+                            'first_name':w.staff.first_name,
+                            'last_name':w.staff.last_name,
+                            'amount':w.amount,
+                            'request_date':w.request_date,
+                            'last_withdrawal_date':w.staff.last_withdrawal_date
+                        }
+                    )
             return JsonResponse({
                 'status':'success',
                 'message':'Success',
-                'members': list(staff_members)
+                'members': withdrawal_list
             })
             
         except Exception as e:
@@ -1867,4 +1889,111 @@ class FetchSchemeMembers(View):
         
 
         
+# Add Schedule Payment Date
+class SchedulePaymentDate(TemplateView):
+    template_name = 'dashboard/schedule_payment_date.html'
 
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        scheme_id = self.request.POST.get('scheme_id')
+        scheduled_date = self.request.POST.get('payment_date')
+        payout_percentage = self.request.POST.get('payout_percentage')
+
+        if not all([scheme_id,scheduled_date]):
+            return JsonResponse({
+                'status':'error',
+                'message':'Missing required fields'
+            })
+        
+        try:
+            scheme = InvestmentScheme.objects.get(
+                id=scheme_id,
+                tenant=tenant
+            )
+        except InvestmentScheme.DoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Scheme not found'
+            })
+        
+        # Create schedule date object
+        try:
+            ScheduledPaymentDates.objects.create(
+                tenant=tenant,
+                scheme=scheme,
+                date_of_payment=scheduled_date,
+                payout_percentage=payout_percentage,
+            )
+
+            return JsonResponse({
+                'status':'success',
+                'message':'Date added successfully.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'Operation can not be performed at this time. {str(e)}'
+            })
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+
+        if tenant:
+            try:
+                schemes = InvestmentScheme.objects.filter(
+                    tenant=tenant
+                ).prefetch_related('scheduledPaymentDate').order_by('-created_date')
+                # print(f'Payout Dates: {schemes.scheduledPaymentDate}')
+            except InvestmentScheme.DoesNotExist:
+                schemes = InvestmentScheme.objects.none()
+            
+            context['available_schemes'] = schemes
+        return context
+    
+
+
+class DeleteSchedulePaymentDate(DeleteView):
+    model = SchedulePaymentDate
+    
+    def get_object(self, queryset = ...):
+        tenant = self.request.tenant
+        scheme_id = self.kwargs.get('scheme_id')
+        obj_id = self.kwargs.get('pk')
+        print(f'{scheme_id} and {obj_id}')
+
+
+        if not all([scheme_id,obj_id]):
+            return JsonResponse({
+                'status':'error',
+                'message':'Missing required fields'
+            })
+        
+        try:
+            obj = get_object_or_404(
+                ScheduledPaymentDates,
+                tenant=tenant,
+                id=obj_id,
+                scheme__id=scheme_id
+            )
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':'Couldn\'t find related scheme'
+            })
+
+        return obj
+    
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        try:
+            self.object.delete()
+            return JsonResponse({
+                'status':'success',
+                'message':'object deleted successfully.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured: {str(e)}'
+            })

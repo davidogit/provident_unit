@@ -4286,4 +4286,14 @@ db.sqlite3
 
 media/
 
-*/tests/
+**/tests/
+
+/debug.log
+
+/celerybeat-schedule.bak
+
+/celerybeat-schedule.dat
+
+/celerybeat-schedule.dir
+
+/backup.json

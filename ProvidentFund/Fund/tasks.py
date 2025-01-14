@@ -7,7 +7,7 @@ from MultiScheme.models import Tenant, InvestmentScheme
 # import contribution details from Contributions App
 from contributions.models import StaffAPI,Contribution
 from django.db import transaction
-from django.db.models import Sum,FloatField,Q
+from django.db.models import Sum,FloatField,Q,DecimalField
 import logging
 from django.core.mail import send_mail
 from ProvidentFund.settings import EMAIL_HOST_USER
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True)
 def member_interest(self):
     try:
-        tenants = Tenant.objects.prefetch_related('investment_schemes__investments','staff_api') #prefetch schemes and staffs
+        tenants = Tenant.objects.prefetch_related('investment_schemes__investments','staff_api','membership') #prefetch schemes and staffs
         logger.info(f'Starting profit calculation for {tenants.count()} tenants.')
 
         for tenant in tenants:
@@ -29,12 +29,19 @@ def member_interest(self):
                 # Get member allocation percentage
                 member_allocation_percentage = scheme.distribution_percentage
 
+
                 # Use reverse relationship b/n staff and contribution to calculate each members contribution
                 members = tenant.staff_api.filter(
                     # tenant=tenant,
                     investment_scheme=scheme,
                     exited_flag=False
-                ).annotate(total_contribution=Sum('contribution__total_contribution',filter=Q(contribution__approved_contribution=True,contribution__investment_scheme=scheme), output_field=FloatField()))
+                ).annotate(total_contribution=Sum('contribution__total_contribution',filter=Q(contribution__approved_contribution=True,contribution__investment_scheme=scheme), output_field=DecimalField()))
+
+                # Get MEMBERSHIPS NB:This model is where the accumulation will be done on not the member(StaffAPI model)
+                memberships = tenant.membership.all().filter(
+                    scheme=scheme
+                )
+
 
                 #get investments associated with each scheme
                 active_investments = scheme.investments.filter(
@@ -45,6 +52,7 @@ def member_interest(self):
                     approval_status=False,
                     termination_status = False
                 )
+                logger.info(f'INVESTMENTS: {active_investments}')
 
                 delayed_interests = DelayedInterest.objects.filter(
                     investment_scheme=scheme,
@@ -58,7 +66,7 @@ def member_interest(self):
                                 
                 # Aggregate total approved contributions for the scheme and tenant
                 #prefetch staff_api in same query
-                total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or 0.0
+                total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or Decimal(0.0)
 
                 # logger.info(f'TOTAL CONT {scheme.name} = {total_contribution}')
 
@@ -92,32 +100,6 @@ def member_interest(self):
                 #     except Exception as e:
                 #         logger.error(f'Error occured{e}')
 
-                # Distribute Bank Interests
-                for b_int in bank_interests:
-                    try:
-                        if total_contribution > 0:
-                            for member in members:
-                                # collect member amount
-                                contribution = member.total_contribution or 0.0
-
-                                # check date user joined the scheme
-                                try:
-                                    scheme_subscription = SchemeApproval.objects.get(
-                                        staff=member, scheme=scheme, tenant=tenant, 
-                                        approved_by_hr=True)
-                                    subscription_date = scheme_subscription.approval_date
-                                except SchemeApproval.DoesNotExist:
-                                    subscription_date = None
-
-                                if subscription_date is not None and subscription_date.date() < b_int.created_date:
-                                    member.estimated_profit += (contribution / total_contribution) * b_int.amount
-                                else:
-                                    member.estimated_profit += 0.0
-                                member.save()
-                            b_int.status = 'Used'
-                            b_int.save()
-                    except Exception as e:
-                        logger.error(f'Error {e}')
 
                 # Estimated Revenue Distribution
                 for inv in active_investments:
@@ -129,31 +111,45 @@ def member_interest(self):
                             # calculate daily member allocation
                             inv_daily_interest = (members_int_allocation / inv.tenure)
                         else:
-                            inv_daily_interest = 0.0
+                            inv_daily_interest = Decimal(0.0)
 
                         if total_contribution > 0:
                             for member in members:
                                 # get member contribution
-                                contribution = member.total_contribution or 0.0
-
-                                # Check date user joined scheme
+                                contribution = member.total_contribution or Decimal(0.0)
+                                logger.info(f'TOTAL CONT {scheme.name} = {total_contribution}')
+                                logger.info(f'MEMBER CONTRIBUTION {contribution}')
+                                # get membership
                                 try:
-                                    scheme_subscription = SchemeApproval.objects.get(
-                                            staff=member, scheme=scheme, tenant=tenant, 
-                                            approved_by_hr=True)
-                                    subscription_date = scheme_subscription.approval_date
-                                except SchemeApproval.DoesNotExist:
-                                    subscription_date = None                            
+                                    membership = memberships.get(
+                                        staff=member
+                                    )
+                                except Exception as e:
+                                    membership = None
+                                    logger.info(f'Membership for: {member.first_name} {member.last_name} not found')
 
-                                # Calculate Estimated income NB: Does not include Principal of member
-                                if subscription_date is not None and subscription_date.date() < inv.interest_start_date and inv._remaining_days > 0:
-                                    profit = (contribution / total_contribution) * inv_daily_interest
-                                    member.estimated_profit += profit
+                                if membership:
+                                    # Check date user joined scheme
+                                    try:
+                                        scheme_subscription = SchemeApproval.objects.get(
+                                                staff=member, scheme=scheme, tenant=tenant, 
+                                                approved_by_hr=True)
+                                        subscription_date = scheme_subscription.approval_date
+                                    except SchemeApproval.DoesNotExist:
+                                        subscription_date = None                            
 
-                                    # logger.info(f'Test to see member contribution: {contribution} for {member.first_name} profit:{profit} daily:{inv_daily_interest}')
-                                else:
-                                    member.estimated_profit += 0.0
-                                member.save()
+                                    # Calculate Estimated income NB: Does not include Principal of member
+                                    if subscription_date and subscription_date.date() < inv.interest_start_date and inv._remaining_days > 0:
+
+                                        profit = (contribution / total_contribution) * inv_daily_interest
+                                        membership.estimated_profit += Decimal(profit)
+
+                                        # logger.info(f'Test to see member contribution: {contribution} for {member.first_name} profit:{profit} daily:{inv_daily_interest}')
+                                        logger.info(f'DISTRIBUTION PERCENTAGE: {member_allocation_percentage}')
+                                        logger.info(f'MEMBERSHIPS: {membership}')
+                                    else:
+                                        membership.estimated_profit += Decimal(0.0)
+                                    membership.save()
                     except Exception as e:
                         logger.error(f'Error :{e}')                    
 
@@ -167,7 +163,7 @@ def member_interest(self):
 
 # Task to calculate actual profit
 @shared_task(bind=True)
-def actual_member_interest(self,tenant_id,scheme_id,investment_id):
+def actual_member_interest(self,tenant_id,scheme_id,inv_id):
     tenant = get_object_or_404(Tenant, id=tenant_id)
     scheme = get_object_or_404(InvestmentScheme, id=scheme_id)
     # Use reverse relationship b/n staff and contribution to calculate each members contribution relating to the scheme
@@ -177,8 +173,15 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
         exited_flag=False
     ).annotate(total_contribution=Sum('contribution__total_contribution',filter=Q(contribution__approved_contribution=True,contribution__investment_scheme=scheme), output_field=FloatField()))
 
+    from contributions.models import Membership
+    # Get MEMBERSHIPS
+    memberships = Membership.objects.filter(
+        tenant=tenant,
+        scheme=scheme
+    )
+
     inv = InvestmentDetail.objects.get(
-                    id=investment_id,
+                    id=inv_id,
                     investment_scheme=scheme,
                     investment_scheme__tenant = tenant,
                     approval_status=True
@@ -192,7 +195,7 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
     
     # Get total contributions made to the scheme
     # Aggregate total approved contributions for the scheme and tenant
-    total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or 0.0
+    total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or Decimal(0.0)
 
     logger.info(f'Total: {total_contribution}')
 
@@ -202,9 +205,13 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
         if total_contribution>0:
             logger.info('STEP 1')
             for member in members:
+                # Get membership
+                membership = memberships.get(
+                    staff=member
+                )
                 
                 # Get member actual amount
-                contribution = member.total_contribution or 0.0
+                contribution = member.total_contribution or Decimal(0.0)
 
                 logger.info(f'User Contribution: {contribution}')
 
@@ -230,14 +237,14 @@ def actual_member_interest(self,tenant_id,scheme_id,investment_id):
                     interest_on_inv = (contribution / total_contribution) * member_allocation
 
                     # Add interest to member actual amount
-                    member.actual_amount += interest_on_inv
+                    membership.total_earnings += interest_on_inv
                     
                     # Subtract interest from member estimated amount
-                    member.estimated_profit = (0-interest_on_inv)
-                    member.save()
+                    membership.estimated_profit = (0-interest_on_inv)
+                    membership.save()
                 else:
                     logger.info('Not working')
-                    member.actual_amount += 0.0
+                    membership.total_earnings += Decimal(0.0)
         else:
             logger.info(f'No contribution found for {tenant.name} during actual interest calculation on {timezone.now}')
                     
@@ -330,7 +337,7 @@ def reduce_date(self):
         ###########################################################################
         # Send Email to tenant
         try:
-            if inv.remaining_days == 0:
+            if inv.interest_end_date == timezone.now().date():
 
                 # send email notification to tenant email
                 tenant_email = inv.investment_scheme.tenant.email
@@ -455,7 +462,7 @@ def rollover_inv_creation(self,**kwargs):
         logger.info(f'Inv Adding Error: {e}')
 
 
-# Task to calculate and add contribution to user actual_amount when a contribution is approved
+# Task to calculate and add contribution to user contribution when a contribution is approved
 @shared_task(bind=True)
 def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
     scheme_id = scheme_id
@@ -481,16 +488,16 @@ def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
     for staff in staff_api:
         staff_contribution = staff.month_contribution
 
-        if staff_contribution:
-            staff.actual_amount += float(staff_contribution) 
+        if staff_contribution and staff_contribution>Decimal(0.0):
+            staff.contributions += Decimal(staff_contribution) 
             # if staff_contribution else 0.0
             print(f'Staff CONT= {staff_contribution}')
             # append to update list
             staff_updates.append(staff)
 
-    # Using bulk update to effect all changes at once
+    # Using bulk update to effect all changes at once on the contributions field
     if staff_updates:
-        StaffAPI.objects.bulk_update(staff_updates,['actual_amount'])
+        StaffAPI.objects.bulk_update(staff_updates,['contributions'])
         logger.info(f'Updated {len(staff_updates)} staffs')
     else:
         logger.infor('No staff contributions to update')

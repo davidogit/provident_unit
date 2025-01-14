@@ -317,7 +317,6 @@ class WithdrawalRequest(models.Model):
     )
     ref_number = models.UUIDField(
         primary_key=True,
-        max_length=15,
         unique=True,
         default=uuid.uuid4
     )
@@ -335,6 +334,14 @@ class WithdrawalRequest(models.Model):
     )
     approved = models.BooleanField(
         default=False
+    )
+    request_date = models.DateTimeField(
+        auto_now_add=True,
+        null=True
+    )
+    appoval_date =  models.DateTimeField(
+        null=True,
+        blank=True
     )
 
     def __str__(self):

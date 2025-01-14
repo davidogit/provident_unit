@@ -71,6 +71,12 @@
                 History</a>
             </nav>
           </li>
+          <li class="nav-item">
+            <a href="{% url 'schedule_payment_date' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-time-line fs-32 lh-1 me-3"></i> <span>Schedule Dates</span></a>
+            <nav class="nav nav-sub">
+              <!-- <a href="{% url 'general_payout' tenant_id=request.tenant.id %}" class="nav-sub-link">General Payout</a> -->
+            </nav>
+          </li>
 
         </ul>
       </div><!--nav-group -->
@@ -407,13 +413,17 @@
 
 
   <!--main-->
+  <div class="container-fluid d-flex justify-content-center align-items-center">
+    <div class="row w-100">
+        <div class="col-12">
+          {% block content %}
 
-  {% block content %}
 
-
-  {% endblock %}
-
-
+          {% endblock %}
+            <!-- Your existing content goes here -->
+        </div>
+    </div>
+  </div>
   <!-- main -->
 
 

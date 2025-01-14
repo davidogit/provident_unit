@@ -59,5 +59,9 @@ urlpatterns =[
     # Payout URLs
     path('general-payout/', views.GeneralPayoutView.as_view(), name='general_payout'),
     path('fetch-members/', views.FetchSchemeMembers.as_view(), name='fetch-members'),
+
+    # Schedule Payment Date URL
+    path('schedule_payment_dates/', views.SchedulePaymentDate.as_view(), name='schedule_payment_date'),
+    path('delete_scheduled_date/<int:pk>/<int:scheme_id>/', views.DeleteSchedulePaymentDate.as_view(), name='delete_scheduled_dates')
     
 ]

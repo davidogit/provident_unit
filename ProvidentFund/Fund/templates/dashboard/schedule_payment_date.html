@@ -1,0 +1,165 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Schedule Payment</title>
+{% endblock %}
+
+{% block header %}
+<h5>Schedule Payment Dates</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-xl">
+            <div class="container">
+                <div class="row g-4">
+                    
+                    <div class="col-xl">
+                        <div class="transaction-form border p-3 rounded position-relative">
+                            <form action="" method="POST" id="add_payout_date">
+                                {% csrf_token %}
+                                <div class="form-floating mb-3 d-flex justify-content-between">
+                            
+                                    <div class="form-floating">
+                                        <select name="scheme_id" id="scheme_id" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for scheme in available_schemes %}
+                                            <option value="{{ scheme.id }}">{{ scheme }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="scheme_id">Scheme</label>
+                                    </div>
+                                
+                                    <div class="form-floating d-block mb-2">
+                                        <input type="date" name="payment_date" id="payment_date" class="form-control">
+                                        <label for="payment_date">Payment Date</label>
+                                    </div>
+
+                                    <div class="form-floating d-block">
+                                        <input type="number" name="payout_percentage" step="0.01" id="payout_percentage" class="form-control" placeholder="">
+                                        <label for="payout_percentage" class="form-label">Payout Percentage</label>
+                                    </div>
+                                </div>
+                                <!-- submit button -->
+                                <div class="d-grid gap
+                                -2">
+                                    <button class="btn btn-outline-primary btn-lg save_mapping" type="submit">Add</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group payout dates by schemes teo on a row in each scheme and two schemes on a row -->
+            <div class="container mt-5">
+                <div class="row g-4">
+                    {% for scheme in available_schemes %}
+                    <div class="col-12 col-md-6 col-lg-4 d-flex justify-content-center align-items-center">
+                        <div class="transaction-form border p-3 rounded position-relative overflow-auto" style="max-height: 200px;">
+                            <h5 class="h5 text-center">{{ scheme|upper }}</h5>
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Payment Date</th>
+                                        <th>Payout Percentage</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% with scheme.scheduledPaymentDate.all as payoutDates %}
+                                    {% if payoutDates %}
+                                    {% for payout in payoutDates %}
+                                    <tr>
+                                        <td class="text-center align-middle">{{ payout.date_of_payment }}</td>
+                                        <td class="text-center align-middle">{{ payout.payout_percentage }} %</td>
+                                        <td class="text-center align-middle">
+                                            <a href="{% url 'delete_scheduled_dates' tenant_id=request.tenant.id pk=payout.id scheme_id=scheme.id %}" class="btn delete-date" data-schedule-date-id="{{ payout.id }}" 
+                                            data-scheme-id="{{ scheme.id }}"><i class="ri-close-circle-fill fs-18" style="color: red;"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="3" class="text-center">No payout dates available</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endwith %}
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        // Add new payout date
+        $('#add_payout_date').submit(function(e){
+            e.preventDefault();
+            var form = $(this);
+            var url = form.attr('action');
+            var data = form.serialize();
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: data,
+                success: function(response){
+                    if(response.status == 'success'){
+                        location.reload();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(){
+                    alert('Failed to add payout date');
+                }
+            });
+        });
+
+        // Delete payout date
+        $('.delete-date').click(function(e){
+            e.preventDefault();
+            var url = $(this).attr('href');
+            // get schedule date id and scheme id
+            var schedule_date_id = $(this).data('schedule-date-id');
+            var scheme_id = $(this).data('scheme-id');
+            console.log(schedule_date_id, scheme_id);
+
+            var confirmDelete = confirm('Are you sure you want to delete this payout date?');
+            if(!confirmDelete){
+                return false;
+            }
+
+            $.ajax({
+                type: 'DELETE',
+                url: url,
+                headers:{
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                data: {
+                    schedule_date_id: schedule_date_id,
+                    scheme_id: scheme_id,
+                },
+                success: function(response){
+                    if(response.status == 'success'){
+                        alert(response.message);
+                        location.reload();
+                    }else{
+                        alert('Failed to delete payout date');
+                    }
+                },
+                error: function(){
+                    alert('An error occured while deleting payout date');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

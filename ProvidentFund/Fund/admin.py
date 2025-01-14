@@ -1,5 +1,5 @@
 from django.contrib import admin
-from Fund.models import InvestmentDetail,BankInterest,DelayedInterest,AuditTrail,BankInterestRate
+from Fund.models import InvestmentDetail,BankInterest,DelayedInterest,AuditTrail,BankInterestRate,Suppliers,Requisition,RequisitionItem,PurchaseOrder,PaymentInvoice,ScheduledPaymentDates
 
 # Register your models here.
 
@@ -29,3 +29,9 @@ class DelayedInterestAdmin(admin.ModelAdmin):
 admin.site.register(DelayedInterest,DelayedInterestAdmin)
 admin.site.register(AuditTrail)
 admin.site.register(BankInterestRate)
+admin.site.register(Suppliers)
+admin.site.register(Requisition)
+admin.site.register(RequisitionItem)
+admin.site.register(PurchaseOrder)
+admin.site.register(PaymentInvoice)
+admin.site.register(ScheduledPaymentDates)
