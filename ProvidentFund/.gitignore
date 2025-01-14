@@ -19,4 +19,6 @@ celerybeat-schedule.dir
 
 backup.json
 
+backup.sql
+
 **/tests/
