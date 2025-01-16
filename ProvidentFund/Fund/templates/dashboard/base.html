@@ -81,6 +81,27 @@
         </ul>
       </div><!--nav-group -->
 
+      <!-- Expense Payment -->
+      <div class="nav-item">
+        <a href="#" class="nav-label">Suppliers & Expenses</a>
+        <ul class="nav nav-sidebar">
+          <li class="nav-item">
+            <a href="#" class="nav-link has-sub"><i class="ri-shopping-cart-line fs-32 lh-1 me-3"></i> <span>Purchase</span></a>
+            <nav class="nav nav-sub">
+              <a href="{% url 'raise_requisition' tenant_id=request.tenant.id %}" class="nav-sub-link">Raise Requisition</a>
+              <a href="{% url 'purchase_order' tenant_id=request.tenant.id %}" class="nav-sub-link">Purchase Orders</a>
+              <a href="{% url 'payout_invoice' tenant_id=request.tenant.id %}" class="nav-sub-link">Payout Invoice</a>
+            </nav>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'supplier_view' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-truck-line fs-32 lh-1 me-3"></i> <span>Suppliers</span></a>
+            <nav class="nav nav-sub">
+            </nav>
+          </li>
+
+        </ul>
+      </div><!--nav-group -->
+
       <div class="nav-item border-5 border-bottom border-secondary">
         <a href="#" class="nav-label">Configuration</a>
         <ul class="nav nav-sidebar">
@@ -106,6 +127,10 @@
             </nav>
           </li>
 
+          <li class="nav-item">
+            <a href="#" class="nav-link"><i class="ri-scales-3-line fs-32 lh-1 me-3"></i> <span>Tax</span></a>
+          </li>
+
           {% if is_manager_or_hr %}
           <li class="nav-item">
             {% if is_manager %}
@@ -119,9 +144,9 @@
                 class="nav-sub-link">Add Scheme
               </a>
               
-            </nav>
-            {% endif %}
+            </nav>    
           </li>
+          {% endif %}
 
           <li class="nav-item">
             {% if is_manager %}
@@ -136,8 +161,8 @@
               </a>
               
             </nav>
-            {% endif %}
           </li>
+          {% endif %}
 
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-survey-line fs-32 lh-1 me-3"></i> <span>Scheme Apllications</span></a>

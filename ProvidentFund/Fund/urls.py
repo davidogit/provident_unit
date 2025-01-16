@@ -61,7 +61,34 @@ urlpatterns =[
     path('fetch-members/', views.FetchWithdrawalRequests.as_view(), name='fetch-members'),
 
     # Schedule Payment Date URL
-    path('schedule_payment_dates/', views.SchedulePaymentDate.as_view(), name='schedule_payment_date'),
-    path('delete_scheduled_date/<int:pk>/<int:scheme_id>/', views.DeleteSchedulePaymentDate.as_view(), name='delete_scheduled_dates')
+    path('schedule_payment_dates/', views.SchedulePaymentDateView.as_view(), name='schedule_payment_date'),
+    path('delete_scheduled_date/<int:pk>/', views.DeleteSchedulePaymentDate.as_view(), name='delete_scheduled_dates'),
+
+    # SUPPLIER URL
+    path('suppliers/', views.SupplierView.as_view(), name='supplier_view'),
+
+    # Delete supplier
+    path('delete-supplier/<int:pk>/', views.DeleteSupplierView.as_view(), name='delete_supplier'),
+    # Update supplier
+    path('update-supplier/<int:pk>/', views.UpdateSupplierView.as_view(), name='update_supplier'),
+
+    # REQUISITION URL
+    path('create-requisition/', views.RaiseRequisitionView.as_view(), name='raise_requisition'),
+    # delete requisition
+    path('delete-requisition/<int:pk>/', views.DeleteRequisitionView.as_view(), name='delete_requisition'),
+    # delete requisition item
+    path('delete-requisition-item/<int:pk>/<int:req_id>/', views.DeleteRequisitionItemView.as_view(), name='delete_requisition_item'),
+    # Add requisition item
+    path('add-requisition-item/', views.AddRequisitionItemView.as_view(), name='add_requisition_item'),
+    # Approve requisition
+    path('approve-requisition/<int:req_id>/', views.ApproveRequisitionView.as_view(), name='approve_requisition'),
+
+
+    # PURCHASE ORDER URL
+    path('purchase-orders/', views.PurschaseOrderView.as_view(), name='purchase_order'),
+
+
+    # PAYOUT INVOICE URL
+    path('payout-invoice/', views.PayoutInvoiceView.as_view(), name='payout_invoice'),
     
 ]

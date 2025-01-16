@@ -8,6 +8,7 @@ from MultiScheme.models import InvestmentScheme,Tenant
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from .generate_invoice import generate_invoice_number
+import uuid
 
 class InvestmentDetail(models.Model):
     invoice_number = models.CharField(
@@ -401,7 +402,7 @@ class AuditTrail(models.Model):
     )
 
     def __str__(self):
-        return f'{self.name} {self.action} at {self.timestamp}'
+        return f'{self.name} | {self.action} | visited at: {self.timestamp}'
 
 
 
@@ -418,7 +419,7 @@ class BankInterestRate(models.Model):
         ordering = ['-effective_date']  # Order by most recent rates
 
     def __str__(self):
-        return f"{self.bank_name} - {self.interest_rate}%"
+        return f"{self.bank_name} | {self.interest_rate}%"
 
 
 
@@ -448,26 +449,52 @@ class ScheduledPaymentDates(models.Model):
     )
 
     def __str__(self):
-        return f'{self.tenant} - {self.scheme} - {self.date_of_payment.month} Scheduled Payment'
+        return f'{self.tenant} | {self.scheme} | {self.date_of_payment.month}'
 
 
 
 # SUPPLIERS
 class Suppliers(models.Model):
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name='suppliers'
+    )
     name = models.CharField(
         max_length=255,
         null=False
     )
+    bank = models.CharField(
+        max_length=255,
+        null=True
+    )
     account_number = models.CharField(
         max_length=20,
-        null=False
+        null=True
     )
-    email = models.EmailField(null=False)
-    phone = models.CharField(max_length=10)
-    location = models.CharField(max_length=255)
+    email = models.EmailField(
+        null=True
+    )
+    phone = models.CharField(
+        max_length=12,
+        null=True
+    )
+    address = models.CharField(
+        max_length=255
+    )
+    branch = models.CharField(
+        max_length=255,
+        null=True
+    )
+    date_added = models.DateTimeField(
+        auto_now_add=True,
+        null=True
+    )
+
 
     def __str__(self):
-        return f'{self.name}'
+        return f'{self.name} | added on: {self.date_added}'
 
 
 # Requisition Model (Header)
@@ -500,13 +527,24 @@ class Requisition(models.Model):
     approved = models.BooleanField(
         default=False
     )
+    class Meta:
+        ordering = ['-date_created']
 
     def update_total_amount(self):
         self.total_amount = sum(item.total_cost for item in self.items.all())
         self.save()
 
+    def approve(self):
+        self.approved = True
+        PurchaseOrder.objects.create(
+            requisition=self,
+            amount=self.total_amount
+        )
+        self.save()
+
+
     def __str__(self):
-        return f'{self.tenant} - {self.supplier}'
+        return f'{self.pk} | {self.description[:20]} | amount: {self.total_amount} | created at: {self.date_created}'
 
 
 # Requisition Items Model
@@ -514,7 +552,8 @@ class RequisitionItem(models.Model):
     requisition = models.ForeignKey(
         Requisition,
         on_delete=models.CASCADE,
-        related_name='items'
+        related_name='items',
+        null=False
     )
     item_name = models.CharField(
         max_length=255,
@@ -529,8 +568,16 @@ class RequisitionItem(models.Model):
     total_cost = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        null=False
+        null=True,
+        blank=True
     )
+    date_added = models.DateTimeField(
+        auto_now_add=True,
+        null=True
+    )
+
+    class Meta:
+        ordering = ['-date_added']
 
     def save(self, *args, **kwargs):
         self.total_cost = self.quantity * self.amount
@@ -545,13 +592,15 @@ class RequisitionItem(models.Model):
         requisition.update_total_amount()
 
     def __str__(self):
-        return f'{self.item_name} - {self.requisition}'
+        return f'{self.item_name} | {self.requisition.description[:20]} | created at: {self.date_added}'
+    
 
 
 # Purchase Order Model
 class PurchaseOrder(models.Model):
-    order_number = models.AutoField(
+    order_number = models.UUIDField(
         primary_key=True,
+        default=uuid.uuid4,
         unique=True,
         editable=False
     )
@@ -571,15 +620,13 @@ class PurchaseOrder(models.Model):
     amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        default=0.00
+        default=0.00,
+        null=True,
+        blank=True
     )
-
-    def save(self,*args,**kwargs):
-        self.amount = self.requisition.update_total_amount()
-        return super().save(*args,**kwargs)
     
     def __str__(self):
-        return f'{self.requisition.tenant} - {self.order_number}'
+        return f'{self.requisition.tenant} | {self.order_number} | created at: {self.date_created}'
 
 
 # Purchase Payment Invoice

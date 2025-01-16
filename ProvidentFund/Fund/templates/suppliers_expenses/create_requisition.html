@@ -1,0 +1,358 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Requisition</title>
+{% endblock %}
+
+{% block header %}
+<h5>Requisition</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-12">
+            <div class="container">
+                <div class="row g-4 d-flex flex-column justify-content-center align-items-center">
+                    
+                    <div class="col-12">
+                        <div class="requisition-form border p-3 rounded position-relative">
+                            <form action="" method="POST" id="requisition-form">
+                                {% csrf_token %}
+                                <div class="row g-3 d-flex justify-content-center align-items-center">
+                            
+                                    <div class="form-floating col-12 col-md-4">
+                                        <select name="supplier_id" id="supplier_id" class="form-select">
+                                            <option value="">-select-</option>
+                                            {% for supplier in suppliers %}
+                                            <option value="{{ supplier.id }}">{{ supplier }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="supplier_id">Supplier</label>
+                                    </div>
+                                
+                                    <div class="form-floating col-12 col-md-4">
+                                        <textarea class="form-control" name="description" id="description"></textarea>
+                                        <label for="description">Description</label>
+                                    </div>
+
+                                    <!-- <div class="form-floating col-12 col-md-4">
+                                        <input type="number" name="payout_percentage" step="0.01" id="payout_percentage" class="form-control" placeholder="">
+                                        <label for="payout_percentage" class="form-label">Payout Percentage</label>
+                                    </div> -->
+
+                                    <!-- submit button -->
+                                    <div class="col-12 col-md-4">
+                                        <button class="btn btn-outline-primary btn-lg save_mapping w-100" type="submit">Add</button>
+                                    </div>
+                                </div>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group payout dates by schemes teo on a row in each scheme and two schemes on a row -->
+            <div class="container mt-5">
+                <div class="row">
+                    {% for requisition in requisition_headers %}
+                    <div class="requisition-card col-12 col-md-6 col-lg-4 mb-4">
+                        <div class="border rounded overflow-hidden d-flex flex-column" style="max-height: 400px;">
+                            <!-- Header Section -->
+                            <div class="p-3">
+                                <div class="row d-flex justify-content-between align-items-center">
+                                    <div class="col-2 text-start">
+                                        <button class="btn btn-link p-0 delete-requisition" data-requisition-id="{{ requisition.id }}">
+                                            <i class="ri-delete-bin-2-line fs-3" style="color: red;"></i>
+                                        </button>
+                                    </div>
+                                    <div class="col-8">
+                                        <h5 class="text-center">{{ requisition.supplier.name }}</h5>
+                                        <p class="text-center">{{ requisition.description }}</p>
+                                    </div>
+                                    <div class="col-2 text-end">
+                                        <button class="btn btn-link p-0 add-item" data-requisition-id="{{ requisition.id }}">
+                                            <i class="ri-add-circle-fill fs-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Table Section -->
+                            <div class="table-responsive flex-grow-1 overflow-auto">
+                                <table class="table table-striped table-hover item-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Quantity</th>
+                                            <th>Amount</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% with requisition.items.all as items %}
+                                        {% if items %}
+                                        {% for item in items %}
+                                        <tr>
+                                            <td class="text-center align-middle">{{ item.item_name }}</td>
+                                            <td class="text-center align-middle">{{ item.quantity }}</td>
+                                            <td class="text-center align-middle">{{ item.amount }}</td>
+                                            <td class="text-center align-middle">{{ item.total_cost }}</td>
+                                            <td class="text-center align-middle">
+                                                <a href="#" class="delete-requisition-item" data-item-id="{{ item.id }}" data-requisition-id="{{ requisition.id }}">
+                                                    <i class="ri-close-circle-fill fs-5 text-danger"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center">No items added.</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Footer Section -->
+                             {% if requisition.items.all %}
+                            <div class="bg-light p-3 position-sticky bottom-0">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <h6>Total</h6>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <h6>{{ requisition.total_amount }}</h6>
+                                    </div>
+                                    {% if is_manager %}
+                                    <div class="col-6 text-start">
+                                        <button class="approve-requisition btn btn-outline-secondary btn-sm" data-requisition-id="{{ requisition.id }}">
+                                            Approve
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        // Save requisition
+        $('#requisition-form').on('submit', function(e){
+            e.preventDefault();
+            var form = $(this);
+            var url = form.attr('action');
+            var data = form.serialize();
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: data,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    if(response.status === 'success'){
+                        alert(response.message);
+                        window.location.reload();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                }
+            });
+        });
+
+
+        //Delete requisition
+        $('.delete-requisition').on('click', function(e){
+            e.preventDefault();
+            var $this = $(this);
+            var requisition_id = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}'
+
+            if (!confirm('Are you sure you want to delete this requisition?')){
+                return;
+            }
+
+            $.ajax({
+                url: `/${tenantId}/fund/delete-requisition/${requisition_id}/`,
+                type: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success:function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        $this.closest('.requisition-card').remove();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                }
+            });
+        });
+
+
+        //Delete requisition item
+        $('.delete-requisition-item').on('click', function(e){
+            e.preventDefault();
+            var $this = $(this);
+            var requisition_id = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}'
+            var item_id = $(this).data('item-id');
+
+            if (!confirm('Are you sure you want to delete this item?')){
+                return;
+            }
+
+            $.ajax({
+                url: `/${tenantId}/fund/delete-requisition-item/${item_id}/${requisition_id}/`,
+                type: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+
+                success:function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        $this.closest('tr').remove();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                    alert('An error occured');
+                }
+            });
+        });
+
+        //Add requisition item
+        $('.add-item').on('click', function(e){
+            e.preventDefault();
+            //var requisition_id = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}'
+
+            //Add new row to the table for user input
+            const newRow = `
+                <tr>
+                    <td class="text-center align-middle">
+                        <input type="text" name="item_name" class="form-control" placeholder="Name">
+                    </td>
+                    <td class="text-center align-middle">
+                        <input type="number" name="quantity" class="form-control" placeholder="Quantity">
+                    </td>
+                    <td class="text-center align-middle">
+                        <input type="number" name="amount" class="form-control" placeholder="Amount">
+                    </td>
+                    <td class="text-center align-middle d-flex">
+                        <a class="btn btn-sm save-item">
+                            <i class="ri-checkbox-circle-line fs-5" style="color:green;"></i>
+                        </a>
+                        <a class="btn btn-sm remove-row">
+                            <i class="ri-delete-bin-2-line fs-5" style="color:red;"></i>
+                        </a>
+                    </td>
+                </tr>    
+            `
+
+            //Append nerRow to table
+            $(this).closest('.requisition-card').find('tbody').append(newRow);
+        });
+
+        //Remove table row
+        $('.item-table').on('click','.remove-row', function(e){
+            e.preventDefault();
+            $(this).closest('tr').remove();
+        });
+
+        //Save item
+        $('.item-table').on('click','.save-item', function(e){
+            e.preventDefault();
+            const row = $(this).closest('tr');
+
+            var item_name = row.find('input[name="item_name"]').val();
+            var quantity = row.find('input[name="quantity"]').val();
+            var amount = row.find('input[name="amount"]').val();
+            var requisition_id = $(this).closest('.requisition-card').find('.delete-requisition').data('requisition-id');
+
+
+            if (!item_name || !quantity || !amount){
+                alert('All fields are required');
+                return;
+            }
+
+            var data = {
+                item_name: item_name,
+                quantity: quantity,
+                amount: amount,
+                requisition_id: requisition_id
+            }
+
+            var tenantId = '{{ request.tenant.id }}'
+
+            $.ajax({
+                url:`/${tenantId}/fund/add-requisition-item/`,
+                type: 'POST',
+                data: data,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success:function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        window.location.reload();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                }
+            });
+        });
+
+        //Approve requisition
+        $('.approve-requisition').on('click',function(e){
+            e.preventDefault();
+            var requisition_id = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}'
+
+            if (!confirm('Are you sure you want to approve this requisition?')){
+                return;
+            }
+
+            $.ajax({
+                url: `/${tenantId}/fund/approve-requisition/${requisition_id}/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success:function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        window.location.reload();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+            });
+        });
+    });
+</script>
+{% endblock %}

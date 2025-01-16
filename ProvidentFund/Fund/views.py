@@ -7,7 +7,7 @@ from django.http.response import HttpResponse as HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 from ProvidentFund.settings import EMAIL_HOST_USER
-from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates
+from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder
 from Member.models import Member,WithdrawalRequest
 from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings
 from MultiScheme.models import InvestmentScheme,Tenant
@@ -1890,7 +1890,7 @@ class FetchWithdrawalRequests(View):
 
         
 # Add Schedule Payment Date
-class SchedulePaymentDate(TemplateView):
+class SchedulePaymentDateView(TemplateView):
     template_name = 'dashboard/schedule_payment_date.html'
 
     def post(self,*args,**kwargs):
@@ -1954,35 +1954,12 @@ class SchedulePaymentDate(TemplateView):
 
 
 class DeleteSchedulePaymentDate(DeleteView):
-    model = SchedulePaymentDate
+    model = ScheduledPaymentDates
     
-    def get_object(self, queryset = ...):
+    def get_queryset(self):
         tenant = self.request.tenant
-        scheme_id = self.kwargs.get('scheme_id')
-        obj_id = self.kwargs.get('pk')
-        print(f'{scheme_id} and {obj_id}')
 
-
-        if not all([scheme_id,obj_id]):
-            return JsonResponse({
-                'status':'error',
-                'message':'Missing required fields'
-            })
-        
-        try:
-            obj = get_object_or_404(
-                ScheduledPaymentDates,
-                tenant=tenant,
-                id=obj_id,
-                scheme__id=scheme_id
-            )
-        except Exception as e:
-            return JsonResponse({
-                'status':'error',
-                'message':'Couldn\'t find related scheme'
-            })
-
-        return obj
+        return ScheduledPaymentDates.objects.filter(tenant=tenant)
     
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -1997,3 +1974,368 @@ class DeleteSchedulePaymentDate(DeleteView):
                 'status':'error',
                 'message':f'An error occured: {str(e)}'
             })
+
+
+# SUPPLIERS VIEW
+class SupplierView(TemplateView):
+    template_name = 'suppliers_expenses/suppliers.html'
+
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        supplier_name = self.request.POST.get('supplier_name')
+        supplier_address = self.request.POST.get('supplier_address')
+        supplier_phone = self.request.POST.get('supplier_phone')
+        supplier_email = self.request.POST.get('supplier_email')
+        supplier_bank = self.request.POST.get('supplier_bank')
+        supplier_account = self.request.POST.get('supplier_account')
+        supplier_branch = self.request.POST.get('supplier_branch')
+
+        if not all([supplier_account,supplier_address,supplier_bank,supplier_branch,supplier_email,supplier_name,supplier_phone]):
+            return JsonResponse({
+                'status':'error',
+                'message':'Missing required fields.'
+            })
+        
+        if not tenant:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid Tenant'
+            })
+        
+        try:
+            Suppliers.objects.create(
+                tenant=tenant,
+                name=supplier_name,
+                bank=supplier_bank,
+                account_number=supplier_account,
+                email=supplier_email,
+                phone=supplier_phone,
+                address=supplier_address,
+                branch=supplier_branch
+            )
+            return JsonResponse({
+                'status':'success',
+                'message':'Success'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured: {str(e)}'
+            })
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+
+        # Fetch all suppliers related to tenant
+        try:
+            suppliers = Suppliers.objects.filter(
+                tenant=tenant
+            )
+            context['suppliers'] = suppliers
+        except Exception:
+            suppliers = Suppliers.objects.none()
+            context['suppliers'] = suppliers
+        
+        return context
+
+# DELETE SUPPLIER
+class DeleteSupplierView(DeleteView):
+    model = Suppliers
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return Suppliers.objects.filter(tenant=tenant)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        supplier_name = self.object.name
+
+        try:
+            self.object.delete()
+            return JsonResponse({
+                'status': 'success',
+                'message': f'{supplier_name} deleted successfully'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'An error occurred: {str(e)}'
+            })
+
+# UPDATE SUPPLIER DETAILS
+class UpdateSupplierView(UpdateView):
+    model = Suppliers
+    fields = [
+        'name',
+        'address',
+        'phone',
+        'bank',
+        'account_number',
+        'email',
+        'branch'
+    ]
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return Suppliers.objects.filter(tenant=tenant)
+
+    def form_valid(self, form):
+        try:
+            self.object = form.save()
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Supplier updated successfully.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'An error occurred: {str(e)}'
+            })
+
+    def form_invalid(self, form):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Form submission is invalid.',
+            'errors': form.errors
+        })
+
+
+# RAISE REQUISITION VIEW
+class RaiseRequisitionView(TemplateView):
+    template_name = 'suppliers_expenses/create_requisition.html'
+
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        supplier_id = self.request.POST.get('supplier_id')
+        description = self.request.POST.get('description')
+
+        if not all([supplier_id,description]):
+            return JsonResponse({
+                'status':'error',
+                'message':'Missing required fields.'
+            })
+
+        try:
+            supplier = Suppliers.objects.get(
+                tenant=tenant,
+                id=supplier_id
+            )
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Supplier not found.'
+            })
+        
+        try:
+            Requisition.objects.create(
+                tenant=tenant,
+                supplier=supplier,
+                description=description
+            )
+            return JsonResponse({
+                'status':'success',
+                'message':'Requisition created.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured saving requisition: {str(e)}'
+            })
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        if tenant:
+            try:
+                suppliers = Suppliers.objects.filter(tenant=tenant)
+            except Suppliers.DoesNotExist:
+                suppliers = None
+            
+            try:
+                requisitions = Requisition.objects.filter(
+                    tenant=tenant,
+                    approved=False
+                )
+            except Requisition.DoesNotExist:
+                requisitions = None
+
+        context['suppliers'] = suppliers
+        context['requisition_headers'] = requisitions
+
+        return context
+
+
+# ADD REQUISITION ITEM VIEW
+class AddRequisitionItemView(CreateView):
+    model = RequisitionItem
+    fields = ('item_name','quantity','amount')
+
+    def form_valid(self, form):
+        tenant = self.request.tenant
+        requisition_id = self.request.POST.get('requisition_id')
+
+        if not requisition_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please select a requisition'
+            })
+        try:
+            requisition = Requisition.objects.get(
+                tenant=tenant,
+                id=requisition_id
+            )
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Requisition not found'
+            })
+        # Dont allow addition to approved requisitions
+        if requisition.approved == True:
+            return JsonResponse({
+                'status':'error',
+                'message':'Can not add new item to an approved requisition'
+            })
+        try:
+            form.instance.requisition = requisition
+            form.save()
+            return JsonResponse({
+                'status':'success',
+                'message':'Item added'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured saving item: {str(e)}'
+            })
+    
+    def form_invalid(self, form):
+        return JsonResponse({
+            'status':'error',
+            'message':f'Invalid Form Data: {str(form.errors)}'
+        })
+    
+    def get_success_url(self):
+        tenant = self.request.tenant
+        url = reverse('raise_requisition', kwargs={'tenant_id':tenant.id})
+        return url
+
+# DELETE REQUISITION OBJECT VIEW
+class DeleteRequisitionView(DeleteView):
+    model = Requisition
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return Requisition.objects.filter(tenant=tenant)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        if not self.object:
+            return JsonResponse({
+                'status':'error',
+                'message':'Requisition not found.'
+            })
+        name = self.object.description
+        try:
+            self.object.delete()
+            return JsonResponse({
+                'status':'success',
+                'message':f'{name} deleted.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured while trying to delete {name}'
+            })
+        
+# DELETE REQUISITION ITEM VIEW
+class DeleteRequisitionItemView(DeleteView):
+    model = RequisitionItem
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        requisition_id = self.kwargs['req_id']
+        print(f'REQUISITION ID: {requisition_id}')
+        print(f'REQUEST{self.request.POST}')
+        requisition = Requisition.objects.get(
+            tenant=tenant,
+            id=requisition_id
+        )
+
+        return RequisitionItem.objects.filter(
+            requisition=requisition
+        )
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        if not self.object:
+            return JsonResponse({
+                'status':'error',
+                'message':'Item not found.'
+            })
+        name = self.object.item_name
+        # Prevent removing an item from an approved requisition
+        if self.object.requisition.approved == True:
+            return JsonResponse({
+                'status':'error',
+                'message':'Can not remove item from an approved requisition.'
+            })
+        try:
+            self.object.delete()
+            return JsonResponse({
+                'status':'success',
+                'message':f'{name} deleted.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured while trying to delete {name}'
+            })
+
+
+# APPROVE REQUISITION VIEW
+class ApproveRequisitionView(View):
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        requisition_id = self.kwargs['req_id']
+
+        if not requisition_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please select a requisition'
+            })
+        
+        try:
+            requisition = Requisition.objects.get(
+                tenant=tenant,
+                id=requisition_id
+            )
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'No matching Requisition found'
+            })
+        
+        # Approve Requisition
+        try:
+            requisition.approve()
+            return JsonResponse({
+                'status':'success',
+                'message':f'{requisition.description}Approve successfully'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured: {str(e)}'
+            })
+
+# PURCHASE ORDER VIEW
+class PurschaseOrderView(TemplateView):
+    template_name = 'suppliers_expenses/purchase_order.html'
+
+
+# PAYOUT INVOICE VIEW
+class PayoutInvoiceView(TemplateView):
+    template_name = 'suppliers_expenses/payout_invoice.html'
