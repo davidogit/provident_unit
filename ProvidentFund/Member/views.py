@@ -16,7 +16,7 @@ from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView,UpdateView,CreateView,ListView
 from django.contrib.auth.models import Group
-from .models import Member,SchemeApproval, TransactionHistory,ExitApproval
+from .models import Member,SchemeApproval, Transaction,ExitApproval
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
@@ -788,11 +788,11 @@ class CreateTransactionView(View):
                 scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id)
                 staff = StaffAPI.objects.get(staff_number=member.staff_id)
 
-                if TransactionHistory.objects.filter(reference=reference).exists():
+                if Transaction.objects.filter(reference=reference).exists():
                     return JsonResponse({'status': 'error', 'message': 'Duplicate reference detected.'}, status=400)
 
                 amount_in_kobo = int(float(amount) * 100)
-                transaction_obj = TransactionHistory.objects.create(
+                transaction_obj = Transaction.objects.create(
                     tenant=tenant,
                     staff=staff,
                     member=member,
@@ -856,7 +856,7 @@ def verify_transaction(request, reference):
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
 class TransactionHistoryView(ListView):
-    model = TransactionHistory
+    model = Transaction
     template_name = 'transaction_history.html'
     paginate_by = 10
     context_object_name = 'transactions'
@@ -864,7 +864,7 @@ class TransactionHistoryView(ListView):
     def get_queryset(self):
         tenant = self.request.tenant
         member = self.request.user.member
-        return TransactionHistory.objects.filter(member=member, tenant=tenant).order_by('-transaction_date')
+        return Transaction.objects.filter(member=member, tenant=tenant).order_by('-transaction_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -924,7 +924,7 @@ class WithdrawalView(View):
                 staff = StaffAPI.objects.get(staff_number=member.staff_id)
 
                 # Check if the user has sufficient balance
-                balance = TransactionHistory.objects.filter(
+                balance = Transaction.objects.filter(
                     tenant=tenant,
                     staff=staff,
                     scheme=scheme
@@ -934,7 +934,7 @@ class WithdrawalView(View):
                     return JsonResponse({'status': 'error', 'message': 'Insufficient balance.'}, status=400)
 
                 # Create a withdrawal request with status 'pending_approval'
-                TransactionHistory.objects.create(
+                Transaction.objects.create(
                     tenant=tenant,
                     staff=staff,
                     member=member,

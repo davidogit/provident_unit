@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.core.validators import FileExtensionValidator
 import random
 from django.db import IntegrityError
+from Fund.generate_invoice import generate_short_alpha_numeric_id
 
 # Create your models here.
 
@@ -182,10 +183,12 @@ class SchemeApproval(models.Model):
 
 
 
-class TransactionHistory(models.Model):
-    transaction_id  =models.UUIDField(
-        default = uuid.uuid4,
-        unique = True
+class Transaction(models.Model):
+    id = models.CharField(
+        max_length=12,
+        primary_key=True,
+        unique = True,
+        editable=False
     )
     tenant = models.ForeignKey(
         Tenant,
@@ -196,11 +199,6 @@ class TransactionHistory(models.Model):
         StaffAPI,
         on_delete=models.CASCADE,
         null=True
-    )
-    member = models.ForeignKey(
-        Member,
-        on_delete=models.CASCADE,
-        related_name="transactions"
     )
     scheme = models.ForeignKey(
         InvestmentScheme,
@@ -216,7 +214,9 @@ class TransactionHistory(models.Model):
     WITHDRAWAL = 'Withdrawal'
     transaction_type_choices = [
         (DEPOSIT, 'Deposit'),
-        (WITHDRAWAL, 'Withdrawal')
+        (WITHDRAWAL, 'Withdrawal'),
+        ('Scheduled Payout','Scheduled Payout'),
+        ('General Payout','General Payout')
     ]
     transaction_type = models.CharField(
         max_length=20,
@@ -228,7 +228,8 @@ class TransactionHistory(models.Model):
     BANK_TRANSFER = 'BankTransfer'
     payment_method_choices = [
         (MOBILE_MONEY, 'Mobile Money'),
-        (BANK_TRANSFER, 'Bank Transfer')
+        (BANK_TRANSFER, 'Bank Transfer'),
+        ('cheque','Cheque')
     ]
     payment_method = models.CharField(
         max_length=20,
@@ -241,7 +242,8 @@ class TransactionHistory(models.Model):
         default=0.00)
     reference = models.TextField(
         max_length=255,
-        blank=True
+        blank=True,
+        null=True
     )
     STATUS_CHOICES = [
         ('pending','Pending'),
@@ -258,6 +260,11 @@ class TransactionHistory(models.Model):
 
     def __str__(self):
         return f"{self.transaction_type} - {self.amount} on {self.transaction_date}"
+    
+    def save(self,*args,**kwargs):
+        if not self.id:
+            self.id = generate_short_alpha_numeric_id(Transaction)
+        return super().save(*args,**kwargs)
 
     class Meta:
         indexes = [
@@ -315,10 +322,17 @@ class WithdrawalRequest(models.Model):
         null=False,
         related_name='withdrawal_request'
     )
-    ref_number = models.UUIDField(
+    scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='withdrawal_request'
+    )
+    id = models.CharField(
+        max_length=12,
         primary_key=True,
         unique=True,
-        default=uuid.uuid4
+        editable=False
     )
     staff = models.ForeignKey(
         StaffAPI,
@@ -345,4 +359,9 @@ class WithdrawalRequest(models.Model):
     )
 
     def __str__(self):
-        return f'{self.ref_number} - {self.amount} - {self.staff.staff_number}'
+        return f'{self.id} - {self.amount} - {self.staff.staff_number}'
+    
+    def save(self,*args,**kwargs):
+        if not self.id:
+            self.id = generate_short_alpha_numeric_id(WithdrawalRequest)
+        return super().save(*args,**kwargs)

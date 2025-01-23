@@ -220,3 +220,6 @@ class BankAccount(models.Model):
         choices=CURRENCY,
         default='GHS'
     )
+
+    def __str__(self):
+        return f'{self.bank_name} | {self.branch} | {self.account_number}'

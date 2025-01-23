@@ -59,10 +59,15 @@ urlpatterns =[
     # Payout URLs
     path('general-payout/', views.GeneralPayoutView.as_view(), name='general_payout'),
     path('fetch-members/', views.FetchWithdrawalRequests.as_view(), name='fetch-members'),
+    # payment History
+    path('payment-history/', views.PaymentHistoryView.as_view(), name='payment_history'),
 
     # Schedule Payment Date URL
     path('schedule_payment_dates/', views.SchedulePaymentDateView.as_view(), name='schedule_payment_date'),
+    # delete scheduled date
     path('delete_scheduled_date/<int:pk>/', views.DeleteSchedulePaymentDate.as_view(), name='delete_scheduled_dates'),
+    # Approve scheduled date
+    path('approve-payout-date/<int:date_id>/', views.ApproveScheduledPaymentDateView.as_view(), name='approve_scheduled_date'),
 
     # SUPPLIER URL
     path('suppliers/', views.SupplierView.as_view(), name='supplier_view'),
@@ -82,11 +87,16 @@ urlpatterns =[
     path('add-requisition-item/', views.AddRequisitionItemView.as_view(), name='add_requisition_item'),
     # Approve requisition
     path('approve-requisition/<int:req_id>/', views.ApproveRequisitionView.as_view(), name='approve_requisition'),
+    #fetch requisition items
+    path('get-requisition-items/<int:req_id>/', views.FetchItemsView.as_view(), name='fetch_items'),
 
 
     # PURCHASE ORDER URL
     path('purchase-orders/', views.PurschaseOrderView.as_view(), name='purchase_order'),
-
+    # received order
+    path('received-order/<slug:order_id>/', views.PurschaseOrderView.as_view(), name='receive-order'),
+    #fetch order items
+    path('get-order-items/<slug:order_id>/', views.FetchPurchaseOrderView.as_view(), name='fetch_order_items'),
 
     # PAYOUT INVOICE URL
     path('payout-invoice/', views.PayoutInvoiceView.as_view(), name='payout_invoice'),

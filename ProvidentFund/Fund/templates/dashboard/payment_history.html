@@ -1,0 +1,163 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}
+<title>Transaction History</title>
+{% endblock %}
+
+{% block header %}
+<h5>Transaction History</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
+        <div class="col-12">
+            <div class="container">
+                <div class="col-12 d-flex justify-content-between align-items-center mb-3">
+                    <div class="col-6 col-md-3 col-lg-6 d-flex flex-row justify-content-between align-items-center">
+                        <form action="" method="GET" class="d-flex flex-row justify-content-between align-items-center">
+                            <!-- Scheme Select -->
+                            <div class="form-floating w-100 me-2">
+                                <select class="form-select" name="scheme" id="scheme" aria-placeholder="">
+                                    <option value="">--select--</option>
+                                    {% for scheme in schemes %}
+                                    <option value="{{ scheme.id }}">{{ scheme }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="scheme">Scheme</label>
+                            </div>
+
+                            <!-- Payment Type -->
+                            <div class="form-floating w-100 me-2">
+                                <select class="form-select" name="payment_type" id="payment_type" aria-placeholder="">
+                                    <option value="">--select--</option>
+                                    {% for value,type in payment_type %}
+                                    <option value="{{ value }}">{{ type }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="payment_type">Payment Type</label>
+                            </div>
+
+                            <!-- Payment Mode Select -->
+                            <div class="form-floating w-100 me-2">
+                                <select class="form-select" name="payment_method" id="payment_method" aria-placeholder="">
+                                    <option value="">--select--</option>
+                                    {% for value, method in payment_methods %}
+                                    <option value="{{ value }}">{{ method }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="payment_method">Payment Method</label>
+                            </div>
+
+                            <!-- Status Select -->
+                            <div class="form-floating w-100 me-2">
+                                <select class="form-select" name="status" id="status" aria-placeholder="">
+                                    <option value="">--select--</option>
+                                    {% for value,status in payment_status %}
+                                    <option value="{{ status }}">{{ status }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="status">status</label>
+                            </div>
+                            <!-- search -->
+                            <button type="submit" class="btn btn-primary">Search</button>
+                        </form>
+                        
+                    </div>
+                </div>
+
+
+                <!-- Table to hold list of members payments to be processed -->
+                <div class="table-responsive overflow-auto" style="height: 500px;">
+                    <table class="table table-bordered table-striped" id="members_table">
+                        <thead class="thead-light text-center">
+                            <th></th>
+                            <th>Transaction Id</th>
+                            <th>Transaction Type</th>
+                            <th>Transaction Amount</th>
+                            <th>Transaction Date</th>
+                            <th>Payment Method</th>
+                            <th>Status</th>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transaction_queryset %}
+                            <tr>
+                                <td>
+                                    {{ forloop.counter|default:0 }}
+                                </td>
+                                <td>
+                                    {{ transaction.id }}
+                                </td>
+                                <td>
+                                    {{ transaction.transaction_type }}
+                                </td>
+                                <td>
+                                    {{ transaction.amount }}
+                                </td>
+                                <td>
+                                    {{ transaction.transaction_date }}
+                                </td>
+                                <td>
+                                    {{ transaction.payment_method }}
+                                </td>
+                                <td class="text-center align-middle">
+                                    {% if transaction.status == 'pending' %}
+                                        <span class="badge bg-warning">{{ transaction.status }}</span>
+                                    {% elif transaction.status == 'completed' %}
+                                        <span class="badge bg-success">{{ transaction.status }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{{ transaction.status }}</span>
+                                    {% endif %}
+                                    
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination -->
+                    <div class="pagination-container row position-sticky bottom-0">
+                        <div class="col-12 d-flex justify-content-center ">
+                            {% if is_paginated %}
+                            <nav aria-label="Page navigation example">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                    <a
+                                        class="page-link"
+                                        href="?page={{ page_obj.previous_page_number }}"
+                                        aria-label="Previous"
+                                    >
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                    </li>
+                                    {% endif %}
+                    
+                                    <li class="page-item">
+                                    <a class="page-link" href="#">{{ page_obj.number }}</a>
+                                    </li>
+                                    {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                    <a
+                                        class="page-link"
+                                        href="?page={{ page_obj.next_page_number }}"
+                                        aria-label="Next"
+                                    >
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                    </li>
+    
+                                    <li class="page-link">
+                                        <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

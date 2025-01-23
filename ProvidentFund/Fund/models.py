@@ -7,7 +7,7 @@ from django.urls import reverse
 from MultiScheme.models import InvestmentScheme,Tenant
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from .generate_invoice import generate_invoice_number
+from .generate_invoice import generate_invoice_number,generate_short_alpha_numeric_id
 import uuid
 
 class InvestmentDetail(models.Model):
@@ -598,9 +598,9 @@ class RequisitionItem(models.Model):
 
 # Purchase Order Model
 class PurchaseOrder(models.Model):
-    order_number = models.UUIDField(
+    id = models.CharField(
+        max_length=12,
         primary_key=True,
-        default=uuid.uuid4,
         unique=True,
         editable=False
     )
@@ -625,8 +625,16 @@ class PurchaseOrder(models.Model):
         blank=True
     )
     
+    class Meta:
+        ordering = ['-date_created']
+
     def __str__(self):
-        return f'{self.requisition.tenant} | {self.order_number} | created at: {self.date_created}'
+        return f'{self.requisition.tenant} | {self.id} | created at: {self.date_created}'
+    
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.id = generate_short_alpha_numeric_id(PurchaseOrder)
+        return super().save(*args, **kwargs)
 
 
 # Purchase Payment Invoice

@@ -2,6 +2,14 @@
 
 {% block title %}
 <title>Purchase Orders</title>
+
+<style>
+    .pagination-container {
+      
+      z-index: 1050; /* Ensure it appears above other elements */
+    }
+</style>
+  
 {% endblock %}
 
 {% block header %}
@@ -9,5 +17,349 @@
 {% endblock %}
 
 {% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5">
+        <div class="col-12">
+            <!-- Group payout dates by schemes teo on a row in each scheme and two schemes on a row -->
+            <div class="container mt-5 position-relative">
+                <div class="row">
+                    
+                    <div class="order-card col-12">
+                        <div class="border rounded overflow-hidden d-flex flex-column" style="max-height: 400px;">
+                            <!-- Table for orders -->
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Supplier</th>
+                                        <th>Description</th>
+                                        <th>Total Amount</th>
+                                        <th>Date</th>
+                                        <th>Order ID</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in purchase_orders %}
+                                    <tr class="order-row" data-order-id="{{ order.id }}">
+                                        <td class="text-start align-middle">{{ order.requisition.supplier.name }}</td>
+                                        <td class="text-start align-middle">{{ order.requisition.description }}</td>
+                                        <td class="text-start align-middle">{{ order.requisition.total_amount }}</td>
+                                        <td class="text-start align-middle">{{ order.date_created }}</td>
+                                        <td class="text-start align-middle">{{ order.id }}</td>
+                                        <td class="text-start align-middle">
+                                            {% if order.received %}
+                                                <span class="badge bg-success">Received</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="d-flex flex-row justify-content-start">
+                                            <button class="btn btn-link p-0 view-items" data-order-id="{{ order.id }}" data-bs-toggle="modal" data-bs-target="#itemModal">
+                                                <i class="ri-eye-line fs-3"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            
+                            <!-- Table Section -->
+                            <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-lg">
+                                    <div class="modal-content order-items-table">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="itemModalLabel">Item Details</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body overflow-auto" style="max-height: 400px;">
+                                            <div class="table-responsive flex-grow-1 overflow-auto">
+                                                <table class="table table-striped table-hover item-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Item</th>
+                                                            <th>Quantity</th>
+                                                            <th>Amount</th>
+                                                            <th>Total</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="modal-item-body">
+                                                        <!-- Items will be added here -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer d-flex justify-content-between">
+                                            <!-- Footer Section -->
+                                            
+                                            <div class="p-3 d-flex flex-column justify-content-between">
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        <h6><strong>Total</strong></h6>
+                                                    </div>
+                                                    <div class="col-6 text-end">
+                                                        <h6><strong class="total-amount"></strong></h6>
+                                                    </div>
+                                                </div>
+                                                <div class="row d-flex flex-row justify-content-between actions">
+                                                    {% if is_manager %}
+                                                    <div class="col text-start">
+                                                        <button class="match-order-items btn btn-outline-secondary btn">
+                                                            Match Items
+                                                        </button> 
+                                                        
+                                                        <button class="receive-order btn btn-outline-secondary btn">
+                                                            Receive
+                                                        </button> 
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
 
+                                            <div>
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Add pagination links -->
+                <div class="pagination-container row position-sticky bottom-0">
+                    <div class="col-12 d-flex justify-content-center ">
+                        {% if is_paginated %}
+                        <nav aria-label="Page navigation example">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                <a
+                                    class="page-link"
+                                    href="?page={{ page_obj.previous_page_number }}"
+                                    aria-label="Previous"
+                                >
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                                </li>
+                                {% endif %}
+                
+                                <li class="page-item">
+                                <a class="page-link" href="#">{{ page_obj.number }}</a>
+                                </li>
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                <a
+                                    class="page-link"
+                                    href="?page={{ page_obj.next_page_number }}"
+                                    aria-label="Next"
+                                >
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                                </li>
+
+                                <li class="page-link">
+                                    <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        //Match order items with received quantity
+        $('.match-order-items').on('click', function(e){
+            e.preventDefault();
+            var order_id = $(this).data('order-id');
+            var itemId = [];
+            var quantity = [];
+            var receivedQuantity = [];
+
+            //Display receive button
+            $(this).closest('.order-card').find('.receive-order').show();
+
+            //Get all rows in the table
+            var rows = $(this).closest('.order-items-table').find('.item-table tbody tr');
+
+            //Check if there are no items in the order
+            if (rows.length === 1){
+                alert('Order has no items.');
+                return;
+            }
+
+            //Add a new header to the table
+            if ($(this).closest('.order-items-table').find('.item-table thead tr th').length === 4){
+                $(this).closest('.order-items-table').find('.item-table thead tr').append(`
+                    <th>Received Quantity</th>
+                `);
+            }
+
+
+            //Add quantity input field to each row
+            rows.each(function () {
+                // Check if the row has an input field
+                if ($(this).find('.received-quantity').length > 0){
+                    return;
+                }
+
+
+                $(this).append(`
+                    <td class="text-start align-middle">
+                        <input type="number" class="form-control received-quantity">
+                    </td>
+                `);
+            });  
+        });
+
+
+
+        //Receive order approval
+        $('.receive-order').on('click',function(e){
+            e.preventDefault();
+            
+            var tenantId = '{{ request.tenant.id }}'
+
+            if (!confirm('Are you sure this order has been received?')){
+                return;
+            }
+
+            const itemId = [];
+            const quantity = [];
+            const receivedQuantity = [];
+
+            //Get all rows in the table
+            var row = $(this).closest('.order-card').find('.item-table tbody tr');
+
+            //Get order id
+            order_id = row.data('order-id');
+
+            //loop all rows in the table and append data to arrays
+            row.each(function(){
+                itemId.push($(this).data('item-id'));
+                quantity.push($(this).data('quantity'));
+                receivedQuantity.push($(this).find('.received-quantity').val());
+            })
+
+
+            $.ajax({
+                url: `/${tenantId}/fund/received-order/${order_id}/`,
+                type: 'POST',
+                data: {
+                    'item_id': itemId,
+                    'quantity': quantity,
+                    'received_quantity': receivedQuantity
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success:function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        window.location.reload();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+            });
+        });
+
+        //Copy order id
+        $('.copy-order-id').on('click', function(e){
+            e.preventDefault();
+            var order_id = $(this).data('order-id');
+
+            navigator.clipboard.writeText(order_id)
+            .then(function() {
+                alert('Order ID copied to clipboard');
+            }) 
+            .catch(function(err){
+                alert('Failed to copy order ID');
+            });
+        });
+
+
+        // Fetch items for a order
+        $('.view-items').on('click', function(e){
+            var order_id = $(this).data('order-id');
+            const tableBody = $(this).closest('.order-card').find('.modal-item-body');
+            var tenantId = '{{ request.tenant.id }}'
+
+            //Hide receive button
+            tableBody.closest('.order-card').find('.receive-order').hide();
+
+
+            //Set order id on the approve button
+            tableBody.closest('.order-card').find('.approve-order').data('order-id', order_id);
+
+            $.ajax({
+                url: `/${tenantId}/fund/get-order-items/${order_id}/`,
+                type: 'GET',
+                success: function(response){
+                    if (response.status === 'success'){
+                        
+                        //Hide match order items button if order has been received
+                        if (response.order_received){
+                            console.log('Order received');
+                            tableBody.closest('.order-card').find('.match-order-items').hide();
+                        }else{
+                            tableBody.closest('.order-card').find('.match-order-items').show();
+                        }
+
+                        //Clear table body
+                        tableBody.html('');
+                        var items = response.items;
+                        
+                        //Check if there are no items in the order
+                        if (items.length === 0){
+                            const row = `
+                                <tr>
+                                    <td colspan="5" class="text-center">No items added.</td>
+                                </tr>
+                            `
+                            tableBody.append(row);
+                        }else{
+                            //Add items to the table
+                            items.forEach(item => {
+                                const row = `
+                                    <tr data-item-id="${ item.id }" data-quantity="${ item.quantity }" data-order-id="${ item.order_id }">
+                                        <td class="text-start align-middle">${ item.item_name }</td>
+                                        <td class="text-start
+                                        align-middle">${ item.quantity }</td>
+                                        <td class="text-start
+                                        align-middle">${ item.amount }</td>
+                                        <td class="text-start
+                                        align-middle">${ item.total_cost }</td>
+                                    </tr>
+                                `
+                                //Append row to table body
+                                tableBody.append(row);
+                            });
+                            
+                            //Update total amount
+                            tableBody.closest('.order-card').find('.total-amount').text(response.total_amount);
+                        }
+                        
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                }
+            })
+        })
+    });
+</script>
 {% endblock %}

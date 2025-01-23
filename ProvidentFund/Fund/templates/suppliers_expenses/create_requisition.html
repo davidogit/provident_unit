@@ -32,7 +32,7 @@
                                     </div>
                                 
                                     <div class="form-floating col-12 col-md-4">
-                                        <textarea class="form-control" name="description" id="description"></textarea>
+                                        <textarea class="form-control" name="description" id="description" maxlength="100"></textarea>
                                         <label for="description">Description</label>
                                     </div>
 
@@ -56,89 +56,110 @@
             <!-- Group payout dates by schemes teo on a row in each scheme and two schemes on a row -->
             <div class="container mt-5">
                 <div class="row">
-                    {% for requisition in requisition_headers %}
-                    <div class="requisition-card col-12 col-md-6 col-lg-4 mb-4">
+                    <div class="requisition-card col-12">
                         <div class="border rounded overflow-hidden d-flex flex-column" style="max-height: 400px;">
-                            <!-- Header Section -->
-                            <div class="p-3">
-                                <div class="row d-flex justify-content-between align-items-center">
-                                    <div class="col-2 text-start">
-                                        <button class="btn btn-link p-0 delete-requisition" data-requisition-id="{{ requisition.id }}">
-                                            <i class="ri-delete-bin-2-line fs-3" style="color: red;"></i>
-                                        </button>
-                                    </div>
-                                    <div class="col-8">
-                                        <h5 class="text-center">{{ requisition.supplier.name }}</h5>
-                                        <p class="text-center">{{ requisition.description }}</p>
-                                    </div>
-                                    <div class="col-2 text-end">
-                                        <button class="btn btn-link p-0 add-item" data-requisition-id="{{ requisition.id }}">
-                                            <i class="ri-add-circle-fill fs-3"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Table for requisitions -->
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Supplier</th>
+                                        <th>Description</th>
+                                        <th>Total Amount</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for requisition in requisition_headers %}
+                                    <tr class="requisition-row">
+                                        <td class="text-start align-middle">{{ requisition.supplier.name }}</td>
+                                        <td class="text-start align-middle">{{ requisition.description }}</td>
+                                        <td class="text-start align-middle">{{ requisition.total_amount }}</td>
+                                        <td class="text-start align-middle">{{ requisition.date_created }}</td>
+                                        <td class="text-start align-middle">
+                                            {% if requisition.approved %}
+                                                <span class="badge bg-success">Approved</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="d-flex flex-row justify-content-start">
+                                            <button class="btn btn-link p-0 view-items" data-requisition-id="{{ requisition.id }}" data-bs-toggle="modal" data-bs-target="#itemModal">
+                                                <i class="ri-add-circle-fill fs-3"></i>
+                                            </button>
+                                            <div class="col-2 text-start">
+                                                <button class="btn btn-link p-0 delete-requisition" data-requisition-id="{{ requisition.id }}">
+                                                    <i class="ri-delete-bin-2-line fs-3" style="color: red;"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                             
                             <!-- Table Section -->
-                            <div class="table-responsive flex-grow-1 overflow-auto">
-                                <table class="table table-striped table-hover item-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Item</th>
-                                            <th>Quantity</th>
-                                            <th>Amount</th>
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% with requisition.items.all as items %}
-                                        {% if items %}
-                                        {% for item in items %}
-                                        <tr>
-                                            <td class="text-center align-middle">{{ item.item_name }}</td>
-                                            <td class="text-center align-middle">{{ item.quantity }}</td>
-                                            <td class="text-center align-middle">{{ item.amount }}</td>
-                                            <td class="text-center align-middle">{{ item.total_cost }}</td>
-                                            <td class="text-center align-middle">
-                                                <a href="#" class="delete-requisition-item" data-item-id="{{ item.id }}" data-requisition-id="{{ requisition.id }}">
-                                                    <i class="ri-close-circle-fill fs-5 text-danger"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                        {% else %}
-                                        <tr>
-                                            <td colspan="4" class="text-center">No items added.</td>
-                                        </tr>
-                                        {% endif %}
-                                        {% endwith %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <!-- Footer Section -->
-                             {% if requisition.items.all %}
-                            <div class="bg-light p-3 position-sticky bottom-0">
-                                <div class="row">
-                                    <div class="col-6">
-                                        <h6>Total</h6>
+                            <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="itemModalLabel">Item Details</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body overflow-auto" style="max-height: 400px;">
+                                            <div class="table-responsive flex-grow-1 overflow-auto">
+                                                <table class="table table-striped table-hover item-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Item</th>
+                                                            <th>Quantity</th>
+                                                            <th>Amount</th>
+                                                            <th>Total</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="modal-item-body">
+                                                        <!-- Items will be added here -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer d-flex justify-content-between">
+                                            <!-- Footer Section -->
+                                        
+                                            <div class="p-3 d-flex flex-column justify-content-between">
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        <h6><strong>Total</strong></h6>
+                                                    </div>
+                                                    <div class="col-6 text-end">
+                                                        <h6><strong class="total-amount"></strong></h6>
+                                                    </div>
+                                                </div>
+                                                <div class="row d-flex flex-row justify-content-between">
+                                                    {% if is_manager %}
+                                                    <div class="col-6 text-start">
+                                                        <button class="approve-requisition btn btn-outline-secondary btn" data-requisition-id="{{ requisition.id }}">
+                                                            Approve
+                                                        </button> 
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <button type="button" class="btn btn-outline-secondary add-item">Add Item</button>
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                            
+                                        </div>
                                     </div>
-                                    <div class="col-6 text-end">
-                                        <h6>{{ requisition.total_amount }}</h6>
-                                    </div>
-                                    {% if is_manager %}
-                                    <div class="col-6 text-start">
-                                        <button class="approve-requisition btn btn-outline-secondary btn-sm" data-requisition-id="{{ requisition.id }}">
-                                            Approve
-                                        </button>
-                                    </div>
-                                    {% endif %}
+                                    
                                 </div>
                             </div>
-                            {% endif %}
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
             </div>
             
@@ -148,6 +169,106 @@
 
 <script>
     $(document).ready(function(){
+        // Fetch items for a requisition
+        $('.view-items').on('click', function(e){
+            var req_id = $(this).data('requisition-id');
+            const tableBody = $(this).closest('.requisition-card').find('.modal-item-body');
+            var tenantId = '{{ request.tenant.id }}'
+
+            //Set requisition id on the approve button
+            tableBody.closest('.requisition-card').find('.approve-requisition').data('requisition-id', req_id);
+
+            $.ajax({
+                url: `/${tenantId}/fund/get-requisition-items/${req_id}/`,
+                type: 'GET',
+                success: function(response){
+                    if (response.status === 'success'){
+                        tableBody.html('');
+                        var items = response.items;
+                        
+                        if (items.length === 0){
+                            const row = `
+                                <tr>
+                                    <td colspan="5" class="text-center">No items added.</td>
+                                </tr>
+                            `
+                            tableBody.append(row);
+                        }else{
+                            items.forEach(item => {
+                                const row = `
+                                    <tr>
+                                        <td class="text-start align-middle">${ item.item_name }</td>
+                                        <td class="text-start
+                                        align-middle">${ item.quantity }</td>
+                                        <td class="text-start
+                                        align-middle">${ item.amount }</td>
+                                        <td class="text-start
+                                        align-middle">${ item.total_cost }</td>
+                                        <td class="text-start
+                                        align-middle">
+                                            <button class="btn btn-link delete-requisition-item" data-item-id="${ item.id }" data-requisition-id="${ req_id }">
+                                                <i class="ri-close-circle-fill fs-5 text-danger"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `
+                                tableBody.append(row);
+                                //Update total amount
+                                tableBody.closest('.requisition-card').find('.total-amount').text(response.total_amount);
+                            });
+
+                            //Delete requisition item
+                            tableBody.on('click','.delete-requisition-item', function(e){
+                                e.preventDefault();
+                                var $this = $(this);
+                                var requisition_id = $(this).data('requisition-id');
+                                var tenantId = '{{ request.tenant.id }}'
+                                var item_id = $(this).data('item-id');
+
+                                if (!confirm('Are you sure you want to delete this item?')){
+                                    return;
+                                }
+
+                                $.ajax({
+                                    url: `/${tenantId}/fund/delete-requisition-item/${item_id}/${requisition_id}/`,
+                                    type: 'DELETE',
+                                    headers: {
+                                        'X-CSRFToken': '{{ csrf_token }}'
+                                    },
+
+                                    success:function(response){
+                                        if (response.status === 'success'){
+                                            $this.closest('.requisition-card').find('.total-amount').text(response.total_amount);
+                                            //alert(response.message);
+                                            $this.closest('tr').remove();
+                                            //console.log(response.total_amount);
+                                            
+                                        }else{
+                                            alert(response.message);
+                                        }
+                                    },
+                                    error: function(error){
+                                        console.log(error);
+                                        alert('An error occured');
+                                    }
+                                });
+                            });
+                        }
+                        
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                }
+
+            })
+        })
+
+
+
+
         // Save requisition
         $('#requisition-form').on('submit', function(e){
             e.preventDefault();
@@ -208,39 +329,7 @@
         });
 
 
-        //Delete requisition item
-        $('.delete-requisition-item').on('click', function(e){
-            e.preventDefault();
-            var $this = $(this);
-            var requisition_id = $(this).data('requisition-id');
-            var tenantId = '{{ request.tenant.id }}'
-            var item_id = $(this).data('item-id');
 
-            if (!confirm('Are you sure you want to delete this item?')){
-                return;
-            }
-
-            $.ajax({
-                url: `/${tenantId}/fund/delete-requisition-item/${item_id}/${requisition_id}/`,
-                type: 'DELETE',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-
-                success:function(response){
-                    if (response.status === 'success'){
-                        alert(response.message);
-                        $this.closest('tr').remove();
-                    }else{
-                        alert(response.message);
-                    }
-                },
-                error: function(error){
-                    console.log(error);
-                    alert('An error occured');
-                }
-            });
-        });
 
         //Add requisition item
         $('.add-item').on('click', function(e){
@@ -251,16 +340,16 @@
             //Add new row to the table for user input
             const newRow = `
                 <tr>
-                    <td class="text-center align-middle">
+                    <td class="text-start align-middle">
                         <input type="text" name="item_name" class="form-control" placeholder="Name">
                     </td>
-                    <td class="text-center align-middle">
+                    <td class="text-start align-middle">
                         <input type="number" name="quantity" class="form-control" placeholder="Quantity">
                     </td>
-                    <td class="text-center align-middle">
+                    <td class="text-start align-middle">
                         <input type="number" name="amount" class="form-control" placeholder="Amount">
                     </td>
-                    <td class="text-center align-middle d-flex">
+                    <td class="text-start align-middle d-flex">
                         <a class="btn btn-sm save-item">
                             <i class="ri-checkbox-circle-line fs-5" style="color:green;"></i>
                         </a>
@@ -272,7 +361,7 @@
             `
 
             //Append nerRow to table
-            $(this).closest('.requisition-card').find('tbody').append(newRow);
+            $(this).closest('.requisition-card').find('.modal-item-body').append(newRow);
         });
 
         //Remove table row
@@ -285,7 +374,8 @@
         $('.item-table').on('click','.save-item', function(e){
             e.preventDefault();
             const row = $(this).closest('tr');
-
+            const tableBody = $(this).closest('.requisition-card').find('.modal-item-body');
+            var lastRow = tableBody.find('tr:last-child');
             var item_name = row.find('input[name="item_name"]').val();
             var quantity = row.find('input[name="quantity"]').val();
             var amount = row.find('input[name="amount"]').val();
@@ -315,8 +405,35 @@
                 },
                 success:function(response){
                     if (response.status === 'success'){
-                        alert(response.message);
-                        window.location.reload();
+                        var item = response.item;
+                        const row = 
+                        `
+                            <tr>
+                                <td class="text-start align-middle">${ item_name }</td>
+                                <td class="text-start
+                                align-middle">${ quantity }</td>
+                                <td class="text-start
+                                align-middle">${ amount }</td>
+                                <td class="text-start
+                                align-middle">${ amount*quantity }</td>
+                                <td class="text-start
+                                align-middle">
+                                    <!-- <button class="btn btn-link delete-requisition-item" data-item-id="" data-requisition-id="">
+                                        <i class="ri-close-circle-fill fs-5 text-danger"></i>
+                                    </button> -->
+                                </td>
+                            </tr>
+                        `
+                        //Insert row before the last row
+                        if (lastRow.length > 0) {
+                            $(row).insertBefore(lastRow);
+                        }else{
+                            tableBody.append(row);
+
+                        }
+
+                        //Update total amount
+                        tableBody.closest('.requisition-card').find('.total-amount').text(response.total_amount);
                     }else{
                         alert(response.message);
                     }

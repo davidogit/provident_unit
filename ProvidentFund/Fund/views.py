@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 from ProvidentFund.settings import EMAIL_HOST_USER
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder
-from Member.models import Member,WithdrawalRequest
+from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction
 from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings
 from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI, Contribution
@@ -29,14 +29,15 @@ from django.utils.dateparse import parse_date
 from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
-from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping
+from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount
 from Fund.tasks import calculate_staff_contribution
+from Fund.generate_invoice import generate_short_alpha_numeric_id
 
 logger = logging.getLogger(__name__)
 
 # Importing custom decorators
 from Member.decorators import tenant_required,tenant_login_required
-from Member.models import SchemeApproval
+
 
 class LandingPage(TemplateView):
     template_name = 'dashboard/landing_page.html'
@@ -1746,8 +1747,8 @@ class GeneralPayoutView(TemplateView):
         scheme_id = self.request.POST.get('scheme_id')
         staff_ids = self.request.POST.getlist('staff_ids[]')#List of selected staffs to be processed
         withdrawal_request_ids = self.request.POST.getlist('ref_ids[]')
-        payout_type = self.request.POST.get('payout_type') #custom or default
-        print(f'{staff_ids} {payout_type}')
+        mode_of_payment = self.request.POST.get('mode_of_payment')
+        bank_id = self.request.POST.get('bank_id')
         
         if not tenant or not scheme_id:
             return JsonResponse({
@@ -1755,29 +1756,76 @@ class GeneralPayoutView(TemplateView):
                 'message':'Invalid Tenant or Scheme ID'
             }, status = 400) #Bad Request
 
-        fields = [staff_ids,payout_type,withdrawal_request_ids]
-        if not all(fields):
+        if not staff_ids or not withdrawal_request_ids:
             return JsonResponse({
                 'status':'error',
                 'message':'Select a staff and payout type'
             })
         
+        if len(staff_ids) != len(withdrawal_request_ids):
+            return JsonResponse({
+                'status':'error',
+                'message':'Mismatch in staff and withdrawal reference IDs'
+            })
+        
         # Fetch related account mapping for processing payouts
-
-
+        now = timezone.now()
+        all_transactions = []
+        all_withdrawals = []
         # Fetch selected scheme to be processed
-        try:
+        try: 
             # Get withdrawal requests
-            withdrawals = WithdrawalRequest.objects.none()
             for staff_id,ref_id in zip(staff_ids,withdrawal_request_ids):
-                print(ref_id)
-                withdrawals |= WithdrawalRequest.objects.filter(tenant=tenant,ref_number=ref_id,staff__Id=staff_id)
+                withdrawal = WithdrawalRequest.objects.filter(tenant=tenant,id=ref_id,staff__Id=staff_id).first()
+                all_withdrawals.append(withdrawal)
 
+                if not withdrawal:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Invalid withdrawal request for staff ID {staff_id}.'
+                    })
+
+                # Subject to change due to clashing of ids
+                # Create Transaction for all users
+                member_transaction = Transaction(
+                    id=generate_short_alpha_numeric_id(Transaction),
+                    tenant=tenant,
+                    staff=withdrawal.staff,
+                    scheme = withdrawal.scheme,
+                    transaction_date=now,
+                    transaction_type='General Payout',
+                    payment_method='Bank Transfer',
+                    amount=withdrawal.amount
+                )
+                
+                all_transactions.append(member_transaction)
+
+            # Bulk create Transactions
+            try:
+                with transaction.atomic():
+                    # create transactions
+                    Transaction.objects.bulk_create(
+                        all_transactions
+                    )
+                    # Approve withdrawals
+                    for withdrawal in all_withdrawals:
+                        withdrawal.approved = True
+                    WithdrawalRequest.objects.bulk_update(
+                        all_withdrawals,
+                        fields=['approved']
+                    )
+            except Exception as e:
+                logger.info(f'An error occured while creating transactions for general payout: {e}')
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Could not create transaction, please try again later.'
+                })
             # Perform Payment Processing task for selected members
-            print(withdrawals)
             # Create Payout invoice
             # create transaction for each member
+            
             # Perform Debit and Credit operations
+            # consider bank and cheque operations
 
             return JsonResponse({
                 'status':'success',
@@ -1785,38 +1833,20 @@ class GeneralPayoutView(TemplateView):
             })
             
         except Exception as e:
+            logger.info(f'Error during general payout processing: {e}')
             return JsonResponse({
                 'status':'error',
-                'message':f'An error occured: {str(e)}'
+                'message':f'An internal server error occurred. Please try again later.'
             },status = 500) #Internat Server Error
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         tenant = self.request.tenant
-        scheme_id = self.request.POST.get('scheme_id')
-        # Get selected Payout scheme
-        try:
-            scheme = InvestmentScheme.objects.get(
-                tenant=tenant,
-                id=scheme_id
-            )
-        except ObjectDoesNotExist:
-            scheme = InvestmentScheme.objects.none()
-        # Get active members on selected scheme
-        members = None
-        if scheme:
-            try:
-                members = StaffAPI.objects.filter(
-                    tenant=tenant,
-                    investment_scheme=scheme,
-                    status='active',
-                    exited_flag=False
-                )
-            except StaffAPI.DoesNotExist:
-                members=StaffAPI.objects.none()
         
-        context['members'] = members
         context['schemes'] = InvestmentScheme.objects.filter(
+            tenant=tenant
+        )
+        context['banks'] = BankAccount.objects.filter(
             tenant=tenant
         )
 
@@ -1849,6 +1879,7 @@ class FetchWithdrawalRequests(View):
             # Filter only unapproved requests
             filtered_withdrawals = WithdrawalRequest.objects.filter(
                 tenant=tenant,
+                scheme=scheme,
                 approved=False
             )
 
@@ -1866,7 +1897,7 @@ class FetchWithdrawalRequests(View):
                         {
                             'staff_id':w.staff.Id,
                             'staff_number':w.staff.staff_number,
-                            'ref_number':w.ref_number,
+                            'id':w.id,
                             'first_name':w.staff.first_name,
                             'last_name':w.staff.last_name,
                             'amount':w.amount,
@@ -1925,6 +1956,12 @@ class SchedulePaymentDateView(TemplateView):
                 payout_percentage=payout_percentage,
             )
 
+            # Send Email notification for date approval of schedule payment dates
+            # gen_send_email(
+                #recepient
+                #message
+                #subject
+            # )
             return JsonResponse({
                 'status':'success',
                 'message':'Date added successfully.'
@@ -1952,6 +1989,42 @@ class SchedulePaymentDateView(TemplateView):
         return context
     
 
+# Approve Scheduled Payment Date
+class ApproveScheduledPaymentDateView(View):
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        scheduled_date_id = self.kwargs['date_id']
+
+        if not scheduled_date_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid date selected.'
+            })
+        
+        # Get date and approve
+        try:
+            date = ScheduledPaymentDates.objects.get(
+                tenant=tenant,
+                id=scheduled_date_id
+            )
+            date.approved = True #Approve date
+            date.save() #save date object
+
+            return JsonResponse({
+                'status':'success',
+                'message':'Date approved successfully.'
+            })
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Can not find date object.'
+            })
+        except Exception as e:
+            logger.info(f'An error occured fetching scheduled date: {e}')
+            return JsonResponse({
+                'status':'error',
+                'message':'Internal server error.'
+            },status=500)
 
 class DeleteSchedulePaymentDate(DeleteView):
     model = ScheduledPaymentDates
@@ -2199,9 +2272,11 @@ class AddRequisitionItemView(CreateView):
         try:
             form.instance.requisition = requisition
             form.save()
+        
             return JsonResponse({
                 'status':'success',
-                'message':'Item added'
+                'message':'Item added',
+                'total_amount':requisition.total_amount
             })
         except Exception as e:
             return JsonResponse({
@@ -2219,6 +2294,46 @@ class AddRequisitionItemView(CreateView):
         tenant = self.request.tenant
         url = reverse('raise_requisition', kwargs={'tenant_id':tenant.id})
         return url
+
+
+
+# FETCH REQUISITION ITEMS
+class FetchItemsView(View):
+    def get(self,*args,**kwargs):
+        tenant = self.request.tenant
+        req_id = self.kwargs['req_id']
+
+        if not req_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid requisition selected.'
+            })
+
+        try:
+            requisition =  Requisition.objects.filter(id=req_id,tenant=tenant).prefetch_related('items').first()
+            items = requisition.items.all()
+            items_list = []
+
+            for item in items:
+                items_list.append({
+                    'id':item.id,
+                    'item_name':item.item_name,
+                    'quantity':item.quantity,
+                    'amount':item.amount,
+                    'total_cost':item.total_cost
+                })
+            return JsonResponse({
+                'status':'success',
+                'items':items_list,
+                'total_amount':requisition.total_amount
+            })
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Requisition does not exist.'
+            })
+
+
 
 # DELETE REQUISITION OBJECT VIEW
 class DeleteRequisitionView(DeleteView):
@@ -2248,7 +2363,9 @@ class DeleteRequisitionView(DeleteView):
                 'status':'error',
                 'message':f'An error occured while trying to delete {name}'
             })
-        
+
+
+
 # DELETE REQUISITION ITEM VIEW
 class DeleteRequisitionItemView(DeleteView):
     model = RequisitionItem
@@ -2276,6 +2393,7 @@ class DeleteRequisitionItemView(DeleteView):
                 'message':'Item not found.'
             })
         name = self.object.item_name
+        requisition = self.object.requisition
         # Prevent removing an item from an approved requisition
         if self.object.requisition.approved == True:
             return JsonResponse({
@@ -2286,13 +2404,16 @@ class DeleteRequisitionItemView(DeleteView):
             self.object.delete()
             return JsonResponse({
                 'status':'success',
-                'message':f'{name} deleted.'
+                'message':f'{name} deleted.',
+                'total_amount':requisition.total_amount
             })
         except Exception as e:
             return JsonResponse({
                 'status':'error',
                 'message':f'An error occured while trying to delete {name}'
             })
+
+
 
 
 # APPROVE REQUISITION VIEW
@@ -2331,11 +2452,177 @@ class ApproveRequisitionView(View):
                 'message':f'An error occured: {str(e)}'
             })
 
+
+
+
+
 # PURCHASE ORDER VIEW
-class PurschaseOrderView(TemplateView):
+class PurschaseOrderView(ListView):
+    model = PurchaseOrder
     template_name = 'suppliers_expenses/purchase_order.html'
+    context_object_name = 'purchase_orders'
+    paginate_by = 6
+    
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return PurchaseOrder.objects.filter(requisition__tenant=tenant)
+    
+    # Order Received
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        order_id = self.kwargs['order_id']
+        list_of_item_ids = self.request.POST.getlist('item_id[]')
+        list_of_received_quantity = self.request.POST.getlist('received_quantity[]')
+
+        if not all(list_of_received_quantity):
+            return JsonResponse({
+                'status':'error',
+                'message':'Please make sure you fill in the matching received quantity field for each item'
+            })
+
+        try:
+            order = self.get_queryset().get(
+                id=order_id
+            )
+
+            if order.received == True:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'This order is already received'
+                })
+            
+
+            # Compare original quantity against received quantity
+            # get all order items from db
+            items = order.requisition.items.all()
+            if items:
+                for item_id, received_quantity in zip(list_of_item_ids, list_of_received_quantity):
+                    
+                    try:
+                        item = items.get(id=item_id) 
+                        print(f'Original:{item.quantity}, Received: {received_quantity}')
+                        if not(item.quantity == int(received_quantity)):
+                            return JsonResponse({
+                                'status': 'error',
+                                'message': 'Original quantity and quantity received do not match.'
+                            })
+                    except items.model.DoesNotExist:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': f'Item with ID {item_id} not found in the order items.'
+                        })
+                order.received = True
+                order.save()                 
+            else:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'No items found for this order.'
+                })
+            
+            return JsonResponse({
+                'status':'success',
+                'message':'Proceed to invoice payment.'
+            })
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Order does not exist.'
+            })
+
+
+
+
+
+# FETCH REQUISITION ITEMS
+class FetchPurchaseOrderView(View):
+    def get(self,*args,**kwargs):
+        tenant = self.request.tenant
+        order_id = self.kwargs['order_id']
+
+        if not order_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid purchase order selected.'
+            })
+
+        try:
+            order =  PurchaseOrder.objects.get(id=order_id)
+            items = order.requisition.items.all()
+            items_list = []
+
+            for item in items:
+                items_list.append({
+                    'id':item.id,
+                    'item_name':item.item_name,
+                    'quantity':item.quantity,
+                    'amount':item.amount,
+                    'total_cost':item.total_cost,
+                    'order_id':order_id,
+                })
+            return JsonResponse({
+                'status':'success',
+                'items':items_list,
+                'total_amount':order.amount,
+                'order_received':order.received
+
+            })
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Purchase order does not exist.'
+            })
+
+
 
 
 # PAYOUT INVOICE VIEW
 class PayoutInvoiceView(TemplateView):
     template_name = 'suppliers_expenses/payout_invoice.html'
+
+
+
+
+# PAYMENT HISTORY
+class PaymentHistoryView(ListView):
+    model = Transaction
+    template_name = 'dashboard/payment_history.html'
+    paginate_by = 5
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return Transaction.objects.filter(tenant=tenant).order_by('-transaction_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        scheme_id = self.request.GET.get('scheme')
+        payment_type = self.request.GET.get('payment_type')
+        payment_method = self.request.GET.get('payment_method')
+        status = self.request.GET.get('status')
+
+        # Start with an empty queryset if no scheme is provided
+        queryset = self.get_queryset().filter(scheme__id=scheme_id) if scheme_id else self.get_queryset().none()
+
+        # Apply additional filters if applicable
+        filters = {}
+        if payment_type:
+            filters['transaction_type'] = payment_type
+        if payment_method:
+            filters['payment_method'] = payment_method
+        if status:
+            filters['status'] = status
+
+        # Apply all filters to the queryset
+        if filters:
+            queryset = queryset.filter(**filters)
+
+        # Debug logging
+        print(f'Final QuerySet: {queryset}')
+
+        # Update context
+        context.update({
+            'transaction_queryset': queryset,
+            'payment_methods': Transaction.payment_method_choices,
+            'payment_status': Transaction.STATUS_CHOICES,
+            'payment_type': Transaction.transaction_type_choices,
+        })
+        return context

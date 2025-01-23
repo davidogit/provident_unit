@@ -72,10 +72,10 @@
             </nav>
           </li>
           <li class="nav-item">
-            <a href="{% url 'schedule_payment_date' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-time-line fs-32 lh-1 me-3"></i> <span>Schedule Dates</span></a>
-            <nav class="nav nav-sub">
-              <!-- <a href="{% url 'general_payout' tenant_id=request.tenant.id %}" class="nav-sub-link">General Payout</a> -->
-            </nav>
+            <a href="{% url 'schedule_payment_date' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-calendar-event-line fs-32 lh-1 me-3"></i> <span>Schedule Dates</span></a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'payment_history' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-history-line fs-32 lh-1 me-3"></i> <span>Payment History</span></a>
           </li>
 
         </ul>

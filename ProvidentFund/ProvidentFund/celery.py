@@ -42,10 +42,10 @@ app.conf.beat_schedule = {
         'task': 'Member.tasks.delete_inactive_users',
         'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
     },
-    # 'delayed_interest_penalty':{
-    #     'task': 'Fund.tasks.delayed_interest_penalty',
-    #     'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
-    # }
+    'notify_tenant_three_days_to_scheduled_payment':{
+        'task': 'Fund.tasks.notify_tenant_three_days_to_scheduled_payment',
+        'schedule': crontab(hour='*', minute='*') #Runs daily at midnight
+    },
 }
 
 

@@ -1,9 +1,10 @@
+from datetime import timedelta
 from decimal import Decimal
 from celery import shared_task
 from django.http import JsonResponse
 from .models import InvestmentDetail,BankInterest,DelayedInterest
 from django.utils import timezone
-from MultiScheme.models import Tenant, InvestmentScheme
+from MultiScheme.models import Tenant, InvestmentScheme,TenantEventNotification
 # import contribution details from Contributions App
 from contributions.models import StaffAPI,Contribution
 from django.db import transaction
@@ -503,47 +504,61 @@ def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
         logger.infor('No staff contributions to update')
 
 
-# Task to calculate daily penalty on delayed interest object
-# @shared_task(bind=True)
-# def delayed_interest_penalty(self):
-#     # get tenants using prefetch related
-#     tenants = Tenant.objects.prefetch_related('investment_schemes__delayed_interest')
 
-#     import calendar
-#     year = timezone.now().year
-#     is_leap = calendar.isleap(year)
-#     days_in_year = 366 if is_leap else 365
+# NOTIFY 3 DAYS TO SCHEDULED PAYMENT
+@shared_task(bind=True)
+def notify_tenant_three_days_to_scheduled_payment(self):
+    """
+    Notify staff members about tenants' upcoming payments scheduled in 3 days.
+    """
+    # Fetch schemes with related scheduled payment dates
+    schemes = InvestmentScheme.objects.prefetch_related('scheduledPaymentDate').all()
 
-#     for tenant in tenants:
-#         # get schemes
-#         schemes = tenant.investment_schemes.all()
-#         if schemes.exists():
-#             logger.info(f'Schemes: {schemes}')
-#             for scheme in schemes:
-#                 # Fetch DI objects
-#                 delayed_interests = scheme.delayed_interest.filter(approved=False)
-#                 logger.info(f'DI: {delayed_interests}')
-#                 if delayed_interests.exists():
-#                     for di in delayed_interests:
-#                         # Extraxt params
-#                         p = di.principal #principal of DI
-#                         r = (di.rate_d_int)/100 #convert percentage to decimal
-#                         n=days_in_year #compound rate=daily
-#                         t= di.period_of_interest_calculation/days_in_year #period by which money is owed in years
-#                         logger.info(f'Principal ={p}, Rate= {r}, T= {t}')
-#                         # Compound Interest calculation
-#                         c = p*(1+(r/n))**(n*t)
-#                         logger.info(f'Compound I= {c}')
+    for scheme in schemes:
+        tenant = scheme.tenant
+        scheduled_dates = scheme.scheduledPaymentDate.filter(
+            approved=True,
+        )
+
+        # Fetch staff emails for 'upcoming_payment_reminder' events
+        email_list = [
+            event.staff.email
+            for event in TenantEventNotification.objects.filter(
+                tenant=tenant,
+                event='upcoming_payment_reminder'
+            )
+            if event.staff and event.staff.email
+        ]
+
+        if scheduled_dates:
+            for scheduled_date in scheduled_dates:
+                # Calculate days until payment
+                days_until_payment = (scheduled_date.date_of_payment - timezone.now().date()).days
+
+                if 0 < days_until_payment <= 3:
+                    try:
+                        # Send email notification
+                        send_mail(
+                            subject='Upcoming Payment Reminder',
+                            message=(
+                                f'Reminder: Your payment for {scheme.name} is scheduled '
+                                f'on {scheduled_date.date_of_payment}.'
+                            ),
+                            from_email=EMAIL_HOST_USER,
+                            recipient_list=email_list,
+                            fail_silently=False,
+                        )
+                        logger.info(
+                            f'Notification sent for scheme: {scheme.name}, tenant: {tenant.name}'
+                        )
+                    except SMTPException as smtp_error:
+                        logger.error(
+                            f'SMTP Error for scheme {scheme.name}, tenant {tenant.name}: {smtp_error}'
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f'Unexpected error sending email for scheme: {scheme.name}, tenant: {tenant.name}: {e}'
+                        )
+
                         
-#                         interest_per_day = (c - p)/n #interest
-#                         logger.info(f'Interest Per day: {interest_per_day}')
-#                         di.interest += interest_per_day
-#                         di.save()
-
-#                         logger.info(f'Tenant: {tenant.name} - Scheme: {scheme.name} - Daily Interest: {interest_per_day}')
-#                 else:
-#                     logger.info(f'No Delayed Interest for {tenant.name} {scheme.name}')
-#         else:
-#             logger.info(f'No schemes available for {tenant.name}')
-
-
+                # Process Scheduled Payments here within the notify task

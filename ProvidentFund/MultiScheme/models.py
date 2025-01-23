@@ -8,6 +8,7 @@ from django.utils.encoding import force_str
 from django.utils import timezone
 from django.dispatch import receiver
 from django.core.validators import MinValueValidator,MaxValueValidator
+from django.conf import settings
 # Create your models here.
 
 # Tenanat model
@@ -31,18 +32,41 @@ class Tenant(models.Model):
 # Schemes model
 
 class InvestmentScheme(models.Model):
-    id = models.AutoField(primary_key=True, editable=False)
-    code = models.CharField(max_length=3,default='')
-    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='investment_schemes',null=True)
-    name = models.CharField(max_length=50,null=True)
+    id = models.AutoField(
+        primary_key=True,
+        editable=False
+    )
+    code = models.CharField(
+        max_length=3,
+        default=''
+    )
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE, related_name='investment_schemes',
+        null=True
+    )
+    name = models.CharField(
+        max_length=50,
+        null=True
+    )
     Yes = 'Yes'
     No = 'No'
     options = [
         (Yes,'Yes'),
         (No, 'No')
     ]
-    delayed_int = models.CharField(max_length=3, choices=options,default=No,null=True)
-    bank_int = models.CharField(max_length=3, choices=options, default=No,null=True)
+    delayed_int = models.CharField(
+        max_length=3,
+        choices=options,
+        default=No,
+        null=True
+    )
+    bank_int = models.CharField(
+        max_length=3,
+        choices=options,
+        default=No,
+        null=True
+    )
     distribution_percentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
@@ -138,17 +162,6 @@ class SchemeSettings(models.Model):
         help_text="Grace period for contributions in days.",
         null=True
     )
-    # grace_period_delayed_int = models.PositiveSmallIntegerField(
-    #     default=0,
-    #     validators=[MinValueValidator(0), MaxValueValidator(31)],
-    #     help_text="Grace period for delayed interest in days."
-    # )# Interest accumulation begins immediately after creating
-    # daily_d_int_rate = models.DecimalField(
-    #     max_digits=5, 
-    #     decimal_places=4,
-    #     validators=[MinValueValidator(0), MaxValueValidator(100)],
-    #     help_text="Daily delayed interest rate as a percentage (0-100)."
-    # )#we use same rate on delayed interest object
     delayed_interest_rate = models.DecimalField(
         max_digits=5,
         decimal_places=2,
@@ -169,3 +182,30 @@ class SchemeSettings(models.Model):
     class Meta:
         verbose_name = "Scheme Setting"
         verbose_name_plural = "Scheme Settings"
+
+
+# Emails for sending Notifications and approval messages
+class TenantEventNotification(models.Model):
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='tenant_event_notification',
+        null=False
+    )
+    choice = [
+        ('upcoming_payment_reminder','upcoming payment reminder'),
+        ('scheduled_payment_date_approval','scheduled payment date approval'),
+        ('general_payment_approval','general payment approval')
+    ]
+    event = models.CharField(
+        max_length=255,
+        default='',
+        choices=choice,
+        null=False
+    )
+    staff = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
