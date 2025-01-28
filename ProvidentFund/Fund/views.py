@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 from ProvidentFund.settings import EMAIL_HOST_USER
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder
-from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction
+from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
 from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings
 from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI, Contribution
@@ -1755,6 +1755,12 @@ class GeneralPayoutView(TemplateView):
                 'status':'error',
                 'message':'Invalid Tenant or Scheme ID'
             }, status = 400) #Bad Request
+        
+        if not mode_of_payment:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please select mode of payment'
+            })
 
         if not staff_ids or not withdrawal_request_ids:
             return JsonResponse({
@@ -1768,6 +1774,34 @@ class GeneralPayoutView(TemplateView):
                 'message':'Mismatch in staff and withdrawal reference IDs'
             })
         
+        bank = None
+        if mode_of_payment == 'Bank Transfer' and bank_id:
+            try:
+                bank = BankAccount.objects.get(
+                    id=bank_id,
+                    tenant=tenant
+                )
+            except ObjectDoesNotExist:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Bank not found.'
+                })
+        else:
+            bank = None
+
+        
+        try:
+            scheme = InvestmentScheme.objects.get(
+                id = scheme_id,
+                tenant = tenant
+            )
+        except Exception as e:
+            logger.info(f'Scheme not found: {str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':'Scheme not found.'
+            })
+        
         # Fetch related account mapping for processing payouts
         now = timezone.now()
         all_transactions = []
@@ -1775,8 +1809,8 @@ class GeneralPayoutView(TemplateView):
         # Fetch selected scheme to be processed
         try: 
             # Get withdrawal requests
-            for staff_id,ref_id in zip(staff_ids,withdrawal_request_ids):
-                withdrawal = WithdrawalRequest.objects.filter(tenant=tenant,id=ref_id,staff__Id=staff_id).first()
+            for staff_id,withdrawal_id in zip(staff_ids,withdrawal_request_ids):
+                withdrawal = WithdrawalRequest.objects.filter(tenant=tenant,id=withdrawal_id,staff__Id=staff_id).first()
                 all_withdrawals.append(withdrawal)
 
                 if not withdrawal:
@@ -1785,41 +1819,56 @@ class GeneralPayoutView(TemplateView):
                         'message': f'Invalid withdrawal request for staff ID {staff_id}.'
                     })
 
-                # Subject to change due to clashing of ids
-                # Create Transaction for all users
-                member_transaction = Transaction(
-                    id=generate_short_alpha_numeric_id(Transaction),
-                    tenant=tenant,
-                    staff=withdrawal.staff,
-                    scheme = withdrawal.scheme,
-                    transaction_date=now,
-                    transaction_type='General Payout',
-                    payment_method='Bank Transfer',
-                    amount=withdrawal.amount
+            # Create withdrawal batch
+            try:
+                batch = WithdrawalBatch.objects.create(
+                    tenant = tenant,
+                    scheme = scheme,
+                    bank = bank,
+                    mode_of_payment = mode_of_payment
                 )
-                
-                all_transactions.append(member_transaction)
-
+            except Exception as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Failed to create batch withdrawal object.'
+                })
             # Bulk create Transactions
             try:
                 with transaction.atomic():
-                    # create transactions
-                    Transaction.objects.bulk_create(
-                        all_transactions
-                    )
-                    # Approve withdrawals
+                    # Assign withdrawals to a parent batch
                     for withdrawal in all_withdrawals:
-                        withdrawal.approved = True
+                        withdrawal.parent_batch = batch
                     WithdrawalRequest.objects.bulk_update(
                         all_withdrawals,
-                        fields=['approved']
+                        fields=['parent_batch']
                     )
+                    # approve batch and children requests
+                    batch.approve_batch(approval_level=1)
             except Exception as e:
-                logger.info(f'An error occured while creating transactions for general payout: {e}')
+                logger.info(f'An error occured {e}')
                 return JsonResponse({
                     'status':'error',
-                    'message':'Could not create transaction, please try again later.'
+                    'message':'An error occured'
                 })
+            
+
+            # Send email with link for approval
+            from django.conf import settings
+            base_url = settings.SITE_URL
+            reverse_url = reverse('email_withdrawal_approval', kwargs={
+                'tenant_id':tenant.id,
+                'batch_id':batch.id,
+                'scheme_id':scheme_id
+            })
+            url = f'{base_url}{reverse_url}'
+            subject = f'Batch Withdrawal Approval'
+            message = f'Please click here to approve batch withdrawal {batch}: {url}.'
+
+            gen_send_email(
+                recepient='xzibitcustrouble@gmail.com',
+                subject=subject,
+                message=message
+            )
             # Perform Payment Processing task for selected members
             # Create Payout invoice
             # create transaction for each member
@@ -1849,6 +1898,7 @@ class GeneralPayoutView(TemplateView):
         context['banks'] = BankAccount.objects.filter(
             tenant=tenant
         )
+        context['mode_of_payment'] = Transaction.payment_method_choices
 
         return context
 
@@ -1880,7 +1930,9 @@ class FetchWithdrawalRequests(View):
             filtered_withdrawals = WithdrawalRequest.objects.filter(
                 tenant=tenant,
                 scheme=scheme,
-                approved=False
+                first_approval=False,
+                second_approval=False,
+                third_approval=False
             )
 
             # Fetch member withdrawal applications
@@ -1918,8 +1970,231 @@ class FetchWithdrawalRequests(View):
             }, status = 500) #Internal Server Error
 
         
+# SECOND STAGE OF APPROVAL FOR WITHDRAWAL REQUEST THROUGH EMAIL
+class SecondPhaseOfWithdrawalApproval(ListView):
+    template_name = 'dashboard/second_withdrawal_approval.html'
+    model = WithdrawalBatch
+    paginate_by = 10
+    context_object_name = 'batch_withdrawals'
 
+    def get_queryset(self):
+        tenant=self.request.tenant
+
+        return WithdrawalBatch.objects.filter(
+            tenant=tenant,
+            first_approval=True,
+            second_approval=False,
+            third_approval=False
+        ).order_by('-date_created')
+    
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        batch_id = self.request.POST.getlist('batch_id[]')
+        print(batch_id)
+        if not batch_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please select a batch to approve'
+            })
         
+        try:
+            batches = WithdrawalBatch.objects.filter(
+                id__in=batch_id,
+                tenant=tenant,
+                first_approval=True,
+                second_approval=False,
+                third_approval=False
+            )
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':'No withdrawal batch matches the given batch ID.'
+            })
+        
+        # Approve batch
+        try:
+            for batch in batches:
+                batch.approve_batch(approval_level=2)
+            # If level 2 approval is successful:
+            return JsonResponse({
+                'status':'success',
+                'message':'Withdrawal batch approved successfuly'
+            })
+        except ValueError as value_error:
+            return JsonResponse({
+                'status':'error',
+                'message':f'{str(value_error)}'
+            })
+        except Exception as return_value:
+            return JsonResponse(
+                return_value # return_value is a an object returned from the model when approve_batch is called
+            )
+        
+class SecondPhaseOfWithdrawalApprovalEmail(TemplateView):
+    template_name = 'dashboard/email_withdrawal_approval.html'
+    def post(self, *args, **kwargs):
+        tenant = self.request.tenant
+        batch_id = self.request.POST.get('batch_id')
+
+        if not batch_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid url'
+            })
+        
+        try:
+            batch = WithdrawalBatch.objects.get(
+                id=batch_id,
+                tenant=tenant,
+                first_approval=True,
+                second_approval=False,
+                third_approval=False
+            )
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':'No withdrawal batch matches the given batch ID.'
+            })
+        
+        # Approve batch
+        try:
+            batch.approve_batch(approval_level=2)
+            # If level 2 approval is successful:
+            return JsonResponse({
+                'status':'success',
+                'message':'Withdrawal batch approved successfuly'
+            })
+        except ValueError as value_error:
+            return JsonResponse({
+                'status':'error',
+                'message':f'{str(value_error)}'
+            })
+        except Exception as return_value:
+            return JsonResponse(
+                return_value # return_value is a an object returned from the model when approve_batch is called
+            )
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant=self.request.tenant
+        batch_id = self.kwargs['batch_id']
+
+        context['batch'] = WithdrawalBatch.objects.get(
+                id=batch_id,
+                tenant=tenant,
+                first_approval=True,
+                second_approval=False,
+                third_approval=False
+            )
+        return context
+
+
+
+class BatchWithdrawalListView(ListView):
+    template_name = 'dashboard/batch_withdrawal_list.html'
+    model = WithdrawalRequest
+    paginate_by = 20
+    context_object_name = 'withdrawals'
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        batch_id = self.kwargs['batch_id']
+        return WithdrawalRequest.objects.filter(
+            tenant=tenant,
+            parent_batch__id=batch_id
+        )
+    
+
+
+
+class FinalBatchWithdrawalApproval(ListView):
+    template_name = 'dashboard/final_batch_withdrawal_approval.html'
+    model = WithdrawalBatch
+    paginate_by = 10
+    context_object_name = 'batch_withdrawals'
+
+    def get_queryset(self):
+        tenant=self.request.tenant
+
+        return WithdrawalBatch.objects.filter(
+            tenant=tenant,
+            first_approval=True,
+            second_approval=True,
+            third_approval=False
+        ).order_by('-date_created')
+    
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        batch_id = self.request.POST.getlist('batch_id[]')
+        print(batch_id)
+        if not batch_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please select a batch to approve'
+            })
+        
+        try:
+            batches = WithdrawalBatch.objects.filter(
+                id__in=batch_id,
+                tenant=tenant,
+                first_approval=True,
+                second_approval=True,
+                third_approval=False
+            )
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':'No withdrawal batch matches the given batch ID.'
+            })
+        
+        # Approve batch
+        try:
+            now = timezone.now()
+            for batch in batches:
+                batch.approve_batch(approval_level=3)
+            # If level 3 approval is successful:
+            # create transaction object for individual requests
+            all_transactions = []
+            withdrawals = batch.withdrawal_request.all()
+
+            for withdrawal in withdrawals:
+                member_transaction = Transaction(
+                    id=generate_short_alpha_numeric_id(Transaction),
+                    tenant=tenant,
+                    staff=withdrawal.staff,
+                    scheme = withdrawal.scheme,
+                    transaction_date=now,
+                    transaction_type='General Payout',
+                    payment_method='Bank Transfer',
+                    amount=withdrawal.amount
+                )
+                all_transactions.append(member_transaction)
+            
+            # Bulk create transactions
+            try:
+                with transaction.atomic():
+                    # create transactions
+                    Transaction.objects.bulk_create(
+                        all_transactions
+                    )
+            except Exception as e:
+                logger.info(f'An error occured while creating transactions for general payout: {e}')
+
+            return JsonResponse({
+                'status':'success',
+                'message':f'Batch approved for Payment. Bank will be instructed to make payment.'
+            })
+        except ValueError as value_error:
+            return JsonResponse({
+                'status':'error',
+                'message':f'{str(value_error)}'
+            })
+        except Exception as return_value:
+            return JsonResponse(
+                return_value # return_value is a an object returned from the model when approve_batch is called
+            )
+
+
+
 # Add Schedule Payment Date
 class SchedulePaymentDateView(TemplateView):
     template_name = 'dashboard/schedule_payment_date.html'

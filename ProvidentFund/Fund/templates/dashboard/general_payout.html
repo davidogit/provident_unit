@@ -29,8 +29,9 @@
                         <div class="form-floating w-100 me-2">
                             <select class="form-select" name="scheme" id="mode_of_payment" aria-placeholder="">
                                 <option value="">--select--</option>
-                                <option value="cheque">Cheque</option>
-                                <option value="bank">Bank</option>
+                                {% for value, choice in mode_of_payment %}
+                                <option value="{{ value }}">{{ choice }}</option>
+                                {% endfor %}
                             </select>
                             <label for="scheme">Mode of Payment</label>
                         </div>
@@ -47,7 +48,7 @@
                     </div>
                     <div class="col-6 col-md-3 col-lg-4 d-flex justify-content-end align-items-center">
                         <!-- Payout button -->
-                        <button type="button" class="btn btn-outline-secondary btn-lg" id="payout">Pay</button>
+                        <button type="button" class="btn btn-outline-secondary btn-lg" id="payout">Approve</button>
                     </div>
                 </div>
 
@@ -118,7 +119,7 @@
         $('#mode_of_payment').on('change', function(e){
             e.preventDefault();
             var modeOfPayment = $(this).val();
-            if(modeOfPayment === 'bank'){
+            if(modeOfPayment === 'Bank Transfer'){
                 $('.bank_select').removeClass('d-none');
                 $('#bank').prop('disabled', false);
             }else{
@@ -221,7 +222,7 @@
                 return;
             }
 
-            if (modeOfPayment === 'bank' && !bankId){
+            if (modeOfPayment === 'Bank Transfer' && !bankId){
                 alert('Please select bank');
                 return;
             }
@@ -257,6 +258,7 @@
                     console.log(response);
                     if(response.status === 'success'){
                         alert(response.message);
+                        window.location.reload();
                     }else{
                         alert(response.message);
                     }

@@ -1,0 +1,127 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Batch Withdrawal List</title>
+{% endblock %}
+
+{% block header %}
+<h5>Batch Withdrawal List</h5>
+{% endblock %}
+
+{% block content %}
+
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
+        <div class="col-12">
+            <div class="container">
+                <!-- Table to hold list of members payments to be processed -->
+                <div class="table-responsive overflow-auto">
+                    <table class="table table-bordered table-striped" id="members_table">
+                        <thead class="thead-light text-center">
+                            <th>
+                                <!-- <input type="checkbox" name="select_all" id="select_all"> -->
+                            </th>
+                            <th>Staff ID</th>
+                            <th>Withdrawal ID</th>
+                            <th>Scheme</th>
+                            <th>Withdrawal Amount</th>
+                            <th>Date Requested</th>
+                            <th>First Approval</th>
+                        </thead>
+                        <tbody class="text-center">
+                            {% if withdrawals %}
+                            {% for withdrawal in withdrawals %}
+                            <tr>
+                                <td>
+                                    {{ forloop.counter }}
+                                </td>
+                                <td>{{ withdrawal.staff.Id }}</td>
+                                <td>{{ withdrawal.id }}</td>
+                                <td>{{ withdrawal.scheme }}</td>
+                                <td>{{ withdrawal.amount }}</td>
+                                <td>{{ withdrawal.request_date }}</td>
+                                <td>{{ withdrawal.first_approval }}</td>
+                                
+                            </tr>
+                            {% endfor %}
+
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No batch withdrawal list available</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination --> 
+                <div class="pagination-container row position-sticky bottom-0">
+                    <div class="col-12 d-flex justify-content-center ">
+                        {% if is_paginated %}
+                        <nav aria-label="Page navigation example">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                <a
+                                    class="page-link"
+                                    href="?page={{ page_obj.previous_page_number }}"
+                                    aria-label="Previous"
+                                >
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                                </li>
+                                {% endif %}
+                
+                                <li class="page-item">
+                                <a class="page-link" href="#">{{ page_obj.number }}</a>
+                                </li>
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                <a
+                                    class="page-link"
+                                    href="?page={{ page_obj.next_page_number }}"
+                                    aria-label="Next"
+                                >
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                                </li>
+
+                                <li class="page-link">
+                                    <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('#approve').click(function(){
+            const batch_id = $(this).data('batch-id');
+            
+            $.ajax({
+                url: '',
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                data: {batch_id: batch_id},
+                success: function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        window.location.reload();
+                    }else{
+                        alert('An error occured:' +response.message);
+                    }
+                },
+                error: function(data){
+                    alert('An error occured');
+                }
+            });
+        });
+    })
+</script>
+{% endblock %}

@@ -58,7 +58,7 @@
                 <div class="row g-4">
                     {% for scheme in available_schemes %}
                     {% if scheme.scheduledPaymentDate.all %}
-                    <div class="col-12 col-md-6 col-lg-4 d-flex justify-content-center align-items-center">
+                    <div class="col-12 col-md-6 col-lg-4 d-flex justify-content-center">
                         <div class="transaction-form border p-3 rounded position-relative overflow-auto" style="max-height: 300px;">
                             <h5 class="h5 text-center">{{ scheme|upper }}</h5>
                             <table class="table table-striped table-hover">
