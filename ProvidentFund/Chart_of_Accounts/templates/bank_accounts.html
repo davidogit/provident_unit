@@ -65,6 +65,10 @@
                                 </select>
                                 <label for="currency">Currency</label>
                             </div>
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="bank_email" name="bank_email"  placeholder="" required>
+                                <label for="bank_email">Bank Email: <em>To be used for payment processing</em></label>
+                            </div>
                         </div>
                         <div class="form-group mb-3">
                             <button type="submit" class="btn btn-outline-primary btn-lg w-100">Save</button>
@@ -83,7 +87,8 @@
                                 <th>Account Type</th>
                                 <th>Parent Account</th>
                                 <!-- <th>Balance</th> -->
-                                <th>Curremcy</th>
+                                <th>Currency</th>
+                                <th>Email</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -96,6 +101,7 @@
                                 <td>{{ account.parent_Account.name }}</td>
                                 <!-- <td>{{ account.current_balance }}</td> -->
                                 <td>{{ account.currency }}</td>
+                                <td>{{ account.bank_email }}</td>
                                 <td class="text-center text-nowrap">
                                     <button class="btn btn-warning btn-sm delete-account">
                                         <input class="account-id" type="text" value="{{ account.id }}" hidden>
@@ -136,7 +142,7 @@
                                                 <label for="update_bank_name">Bank Name</label>
 
                                                 <!-- Hidden field for bank id -->
-                                                 <input type="number" id="update_bank_id" name="bank_id" value="" hidden>
+                                                <input type="number" id="update_bank_id" name="bank_id" value="" hidden>
                                             </div>
                                             <div class="form-floating mb-3">
                                                 <input type="text" class="form-control" id="update_branch" name="branch"  placeholder="" required>
@@ -179,6 +185,10 @@
                                                     {% endfor %}
                                                 </select>
                                                 <label for="update_currency">Currency</label>
+                                            </div>
+                                            <div class="form-floating mb-3">
+                                                <input type="text" class="form-control" id="update_bank_email" name="bank_email"  placeholder="" required>
+                                                <label for="update_bank_email">Bank Email: <em>To be used for payment processing</em></label>
                                             </div>
                                         </div>
                                         <div class="form-group mb-3">
@@ -272,6 +282,7 @@
                     $('#update_accountType').val(response.bank.account_type);
                     $('#update_currency').val(response.bank.currency);
                     $('#update_bank_id').val(response.bank.id);
+                    $('#update_bank_email').val(response.bank.bank_email);
                 },
                 error: function(response){
                     alert('An error occured');

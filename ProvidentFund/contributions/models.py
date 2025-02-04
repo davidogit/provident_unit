@@ -86,6 +86,25 @@ class StaffAPI(models.Model):
         null=True,
         blank=True
     )
+    # New fields for bank details
+    bank_name = models.CharField(
+        max_length=255,
+        default='',
+        null=True,
+        blank=True
+    )
+    bank_branch = models.CharField(
+        max_length=255,
+        default='',
+        null=True,
+        blank=True
+    )
+    bank_account_number = models.CharField(
+        max_length=255,
+        default='',
+        null=True,
+        blank=True
+    )
 
 
     def __str__(self):

@@ -18,7 +18,7 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
 from .forms import InvestmentUpdateForm,InvestmentApprovalForm
-from Fund.tasks import actual_member_interest,rollover_inv_creation
+from Fund.tasks import actual_member_interest,rollover_inv_creation,send_excel_sheet_to_bank_for_payment
 from Member.tasks import gen_send_email
 from django.core.exceptions import ValidationError
 from django.db.models import Sum,F,Prefetch
@@ -2179,6 +2179,10 @@ class FinalBatchWithdrawalApproval(ListView):
             except Exception as e:
                 logger.info(f'An error occured while creating transactions for general payout: {e}')
 
+            # Call Task to send sheet to bank for payment processing
+            
+            send_excel_sheet_to_bank_for_payment.delay(batch_id)
+
             return JsonResponse({
                 'status':'success',
                 'message':f'Batch approved for Payment. Bank will be instructed to make payment.'
@@ -2194,7 +2198,7 @@ class FinalBatchWithdrawalApproval(ListView):
             )
 
 
-
+import calendar
 # Add Schedule Payment Date
 class SchedulePaymentDateView(TemplateView):
     template_name = 'dashboard/schedule_payment_date.html'
@@ -2202,13 +2206,22 @@ class SchedulePaymentDateView(TemplateView):
     def post(self,*args,**kwargs):
         tenant = self.request.tenant
         scheme_id = self.request.POST.get('scheme_id')
-        scheduled_date = self.request.POST.get('payment_date')
+        bank_id = self.request.POST.get('bank')
+        day = self.request.POST.get('payment_day')
+        month = self.request.POST.get('payment_month')
         payout_percentage = self.request.POST.get('payout_percentage')
 
-        if not all([scheme_id,scheduled_date]):
+        if not all([scheme_id,day,month,bank_id]):
             return JsonResponse({
                 'status':'error',
                 'message':'Missing required fields'
+            })
+        
+        # Validate days for February
+        if int(month) == 2 and int(day) > 29:
+            return JsonResponse({
+                'status':'error',
+                'message':'Selected day out of range.'
             })
         
         try:
@@ -2216,10 +2229,21 @@ class SchedulePaymentDateView(TemplateView):
                 id=scheme_id,
                 tenant=tenant
             )
-        except InvestmentScheme.DoesNotExist:
+        except ObjectDoesNotExist:
             return JsonResponse({
                 'status':'error',
                 'message':'Scheme not found'
+            })
+
+        try:
+            bank = BankAccount.objects.get(
+                tenant=tenant,
+                id=bank_id
+            )
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Bank not found'
             })
         
         # Create schedule date object
@@ -2227,8 +2251,10 @@ class SchedulePaymentDateView(TemplateView):
             ScheduledPaymentDates.objects.create(
                 tenant=tenant,
                 scheme=scheme,
-                date_of_payment=scheduled_date,
-                payout_percentage=payout_percentage,
+                bank=bank,
+                day=day,
+                month=month,
+                payout_percentage=Decimal(payout_percentage),
             )
 
             # Send Email notification for date approval of schedule payment dates
@@ -2258,9 +2284,18 @@ class SchedulePaymentDateView(TemplateView):
                 ).prefetch_related('scheduledPaymentDate').order_by('-created_date')
                 # print(f'Payout Dates: {schemes.scheduledPaymentDate}')
             except InvestmentScheme.DoesNotExist:
-                schemes = InvestmentScheme.objects.none()
+                schemes = None
+            
+            try:
+                banks = BankAccount.objects.filter(
+                    tenant=tenant
+                )
+            except BankAccount.DoesNotExist:
+                banks = None
             
             context['available_schemes'] = schemes
+            context['banks'] = banks
+            context['months'] = ScheduledPaymentDates.month_choices
         return context
     
 
@@ -2300,6 +2335,43 @@ class ApproveScheduledPaymentDateView(View):
                 'status':'error',
                 'message':'Internal server error.'
             },status=500)
+
+
+# PAUSE SCHEDULE PAYOUT
+class PauseScheduledPaymentDateView(View):
+
+    def get(self, request, *args, **kwargs):
+
+        tenant = self.request.tenant
+        payment_date_id = self.kwargs['schedule_date_id']
+
+        if not payment_date_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid scheduled date ID.'
+            })
+        
+        try:
+            scheduled_date = ScheduledPaymentDates.objects.get(
+                tenant=tenant,
+                id = payment_date_id
+            )
+            scheduled_date.approved = False
+            scheduled_date.save()
+            return JsonResponse({
+                'status':'success',
+                'message':'Date paused successfully.'
+            })
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Scheduled date not found.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured: {str(e)}'
+            })
 
 class DeleteSchedulePaymentDate(DeleteView):
     model = ScheduledPaymentDates

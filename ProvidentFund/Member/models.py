@@ -162,7 +162,7 @@ class SchemeApproval(models.Model):
         tenant_name = self.tenant.name
         user_name = self.member.user.username
 
-        return os.path.join('File_uploads',tenant_name,user_name,filename)
+        return os.path.join('File_uploads',tenant_name,'MEMBER_UPLOADS',user_name,filename)
 
 
     document = models.FileField(
@@ -368,6 +368,18 @@ class WithdrawalBatch(models.Model):
     )
     third_approval = models.BooleanField(
         default=False
+    )
+    # dynamic file path for document uploads
+    def upload_file(self,filename):
+        tenant_name = self.tenant.name
+        # user_name = self.member.user.username
+
+        return os.path.join('File_uploads',tenant_name,'BATCH_UPLOADS',filename)
+    bank_file = models.FileField(
+        null=True,
+        blank=True,
+        upload_to=upload_file,
+        validators=[FileExtensionValidator(allowed_extensions=['xls','xlsx'])]
     )
 
     class Meta:

@@ -76,6 +76,8 @@ urlpatterns =[
     path('delete_scheduled_date/<int:pk>/', views.DeleteSchedulePaymentDate.as_view(), name='delete_scheduled_dates'),
     # Approve scheduled date
     path('approve-payout-date/<int:date_id>/', views.ApproveScheduledPaymentDateView.as_view(), name='approve_scheduled_date'),
+    # Pause scheduled date
+    path('pause-payout-date/<int:schedule_date_id>/', views.PauseScheduledPaymentDateView.as_view(), name='pause_scheduled_date'),
 
     # SUPPLIER URL
     path('suppliers/', views.SupplierView.as_view(), name='supplier_view'),

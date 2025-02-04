@@ -215,6 +215,10 @@ class BankAccount(models.Model):
         related_name='bank_accounts',
         null=True
     )
+    bank_email = models.EmailField(
+        null=True,
+        blank=False
+    )
     currency = models.CharField(
         max_length=255,
         choices=CURRENCY,
