@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from itertools import chain
 import json,uuid
 import smtplib
 from typing import Any
@@ -9,6 +10,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse, JsonResponse
 from django.urls import reverse, reverse_lazy
 from django.views import View
+import phonenumbers
 import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
 from .forms import UserForm, MemberForm
@@ -22,7 +24,7 @@ from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
 from .forms import CombinedProfileForm
 from MultiScheme.models import Tenant,InvestmentScheme
-from contributions.models import Contribution, StaffAPI
+from contributions.models import Contribution, Membership, StaffAPI
 # Importing the user model 
 from django.contrib.auth import get_user_model
 # Importing custom decorators
@@ -37,6 +39,29 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.views.decorators.http import require_GET
 from django.db import models
+from django.http import JsonResponse
+from django.views import View
+from django.db.models import Sum
+from contributions.models import StaffAPI
+from .models import InvestmentScheme
+import json
+from django.views import View
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.utils import timezone
+from .models import WithdrawalRequest
+from decimal import Decimal
+from django.db import transaction
+from django.views import View
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.core.mail import send_mail
+from django.utils import timezone
+from phonenumbers import parse as parse_phone, format_number, PhoneNumberFormat
+from twilio.rest import Client
+import logging
+from .models import WithdrawalRequest, InvestmentScheme, StaffAPI, Tenant, Transaction
+from django.db.models import F
 
 
 @unauthenticated_user
@@ -749,9 +774,7 @@ class Contributed(ListView):
 
         return context
 
-import requests
-import logging
-from django.db import transaction
+
 logger = logging.getLogger(__name__)
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
@@ -775,7 +798,7 @@ class CreateTransactionView(View):
         try:
             data = json.loads(request.body)
             tenant = request.tenant
-            member = request.user.member
+            staff_id = kwargs.get('staff_id')
             scheme_id = data.get('scheme_id')
             amount = data.get('amount')
             email = data.get('email')
@@ -786,7 +809,7 @@ class CreateTransactionView(View):
 
             with transaction.atomic():
                 scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id)
-                staff = StaffAPI.objects.get(staff_number=member.staff_id)
+                staff = StaffAPI.objects.get(staff_number=staff_id)
 
                 if Transaction.objects.filter(reference=reference).exists():
                     return JsonResponse({'status': 'error', 'message': 'Duplicate reference detected.'}, status=400)
@@ -795,11 +818,14 @@ class CreateTransactionView(View):
                 transaction_obj = Transaction.objects.create(
                     tenant=tenant,
                     staff=staff,
-                    member=member,
+                    # member=member,
                     scheme=scheme,
                     amount=amount,
                     reference=reference
                 )
+
+                staff.total_contribution = F('contributions') + amount
+                staff.save(update_fields=['contributions'])
 
                 history_url = reverse('transaction_history', kwargs={
                     'tenant_id': tenant.id,
@@ -821,7 +847,7 @@ class CreateTransactionView(View):
             logger.error(f"Invalid scheme ID: {scheme_id}")
             return JsonResponse({'status': 'error', 'message': 'Invalid scheme ID.'}, status=400)
         except StaffAPI.DoesNotExist:
-            logger.error(f"Staff not found for member: {member.id}")
+            logger.error(f"Staff not found for member: {staff_id}")
             return JsonResponse({'status': 'error', 'message': 'Staff not found.'}, status=400)
         except Exception as e:
             logger.error(f"Unexpected error in CreateTransactionView: {str(e)}")
@@ -855,7 +881,8 @@ def verify_transaction(request, reference):
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
-class TransactionHistoryView(ListView):
+
+class TransactionView(ListView):
     model = Transaction
     template_name = 'transaction_history.html'
     paginate_by = 10
@@ -863,8 +890,11 @@ class TransactionHistoryView(ListView):
 
     def get_queryset(self):
         tenant = self.request.tenant
-        member = self.request.user.member
-        return Transaction.objects.filter(member=member, tenant=tenant).order_by('-transaction_date')
+        staff_id = self.kwargs.get('staff_id')
+        staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
+        # Fetch deposit transactions
+        deposit_transactions = Transaction.objects.filter(staff=staff, tenant=tenant).order_by('-transaction_date')
+        return deposit_transactions
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -878,32 +908,37 @@ class TransactionHistoryView(ListView):
             staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
             context['schemes'] = staff.investment_scheme.all()
 
-            queryset = self.get_queryset().order_by(sort)
+            # Fetch deposit and withdrawal transactions
+            deposit_transactions = self.get_queryset().order_by(sort)
+            withdrawal_requests = WithdrawalRequest.objects.filter(staff=staff, tenant=tenant).order_by('-request_date')
 
+            # Filter by scheme if needed
             if scheme_id:
-                queryset = queryset.filter(scheme__id=scheme_id)
+                deposit_transactions = deposit_transactions.filter(scheme__id=scheme_id)
+                withdrawal_requests = withdrawal_requests.filter(scheme__id=scheme_id)
 
+            # Filter by status if needed
             if status:
-                queryset = queryset.filter(status=status)
+                deposit_transactions = deposit_transactions.filter(status=status)
+                withdrawal_requests = withdrawal_requests.filter(approved=(status.lower() == 'completed'))
 
-            context['transactions'] = queryset
+            # Combine and sort by date
+            combined_transactions = sorted(
+                chain(deposit_transactions, withdrawal_requests),
+                key=lambda x: x.transaction_date if hasattr(x, 'transaction_date') else x.request_date,
+                reverse=True
+            )
+
+            context['transactions'] = combined_transactions
 
         except StaffAPI.DoesNotExist:
             context['error'] = 'No transaction data available for this user'
 
         return context
+
     
 
-from decimal import Decimal
-import json
-from django.core.mail import send_mail
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views import View
-from django.db import transaction
-import logging
-import phonenumbers
-from twilio.rest import Client  # Import Twilio for SMS
+
 
 logger = logging.getLogger(__name__)
 
@@ -925,18 +960,14 @@ class WithdrawalView(View):
             tenant = request.tenant
             member = request.user.member
             scheme_id = data.get('scheme_id')
-            transaction_type = data.get('transaction_type')
             amount = data.get('amount')
 
             # Validate inputs
-            if not all([scheme_id, transaction_type, amount]):
+            if not all([scheme_id, amount]):
                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
             # Convert amount to Decimal for calculations
             amount = Decimal(amount)
-
-            if transaction_type not in ['momo', 'bank_transfer']:
-                return JsonResponse({'status': 'error', 'message': 'Invalid transaction type.'}, status=400)
 
             with transaction.atomic():
                 # Validate scheme and staff
@@ -944,7 +975,7 @@ class WithdrawalView(View):
                 staff = StaffAPI.objects.get(staff_number=member.staff_id)
 
                 # Check if the user has sufficient balance
-                balance = Transaction.objects.filter(
+                balance = WithdrawalRequest.objects.filter(
                     tenant=tenant,
                     staff=staff,
                     scheme=scheme
@@ -953,20 +984,14 @@ class WithdrawalView(View):
                 if balance < amount:
                     return JsonResponse({'status': 'error', 'message': 'Insufficient balance.'}, status=400)
 
-                # Deduct the withdrawal amount from the estimated profit
-                staff.estimated_profit -= amount
-                staff.save()
-
-                # Create a withdrawal transaction
-                TransactionHistory.objects.create(
+                # Create a withdrawal request
+                withdrawal_request = WithdrawalRequest.objects.create(
                     tenant=tenant,
                     staff=staff,
-                    member=member,
                     scheme=scheme,
-                    amount=-amount,
-                    transaction_type='withdrawal',
-                    status='pending',
-                    additional_data={'transaction_type': transaction_type},  # Save the type of withdrawal
+                    amount=amount,
+                    approved=False,
+                    request_date=timezone.now(),
                 )
 
                 # Notify manager and user
@@ -1026,10 +1051,10 @@ class WithdrawalView(View):
             )
 
             raw_phone = member.tel_number
-            parsed_phone = phonenumbers.parse(raw_phone, "GH")  # "GH" is the country code for Ghana
+            parsed_phone = parse_phone(raw_phone, "GH")  # "GH" is the country code for Ghana
             if not phonenumbers.is_valid_number(parsed_phone):
                 raise ValueError(f"Invalid phone number: {raw_phone}")
-            formatted_phone = phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.E164)
+            formatted_phone = format_number(parsed_phone, PhoneNumberFormat.E164)
 
             # Send SMS to the user (using Twilio or another SMS service)
             account_sid = 'ACe6e705f0732d1a51651131aa2516ab10'
@@ -1052,26 +1077,13 @@ class WithdrawalView(View):
             logger.error(f"Error notifying user: {str(e)}")
 
 
-from django.contrib.auth.decorators import user_passes_test
-from django.utils.decorators import method_decorator
-from django.views import View
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
-from .models import TransactionHistory
 
-# Decorator to restrict view access to managers
-# def is_manager(user):
-#     return user.groups.filter(name='Manager').exists()
-
-# @method_decorator(user_passes_test(is_manager), name='dispatch')
 class ManagerApprovalView(View):
     template_name = 'manager/approval_list.html'
 
     def get(self, request, *args, **kwargs):
         # Fetch pending withdrawal requests
-        pending_requests = TransactionHistory.objects.filter(
-            transaction_type='withdrawal', status='pending'
-        )
+        pending_requests = WithdrawalRequest.objects.filter(approved=False)
 
         context = {
             'pending_requests': pending_requests,
@@ -1081,68 +1093,102 @@ class ManagerApprovalView(View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            transaction_id = data.get('transaction_id')
+            withdrawal_id = data.get('withdrawal_id')
             action = data.get('action')
 
             # Validate input
-            if not transaction_id or not action:
+            if not withdrawal_id or not action:
                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
-            # Retrieve the transaction
-            transaction = get_object_or_404(TransactionHistory, id=transaction_id)
+            # Retrieve the withdrawal request
+            withdrawal_request = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
 
             if action == 'approve':
-                # Approve the transaction
-                transaction.status = 'approved'
+                # Approve the withdrawal request
+                withdrawal_request.approved = True
+                withdrawal_request.approval_date = timezone.now()
+                withdrawal_request.save()
 
                 # Process payment if needed
-                transaction_type = transaction.additional_data.get('transaction_type')
-                if transaction_type == 'momo':
-                    self.process_momo_payment(transaction)
-                elif transaction_type == 'bank_transfer':
-                    self.process_bank_transfer(transaction)
-                else:
-                    return JsonResponse({'status': 'error', 'message': 'Invalid transaction type.'}, status=400)
+                self.process_payment(withdrawal_request)
 
             elif action == 'reject':
-                # Reject the transaction
-                transaction.status = 'rejected'
+                # Reject the withdrawal request
+                withdrawal_request.approved = False
+                withdrawal_request.save()
 
                 # Optionally refund the amount to the user's estimated profit
-                staff = transaction.staff
-                staff.estimated_profit += abs(transaction.amount)
+                staff = withdrawal_request.staff
+                staff.estimated_profit += withdrawal_request.amount
                 staff.save()
 
             else:
                 return JsonResponse({'status': 'error', 'message': 'Invalid action.'}, status=400)
 
-            transaction.save()
-            return JsonResponse({'status': 'success', 'message': 'Transaction updated successfully.'})
+            return JsonResponse({'status': 'success', 'message': 'Withdrawal request updated successfully.'})
 
         except Exception as e:
             logger.error(f"Error in ManagerApprovalView: {str(e)}")
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-    def process_momo_payment(self, transaction):
+    def process_payment(self, withdrawal_request):
         """
-        Process a MoMo payment for an approved transaction.
+        Process payment for an approved withdrawal request.
         """
         try:
-            # Add MoMo payment processing logic here
-            logger.info(f"Processing MoMo payment for transaction ID: {transaction.id}")
+            # Add payment processing logic here (e.g., MoMo, bank transfer)
+            logger.info(f"Processing payment for withdrawal request ID: {withdrawal_request.id}")
             # Simulate payment success
         except Exception as e:
-            logger.error(f"Error processing MoMo payment: {str(e)}")
+            logger.error(f"Error processing payment: {str(e)}")
             raise
 
-    def process_bank_transfer(self, transaction):
-        """
-        Process a bank transfer for an approved transaction.
-        """
+
+
+
+class GetBalanceView(View):
+    def get(self, request, tenant_id, staff_id, *args, **kwargs):
+        scheme_id = request.GET.get('scheme_id')
+
+        if not scheme_id:
+            return JsonResponse(
+                {'status': 'error', 'message': 'Scheme ID is required.'},
+                status=400
+            )
+
         try:
-            # Add bank transfer logic here
-            logger.info(f"Processing bank transfer for transaction ID: {transaction.id}")
-            # Simulate payment success
+            # Fetch the investment scheme
+            scheme = InvestmentScheme.objects.get(id=scheme_id)
+
+            # Validate if the staff_id matches a valid Membership
+            membership = Membership.objects.filter(
+                scheme=scheme,
+                staff__id=staff_id
+            ).first()
+
+            if not membership:
+                return JsonResponse(
+                    {'status': 'error', 'message': 'No membership found for this staff.'},
+                    status=404
+                )
+
+            # Calculate the available balance
+            available_balance = membership.total_earnings
+
+            return JsonResponse({
+                'status': 'success',
+                'scheme_name': scheme.name,
+                'balance': float(available_balance)
+            })
+
+        except InvestmentScheme.DoesNotExist:
+            return JsonResponse(
+                {'status': 'error', 'message': 'Invalid scheme ID.'},
+                status=400
+            )
+
         except Exception as e:
-            logger.error(f"Error processing bank transfer: {str(e)}")
-            raise
+            return JsonResponse(
+                {'status': 'error', 'message': str(e)},
+                status=500
+            )
