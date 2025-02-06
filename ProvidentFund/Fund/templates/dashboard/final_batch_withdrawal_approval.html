@@ -1,0 +1,149 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Final Approval</title>
+{% endblock %}
+
+{% block header %}
+<h5>Final Batch Withdrawal Approval</h5>
+{% endblock %}
+
+{% block content %}
+
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
+        <div class="col-12">
+            <div class="container">
+                <div class="col-12 d-flex justify-content-between align-items-center mb-3">
+                    <!-- Payment Mode Select -->
+                    <div class="col-3 form-floating  me-2">
+                        <select class="form-select" name="scheme" id="mode_of_payment" aria-placeholder="">
+                            <option value="">--select--</option>
+                            {% for value, choice in mode_of_payment %}
+                            <option value="{{ value }}">{{ choice }}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="scheme">Mode of Payment</label>
+                    </div>
+                    <!-- Bank Select -->
+                    <div class="col-3 d-none form-floating bank_select">
+                        <select class="form-select" name="scheme" id="bank" aria-placeholder="">
+                            <option value="">--select--</option>
+                            {% for bank in banks %}
+                            <option value="{{ bank.id }}">{{ bank }}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="scheme">Bank</label>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-4 d-flex justify-content-end align-items-center">
+                        <!-- Payout button -->
+                        <button type="button" class="btn btn-outline-secondary btn-lg" id="approve">Pay</button>
+                    </div>
+                </div>
+
+
+                <!-- Table to hold list of members payments to be processed -->
+                <div class="table-responsive overflow-auto">
+                    <table class="table table-bordered table-striped" id="members_table">
+                        <thead class="thead-light text-center">
+                            <th>
+                                <!-- <input type="checkbox" name="select_all" id="select_all"> -->
+                            </th>
+                            <th>Batch ID</th>
+                            <th>Scheme</th>
+                            <th>Total Amount</th>
+                            <th>Date Created</th>
+                            <th>Last Updated</th>
+                            <th>First Approval</th>
+                        </thead>
+                        <tbody class="text-center">
+                            {% if batch_withdrawals %}
+                            {% for batch in batch_withdrawals %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="batch_id" value="{{ batch.id }}">
+                                </td>
+                                <td><a href="{% url 'batch_withdrawal_list' tenant_id=request.tenant.id batch_id=batch.id %}">{{ batch.id }}</a></td>
+                                <td>{{ batch.scheme }}</td>
+                                <td>{{ batch.total_amount }}</td>
+                                <td>{{ batch.date_created }}</td>
+                                <td>{{ batch.last_updated }}</td>
+                                <td>{{ batch.first_approval }}</td>
+                            </tr>
+                            {% endfor %}
+
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No batch withdrawal to pay</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        //Disable bank select on page load
+        $('#bank').prop('disabled', true);
+        //hide bank select
+        //$('.bank_select').hide();
+
+        //Disable bank select
+        $('#mode_of_payment').on('change', function(e){
+            e.preventDefault();
+            var modeOfPayment = $(this).val();
+            if(modeOfPayment === 'Bank Transfer'){
+                $('.bank_select').removeClass('d-none');
+                $('#bank').prop('disabled', false);
+            }else{
+                $('#bank').prop('disabled', true);
+                $('.bank_select').addClass('d-none');
+            }
+        });
+
+
+        $('#approve').click(function(){
+            if (!confirm('Are you sure you want to pay this batch?')) {
+                return;
+            }
+            const payment_mode = $('#mode_of_payment').val();
+            const batch_id = [];
+            const bank_id = $('#bank').val();
+            $('input[name=batch_id]:checked').each(function(){
+                batch_id.push($(this).val())
+            });
+            console.log(batch_id);
+
+            if(batch_id.length === 0){
+                alert('Please select at least one batch to approve');
+            }else{
+                $.ajax({
+                    url: '',
+                    method: 'POST',
+                    headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                    data: {
+                        batch_id: batch_id,
+                        payment_mode: payment_mode,
+                        bank_id: bank_id
+                    },
+                    success: function(response){
+                        if (response.status === 'success'){
+                            alert(response.message);
+                            window.location.reload();
+                        }else{
+                            alert('An error occured:' +response.message);
+                        }
+                    },
+                    error: function(data){
+                        alert('An error occured');
+                    }
+                });
+            }
+        });
+    })
+</script>
+{% endblock %}

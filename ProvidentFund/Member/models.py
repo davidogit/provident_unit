@@ -1,11 +1,12 @@
+from decimal import Decimal
 import os
-from django.db import models
+from django.db import models,transaction
 from django.contrib.auth.models import User
 from requests import options
 from MultiScheme.models import Tenant
 from django.conf import settings
 import uuid
-
+from Chart_of_Accounts.models import BankAccount
 from contributions.models import StaffAPI
 from MultiScheme.models import InvestmentScheme
 from django.utils import timezone
@@ -163,7 +164,7 @@ class SchemeApproval(models.Model):
         tenant_name = self.tenant.name
         user_name = self.member.user.username
 
-        return os.path.join('File_uploads',tenant_name,user_name,filename)
+        return os.path.join('File_uploads',tenant_name,'MEMBER_UPLOADS',user_name,filename)
 
 
     document = models.FileField(
@@ -223,11 +224,11 @@ class Transaction(models.Model):
     transaction_type = models.CharField(
         max_length=20,
         choices=transaction_type_choices,
-         default=DEPOSIT
+        default=DEPOSIT
     )
 
-    MOBILE_MONEY = 'MobileMoney'
-    BANK_TRANSFER = 'BankTransfer'
+    MOBILE_MONEY = 'Mobile Money'
+    BANK_TRANSFER = 'Bank Transfer'
     payment_method_choices = [
         (MOBILE_MONEY, 'Mobile Money'),
         (BANK_TRANSFER, 'Bank Transfer'),
@@ -241,7 +242,8 @@ class Transaction(models.Model):
     amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        default=0.00)
+        default=0.00
+    )
     reference = models.TextField(
         max_length=255,
         blank=True,
@@ -317,8 +319,135 @@ class ExitApproval(models.Model):
         return f'{self.tenant.name} - {self.member.user.username}\'s EXIT application'
 
 
+# Grouping withdrawals for second and third approval
+class WithdrawalBatch(models.Model):
+    id = models.CharField(
+        max_length=12,
+        primary_key=True,
+        editable=False,
+        unique=True
+    )
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=False,
+        blank=False
+    )
+    scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=False,
+        blank=False
+    )
+    bank = models.ForeignKey(
+        BankAccount,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='withdrawal_batch'
+    )
+    payment_method_choices = [
+        ('Mobile Money', 'Mobile Money'),
+        ('Bank Transfer', 'Bank Transfer'),
+        ('cheque','Cheque')
+    ]
+    mode_of_payment = models.CharField(
+        max_length=255,
+        default='',
+        null=True,
+        choices=payment_method_choices
+    )
+    date_created = models.DateTimeField(
+        auto_now_add=True
+    )
+    last_updated = models.DateTimeField(
+        auto_now=True
+    )
+    first_approval = models.BooleanField(
+        default=False
+    )
+    second_approval = models.BooleanField(
+        default=False
+    )
+    third_approval = models.BooleanField(
+        default=False
+    )
+    # dynamic file path for document uploads
+    def upload_file(self,filename):
+        tenant_name = self.tenant.name
+        # user_name = self.member.user.username
+
+        return os.path.join('File_uploads',tenant_name,'BATCH_UPLOADS',filename)
+    bank_file = models.FileField(
+        null=True,
+        blank=True,
+        upload_to=upload_file,
+        validators=[FileExtensionValidator(allowed_extensions=['xls','xlsx'])]
+    )
+
+    class Meta:
+        verbose_name = 'Batch Withdrawal'
+
+    def __str__(self):
+        return f'Batch Withdrawal Object | {self.tenant} | {self.scheme} - {self.id}'
+    
+    @property
+    def total_amount(self):
+        withdrawals = self.withdrawal_request.all()
+        total = Decimal(0)
+        if withdrawals:
+            for w in withdrawals:
+                total += w.amount
+        return total
+
+    # approve individual request from batch withdrawal
+    def approve_batch(self,approval_level):
+        if approval_level not in [1,2,3]:
+            raise ValueError('Invalid approval level, must be 1,2, or 3')
+        try:
+            with transaction.atomic():
+                if approval_level == 1 and not self.first_approval:
+                    # Update individal withdrawal requests
+                    self.withdrawal_request.filter(first_approval=False).update(first_approval=True)
+                    # Update batch
+                    self.first_approval = True
+                elif approval_level == 2 and not self.second_approval:
+                    self.withdrawal_request.filter(second_approval=False).update(second_approval=True)
+                    self.second_approval = True
+                elif approval_level == 3 and not self.third_approval:
+                    self.withdrawal_request.filter(third_approval=False).update(third_approval=True)
+                    self.third_approval = True
+                else:
+                    raise ValueError('Approval level has already been processed')
+                
+                self.save()
+                return {
+                    'status':'success',
+                    'message':f'Withdrawal batch approved for level {approval_level}.'
+                }
+        except Exception as e:
+            return {
+                'status':'error',
+                'message':f'An error occured trying to approve: {str(e)}'
+            }
+    
+    def save(self,*args,**kwargs):
+        if not self.id:
+            self.id = generate_short_alpha_numeric_id(WithdrawalBatch)
+        return super().save(*args,**kwargs)
+        
+
+
+
+
 # MEMBER WITHDRAWAL APPLICATION
 class WithdrawalRequest(models.Model):
+    id = models.CharField(
+        max_length=12,
+        primary_key=True,
+        unique=True,
+        editable=False
+    )
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
@@ -330,12 +459,6 @@ class WithdrawalRequest(models.Model):
         on_delete=models.CASCADE,
         null=True,
         related_name='withdrawal_request'
-    )
-    id = models.CharField(
-        max_length=12,
-        primary_key=True,
-        unique=True,
-        editable=False
     )
     staff = models.ForeignKey(
         StaffAPI,
@@ -349,7 +472,20 @@ class WithdrawalRequest(models.Model):
         null=False,
         blank=False
     )
-    approved = models.BooleanField(
+    parent_batch = models.ForeignKey(
+        WithdrawalBatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='withdrawal_request'
+    )
+    first_approval = models.BooleanField(
+        default=False
+    )
+    second_approval = models.BooleanField(
+        default=False
+    )
+    third_approval = models.BooleanField(
         default=False
     )
     request_date = models.DateTimeField(

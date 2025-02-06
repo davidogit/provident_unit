@@ -1,5 +1,5 @@
 import random
-import string
+import os
 from django.db import IntegrityError, models,transaction
 from django.dispatch import receiver
 from django.db.models.signals import pre_save
@@ -8,7 +8,8 @@ from MultiScheme.models import InvestmentScheme,Tenant
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from .generate_invoice import generate_invoice_number,generate_short_alpha_numeric_id
-import uuid
+from Chart_of_Accounts.models import BankAccount
+from django.core.validators import FileExtensionValidator
 
 class InvestmentDetail(models.Model):
     invoice_number = models.CharField(
@@ -425,7 +426,32 @@ class BankInterestRate(models.Model):
 
 # Schedule dates for General Payment Model
 class ScheduledPaymentDates(models.Model):
-    date_of_payment = models.DateField(null=False)
+    month_choices = [
+        ('1','January'),
+        ('2','February'),
+        ('3','March'),
+        ('4','April'),
+        ('5','May'),
+        ('6','June'),
+        ('7','July'),
+        ('8','August'),
+        ('9','September'),
+        ('10','October'),
+        ('11','November'),
+        ('12','December'),
+    ]
+    # date_of_payment = models.DateField(null=False)
+    day = models.PositiveIntegerField(
+        null=False,
+        blank=False
+    )
+    month = models.CharField(
+        max_length=10,
+        null=False,
+        blank=False,
+        default='',
+        choices=month_choices
+    )
     payout_percentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
@@ -438,6 +464,12 @@ class ScheduledPaymentDates(models.Model):
         null=False,
         related_name='scheduledPaymentDate'
     )
+    bank = models.ForeignKey(
+        BankAccount,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
@@ -449,7 +481,7 @@ class ScheduledPaymentDates(models.Model):
     )
 
     def __str__(self):
-        return f'{self.tenant} | {self.scheme} | {self.date_of_payment.month}'
+        return f'{self.tenant} | {self.scheme} || {self.month} {self.day}'
 
 
 
@@ -661,3 +693,41 @@ class PaymentInvoice(models.Model):
     def save(self,*args,**kwargs):
         self.supplier = self.purchase_order.requisition.supplier
         return super().save(*args,**kwargs)
+
+
+
+
+# MODEL FOR EXCEL FILES SENT TO BANK
+class BankSheet(models.Model):
+    name = models.CharField(
+        max_length=255,
+        null=False,
+        blank=False
+    )
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=False,
+        blank=False,
+        related_name='bank_sheet'
+    )
+    scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=False,
+        related_name='bank_sheet'
+    )
+    def upload_file(self,filename):
+        tenant_name=self.tenant.name
+        return os.path.join('File_uploads',tenant_name,'SCHEDULED_PAYOUTS',filename)
+    
+    excel_file = models.FileField(
+        null=True,
+        blank=True,
+        upload_to=upload_file,
+        validators=[FileExtensionValidator(allowed_extensions=['xls','xlsx'])]
+    )
+
+    def __str__(self):
+        return f'{self.tenant.name} - Scheduled Payout File - {self.id}'

@@ -61,6 +61,14 @@ urlpatterns =[
     path('fetch-members/', views.FetchWithdrawalRequests.as_view(), name='fetch-members'),
     # payment History
     path('payment-history/', views.PaymentHistoryView.as_view(), name='payment_history'),
+    # Level 2 withdrawal request approval
+    path('approve-batch-withdrawal/', views.SecondPhaseOfWithdrawalApproval.as_view(), name='second_withdrawal_approval'),
+    # Level 2 Email approval of withdrawals
+    path('email-batch-approval/<slug:batch_id>/<scheme_id>/', views.SecondPhaseOfWithdrawalApprovalEmail.as_view(),name='email_withdrawal_approval'),
+    # Batch withdrawals list view
+    path('batch-withdrawal-list/<slug:batch_id>/', views.BatchWithdrawalListView.as_view(), name='batch_withdrawal_list'),
+    # Final batch Withdrawal approval
+    path('final-batch-approval/', views.FinalBatchWithdrawalApproval.as_view(), name='final_batch_withdrawal_approval'),
 
     # Schedule Payment Date URL
     path('schedule_payment_dates/', views.SchedulePaymentDateView.as_view(), name='schedule_payment_date'),
@@ -68,6 +76,8 @@ urlpatterns =[
     path('delete_scheduled_date/<int:pk>/', views.DeleteSchedulePaymentDate.as_view(), name='delete_scheduled_dates'),
     # Approve scheduled date
     path('approve-payout-date/<int:date_id>/', views.ApproveScheduledPaymentDateView.as_view(), name='approve_scheduled_date'),
+    # Pause scheduled date
+    path('pause-payout-date/<int:schedule_date_id>/', views.PauseScheduledPaymentDateView.as_view(), name='pause_scheduled_date'),
 
     # SUPPLIER URL
     path('suppliers/', views.SupplierView.as_view(), name='supplier_view'),

@@ -436,9 +436,10 @@ class BankAccountsView(TemplateView):
         account_type = self.request.POST.get('account_type')
         parent_Account_id = self.request.POST.get('parent_Account')
         currency = self.request.POST.get('currency')
+        bank_email = self.request.POST.get('bank_email')
 
 
-        all_fields = [tenant,account_holder_name,account_number,account_type,branch,bank_name,parent_Account_id,currency]
+        all_fields = [tenant,account_holder_name,account_number,account_type,branch,bank_name,parent_Account_id,currency,bank_email]
 
         if not all(all_fields):
             return JsonResponse({
@@ -465,7 +466,8 @@ class BankAccountsView(TemplateView):
                 branch=branch,
                 account_type=account_type,
                 parent_Account=parent_account,
-                currency=currency
+                currency=currency,
+                bank_email = bank_email
             )
         except Exception:
             return JsonResponse({
@@ -558,13 +560,16 @@ class DeleteBankView(DeleteView):
 class BankUpdateView(UpdateView):
     model = BankAccount
     template_engine = ''
-    fields = ('account_number',
-              'bank_name',
-              'account_holder_name',
-              'branch',
-              'account_type',
-              'parent_Account',
-              'currency')
+    fields = (
+        'account_number',
+        'bank_name',
+        'account_holder_name',
+        'branch',
+        'account_type',
+        'parent_Account',
+        'currency',
+        'bank_email'
+    )
 
     def get_object(self, queryset = ...):
         tenant = self.request.tenant
@@ -651,7 +656,8 @@ class FetchBankDetail(TemplateView):
                     'account_type':bank.account_type,
                     'currency':bank.currency,
                     'branch':bank.branch,
-                    'parent':bank.parent_Account.id if bank.parent_Account else None 
+                    'parent':bank.parent_Account.id if bank.parent_Account else None,
+                    'bank_email': bank.bank_email
                 }
             })
         except BankAccount.DoesNotExist:

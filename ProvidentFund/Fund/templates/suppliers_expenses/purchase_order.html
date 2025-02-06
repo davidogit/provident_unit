@@ -187,17 +187,17 @@
             var quantity = [];
             var receivedQuantity = [];
 
-            //Display receive button
-            $(this).closest('.order-card').find('.receive-order').show();
-
             //Get all rows in the table
             var rows = $(this).closest('.order-items-table').find('.item-table tbody tr');
 
             //Check if there are no items in the order
-            if (rows.length === 1){
+            if (rows.length === 1 && rows.find('td').length === 1){
                 alert('Order has no items.');
                 return;
             }
+
+            //Display receive button
+            $(this).closest('.order-card').find('.receive-order').show();
 
             //Add a new header to the table
             if ($(this).closest('.order-items-table').find('.item-table thead tr th').length === 4){
@@ -217,9 +217,10 @@
 
                 $(this).append(`
                     <td class="text-start align-middle">
-                        <input type="number" class="form-control received-quantity">
+                        <input type="number" class="form-control received-quantity" min="0">
                     </td>
-                `);
+                `
+                );
             });  
         });
 
@@ -252,6 +253,10 @@
                 receivedQuantity.push($(this).find('.received-quantity').val());
             })
 
+            if (row.length != receivedQuantity.length){
+                alert('Please fill in all received quantities');
+                return;
+            }
 
             $.ajax({
                 url: `/${tenantId}/fund/received-order/${order_id}/`,

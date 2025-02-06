@@ -66,9 +66,8 @@
                 Payout</span></a>
             <nav class="nav nav-sub">
               <a href="{% url 'general_payout' tenant_id=request.tenant.id %}" class="nav-sub-link">General Payout</a>
-              <a href="#" class="nav-sub-link">Scheduled Payout</a>
-              <a href="#" class="nav-sub-link">Payout
-                History</a>
+              <a href="{% url 'second_withdrawal_approval' tenant_id=request.tenant.id %}" class="nav-sub-link">First Approval</a>
+              <a href="{% url 'final_batch_withdrawal_approval' tenant_id=request.tenant.id %}" class="nav-sub-link">Final Approval</a>
             </nav>
           </li>
           <li class="nav-item">
