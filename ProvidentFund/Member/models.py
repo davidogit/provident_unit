@@ -351,7 +351,7 @@ class WithdrawalBatch(models.Model):
     mode_of_payment = models.CharField(
         max_length=255,
         default='',
-        null=False,
+        null=True,
         choices=payment_method_choices
     )
     date_created = models.DateTimeField(

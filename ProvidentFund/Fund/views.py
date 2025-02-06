@@ -1747,8 +1747,7 @@ class GeneralPayoutView(TemplateView):
         scheme_id = self.request.POST.get('scheme_id')
         staff_ids = self.request.POST.getlist('staff_ids[]')#List of selected staffs to be processed
         withdrawal_request_ids = self.request.POST.getlist('ref_ids[]')
-        mode_of_payment = self.request.POST.get('mode_of_payment')
-        bank_id = self.request.POST.get('bank_id')
+        
         
         if not tenant or not scheme_id:
             return JsonResponse({
@@ -1756,11 +1755,7 @@ class GeneralPayoutView(TemplateView):
                 'message':'Invalid Tenant or Scheme ID'
             }, status = 400) #Bad Request
         
-        if not mode_of_payment:
-            return JsonResponse({
-                'status':'error',
-                'message':'Please select mode of payment'
-            })
+        
 
         if not staff_ids or not withdrawal_request_ids:
             return JsonResponse({
@@ -1774,20 +1769,7 @@ class GeneralPayoutView(TemplateView):
                 'message':'Mismatch in staff and withdrawal reference IDs'
             })
         
-        bank = None
-        if mode_of_payment == 'Bank Transfer' and bank_id:
-            try:
-                bank = BankAccount.objects.get(
-                    id=bank_id,
-                    tenant=tenant
-                )
-            except ObjectDoesNotExist:
-                return JsonResponse({
-                    'status':'error',
-                    'message':'Bank not found.'
-                })
-        else:
-            bank = None
+        
 
         
         try:
@@ -1824,8 +1806,8 @@ class GeneralPayoutView(TemplateView):
                 batch = WithdrawalBatch.objects.create(
                     tenant = tenant,
                     scheme = scheme,
-                    bank = bank,
-                    mode_of_payment = mode_of_payment
+                    # bank = bank,
+                    # mode_of_payment = mode_of_payment
                 )
             except Exception as e:
                 return JsonResponse({
@@ -1895,10 +1877,6 @@ class GeneralPayoutView(TemplateView):
         context['schemes'] = InvestmentScheme.objects.filter(
             tenant=tenant
         )
-        context['banks'] = BankAccount.objects.filter(
-            tenant=tenant
-        )
-        context['mode_of_payment'] = Transaction.payment_method_choices
 
         return context
 
@@ -2125,12 +2103,35 @@ class FinalBatchWithdrawalApproval(ListView):
     def post(self,*args,**kwargs):
         tenant = self.request.tenant
         batch_id = self.request.POST.getlist('batch_id[]')
+        mode_of_payment = self.request.POST.get('payment_mode')
+        bank_id = self.request.POST.get('bank_id')
         print(batch_id)
         if not batch_id:
             return JsonResponse({
                 'status':'error',
                 'message':'Please select a batch to approve'
             })
+        
+        if not mode_of_payment:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please select mode of payment'
+            })
+        
+        bank = None
+        if mode_of_payment == 'Bank Transfer' and bank_id:
+            try:
+                bank = BankAccount.objects.get(
+                    id=bank_id,
+                    tenant=tenant
+                )
+            except ObjectDoesNotExist:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Bank not found.'
+                })
+        else:
+            bank = None
         
         try:
             batches = WithdrawalBatch.objects.filter(
@@ -2150,7 +2151,10 @@ class FinalBatchWithdrawalApproval(ListView):
         try:
             now = timezone.now()
             for batch in batches:
+                batch.bank = bank
+                batch.mode_of_payment = mode_of_payment
                 batch.approve_batch(approval_level=3)
+                batch.save()
             # If level 3 approval is successful:
             # create transaction object for individual requests
             all_transactions = []
@@ -2196,6 +2200,15 @@ class FinalBatchWithdrawalApproval(ListView):
             return JsonResponse(
                 return_value # return_value is a an object returned from the model when approve_batch is called
             )
+    
+    def get_context_data(self, **kwargs):
+        tenant = self.request.tenant
+        context = super().get_context_data(**kwargs)
+        context['banks'] = BankAccount.objects.filter(
+            tenant=tenant
+        )
+        context['mode_of_payment'] = Transaction.payment_method_choices
+        return context
 
 
 import calendar

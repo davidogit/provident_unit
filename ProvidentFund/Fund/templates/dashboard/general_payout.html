@@ -13,9 +13,9 @@
         <div class="col-12">
             <div class="container">
                 <div class="col-12 d-flex justify-content-between align-items-center mb-3">
-                    <div class="col-6 col-md-3 col-lg-8 d-flex flex-row justify-content-between align-items-center">
+                    <div class="col-6 col-md-3 col-lg-8 d-flex flex-row justify-content-start align-items-center">
                         <!-- Scheme Select -->
-                        <div class="form-floating w-100 me-2">
+                        <div class="form-floating me-2">
                             <select class="form-select" name="scheme" id="scheme" aria-placeholder="">
                                 <option value="">--select--</option>
                                 {% for scheme in schemes %}
@@ -25,26 +25,7 @@
                             <label for="scheme">Scheme</label>
                         </div>
 
-                        <!-- Payment Mode Select -->
-                        <div class="form-floating w-100 me-2">
-                            <select class="form-select" name="scheme" id="mode_of_payment" aria-placeholder="">
-                                <option value="">--select--</option>
-                                {% for value, choice in mode_of_payment %}
-                                <option value="{{ value }}">{{ choice }}</option>
-                                {% endfor %}
-                            </select>
-                            <label for="scheme">Mode of Payment</label>
-                        </div>
-                        <!-- Bank Select -->
-                        <div class="d-none form-floating w-100 bank_select">
-                            <select class="form-select" name="scheme" id="bank" aria-placeholder="">
-                                <option value="">--select--</option>
-                                {% for bank in banks %}
-                                <option value="{{ bank.id }}">{{ bank }}</option>
-                                {% endfor %}
-                            </select>
-                            <label for="scheme">Bank</label>
-                        </div>
+                        
                     </div>
                     <div class="col-6 col-md-3 col-lg-4 d-flex justify-content-end align-items-center">
                         <!-- Payout button -->
@@ -110,23 +91,7 @@
 
 
     $(document).ready(function(){
-        //Disable bank select on page load
-        $('#bank').prop('disabled', true);
-        //hide bank select
-        //$('.bank_select').hide();
-
-        //Disable bank select
-        $('#mode_of_payment').on('change', function(e){
-            e.preventDefault();
-            var modeOfPayment = $(this).val();
-            if(modeOfPayment === 'Bank Transfer'){
-                $('.bank_select').removeClass('d-none');
-                $('#bank').prop('disabled', false);
-            }else{
-                $('#bank').prop('disabled', true);
-                $('.bank_select').addClass('d-none');
-            }
-        });
+        
 
         // Select all checkbox
         $('#select_all').click(function(){
@@ -211,21 +176,21 @@
             e.preventDefault();
             var tenantId = '{{ request.tenant.id }}';
             var schemeId = $('#scheme').val();
-            var payoutType = $('input[name=payout_type]:checked').val();
+            //var payoutType = $('input[name=payout_type]:checked').val();
             var staffIds = [];
             var ref_ids = [];
-            var bankId = $('#bank').val();
-            var modeOfPayment = $('#mode_of_payment').val();
+            //var bankId = $('#bank').val();
+            //var modeOfPayment = $('#mode_of_payment').val();
 
-            if (!modeOfPayment){
-                alert('Please select mode of payment');
-                return;
-            }
+            //if (!modeOfPayment){
+                //alert('Please select mode of payment');
+                //return;
+            //}
 
-            if (modeOfPayment === 'Bank Transfer' && !bankId){
-                alert('Please select bank');
-                return;
-            }
+            //if (modeOfPayment === 'Bank Transfer' && !bankId){
+                //alert('Please select bank');
+                //return;
+            //}
 
             $('input[name=staff_id]:checked').each(function(){
                 staffIds.push($(this).val());
@@ -247,11 +212,11 @@
                 //traditional:true, //This is to allow array to be sent to the server
                 data: {
                     'scheme_id': schemeId,
-                    'payout_type': payoutType,
+                    //'payout_type': payoutType,
                     'staff_ids': staffIds,
                     'ref_ids': ref_ids,
-                    'bank_id': bankId,
-                    'mode_of_payment': modeOfPayment,
+                    //'bank_id': bankId,
+                    //'mode_of_payment': modeOfPayment,
                     csrfmiddlewaretoken: '{{ csrf_token }}',
                 },
                 success: function(response){
