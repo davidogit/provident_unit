@@ -20,6 +20,16 @@
                 {% endfor %}
               </select>
             </div>
+
+            <div class="form-group mb-3">
+              <label for="transaction-type" class="form-label">Transaction Type</label>
+              <select name="transaction_type" id="transaction-type" class="form-control" required>
+                <option value="" disabled selected>Select transaction type</option>
+                <option value="momo">Mobile Money (MoMo)</option>
+                <option value="bank_transfer">Bank Transfer</option>
+              </select>
+            </div>
+
             <div class="form-group mb-3">
               <label for="amount" class="form-label">Amount</label>
               <input
@@ -31,6 +41,7 @@
                 required
               />
             </div>
+
             <div class="form-submit text-center">
               <button type="button" id="withdrawButton" class="btn btn-primary btn-block">
                 Request Withdrawal
@@ -42,12 +53,14 @@
     </div>
   </div>
 </div>
+
 <script>
   document.getElementById("withdrawButton").addEventListener("click", function () {
     const schemeId = document.getElementById("scheme-type").value;
+    const transactionType = document.getElementById("transaction-type").value;
     const amount = document.getElementById("amount").value;
 
-    if (!schemeId || !amount) {
+    if (!schemeId || !transactionType || !amount) {
       alert("Please fill in all fields");
       return;
     }
@@ -60,6 +73,7 @@
       },
       body: JSON.stringify({
         scheme_id: schemeId,
+        transaction_type: transactionType,
         amount: amount,
       }),
     })

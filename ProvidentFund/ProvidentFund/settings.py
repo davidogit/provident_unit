@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     
     'rest_framework',
     "debug_toolbar",
+    "clear_cache",
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -129,7 +130,7 @@ DATABASES = {
         'OPTIONS': {
             'init_command': 'SET default_storage_engine=INNODB',
         },
-        'NAME': 'provident_fund',
+        'NAME': 'Fund_Management',
         'USER': 'root',
         'PASSWORD': 'collinsxzibit1?',
         'HOST': 'localhost',
@@ -238,30 +239,30 @@ PAYSTACK_SECRET_KEY = 'sk_test_7bc2565b498e1a4677bc639dc60ed02fe3d62dd4'
 
 # ... other settings ...
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': 'debug.log',
-        },
-    },
-    'root': {
-        'handlers': ['console', 'file'],
-        'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    },
-}
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': True,
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#         },
+#         'file': {
+#             'class': 'logging.FileHandler',
+#             'filename': 'debug.log',
+#         },
+#     },
+#     'root': {
+#         'handlers': ['console', 'file'],
+#         'level': 'INFO',
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['console', 'file'],
+#             'level': 'INFO',
+#             'propagate': True,
+#         },
+#     },
+# }
 
 PAYSTACK_SECRET_KEY = 'sk_test_7bc2565b498e1a4677bc639dc60ed02fe3d62dd4'
 PAYSTACK_PUBLIC_KEY = 'pk_test_d07e3b0e3a2c21e754a416c9b79ad62350794394'

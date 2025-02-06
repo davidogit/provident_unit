@@ -417,7 +417,7 @@ class BankInterestRate(models.Model):
 
     class Meta:
         ordering = ['-effective_date']  # Order by most recent rates
-
+        
     def __str__(self):
         return f"{self.bank_name} | {self.interest_rate}%"
 

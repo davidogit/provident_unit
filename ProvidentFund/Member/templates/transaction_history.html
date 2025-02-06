@@ -6,8 +6,8 @@
 
     <div class="d-md-flex align-items-center justify-content-between mb-4">
         <div>
-            <h2 class="h5 mb-2">Member: {{ member.full_name }}</h2>
-            <p>Staff ID: {{ member.staff_id }}</p>
+            <h2 class="h5 mb-2">Member: {{ request.user.first_name }} {{ request.user.last_name }}</h2>
+            <p>Staff ID: {{ request.user.staff_number }}</p>
         </div>
         <a href="{% url 'create_transaction' tenant_id=request.tenant.id staff_id=request.user.member.staff_id %}" class="btn btn-primary">Create New Transaction</a>
     </div>

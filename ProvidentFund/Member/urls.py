@@ -1,7 +1,7 @@
 from django.urls import path
 from Member import views
 from . import views
-from .views import EditMemberProfileView,TransactionHistoryView, WithdrawalView, verify_transaction
+from .views import EditMemberProfileView,TransactionHistoryView, WithdrawalView, verify_transaction,ManagerApprovalView
 
 
 urlpatterns=[
@@ -33,6 +33,7 @@ urlpatterns=[
     path('transaction_history/<int:staff_id>/', views.TransactionHistoryView.as_view(),  name='transaction_history'), 
     path('withdraw/<int:staff_id>/', WithdrawalView.as_view(), name='withdraw'),
     path('verify-transaction/<str:reference>/', verify_transaction, name='verify_transaction'),
+    path('manager/approval/', ManagerApprovalView.as_view(), name='manager_approval'),
     
 
 ]

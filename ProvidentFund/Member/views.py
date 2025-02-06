@@ -894,6 +894,17 @@ class TransactionHistoryView(ListView):
         return context
     
 
+from decimal import Decimal
+import json
+from django.core.mail import send_mail
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views import View
+from django.db import transaction
+import logging
+import phonenumbers
+from twilio.rest import Client  # Import Twilio for SMS
+
 logger = logging.getLogger(__name__)
 
 class WithdrawalView(View):
@@ -914,12 +925,21 @@ class WithdrawalView(View):
             tenant = request.tenant
             member = request.user.member
             scheme_id = data.get('scheme_id')
-            amount = float(data.get('amount'))
+            transaction_type = data.get('transaction_type')
+            amount = data.get('amount')
 
-            if not all([scheme_id, amount]):
+            # Validate inputs
+            if not all([scheme_id, transaction_type, amount]):
                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
+            # Convert amount to Decimal for calculations
+            amount = Decimal(amount)
+
+            if transaction_type not in ['momo', 'bank_transfer']:
+                return JsonResponse({'status': 'error', 'message': 'Invalid transaction type.'}, status=400)
+
             with transaction.atomic():
+                # Validate scheme and staff
                 scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id)
                 staff = StaffAPI.objects.get(staff_number=member.staff_id)
 
@@ -933,25 +953,196 @@ class WithdrawalView(View):
                 if balance < amount:
                     return JsonResponse({'status': 'error', 'message': 'Insufficient balance.'}, status=400)
 
-                # Create a withdrawal request with status 'pending_approval'
-                Transaction.objects.create(
+                # Deduct the withdrawal amount from the estimated profit
+                staff.estimated_profit -= amount
+                staff.save()
+
+                # Create a withdrawal transaction
+                TransactionHistory.objects.create(
                     tenant=tenant,
                     staff=staff,
                     member=member,
                     scheme=scheme,
                     amount=-amount,
                     transaction_type='withdrawal',
-                    status='pending_approval',
+                    status='pending',
+                    additional_data={'transaction_type': transaction_type},  # Save the type of withdrawal
                 )
 
-                # Notify the manager (e.g., send an email or update a dashboard)
-                # notify_manager_of_withdrawal_request(member, amount, scheme)
+                # Notify manager and user
+                self.notify_manager(member, amount, scheme)
+                self.notify_user(member, amount, scheme)
 
                 return JsonResponse({
                     'status': 'success',
-                    'message': 'Withdrawal request submitted for approval.'
+                    'message': 'Withdrawal request submitted for approval. Notification sent to your email and phone.'
                 })
 
         except Exception as e:
             logger.error(f"Unexpected error in WithdrawalView: {str(e)}")
             return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
+
+    def notify_manager(self, member, amount, scheme):
+        try:
+            manager_email = 'osahdav@gmail.com'  # Replace with dynamic manager email if available
+            subject = 'Withdrawal Request Pending Approval'
+            message = (
+                f"A withdrawal request has been submitted by {member.user.get_full_name()} ID: {member.staff_id}.\n"
+                f"Details:\n"
+                f"Scheme: {scheme.name}\n"
+                f"Amount: ₵{amount:.2f}\n"
+                f"Status: Pending Approval\n"
+                f"Please review and take the necessary actions."
+            )
+
+            send_mail(
+                subject,
+                message,
+                'osahdav@gmail.com',  # Replace with your sender email
+                [manager_email],
+                fail_silently=False,
+            )
+
+            logger.info(f"Notification email sent to {manager_email} for withdrawal request.")
+        except Exception as e:
+            logger.error(f"Error sending notification email: {str(e)}")
+
+    def notify_user(self, member, amount, scheme):
+        try:
+            # Send email to the user
+            subject = 'Withdrawal Request Submitted'
+            message = (
+                f"Dear {member.user.get_full_name()},\n"
+                f"Your withdrawal request of ₵{amount:.2f} from the {scheme.name} scheme has been submitted successfully.\n"
+                f"Please note that it is pending approval and may take 2-3 business days to process."
+            )
+
+            send_mail(
+                subject,
+                message,
+                'dave21620@gmail.com',  # Replace with your sender email
+                [member.user.email],
+                fail_silently=False,
+            )
+
+            raw_phone = member.tel_number
+            parsed_phone = phonenumbers.parse(raw_phone, "GH")  # "GH" is the country code for Ghana
+            if not phonenumbers.is_valid_number(parsed_phone):
+                raise ValueError(f"Invalid phone number: {raw_phone}")
+            formatted_phone = phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.E164)
+
+            # Send SMS to the user (using Twilio or another SMS service)
+            account_sid = 'ACe6e705f0732d1a51651131aa2516ab10'
+            auth_token = 'eb8dec355cd270700f0b00e341d3dc46'
+            client = Client(account_sid, auth_token)
+
+            sms_message = (
+                f"Hi { member.user.last_name } { member.user.first_name }, your withdrawal request of ₵{amount:.2f} has been submitted. "
+                f"It is pending approval and may take 2-3 business days."
+            )
+
+            client.messages.create(
+                body=sms_message,
+                from_='+14068004910',  # Replace with your Twilio phone number
+                to=formatted_phone,  # Ensure the phone number is stored in the Member model
+            )
+
+            logger.info(f"Notification email and SMS sent to {member.user.email} and {member.formatted_phone}.")
+        except Exception as e:
+            logger.error(f"Error notifying user: {str(e)}")
+
+
+from django.contrib.auth.decorators import user_passes_test
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from .models import TransactionHistory
+
+# Decorator to restrict view access to managers
+# def is_manager(user):
+#     return user.groups.filter(name='Manager').exists()
+
+# @method_decorator(user_passes_test(is_manager), name='dispatch')
+class ManagerApprovalView(View):
+    template_name = 'manager/approval_list.html'
+
+    def get(self, request, *args, **kwargs):
+        # Fetch pending withdrawal requests
+        pending_requests = TransactionHistory.objects.filter(
+            transaction_type='withdrawal', status='pending'
+        )
+
+        context = {
+            'pending_requests': pending_requests,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            transaction_id = data.get('transaction_id')
+            action = data.get('action')
+
+            # Validate input
+            if not transaction_id or not action:
+                return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
+
+            # Retrieve the transaction
+            transaction = get_object_or_404(TransactionHistory, id=transaction_id)
+
+            if action == 'approve':
+                # Approve the transaction
+                transaction.status = 'approved'
+
+                # Process payment if needed
+                transaction_type = transaction.additional_data.get('transaction_type')
+                if transaction_type == 'momo':
+                    self.process_momo_payment(transaction)
+                elif transaction_type == 'bank_transfer':
+                    self.process_bank_transfer(transaction)
+                else:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid transaction type.'}, status=400)
+
+            elif action == 'reject':
+                # Reject the transaction
+                transaction.status = 'rejected'
+
+                # Optionally refund the amount to the user's estimated profit
+                staff = transaction.staff
+                staff.estimated_profit += abs(transaction.amount)
+                staff.save()
+
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Invalid action.'}, status=400)
+
+            transaction.save()
+            return JsonResponse({'status': 'success', 'message': 'Transaction updated successfully.'})
+
+        except Exception as e:
+            logger.error(f"Error in ManagerApprovalView: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    def process_momo_payment(self, transaction):
+        """
+        Process a MoMo payment for an approved transaction.
+        """
+        try:
+            # Add MoMo payment processing logic here
+            logger.info(f"Processing MoMo payment for transaction ID: {transaction.id}")
+            # Simulate payment success
+        except Exception as e:
+            logger.error(f"Error processing MoMo payment: {str(e)}")
+            raise
+
+    def process_bank_transfer(self, transaction):
+        """
+        Process a bank transfer for an approved transaction.
+        """
+        try:
+            # Add bank transfer logic here
+            logger.info(f"Processing bank transfer for transaction ID: {transaction.id}")
+            # Simulate payment success
+        except Exception as e:
+            logger.error(f"Error processing bank transfer: {str(e)}")
+            raise

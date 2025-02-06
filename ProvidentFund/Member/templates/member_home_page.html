@@ -1,6 +1,10 @@
-{% extends 'member_base.html' %} {% block title %}
+{% extends 'member_base.html' %} 
+
+{% block title %}
 <title>{{ user.username }}'s Dashboard</title>
-{% endblock %} {% block content %}
+{% endblock %}
+
+{% block content %}
 
 <!-- row -->
 
@@ -53,14 +57,15 @@
                 </div><!-- card -->
               </div><!-- col -->
             </div>
+        
             <!-- card-body -->
-            <div id="apexChart4" class="apex-chart"></div>
+            {% comment %} <div id="apexChart4" class="apex-chart"></div>
           </div>
           <!-- card -->
         </div>
         <!-- col -->
-      </div>
-    </div>
+      </div> {% endcomment %}
+    </div> 
     <!-- col -->
     <div class="col-xl-12">
       <div class="row g-3">
@@ -171,6 +176,8 @@
       Withdraw Funds
     </a>
   </li>
+  <a href="{% url 'manager_approval' tenant_id=request.tenant.id %}" class="btn btn-primary">Go to Manager Approval</a>
 
-  {% endblock %}
 </div>
+{% endblock %}
+

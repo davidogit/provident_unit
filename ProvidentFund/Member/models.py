@@ -12,6 +12,8 @@ from django.utils import timezone
 from django.core.validators import FileExtensionValidator
 import random
 from django.db import IntegrityError
+from django.db.models import JSONField
+from Fund.generate_invoice import generate_short_alpha_numeric_id
 from Fund.generate_invoice import generate_short_alpha_numeric_id
 
 # Create your models here.
@@ -271,6 +273,7 @@ class Transaction(models.Model):
             models.Index(fields=['transaction_date']),
             models.Index(fields=['status']),
         ]
+
 
 
 
