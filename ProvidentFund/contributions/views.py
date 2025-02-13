@@ -25,7 +25,7 @@ from django.shortcuts import render, redirect
 
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR',]), name='dispatch')
+@method_decorator(role_required(role=['Contributions Manager','Contributions Supervisor','Contributions Analyst']),name='dispatch')
 class StaffMemberListView(ListView):
     model = StaffAPI
     template_name = 'contributions/staffmember_list.html'
@@ -47,7 +47,7 @@ class StaffMemberListView(ListView):
 
 @method_decorator(tenant_login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch') 
-@method_decorator(role_required(role=['HR',]), name='dispatch')  
+@method_decorator(role_required(role=[]), name='dispatch')  
 class OptOutMemberView(View):
     def post(self, request, *args, **kwargs):
         member_id = kwargs.get('pk')
@@ -87,7 +87,7 @@ class OptOutMemberView(View):
 
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR',]), name='dispatch')
+@method_decorator(role_required(role=['Contributions Manager','Contributions Supervisor','Contributions Analyst']), name='dispatch')
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
@@ -96,7 +96,7 @@ class StaffMemberDetailView(DetailView):
 
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR',]), name='dispatch')
+@method_decorator(role_required(role=['Contributions Manager','Contributions Supervisor','Contributions Analyst']), name='dispatch')
 class Contributed(ListView):
     model = Contribution
     template_name = 'contributions/contributed.html'
@@ -130,11 +130,11 @@ class Contributed(ListView):
 
     
     # Using get_object to retrieve the user pk from url
-    def get_object(self):
-        user_id = self.kwargs.get('pk')
-        tenant = self.request.tenant
+    # def get_object(self):
+    #     user_id = self.kwargs.get('pk')
+    #     tenant = self.request.tenant
 
-        return get_object_or_404(StaffAPI, Id=user_id, investment_scheme__tenant=tenant)
+    #     return get_object_or_404(StaffAPI, Id=user_id, investment_scheme__tenant=tenant)
 
     # context data
     def get_context_data(self, **kwargs):

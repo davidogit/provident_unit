@@ -21,7 +21,7 @@ class User(AbstractUser):
     groups = models.ManyToManyField(
         Group,
         related_name='custom_user_set',  # Updated related_name
-        blank=True,
+        blank=False,
         help_text='The groups this user belongs to.',
         verbose_name='groups'
     )
@@ -30,7 +30,8 @@ class User(AbstractUser):
         Permission,
         related_name='custom_user_permissions_set',  # Updated related_name
         help_text='Specific permissions for this user.',
-        verbose_name='user permissions'
+        verbose_name='user permissions',
+        blank=True
     )
 
     # History

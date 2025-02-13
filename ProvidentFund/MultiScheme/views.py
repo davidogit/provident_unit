@@ -23,7 +23,7 @@ from rest_framework import status
 # Scheme List View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager']), name='dispatch')
+@method_decorator(role_required(role=['Scheme Manager','Scheme Supervisor','Scheme Analyst']), name='dispatch')
 class SchemeList(ListView):
     template_name ='multischeme/scheme_list.html'
     model = InvestmentScheme
@@ -41,7 +41,7 @@ class SchemeList(ListView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager']), name='dispatch')
+@method_decorator(role_required(role=['Scheme Analyst']), name='dispatch')
 class AddScheme(CreateView):
     template_name = 'multischeme/add_scheme.html'
     model = InvestmentScheme
@@ -92,6 +92,9 @@ class AddScheme(CreateView):
 
 
 # Scheme Settings/Configuration
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
 class SchemeSettingsView(CreateView):
     model = SchemeSettings
     fields = ('contribution_day','grace_period_contribution','delayed_interest_rate','period_of_delayed_calculation') #include all fields from model
@@ -137,12 +140,16 @@ class SchemeSettingsView(CreateView):
             settings.save()
             print('Saved successfully')
             redirect_url = reverse('scheme_settings', kwargs={'tenant_id' : tenant.id, 'scheme_name':scheme_id})
-            return JsonResponse({'status':'success',
-                                  'message':'Settings updated successfully.',
-                                  'redirect_url':redirect_url})
+            return JsonResponse({
+                'status':'success',
+                'message':'Settings updated successfully.',
+                'redirect_url':redirect_url
+            })
         except Exception as e:
-            return JsonResponse({'status':'error',
-                                  'message':f'An error occured: {e}'})
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured: {e}'
+            })
 
         
         # return HttpResponseRedirect(self.get_success_url())

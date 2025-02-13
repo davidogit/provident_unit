@@ -41,6 +41,17 @@
     #serach-results {
       display: none;
     }
+
+    /* Hide scrollbar but allow scrolling */
+    .overflow-auto::-webkit-scrollbar {
+      display: none;  /* Hide scrollbar for Chrome, Safari */
+    }
+
+    .overflow-auto {
+      -ms-overflow-style: none;  /* Hide scrollbar for IE and Edge */
+      scrollbar-width: none;  /* Hide scrollbar for Firefox */
+    }
+
   </style>
   <!-- Hiding Serch Results -->
   <!-- JQuery for Serch implementation -->
@@ -59,37 +70,62 @@
 
       <!-- General Payout -->
       <div class="nav-item">
-        <a href="#" class="nav-label">Payout & Benefits</a>
+        {% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups or 'Scheme Supervisor' in user_groups %}
+        <a href="#" class="nav-label">{% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups %}Payout & Benefits {% elif 'Scheme Supervisor' in user_groups %}Validate Withdrawal Request{% endif %}</a>
         <ul class="nav nav-sidebar">
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-wallet-line fs-32 lh-1 me-3"></i> <span>General
-                Payout</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-wallet-line fs-32 lh-1 me-3"></i> <span>Process Withdrawal Requests</span></a>
             <nav class="nav nav-sub">
-              <a href="{% url 'general_payout' tenant_id=request.tenant.id %}" class="nav-sub-link">General Payout</a>
+              {% if 'Scheme Supervisor' in user_groups %}
+              <a href="{% url 'general_payout' tenant_id=request.tenant.id %}" class="nav-sub-link">Withdrawal Approval</a>
+              {% endif %}
+
+              {% if 'Finance Supervisor' in user_groups %}
               <a href="{% url 'second_withdrawal_approval' tenant_id=request.tenant.id %}" class="nav-sub-link">First Approval</a>
+              {% endif %}
+
+              {% if 'Finance Manager' in user_groups%}
               <a href="{% url 'final_batch_withdrawal_approval' tenant_id=request.tenant.id %}" class="nav-sub-link">Final Approval</a>
+              {% endif %}
             </nav>
           </li>
-          <li class="nav-item">
-            <a href="{% url 'schedule_payment_date' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-calendar-event-line fs-32 lh-1 me-3"></i> <span>Schedule Dates</span></a>
-          </li>
+
+          {% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups %}
           <li class="nav-item">
             <a href="{% url 'payment_history' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-history-line fs-32 lh-1 me-3"></i> <span>Payment History</span></a>
           </li>
-
+          {% endif %}
         </ul>
+        {% endif %}
       </div><!--nav-group -->
+      
+      {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups %}
+      <div class="nav-item">
+        <a href="#" class="nav-label">Scheduled Payment Date</a>
+        <ul class="nav nav-sidebar">
+          <li class="nav-item">
+            <a href="{% url 'schedule_payment_date' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-calendar-event-line fs-32 lh-1 me-3"></i> <span>Scheduled Dates</span></a>
+          </li>
+        </ul>
+      </div>
+      {% endif %}
+
 
       <!-- Expense Payment -->
+       {% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups %}
       <div class="nav-item">
         <a href="#" class="nav-label">Suppliers & Expenses</a>
         <ul class="nav nav-sidebar">
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-shopping-cart-line fs-32 lh-1 me-3"></i> <span>Purchase</span></a>
             <nav class="nav nav-sub">
+              {% if 'Finance Analyst' in user_groups %}
               <a href="{% url 'raise_requisition' tenant_id=request.tenant.id %}" class="nav-sub-link">Raise Requisition</a>
+              {% endif %}
               <a href="{% url 'purchase_order' tenant_id=request.tenant.id %}" class="nav-sub-link">Purchase Orders</a>
-              <a href="{% url 'payout_invoice' tenant_id=request.tenant.id %}" class="nav-sub-link">Payout Invoice</a>
+              {% if 'Finance Manager' in user_groups or 'Finance Analyst' in user_groups %}
+              <a href="{% url 'payout_invoice' tenant_id=request.tenant.id %}" class="nav-sub-link">Invoice</a>
+              {% endif %}
             </nav>
           </li>
           <li class="nav-item">
@@ -97,14 +133,16 @@
             <nav class="nav nav-sub">
             </nav>
           </li>
-
         </ul>
       </div><!--nav-group -->
+      {% endif %}
 
       <div class="nav-item border-5 border-bottom border-secondary">
+        {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups or 'Super User' in user_groups %}
         <a href="#" class="nav-label">Configuration</a>
         <ul class="nav nav-sidebar">
 
+          {% if 'Super User' in user_groups %}
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-book-2-line fs-32 lh-1 me-3"></i> <span>Accounts</span></a>
             <nav class="nav nav-sub"> 
@@ -125,30 +163,33 @@
               </a>
             </nav>
           </li>
+          {% endif %}
 
+          {% if 'Super User' in user_groups %}
           <li class="nav-item">
             <a href="#" class="nav-link"><i class="ri-scales-3-line fs-32 lh-1 me-3"></i> <span>Tax</span></a>
           </li>
+          {% endif %}
 
-          {% if is_manager_or_hr %}
+
+          {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups %}
           <li class="nav-item">
-            {% if is_manager %}
             <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Configuration</span></a>
             <nav class="nav nav-sub"> 
               <a href="{% url 'scheme_list' tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Active Schemes
               </a>
-
+              {% if 'Scheme Analyst' in user_groups %}
               <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Add Scheme
               </a>
-              
+              {% endif %}
             </nav>    
           </li>
           {% endif %}
 
+          {% if 'Super User' in user_groups %}
           <li class="nav-item">
-            {% if is_manager %}
             <a href="#" class="nav-link has-sub"><i class="ri-group-line fs-32 lh-1 me-3"></i> <span>Mass Enroll</span></a>
             <nav class="nav nav-sub"> 
               <a href="{% url 'mass_enroll' tenant_id=request.tenant.id %}"
@@ -163,26 +204,29 @@
           </li>
           {% endif %}
 
+          {% if 'Scheme Supervisor' in user_groups %}
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-survey-line fs-32 lh-1 me-3"></i> <span>Scheme Apllications</span></a>
-              <nav class="nav nav-sub">
-                {% if is_manager %}
-                <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
-                class="nav-sub-link">View Applications
-                </a>
-                {% endif %}
-
-                {% if is_hr_user %}
-                <a href="{% url 'approve_exit_members'  tenant_id=request.tenant.id %}"
-                class="nav-sub-link">Exiting Members Applications
-                </a>
-                {% endif %}
-              </nav>
-
+            <nav class="nav nav-sub">
+              <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
+              class="nav-sub-link">View Applications
+              </a>
+              <a href="{% url 'approve_exit_members'  tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Exiting Members Applications
+              </a>
+            </nav>
           </li>
           {% endif %}
 
+          {% if 'Super User' in user_groups %}
+          <li class="nav-item">
+            <a href="{% url 'event_mapping' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-notification-4-line fs-32 lh-1 me-3"></i> <span>Event Notification Mapping</span></a>
+          </li>
+          {% endif %}
+        </ul>
+        {% endif %}
       </div><!--nav-group -->
+      
       
       <!-- Loop through every scheme  -->
       
@@ -191,7 +235,7 @@
         <a href="#" class="nav-label">{{ scheme.name }}</a>
 
         <ul class="nav nav-sidebar">
-          {% if is_manager_or_treasury_user %}
+          {% if 'Treasury Manager' in user_groups or 'Treasury Supervisor' in user_groups or 'Treasury Analyst' in user_groups %}
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-line-chart-line fs-32 lh-1 me-3"></i>
               <span>Investments</span></a>
@@ -199,7 +243,7 @@
               <a href="{% url 'investment_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
                 class="nav-sub-link">View Current Investments
               </a>
-              {% if is_treasury_user %}
+              {% if 'Treasury Analyst' in user_groups %}
               <a href="{% url 'add_investment' scheme_name=scheme.id tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Add New Investments
               </a>
@@ -212,7 +256,7 @@
           {% endif %}
 
           
-            {% if is_manager %}
+          {% if 'Treasury Manager' in user_groups or 'Treasury Supervisor' in user_groups or 'Treasury Analyst' in user_groups %}
             <li class="nav-item">
               <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Delayed
                   Interest</span></a>
@@ -224,9 +268,8 @@
                   class="nav-sub-link">Generate Report
                 </a>
               </nav>
-              
             </li>
-            {% endif %}
+          {% endif %}
           
 
           {% if scheme.bank_int == 'Yes' %}
@@ -250,54 +293,62 @@
             {% endif %}
           {% endif %}
 
-          {% if is_manager_or_hr %}
+          {% if 'Treasury Manager' in user_groups or 'Treasury Supervisor' in user_groups or 'Treasury Analyst' in user_groups or 'Contributions Manager' in user_groups or 'Contributions Supervisor' in user_groups or 'Contributions Analyst' in user_groups %}
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-group-2-line fs-32 lh-1 me-3"></i> <span>Members</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-group-2-line fs-32 lh-1 me-3"></i> <span>Members & Member Contributions</span></a>
             <nav class="nav nav-sub">
-              {% if is_manager %}
+              {% if 'Treasury Manager' in user_groups or 'Treasury Supervisor' in user_groups or 'Treasury Analyst' in user_groups %}
               <a href="{% url 'member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">Active PF Members</a>
-              {% endif %}
-              {% if is_hr_user %}
-              <a href="{% url 'staff_member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">Active PF Members</a>
+                class="nav-sub-link">Active Members</a>
               {% endif %}
 
-                
+              {% if 'Contributions Manager' in user_groups or 'Contributions Supervisor' in user_groups or 'Contributions Analyst' in user_groups %}
+              <a href="{% url 'staff_member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Active Members</a>
+              {% endif %}
+
+              {% if 'Treasury Manager' in user_groups or 'Treasury Supervisor' in user_groups or 'Treasury Analyst' in user_groups %}
               <a href="{% url 'exited_members' scheme_name=scheme.id tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Exited Members</a>
+              {% endif %}
               <!-- <a href="#" class="nav-sub-link">Add Member</a> -->
             </nav>
           </li>
           {% endif %}
 
-          {% if is_finance_manager %}
+          {% if 'Contributions Manager' in user_groups or 'Contributions Supervisor' in user_groups or 'Contributions Analyst' in user_groups %}
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-exchange-dollar-line fs-32 lh-1 me-3"></i> <span>Member
-                Contributions</span></a>
+            <a href="#" class="nav-link has-sub">
+              <i class="ri-exchange-dollar-line fs-32 lh-1 me-3">
+              </i>
+              <span>
+                General COntributions
+              </span>
+            </a>
 
             <nav class="nav nav-sub">
-              {% if is_finance_manager %}
-                <a href="{% url 'approve_contributions' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Validate contributions</a>
-              {% endif %}
+                <a href="{% url 'approve_contributions' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">View Contributions</a>
             </nav>
-
           </li>
           {% endif %}
           
-          {% if is_manager %}
+          {% if 'Treasury Manager' in user_groups or 'Treasury Supervisor' in user_groups or 'Treasury Analyst' in user_groups %}
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-check-double-line fs-32 lh-1 me-3"></i> <span>Approvals</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-check-double-line fs-32 lh-1 me-3"></i> <span>Investment Approvals</span></a>
             <nav class="nav nav-sub">
+              {% if 'Treasury Manager' in user_groups %}
               <a href="{% url 'investment_approval' tenant_id=request.tenant.id scheme_name=scheme.id %}"
-                class="nav-sub-link">Investment approval
+                class="nav-sub-link">Investment Approval
               </a>
-
+              {% endif %}
               <a href="{% url 'approved_investments'  tenant_id=request.tenant.id scheme_name=scheme.id %}"
-                class="nav-sub-link">Approved investments
+                class="nav-sub-link">Approved Investments
               </a>
             </nav>
           </li>
+          {% endif %}
+
+          {% if 'Scheme Supervisor' in user_groups %}
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Settings</span></a>
             <nav class="nav nav-sub">
@@ -323,20 +374,10 @@
         <div class="sidebar-footer-thumb">
           <img src="{% static 'assets/img/default_profile_pic.png' %}" alt="">
         </div><!-- sidebar-footer-thumb -->
-        <div class="sidebar-footer-body">
-          {% if is_manager %}
-          <h6><a href="../pages/profile.html">PF Manager</a></h6>
-          {% endif %}
-          {% if is_treasury_user %}
-          <h6><a href="../pages/profile.html">PF Treasurer</a></h6>
-          {% endif %}
-          {% if is_hr_user %}
-          <h6><a href="../pages/profile.html">PF HR</a></h6>
-          {% endif %}
-          {% if is_finance_manager %}
-          <h6><a href="../pages/profile.html">PF Finance Manager</a></h6>
-          {% endif %}
-          <p>STAFF</p>
+        <div class="sidebar-footer-body overflow-auto" style="max-height: 60px;">
+          {% for group in user_groups %}
+          <small><em>{{ group }}</em></small><br>
+          {% endfor %}
         </div><!-- sidebar-footer-body -->
         <a id="sidebarFooterMenu" href="#" class="dropdown-link"><i class="ri-arrow-down-s-line"></i></a>
       </div><!-- sidebar-footer-top -->

@@ -9,7 +9,7 @@ from django.views.generic import TemplateView, ListView,DetailView,UpdateView,Cr
 from ProvidentFund.settings import EMAIL_HOST_USER
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder
 from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
-from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings
+from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings,TenantEventNotification
 from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI, Contribution
 from django.urls import reverse, reverse_lazy
@@ -32,7 +32,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount
 from Fund.tasks import calculate_staff_contribution
 from Fund.generate_invoice import generate_short_alpha_numeric_id
-
+from Admin.models import User
+import openpyxl
+from django.db import transaction
 logger = logging.getLogger(__name__)
 
 # Importing custom decorators
@@ -54,14 +56,14 @@ class AccessDenied(TemplateView):
 
     def get(self, request, *args, **kwargs):
         # clear session data
-        request.session.flush()
+        # request.session.flush()
 
         return super().get(request, *args, **kwargs)
 
 # the name=dispatch means the decorators will work for POST,GET,PUT etc
 @method_decorator(login_required, name='dispatch') 
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager', 'Treasury User', 'HR','Finance Manager']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager']), name='dispatch')
 class Invest(TemplateView):
     template_name = 'dashboard/finance.html'
 
@@ -132,7 +134,7 @@ class Invest(TemplateView):
 # Creating List View for model
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
 class InvestmentListView(ListView):
     context_object_name = 'investment_list'
     model = InvestmentDetail
@@ -209,7 +211,7 @@ class InvestmentListView(ListView):
 # Investment Detail View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
 class InvestmentDetailView(DetailView):
     model = InvestmentDetail
     template_name = 'dashboard/investment_details.html'
@@ -326,10 +328,10 @@ class InvestmentDetailView(DetailView):
 # Adding an investment
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
 class AddInvestment(CreateView):
     model=InvestmentDetail
-    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage','years','componding_frequency','type_of_tbill')
+    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage','years','compounding_frequency','type_of_tbill')
     template_name = 'dashboard/investment_form.html'
     # success_url = reverse_lazy('investment_list')
 
@@ -414,7 +416,7 @@ class AddInvestment(CreateView):
 # Updating an Investement's details
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
 class InvestmentUpdateView(UpdateView):
     model = InvestmentDetail
     form_class = InvestmentUpdateForm
@@ -491,8 +493,8 @@ class InvestmentUpdateView(UpdateView):
 # Updating rollover interest percentage field only
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User']), name='dispatch')
-class RolloverPercentage(TemplateView):
+@method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
+class RolloverInvestment(TemplateView):
     template_name = 'dashboard/rollover_percentage.html'
 
     def post(self, request, *args, **kwargs):
@@ -644,7 +646,7 @@ class RolloverPercentage(TemplateView):
 # Deleting an Investment from Database
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
 class InvestmentDeleteView(DeleteView):
     model = InvestmentDetail
     context_object_name = 'investment'
@@ -676,7 +678,7 @@ class InvestmentDeleteView(DeleteView):
 # Active Members List
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager','Finance Manager']), name='dispatch')
+@method_decorator(role_required(role=[]), name='dispatch')
 class MemberListView(ListView):
     model = StaffAPI
     template_name = 'dashboard/member_list.html'
@@ -715,7 +717,7 @@ class MemberListView(ListView):
 # Exited Members List
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR','Manager','Finance Manager']), name='dispatch')
+@method_decorator(role_required(role=[]), name='dispatch')
 class ExitedMembers(ListView):
     model = StaffAPI
     template_name ='dashboard/exited_members.html'
@@ -752,7 +754,7 @@ class ExitedMembers(ListView):
 # Memeber detailed View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager','Finance Manager']), name='dispatch')
+@method_decorator(role_required(role=[]), name='dispatch')
 class MemberDetailView(DetailView):
     # model = Member
     model = StaffAPI
@@ -775,7 +777,7 @@ class MemberDetailView(DetailView):
 # Query For Investment View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
@@ -872,7 +874,7 @@ class InvestmentQuery(ListView):
 # List view for delayed interest
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
 class DelayedInterestListView(ListView):
     template_name = 'dashboard/delayed_interest_list.html'
     model = DelayedInterest
@@ -994,7 +996,7 @@ class DelayedInterestListView(ListView):
 # Delayed Interest Query
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury User','Manager']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
 class DelayedInterestQuery(ListView):
     model = DelayedInterest
     template_name = 'dashboard/delayed_interest_query.html'
@@ -1055,8 +1057,8 @@ class DelayedInterestQuery(ListView):
 # Approval of investments
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager']), name='dispatch')
-class InvestmentApproval(ListView):
+@method_decorator(role_required(role=['Treasury Supervisor']), name='dispatch')
+class ApproveMaturedInvestment(ListView):
     model = InvestmentDetail
     template_name = 'dashboard/investment_approval.html'
 
@@ -1155,7 +1157,7 @@ class InvestmentApproval(ListView):
 # Approved Investments list
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
 class ApprovedInvestments(ListView):
     model = InvestmentDetail
     template_name = 'dashboard/approved_investments.html'
@@ -1176,12 +1178,12 @@ class ApprovedInvestments(ListView):
 # LIST OF SCHEME APPLICATION APPROVALS
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR','Manager']), name='dispatch')
-class ToBeApproved(ListView):
+@method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
+class SchemeApplications(ListView):
     model = SchemeApproval
     template_name = 'dashboard/scheme_approval.html'
     context_object_name = 'schemeapproval_list'
-
+    paginate_by = 20
 
     def get_queryset(self):
         tenant = self.request.tenant
@@ -1240,7 +1242,7 @@ class ToBeApproved(ListView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager']), name='dispatch')
+@method_decorator(role_required(role=[]), name='dispatch')
 class RecentActivities(ListView):
     model = InvestmentDetail
     template_name = 'dashboard/all_history.html'
@@ -1310,7 +1312,7 @@ class RecentActivities(ListView):
 # Contribution Approval
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Finance Manager']), name='dispatch')
+@method_decorator(role_required(role=['Contributions Manager','Contributions Supervisor','Contributions Analyst']), name='dispatch')
 class ApproveContributions(TemplateView):
     template_name = 'dashboard/approve_contributions.html'
 
@@ -1511,6 +1513,7 @@ class ApproveContributions(TemplateView):
 
 @method_decorator(tenant_login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Contributions Manager','Contributions Supervisor','Contributions Analyst']), name='dispatch')
 class FetchContributions(TemplateView):
     def get(self, request: HttpRequest, *args, **kwargs):
         tenant = request.tenant
@@ -1522,7 +1525,7 @@ class FetchContributions(TemplateView):
             return JsonResponse({'status': 'error', 'message': 'Month and year are required.'})
         try:
             # Fetch data
-            from contributions.models import Contribution
+            # from contributions.models import Contribution
             queryset = Contribution.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,month=month,year=year,approved_contribution=False)
 
 
@@ -1537,18 +1540,20 @@ class FetchContributions(TemplateView):
             contribution_status = queryset.first().approved_contribution
 
             # object response
-            return JsonResponse({'number_of_contributions':total_number,
+            return JsonResponse({
+                'number_of_contributions':total_number,
                 'total_amount':total_amount,
                 'date_of_contribution':contribution_date,
                 'contribution_status':contribution_status,
-                'status':'success'})
+                'status':'success'
+            })
         except Exception as e:
             return JsonResponse({'status':'error', 'message':str(e)})
 
 from Member.models import ExitApproval
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['HR',]), name='dispatch')
+@method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
 class ApproveExitedMembers(TemplateView):
     # model = ExitApproval
     template_name = 'dashboard/exiting_members.html'
@@ -1616,8 +1621,9 @@ class MissingSchemeIdError(Exception):
         super().__init__(self.message)
 
 # MASS MEMBER UPLOAD
-import openpyxl
-from django.db import transaction
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class MassMemberUpload(CreateView ):
     model= StaffAPI
     fields =('__all__')
@@ -1739,6 +1745,9 @@ class MassMemberUpload(CreateView ):
 
 
 # General Payout View
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
 class GeneralPayoutView(TemplateView):
     template_name = 'dashboard/general_payout.html'
 
@@ -1748,29 +1757,23 @@ class GeneralPayoutView(TemplateView):
         staff_ids = self.request.POST.getlist('staff_ids[]')#List of selected staffs to be processed
         withdrawal_request_ids = self.request.POST.getlist('ref_ids[]')
         
-        
         if not tenant or not scheme_id:
             return JsonResponse({
                 'status':'error',
                 'message':'Invalid Tenant or Scheme ID'
             }, status = 400) #Bad Request
         
-        
-
         if not staff_ids or not withdrawal_request_ids:
             return JsonResponse({
                 'status':'error',
                 'message':'Select a staff and payout type'
             })
-        
+
         if len(staff_ids) != len(withdrawal_request_ids):
             return JsonResponse({
                 'status':'error',
                 'message':'Mismatch in staff and withdrawal reference IDs'
             })
-        
-        
-
         
         try:
             scheme = InvestmentScheme.objects.get(
@@ -1784,9 +1787,31 @@ class GeneralPayoutView(TemplateView):
                 'message':'Scheme not found.'
             })
         
+        try:
+            email = TenantEventNotification.objects.filter(
+                tenant=tenant,
+                event = 'withdrawal_second_approval'
+            ).values_list('staff__email', flat=True)
+
+            if not email:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'No event mapping found for this event: second level approval of withdrawal request.'
+                })
+        except TenantEventNotification.DoesNotExist:
+            logger.error('Could not find TenantEventNotification model.')
+            return JsonResponse({
+                'status':'error',
+                'message':'An error occured. Please try again.'
+            })
+        except Exception as e:
+            logger.error(f'An error occured: {str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured.'
+            })
+        
         # Fetch related account mapping for processing payouts
-        now = timezone.now()
-        all_transactions = []
         all_withdrawals = []
         # Fetch selected scheme to be processed
         try: 
@@ -1845,12 +1870,22 @@ class GeneralPayoutView(TemplateView):
             url = f'{base_url}{reverse_url}'
             subject = f'Batch Withdrawal Approval'
             message = f'Please click here to approve batch withdrawal {batch}: {url}.'
-
-            gen_send_email(
-                recepient='xzibitcustrouble@gmail.com',
-                subject=subject,
-                message=message
-            )
+            
+            print('START 5')
+            print(list(email))
+            try:
+                gen_send_email.delay(
+                    recepient=list(email),
+                    subject=subject,
+                    message=message
+                )
+            except Exception as e:
+                logger.error(f'An error occured: {str(e)}')
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'An error occured: {str(e)}'
+                })
+            print('START 6')
             # Perform Payment Processing task for selected members
             # Create Payout invoice
             # create transaction for each member
@@ -1881,6 +1916,9 @@ class GeneralPayoutView(TemplateView):
         return context
 
 # Fetch Scheme Members for Payout
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
 class FetchWithdrawalRequests(View):
     def get(self, request, *args, **kwargs):
         tenant = request.tenant
@@ -1949,6 +1987,9 @@ class FetchWithdrawalRequests(View):
 
         
 # SECOND STAGE OF APPROVAL FOR WITHDRAWAL REQUEST THROUGH EMAIL
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Supervisor']), name='dispatch')
 class SecondPhaseOfWithdrawalApproval(ListView):
     template_name = 'dashboard/second_withdrawal_approval.html'
     model = WithdrawalBatch
@@ -1976,6 +2017,24 @@ class SecondPhaseOfWithdrawalApproval(ListView):
             })
         
         try:
+            email = TenantEventNotification.objects.filter(
+                tenant=tenant,
+                event = 'withdrawal_second_approval'
+            ).values_list('staff__email', flat=True)
+
+            if not email:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'No event mapping found for this event: third level approval of withdrawal request.'
+                })
+        except Exception as e:
+            logger.error(f'An error occured: {str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured.'
+            })
+        
+        try:
             batches = WithdrawalBatch.objects.filter(
                 id__in=batch_id,
                 tenant=tenant,
@@ -1994,6 +2053,17 @@ class SecondPhaseOfWithdrawalApproval(ListView):
             for batch in batches:
                 batch.approve_batch(approval_level=2)
             # If level 2 approval is successful:
+
+            # Notify level 3 for final approval
+            subject = 'Withdrawal Approval'
+            message = f'A withdrawal request has been initiated and awaiting your approval.'
+            emails = list(email)
+            gen_send_email.delay(
+                subject=subject,
+                message=message,
+                recepient=emails
+            )
+
             return JsonResponse({
                 'status':'success',
                 'message':'Withdrawal batch approved successfuly'
@@ -2007,7 +2077,11 @@ class SecondPhaseOfWithdrawalApproval(ListView):
             return JsonResponse(
                 return_value # return_value is a an object returned from the model when approve_batch is called
             )
-        
+
+# Approval done through email link
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Supervisor']), name='dispatch')
 class SecondPhaseOfWithdrawalApprovalEmail(TemplateView):
     template_name = 'dashboard/email_withdrawal_approval.html'
     def post(self, *args, **kwargs):
@@ -2066,7 +2140,9 @@ class SecondPhaseOfWithdrawalApprovalEmail(TemplateView):
         return context
 
 
-
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
 class BatchWithdrawalListView(ListView):
     template_name = 'dashboard/batch_withdrawal_list.html'
     model = WithdrawalRequest
@@ -2083,7 +2159,9 @@ class BatchWithdrawalListView(ListView):
     
 
 
-
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager']), name='dispatch')
 class FinalBatchWithdrawalApproval(ListView):
     template_name = 'dashboard/final_batch_withdrawal_approval.html'
     model = WithdrawalBatch
@@ -2211,8 +2289,10 @@ class FinalBatchWithdrawalApproval(ListView):
         return context
 
 
-import calendar
 # Add Schedule Payment Date
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Analyst','Scheme Supervisor','Scheme Manager']), name='dispatch')
 class SchedulePaymentDateView(TemplateView):
     template_name = 'dashboard/schedule_payment_date.html'
 
@@ -2313,6 +2393,9 @@ class SchedulePaymentDateView(TemplateView):
     
 
 # Approve Scheduled Payment Date
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Manager']), name='dispatch')
 class ApproveScheduledPaymentDateView(View):
     def post(self,*args,**kwargs):
         tenant = self.request.tenant
@@ -2351,8 +2434,10 @@ class ApproveScheduledPaymentDateView(View):
 
 
 # PAUSE SCHEDULE PAYOUT
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Manager']), name='dispatch')
 class PauseScheduledPaymentDateView(View):
-
     def get(self, request, *args, **kwargs):
 
         tenant = self.request.tenant
@@ -2386,6 +2471,11 @@ class PauseScheduledPaymentDateView(View):
                 'message':f'An error occured: {str(e)}'
             })
 
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
 class DeleteSchedulePaymentDate(DeleteView):
     model = ScheduledPaymentDates
     
@@ -2410,6 +2500,9 @@ class DeleteSchedulePaymentDate(DeleteView):
 
 
 # SUPPLIERS VIEW
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
 class SupplierView(TemplateView):
     template_name = 'suppliers_expenses/suppliers.html'
 
@@ -2472,7 +2565,12 @@ class SupplierView(TemplateView):
         
         return context
 
+
+
 # DELETE SUPPLIER
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class DeleteSupplierView(DeleteView):
     model = Suppliers
 
@@ -2496,7 +2594,12 @@ class DeleteSupplierView(DeleteView):
                 'message': f'An error occurred: {str(e)}'
             })
 
+
+
 # UPDATE SUPPLIER DETAILS
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class UpdateSupplierView(UpdateView):
     model = Suppliers
     fields = [
@@ -2535,6 +2638,9 @@ class UpdateSupplierView(UpdateView):
 
 
 # RAISE REQUISITION VIEW
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class RaiseRequisitionView(TemplateView):
     template_name = 'suppliers_expenses/create_requisition.html'
 
@@ -2600,6 +2706,9 @@ class RaiseRequisitionView(TemplateView):
 
 
 # ADD REQUISITION ITEM VIEW
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class AddRequisitionItemView(CreateView):
     model = RequisitionItem
     fields = ('item_name','quantity','amount')
@@ -2658,6 +2767,9 @@ class AddRequisitionItemView(CreateView):
 
 
 # FETCH REQUISITION ITEMS
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
 class FetchItemsView(View):
     def get(self,*args,**kwargs):
         tenant = self.request.tenant
@@ -2696,6 +2808,9 @@ class FetchItemsView(View):
 
 
 # DELETE REQUISITION OBJECT VIEW
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class DeleteRequisitionView(DeleteView):
     model = Requisition
 
@@ -2727,6 +2842,9 @@ class DeleteRequisitionView(DeleteView):
 
 
 # DELETE REQUISITION ITEM VIEW
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class DeleteRequisitionItemView(DeleteView):
     model = RequisitionItem
 
@@ -2777,6 +2895,9 @@ class DeleteRequisitionItemView(DeleteView):
 
 
 # APPROVE REQUISITION VIEW
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager']), name='dispatch')
 class ApproveRequisitionView(View):
     def post(self,*args,**kwargs):
         tenant = self.request.tenant
@@ -2817,6 +2938,9 @@ class ApproveRequisitionView(View):
 
 
 # PURCHASE ORDER VIEW
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
 class PurschaseOrderView(ListView):
     model = PurchaseOrder
     template_name = 'suppliers_expenses/purchase_order.html'
@@ -2866,7 +2990,7 @@ class PurschaseOrderView(ListView):
                                 'status': 'error',
                                 'message': 'Original quantity and quantity received do not match.'
                             })
-                    except items.model.DoesNotExist:
+                    except Exception as e:
                         return JsonResponse({
                             'status': 'error',
                             'message': f'Item with ID {item_id} not found in the order items.'
@@ -2894,6 +3018,9 @@ class PurschaseOrderView(ListView):
 
 
 # FETCH REQUISITION ITEMS
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
 class FetchPurchaseOrderView(View):
     def get(self,*args,**kwargs):
         tenant = self.request.tenant
@@ -2906,7 +3033,10 @@ class FetchPurchaseOrderView(View):
             })
 
         try:
-            order =  PurchaseOrder.objects.get(id=order_id)
+            order =  PurchaseOrder.objects.get(
+                tenant=tenant,
+                id=order_id
+            )
             items = order.requisition.items.all()
             items_list = []
 
@@ -2936,6 +3066,9 @@ class FetchPurchaseOrderView(View):
 
 
 # PAYOUT INVOICE VIEW
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class PayoutInvoiceView(TemplateView):
     template_name = 'suppliers_expenses/payout_invoice.html'
 
@@ -2943,24 +3076,25 @@ class PayoutInvoiceView(TemplateView):
 
 
 # PAYMENT HISTORY
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
 class PaymentHistoryView(ListView):
     model = Transaction
     template_name = 'dashboard/payment_history.html'
-    paginate_by = 5
+    paginate_by = 15
+    context_object_name='transaction_queryset'
 
     def get_queryset(self):
         tenant = self.request.tenant
-        return Transaction.objects.filter(tenant=tenant).order_by('-transaction_date')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
         scheme_id = self.request.GET.get('scheme')
         payment_type = self.request.GET.get('payment_type')
         payment_method = self.request.GET.get('payment_method')
         status = self.request.GET.get('status')
+        transaction_id = self.request.GET.get('transaction_id')
 
         # Start with an empty queryset if no scheme is provided
-        queryset = self.get_queryset().filter(scheme__id=scheme_id) if scheme_id else self.get_queryset().none()
+        queryset = Transaction.objects.filter(tenant=tenant,scheme__id=scheme_id).order_by('-transaction_date') if scheme_id else Transaction.objects.none()
 
         # Apply additional filters if applicable
         filters = {}
@@ -2968,6 +3102,8 @@ class PaymentHistoryView(ListView):
             filters['transaction_type'] = payment_type
         if payment_method:
             filters['payment_method'] = payment_method
+        if transaction_id:
+            filters['id']=transaction_id
         if status:
             filters['status'] = status
 
@@ -2975,14 +3111,86 @@ class PaymentHistoryView(ListView):
         if filters:
             queryset = queryset.filter(**filters)
 
-        # Debug logging
-        print(f'Final QuerySet: {queryset}')
+        return queryset
 
-        # Update context
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         context.update({
-            'transaction_queryset': queryset,
+            # 'transaction_queryset': queryset,
             'payment_methods': Transaction.payment_method_choices,
             'payment_status': Transaction.STATUS_CHOICES,
             'payment_type': Transaction.transaction_type_choices,
         })
+        return context
+
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
+class EventMapping(ListView):
+    model = TenantEventNotification
+    template_name = 'dashboard/event_mapping.html'
+    context_object_name = 'event_mapping'
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return TenantEventNotification.objects.filter(
+            tenant=tenant
+        ).order_by('-date_assigned')
+
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        staff_id = self.request.POST.get('staff_id') #System staff
+        event = self.request.POST.get('event')
+
+        if not (staff_id or event):
+            return JsonResponse({
+                'status':'error',
+                'message':'Missing required fields.'
+            })
+        
+        try:
+            staff = User.objects.get(
+                id=staff_id,
+                tenant=tenant
+            )
+        except Exception as e:
+            logger.error(f'An error occured: {e}')
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid staff selected.'
+            })
+        
+        try:
+            TenantEventNotification.objects.create(
+                tenant=tenant,
+                event=event,
+                staff=staff
+            )
+        except Exception as e:
+            logger.error(f'An error occured creating a TenantEventNotification object: {e}')
+            return JsonResponse({
+                'status':'error',
+                'message':'Unable to create an event mapping, please try again.'
+            })
+        
+        return JsonResponse({
+            'status':'success',
+            'message':'Event mapped successfully.'
+        })
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+
+        events = TenantEventNotification.choice
+        all_staffs = User.objects.filter(
+            tenant=tenant
+        ).exclude(
+            groups__name='Member'
+        )
+        context['events'] = events
+        context['all_staffs'] = all_staffs
+
         return context

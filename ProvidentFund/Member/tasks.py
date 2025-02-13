@@ -3,7 +3,7 @@ from celery import shared_task
 from django.utils import timezone
 from .models import Member
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
+from django.core.mail import send_mail,send_mass_mail
 from ProvidentFund.settings import EMAIL_HOST_USER
 from smtplib import SMTPException
 from django.db import transaction
@@ -48,20 +48,30 @@ def delete_inactive_users(self):
         inactive_users= get_user_model().objects.filter(inactive_status=True)
 
         # For every member who is about to be deleted a message is sent to notify them on the deletion of their account
+        message_list = []
         for user in inactive_users:
             try:
-                send_mail(
-                        subject='PF Account Deletion Notification',
-                        message='Your account has been deleted due to you not being able to apply to a scheme after a given number of days. We hope to see you again when you qualify for a scheme.',
-                        from_email=EMAIL_HOST_USER,
-                        recipient_list=[user.email],
-                        fail_silently=False,
+                message=(
+                        'PF Account Deletion Notification',
+                        'Your account has been deleted due to you not being able to apply to a scheme after a given number of days. We hope to see you again when you qualify for a scheme.',
+                        EMAIL_HOST_USER,
+                        user.email,
                 )
             except SMTPException as e:
                 logger.error(f'An unexpected error occured when trying to send an email to {user.email} error: {e}')
+            message_list.append(message)
 
-        # Delete members
-        inactive_users.delete()
+        try:
+            # send mass mail to users
+            send_mass_mail(
+                tuple(message_list),
+                fail_silently=False
+            )
+            logger.info('Inactive members deleted successfully.')
+            # Delete members
+            inactive_users.delete()
+        except Exception as e:
+            logger.error('An error occured while deleting inactive users.')
 
     except Exception as e:
         logger.error(f'Transaction aborted : {e}')
@@ -83,10 +93,23 @@ def send_otp_code(self,email,host,otp):
 
 @shared_task(bind=True)
 def gen_send_email(self,recepient,message,subject):
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=EMAIL_HOST_USER,
-        recipient_list=[recepient],
-        fail_silently=False,
-    )
+    logger.info(f'Sending mails to: {recepient}')
+    from_email=EMAIL_HOST_USER
+    message_list = []
+    for mail in recepient:
+        message = (
+            subject,
+            message,
+            from_email,
+            [mail]
+        )
+        message_list.append(message)
+    try:
+        send_mass_mail(
+            tuple(message_list),
+            fail_silently=False
+        )
+    except SMTPException as smtp:
+        logger.error(f'An SMTP error occured: {str(smtp)}')
+    except Exception as e:
+        logger.error(f'An error occured while trying to send mass mail: {str(e)}')

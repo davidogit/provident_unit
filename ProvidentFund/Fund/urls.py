@@ -10,12 +10,12 @@ urlpatterns =[
     path('<int:scheme_name>/memberList/', views.MemberListView.as_view(), name='member_list'),
     path('<int:scheme_name>/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('<int:scheme_name>/investmentDetail/<int:pk>/', views.InvestmentDetailView.as_view(), name='investment_detail'),
-    path('<int:scheme_name>/ivestment_approval/', views.InvestmentApproval.as_view(), name='investment_approval'),
+    path('<int:scheme_name>/ivestment_approval/', views.ApproveMaturedInvestment.as_view(), name='investment_approval'),
     path('<int:scheme_name>/approved_investments/', views.ApprovedInvestments.as_view(), name='approved_investments'),
     
     path('<int:scheme_name>/update/<int:pk>', views.InvestmentUpdateView.as_view(), name='investment_update'),
     path('<int:scheme_name>/deleteInvestment/<int:pk>/', views.InvestmentDeleteView.as_view(), name='delete_investment'),
-    path('<int:scheme_name>/investmentRollover/<int:pk>/', views.RolloverPercentage.as_view(), name='rollover_percentage'),
+    path('<int:scheme_name>/investmentRollover/<int:pk>/', views.RolloverInvestment.as_view(), name='rollover_percentage'),
     path('<int:scheme_name>/investment_query/', views.InvestmentQuery.as_view(), name='query'),
 
     # Member URLS
@@ -37,7 +37,7 @@ urlpatterns =[
     path('access_denied/', views.AccessDenied.as_view(), name='access_denied'),
 
     # Scheme Approval
-    path('approvals/', views.ToBeApproved.as_view(), name='scheme_approval'),
+    path('approvals/', views.SchemeApplications.as_view(), name='scheme_approval'),
 
     # History of investments
     path('recent_activities/', views.RecentActivities.as_view(), name='recent_activities'),
@@ -111,4 +111,6 @@ urlpatterns =[
     # PAYOUT INVOICE URL
     path('payout-invoice/', views.PayoutInvoiceView.as_view(), name='payout_invoice'),
     
+    # EVENT MAPPING
+    path('event_mapping/', views.EventMapping.as_view(), name='event_mapping')
 ]

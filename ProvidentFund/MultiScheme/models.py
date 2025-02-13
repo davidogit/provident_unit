@@ -195,7 +195,13 @@ class TenantEventNotification(models.Model):
     choice = [
         ('upcoming_payment_reminder','upcoming payment reminder'),
         ('scheduled_payment_date_approval','scheduled payment date approval'),
-        ('general_payment_approval','general payment approval')
+        ('general_payment_approval','general payment approval'),
+        ('matured_investment_approval','approve matured investments'),
+        ('approve_requisition','approve requisition'),
+        ('withdrawal_first_approval','first level approval of withdrawal request'),
+        ('withdrawal_second_approval','second level approval of withdrawal request'),
+        ('withdrawal_third_approval','third level approval of withdrawal request'),
+        ('approve_scheduled_date','approve scheduled date'),
     ]
     event = models.CharField(
         max_length=255,
@@ -208,4 +214,8 @@ class TenantEventNotification(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True
+    )
+    date_assigned = models.DateTimeField(
+        auto_now_add=True,
+        null=True
     )

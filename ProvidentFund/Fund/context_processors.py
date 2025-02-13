@@ -32,15 +32,76 @@ def user_groups_and_permissions(request):
 
     # Define flags for specific group combinations
     context = {
-        "is_manager_or_treasury_user": bool(group_names & {"Manager", "Treasury User"}),
-        "is_manager_or_hr": bool(group_names & {"Manager", "HR"}),
-        "is_treasury_user": "Treasury User" in group_names,
-        "is_hr_user": "HR" in group_names,
-        "is_manager": "Manager" in group_names,
-        "is_finance_manager": "Finance Manager" in group_names,
-        "is_fund_administrator": "Fund Administrator" in group_names,
-        "is_treasury_administrator": "Treasury Administrator" in group_names,
+        # & checks for intersection of groups and bool returns True/False
+        # "is_manager_or_treasury_user": bool(group_names & {"Manager", "Treasury User"}),
+        # "is_manager_or_hr": bool(group_names & {"Manager", "HR"}),
+
+        # "is_treasury_user": "Treasury User" in group_names,
+
+        # "is_hr_user": "HR" in group_names,
+
+        # "is_manager": "Manager" in group_names,
+
+        # "is_finance_manager": "Finance Manager" in group_names,
+
+        # "is_fund_administrator": "Fund Administrator" in group_names,
+
+        # "is_treasury_administrator": "Treasury Administrator" in group_names,
+
+        """""
+        GENERAL USER
+        """""
+        # User
         "user": user,
+        # user linked groups
+        "user_groups":user.groups.values_list("name", flat=True),
+
+        """""
+        INVESTMENTS
+        """""
+        # Treasury Manager
+        "Treasury_Manager":"Treasury Manager" in group_names,
+        # Treasury Supervisor
+        "Treasury_Supervisor": "Treasury Supervisor" in group_names,
+        # Treasury Analyst
+        "Treasury_Analyst": "Treasury Analyst" in group_names,
+
+        """""
+        CONTRIBUTIONS
+        """""
+
+        # Contributions Manager
+        "Contributions_Manager": "Contributions Manager" in group_names,
+        # Contributions Supervisor
+        "Contributions_Supervisor": "Contributions Supervisor" in group_names,
+        # Contributions Analyst
+        "Contributions_Analyst": "Contributions Analyst" in group_names,
+
+        """""
+        SCHEME MANAGEMENT
+        """""
+        # Scheme Management
+        "Scheme_Manager":"Scheme Manager" in group_names,
+        # Scheme Supervisor
+        "Scheme_Supervisor": "Scheme Supervisor" in group_names,
+        # Scheme Analyst
+        "Scheme_Analyst": "Scheme Analyst" in group_names,
+
+        """""
+        PAYMENTS
+        """""
+        # Finance Manager
+        "Finance_Manager": "Finance Manager" in group_names,
+        # Finance Supervisor
+        "Finance_Supervisor": "Finance Supervisor" in group_names,
+        # Finance Analyst
+        "Finance_Analyst": "Finance Analyst" in group_names,
+
+        """""
+        ACCOUNTS SET UP
+        """""
+        # Super User
+        "Super_User": "Super User" in group_names
     }
 
     return context
