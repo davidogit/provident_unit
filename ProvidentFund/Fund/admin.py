@@ -6,10 +6,10 @@ from Fund.models import InvestmentDetail,BankInterest,DelayedInterest,AuditTrail
 
 
 class InvestmentDetailAdmin(admin.ModelAdmin):
-    list_display=('invoice_number','account_name','account_type','status','investment_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage','tenure','remaining_days','rollover_principal','rollover_accumulated_amount','rollover_interest_percentage')
+    list_display=('invoice_number','account_name','account_type','status','investment_type','account_number','principal_amount','interest_amount','interest_start_date','interest_end_date','interest_percentage','tenure','remaining_days')
 
 
-    readonly_fields = ('interest_amount','invoice_number','rollover_interest_percentage','created_date')
+    readonly_fields = ('interest_amount','invoice_number','created_date')
 
 
 admin.site.register(InvestmentDetail, InvestmentDetailAdmin)

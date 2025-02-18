@@ -16,8 +16,9 @@
                 <div class="row g-4 d-flex flex-column justify-content-center align-items-center">
                     
                     <div class="col-12 d-flex justify-content-center">
+                        {% if 'Scheme Analyst' in user_groups %}
                         <div class="col-12 col-md-12 col-lg-10 transaction-form border p-3 rounded position-relative">
-                            <form action="" method="POST" id="add_payout_date" class="row gap-1 flex-wrap">
+                            <form action="" method="POST" id="add_payout_date" class="row gap-2 flex-wrap justify-content-center">
                                 {%csrf_token%}                    
                                 <div class="form-floating col-12 col-md-2">
                                     <select name="scheme_id" id="scheme_id" class="form-select">
@@ -93,12 +94,13 @@
                                 </div>
 
                                 <!-- submit button -->
-                                <div class="col-12 col-md-4">
+                                <div class="col-12 col-md-2 justify-content-center align-items-center">
                                     <button class="btn btn-outline-primary btn-lg save_mapping w-100" type="submit">Add</button>
                                 </div>
 
                             </form>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -117,11 +119,11 @@
                                         <th class="text-center">Date</th>
                                         <th class="text-center">Payout (%)</th>
                                         <th class="text-center">Bank</th>
-                                        {% if not is_manager %}
+                                        {% if 'Scheme Supervisor' in user_groups %}
                                         <th class="text-center">Action</th>
                                         {% endif %}
                                         <th class="text-center">Status</th>
-                                        {% if is_manager %}
+                                        {% if 'Scheme Manager' in user_groups %}
                                         <th class="text-center">Approve
                                         </th>
                                         {% endif %}
@@ -135,7 +137,7 @@
                                         <td class="text-center align-middle">{{ payout.day }} {{ payout.get_month_display }}</td>
                                         <td class="text-center align-middle">{{ payout.payout_percentage }}</td>
                                         <td class="text-center align-middle">{{ payout.bank }}</td>
-                                        {% if not is_manager %}
+                                        {% if 'Scheme Supervisor' in user_groups %}
                                         <td class="text-center align-middle">
                                             <a href="{% url 'delete_scheduled_dates' tenant_id=request.tenant.id pk=payout.id %}" class="btn delete-date" data-schedule-date-id="{{ payout.id }}" 
                                             data-scheme-id="{{ scheme.id }}"><i class="ri-close-circle-fill fs-18" style="color: red;"></i>
@@ -150,8 +152,7 @@
                                             {% endif %}
                                         </td>
                                         <!-- Approve scheduled dates -->
-                                         {% if is_manager %}
-                                         
+                                        {% if 'Scheme Manager' in user_groups %}
                                         <td class="text-center align-middle text-wrap">
                                             {% if not payout.approved %}
                                             <!-- Approve scheduled date -->

@@ -7,7 +7,10 @@ from django.contrib.auth import get_user_model
 
 def schemes_processor(request):
     tenant = getattr(request, 'tenant', None)
-    schemes = InvestmentScheme.objects.filter(tenant=tenant) if tenant else InvestmentScheme.objects.none()
+    schemes = InvestmentScheme.objects.filter(
+        tenant=tenant,
+        approved=True
+    ) if tenant else InvestmentScheme.objects.none()
 
     delayed_int_option = schemes.filter(delayed_int__in =['Yes',])
     bank_int_option = schemes.filter(bank_int__in =['Yes',])

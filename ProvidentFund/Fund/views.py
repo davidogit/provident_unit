@@ -1,6 +1,6 @@
 from decimal import Decimal
 import json
-from django.db.models import Q,Count
+from django.db.models import Q,Count,ProtectedError
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, JsonResponse
 from django.http.response import HttpResponse as HttpResponse
@@ -17,7 +17,7 @@ from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
-from .forms import InvestmentUpdateForm,InvestmentApprovalForm
+from .forms import InvestmentUpdateForm,InvestmentApprovalForm,InvestmentCreationForm
 from Fund.tasks import actual_member_interest,rollover_inv_creation,send_excel_sheet_to_bank_for_payment
 from Member.tasks import gen_send_email
 from django.core.exceptions import ValidationError
@@ -72,14 +72,19 @@ class Invest(TemplateView):
         # Get Tenant
         tenant = Tenant.objects.prefetch_related('staff_api').get(id=self.request.tenant.id)
         # Fetch schemes and related investments using prefetch
-        schemes = InvestmentScheme.objects.filter(tenant=tenant).prefetch_related('member')
+        schemes = InvestmentScheme.objects.filter(
+            tenant=tenant
+        ).prefetch_related('member')
         try:
-            interest_query = InvestmentDetail.objects.filter(investment_scheme__tenant=tenant)
+            interest_query = InvestmentDetail.objects.filter(
+                investment_scheme__tenant=tenant,
+                approved=True
+            )
         except:
-            interest_query.none()
+            interest_query = None
         # Total Interest - Estimated and Actual
         try:
-            estimated_amount = interest_query.filter(approval_status=False).aggregate(total = Sum('interest_amount'))['total'] or Decimal(0.0)
+            estimated_amount = interest_query.filter(approval_status=False).aggregate(total = Sum('interest_amount'))['total'] or Decimal(0.0) if interest_query else 0.0
             
             context['total_interest'] = estimated_amount
         except:
@@ -151,7 +156,10 @@ class InvestmentListView(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
+            return InvestmentDetail.objects.filter(
+                investment_scheme__tenant=tenant,
+                investment_scheme__id = scheme_id,
+            ).order_by('-created_date')
         else:
             return InvestmentDetail.objects.none()
 
@@ -163,47 +171,50 @@ class InvestmentListView(ListView):
         # filtered_queryset = self.get_filtered_queryset(queryset)
 
         context['investment_count']= queryset.count()
-        context['T_bills_count'] = queryset.filter(investment_type='Treasury Bill').count()
-        context['F_deposit_count'] = queryset.filter(investment_type='Fixed Deposit').count()
+        context['T_bills_count'] = queryset.filter(investment_type='Treasury Bill').count() if queryset else 0
+        context['F_deposit_count'] = queryset.filter(investment_type='Fixed Deposit').count() if queryset else 0
 
 
         # context['t_bill_page'] 
 
-        fixed_deposit =queryset.filter(investment_type='Fixed Deposit')
-        paginator = Paginator(fixed_deposit, self.paginate_by)
-        page = self.request.GET.get('f_deposit_page',1)
-        try:
-            paginated_queryset = paginator.page(page)
+        fixed_deposit =queryset.filter(investment_type='Fixed Deposit') if queryset else None
 
-        except PageNotAnInteger:
-            paginated_queryset = paginator.page(1)
-        except EmptyPage:
-            paginated_queryset = paginator.page(paginator.num_pages)
+        if fixed_deposit:
+            paginator = Paginator(fixed_deposit, self.paginate_by)
+            page = self.request.GET.get('f_deposit_page',1)
+            try:
+                paginated_queryset = paginator.page(page)
 
-        context['f_deposit_page'] = paginated_queryset
-        context['paginator'] = paginator
-        context['fixed_is_paginated'] = paginator.num_pages > 1
-        print(f'Paginated F: {paginated_queryset} is paginated:{paginator.num_pages > 1} has next: {paginated_queryset.has_next()}')
-        # Add paginated results to context
+            except PageNotAnInteger:
+                paginated_queryset = paginator.page(1)
+            except EmptyPage:
+                paginated_queryset = paginator.page(paginator.num_pages)
+
+            context['f_deposit_page'] = paginated_queryset
+            context['paginator'] = paginator
+            context['fixed_is_paginated'] = paginator.num_pages > 1
+            print(f'Paginated F: {paginated_queryset} is paginated:{paginator.num_pages > 1} has next: {paginated_queryset.has_next()}')
+            # Add paginated results to context
             
 
-        treasury_bills = queryset.filter(investment_type='Treasury Bill')
-        # Apply pagination for Tresury bill or Fixed deposit
+        treasury_bills = queryset.filter(investment_type='Treasury Bill') if queryset else None
+        if treasury_bills:
+            # Apply pagination for Tresury bill or Fixed deposit
 
-        # print(f'Filtered T_bill = {filtered_queryset}')
-        paginator = Paginator(treasury_bills, self.paginate_by)
-        page = self.request.GET.get('t_bill_page')
-        try:
-            paginated_queryset = paginator.page(page)
-        except PageNotAnInteger:
-            paginated_queryset = paginator.page(1)
-        except EmptyPage:
-            paginated_queryset = paginator.page(paginator.num_pages)
+            # print(f'Filtered T_bill = {filtered_queryset}')
+            paginator = Paginator(treasury_bills, self.paginate_by)
+            page = self.request.GET.get('t_bill_page')
+            try:
+                paginated_queryset = paginator.page(page)
+            except PageNotAnInteger:
+                paginated_queryset = paginator.page(1)
+            except EmptyPage:
+                paginated_queryset = paginator.page(paginator.num_pages)
 
-        # Add paginated results to context
-        context['t_bill_page'] = paginated_queryset
-        context['paginator'] = paginator
-        context['is_paginated'] = paginator.num_pages > 1
+            # Add paginated results to context
+            context['t_bill_page'] = paginated_queryset
+            context['paginator'] = paginator
+            context['is_paginated'] = paginator.num_pages > 1
 
         return context
     
@@ -218,111 +229,106 @@ class InvestmentDetailView(DetailView):
     context_object_name = 'investment_detail'
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
-    def get_queryset(self):
-         
+    def get_queryset(self):  
         # Get Tenant
         tenant = self.request.tenant        
-
         # Get scheme name
         scheme_id = self.request.scheme_name
 
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
+            return InvestmentDetail.objects.filter(
+                investment_scheme__tenant=tenant,
+                investment_scheme__id = scheme_id
+            )
         else:
-            return InvestmentDetail.objects.none()
+            return None
 
     def post(self, request, *args, **kwargs):
-        if request.method == 'POST':
-            try:
-                print('START')
-                tenant = request.tenant
-                scheme_id = request.scheme_name
-                inv_id = request.POST.get('inv_id')
-                termination_date_str = request.POST.get('termination_date')
-                termination_interest_str = request.POST.get('termination_interest')
-                termination_interest = Decimal(termination_interest_str)
+        tenant = request.tenant
+        scheme_id = request.scheme_name
+        inv_id = request.POST.get('inv_id')
+        termination_date_str = request.POST.get('termination_date')
+        termination_interest_str = request.POST.get('termination_interest')
+        termination_interest = Decimal(termination_interest_str)
 
-                try:
-                    scheme = InvestmentScheme.objects.filter(
-                        tenant=tenant,
-                        id = scheme_id
-                    ).prefetch_related('account_mapping').first()
-                except Exception:
-                    return JsonResponse({
-                        'status':'error',
-                        'message':'Investment scheme not found.'
-                    })
-                
-                try:
-                    mapping = scheme.account_mapping.get(name='Redeem Investment')
-                except Exception:
-                    return JsonResponse({
-                        'status':'error',
-                        'message':'No account mapping for "Redeem Investment" found. Please create a mapping for this event and try again.'
-                    })
-                
-                # fetch debit and credit accounts
-                debit_account = mapping.debit_acc
-                credit_account = mapping.credit_acc
+        try:
+            scheme = InvestmentScheme.objects.filter(
+                tenant=tenant,
+                id = scheme_id
+            ).prefetch_related('account_mapping').first()
+        except Exception:
+            return JsonResponse({
+                'status':'error',
+                'message':'Investment scheme not found.'
+            })
+        
+        try:
+            mapping = scheme.account_mapping.get(name='Redeem Investment')
+        except Exception:
+            return JsonResponse({
+                'status':'error',
+                'message':'No account mapping for "Redeem Investment" found. Please create a mapping for this event and try again.'
+            })
+        
+        # fetch debit and credit accounts
+        debit_account = mapping.debit_acc
+        credit_account = mapping.credit_acc
 
-                if not debit_account or not credit_account:
-                    return JsonResponse({
-                        'status':'error',
-                        'message':'Debit or Credit accounts not properly configured'
-                    })
+        if not debit_account or not credit_account:
+            return JsonResponse({
+                'status':'error',
+                'message':'Debit or Credit accounts not properly configured'
+            })
 
-                if not inv_id or not termination_date_str:
-                    return JsonResponse({'status': 'error', 'message': 'Missing required parameters.'})
+        if not inv_id or not termination_date_str:
+            return JsonResponse({'status': 'error', 'message': 'Missing required parameters.'})
 
-                try:
-                    termination_date = datetime.strptime(termination_date_str, "%Y-%m-%d").date()
-                except ValueError:
-                    return JsonResponse({'status': 'error', 'message': 'Invalid termination date format.'})
+        try:
+            termination_date = datetime.strptime(termination_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid termination date format.'})
 
-                # Get investment to terminate
-                try:
-                    inv = InvestmentDetail.objects.get(
-                        id=inv_id,
-                        investment_scheme__tenant=tenant,
-                        investment_scheme__id=scheme_id
-                    )
+        # Get investment to terminate
+        try:
+            inv = InvestmentDetail.objects.get(
+                id=inv_id,
+                approved=True,
+                investment_scheme__tenant=tenant,
+                investment_scheme__id=scheme_id
+            )
+        except InvestmentDetail.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': "Couldn\'t find investment"})
 
-                except InvestmentDetail.DoesNotExist:
-                    return JsonResponse({'status': 'error', 'message': "Couldn\'t find investment object"})
+        current_date = timezone.now().date()
+        if current_date>inv.interest_end_date:
+            return JsonResponse({
+                'status':'error',
+                'message':'This investment is matured hence can\'t be terminated.'
+            })
 
-                current_date = timezone.now().date()
-                if current_date>inv.interest_end_date:
-                    return JsonResponse({
-                        'status':'error',
-                        'message':'This investment is matured hence can\'t be terminated.'
-                    })
+        # Calculate interest up to termination date
+        days_to_termination = (termination_date - current_date).days
+        if days_to_termination < 0 or termination_date > inv.interest_end_date:
+            return JsonResponse({'status': 'error', 'message': 'Termination date cannot be in the past or after maturity date.'})
+        
+        with transaction.atomic():
+            inv.interest_amount = termination_interest
+            inv.status = 'Expired'
+            inv.interest_end_date = termination_date
+            inv.termination_status = True
+            inv.save()
 
-                # Calculate interest up to termination date
-                days_to_termination = (termination_date - current_date).days
-                if days_to_termination < 0 or termination_date > inv.interest_end_date:
-                    return JsonResponse({'status': 'error', 'message': 'Termination date cannot be in the past or after maturity date.'})
-                
-                with transaction.atomic():
-                    inv.interest_amount = termination_interest
-                    inv.status = 'Expired'
-                    inv.interest_end_date = termination_date
-                    inv.termination_status = True
-                    inv.save()
+            # Perform debit and credit operations
+            debit_account.current_balance -= termination_interest
+            credit_account.current_balance += termination_interest
 
-                    # Perform debit and credit operations
-                    debit_account.current_balance -= termination_interest
-                    credit_account.current_balance += termination_interest
+            # Save debit and credit operaions
+            debit_account.save()
+            credit_account.save()
+        
+        return JsonResponse({'status': 'success', 'message': 'Investment terminated successfully.'})
 
-                    # Save debit and credit operaions
-                    debit_account.save()
-                    credit_account.save()
-                
-                return JsonResponse({'status': 'success', 'message': 'Investment terminated successfully.'})
-            except InvestmentDetail.DoesNotExist:
-                return JsonResponse({'status': 'error', 'message': 'Investment not found.'})
-            except Exception as e:
-                return JsonResponse({'status': f'error', 'message': 'An unexpected error occurred.: {e}'})
 
 
 # Adding an investment
@@ -331,9 +337,21 @@ class InvestmentDetailView(DetailView):
 @method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
 class AddInvestment(CreateView):
     model=InvestmentDetail
-    fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage','years','compounding_frequency','type_of_tbill')
     template_name = 'dashboard/investment_form.html'
-    # success_url = reverse_lazy('investment_list')
+    form_class = InvestmentCreationForm
+    # fields = (
+    #     'investment_type',
+    #     'account_name',
+    #     'account_type',
+    #     'account_number',
+    #     'principal_amount',
+    #     'interest_start_date',
+    #     'interest_end_date',
+    #     'interest_percentage',
+    #     'years',
+    #     'compounding_frequency',
+    #     'type_of_tbill'
+    # )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -349,12 +367,29 @@ class AddInvestment(CreateView):
 
         return context
     
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['type_of_tbill'].required = False 
+        return form
+    
+    def form_invalid(self, form):
+        print(f'Form is invalid: {form.errors}')
+        return JsonResponse({
+            'status':'error',
+            'message':f'An error occured: {form.errors}'
+        })
+        # return super().form_invalid(form)
+
     # Make sure we are updating details under the right tenant
     def form_valid(self, form):
+        print('Form Valid')
         tenant = self.request.tenant
         scheme_name = self.request.scheme_name
 
-        scheme = InvestmentScheme.objects.filter(id=scheme_name, tenant=tenant).prefetch_related('account_mapping').first()
+        scheme = InvestmentScheme.objects.filter(
+            id=scheme_name,
+            tenant=tenant
+        ).prefetch_related('account_mapping').first()
 
         if not scheme:
             return JsonResponse({
@@ -362,7 +397,7 @@ class AddInvestment(CreateView):
                 'message':'Investment scheme not found'
             })
         
-        mapping = scheme.account_mapping.get(name='Investment')
+        mapping = scheme.account_mapping.filter(name='Investment').first()
         if not mapping:
             return JsonResponse({
                 'status':'error',
@@ -384,11 +419,11 @@ class AddInvestment(CreateView):
                 })
             
             # Prevent cases of insufficient balance when trying to debit an account
-            if debit_account.current_balance < investment_amount:
-                return JsonResponse({
-                    'status':'error',
-                    'message':f'Insufficient balance for {debit_account}'
-                })
+            # if debit_account.current_balance < investment_amount:
+            #     return JsonResponse({
+            #         'status':'error',
+            #         'message':f'Insufficient balance for {debit_account}'
+            #     })
             
             # perform debit anf credit operations
             debit_account.current_balance -= investment_amount
@@ -397,93 +432,121 @@ class AddInvestment(CreateView):
             # save account balances
             debit_account.save()
             credit_account.save()
-
+        # Set type of Tbill for Fixed Deposit to Fixed Deposit
+        if self.request.POST.get('type_of_tbill') == '':
+            form.instance.type_of_tbill == 'Fixed Deposit'
         # set scheme on investment object
         form.instance.investment_scheme = scheme
+        super().form_valid(form)
 
-        return super().form_valid(form)
+        return JsonResponse({
+            'status':'success',
+            'message':'Investment created successfully.',
+            'redirect_url':self.get_success_url()
+        })
     
 
     def get_success_url(self):
-
         scheme = self.request.scheme_name
         tenant =  self.request.tenant
-
         return reverse('investment_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id}) 
 
 
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager']), name='dispatch')
+class ApproveNewInvestments(ListView):
+    model =  InvestmentDetail
+    template_name = 'dashboard/approve_new_investments.html'
+    paginate_by = 10
+    context_object_name = 'new_investment_list'
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+        return InvestmentDetail.objects.filter(
+            investment_scheme__tenant=tenant,
+            investment_scheme__id=scheme_id,
+            approved=False,
+            approval_status=False
+        ).order_by('-created_date')
+    
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        inv_id = self.request.POST.get('inv_id')
+
+        if not inv_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please provide an ID for the specified investment.'
+            })
+        
+        inv = InvestmentDetail.objects.filter(
+            investment_scheme__tenant=tenant,
+            id=inv_id,
+            approved=False
+        ).first()
+
+        if not inv:
+            return JsonResponse({
+                'status':'error',
+                'message':'Investment not found.'
+            })
+
+        # Approve Inbvestment
+        inv.approved = True
+        inv.save()
+
+        return JsonResponse({
+            'status':'success',
+            'message':'Investment approved successfully.'
+        })
 
 # Updating an Investement's details
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
 class InvestmentUpdateView(UpdateView):
+
     model = InvestmentDetail
     form_class = InvestmentUpdateForm
     template_name = 'dashboard/investment_update_form.html'
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
-    def get_queryset(self):
-         
-        # Get Tenant
+    def get_object(self):
         tenant = self.request.tenant
-
-        # Get scheme name
         scheme_id = self.request.scheme_name
-
         # get inv pk
         pk = self.kwargs['pk']
+        return InvestmentDetail.objects.filter(
+            pk=pk,
+            approved=True,
+            investment_scheme__tenant=tenant,
+            investment_scheme__id = scheme_id
+        ).first()
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
-        else:
-            return InvestmentDetail.objects.none()
     
-    # Make sure we are updating details under the right tenant
     def form_valid(self, form):
-        try:
-            tenant = self.request.tenant
-
-            scheme = self.get_queryset().first().investment_scheme
-
-            if scheme:
-                form.instance.investment_scheme = scheme
-                response = super().form_valid(form)
-                # form.save()
-                # add success url to redirect user after a successful update
-                print('form saved')
-                return JsonResponse({'status':'success', 'redirect_url':self.get_success_url()})
-
-        except ValidationError as e:
-            return JsonResponse({'status':'error', 'message':str(e.message)})
-        return response
+        super().form_valid(form)
+        return JsonResponse({'status':'success', 'redirect_url':self.get_success_url()})
     
     # Form instance
     def get_context_data(self, **kwargs):
         context= super().get_context_data(**kwargs)
-
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-        # get inv instance
-        pk = self.kwargs['pk']
-
-        inv = InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant, investment_scheme__id = scheme_id).first()
+        inv = self.object
         
         # Pass invoice number separately since its not part of the form
         context['invoice_number'] = inv.invoice_number
 
         form = InvestmentUpdateForm(instance=inv)
-
         context['form'] = form
 
         return context
     
     def get_success_url(self):
-
         scheme_id = self.request.scheme_name
         tenant =  self.request.tenant
-
         return reverse('investment_list', kwargs={'scheme_name':scheme_id, 'tenant_id':tenant.id})
 
 
@@ -498,7 +561,6 @@ class RolloverInvestment(TemplateView):
     template_name = 'dashboard/rollover_percentage.html'
 
     def post(self, request, *args, **kwargs):
-        print(self.request.POST)
         tenant = self.request.tenant
         tenant_id = request.tenant.id
         scheme_id = request.scheme_name
@@ -516,7 +578,10 @@ class RolloverInvestment(TemplateView):
         pk = kwargs['pk']
 
         # Make sure mappings exist before we proceed further
-        scheme = InvestmentScheme.objects.filter(id=scheme_id,tenant=tenant).prefetch_related('account_mapping').first()
+        scheme = InvestmentScheme.objects.filter(
+            id=scheme_id,
+            tenant=tenant
+        ).prefetch_related('account_mapping').first()
 
         if not scheme:
             return JsonResponse({
@@ -524,7 +589,7 @@ class RolloverInvestment(TemplateView):
                 'message':'Investment scheme not found'
             })
         
-        mapping = scheme.account_mapping.get(name='Roll Over')
+        mapping = scheme.account_mapping.filter(name='Roll Over').first()
         if not mapping:
             return JsonResponse({
                 'status':'error',
@@ -533,7 +598,15 @@ class RolloverInvestment(TemplateView):
 
         # Increment rollover count of original investment
         try:
-            inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=request.tenant,investment_scheme__id=scheme_id,approval_status=False,termination_status=False)
+            inv = get_object_or_404(
+                InvestmentDetail,
+                pk=pk,
+                investment_scheme__tenant=request.tenant,
+                investment_scheme__id=scheme_id,
+                approved=True,
+                approval_status=False,
+                termination_status=False
+            )
         except:
             return JsonResponse({'status':'error', 'message':'Investment object not found', 'redirect_url': self.get_success_url()})
 
@@ -630,16 +703,20 @@ class RolloverInvestment(TemplateView):
 
         # Fetch investment
         if tenant:
-            inv = get_object_or_404(InvestmentDetail,pk=pk,investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)     
+            inv = get_object_or_404(
+                InvestmentDetail,
+                pk=pk,
+                approved=True,
+                investment_scheme__tenant=tenant,
+                investment_scheme__id=scheme_id
+            ) 
         
         context['rollover']= inv
         return context
     
     def get_success_url(self):
-
         scheme_id = self.request.scheme_name
         tenant =  self.request.tenant
-
         return reverse('investment_list', kwargs={'scheme_name':scheme_id, 'tenant_id':tenant.id})
 
 
@@ -647,32 +724,53 @@ class RolloverInvestment(TemplateView):
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
-class InvestmentDeleteView(DeleteView):
-    model = InvestmentDetail
+class InvestmentDeleteView(TemplateView):
+    # model = InvestmentDetail
     context_object_name = 'investment'
     template_name = 'dashboard/delete_investment.html'
 
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
-    def get_queryset(self):   
-        # Get Tenant
-        tenant = self.request.tenant
-        # Get scheme name
-        scheme_id = self.request.scheme_name
-        # Get inv pk
-        pk=self.kwargs['pk']
-
-        # Filtering Queryset by Tenant
+    def get_object(self,request,pk):
+        tenant = request.tenant
+        scheme_id = request.scheme_name
+        
         if tenant:
-            return InvestmentDetail.objects.filter(pk=pk,investment_scheme__tenant=tenant,investment_scheme__id = scheme_id)
-        else:
-            return InvestmentDetail.objects.none()
-    
-    def get_success_url(self):
-        scheme = self.request.scheme_name
-        tenant =  self.request.tenant
+            return InvestmentDetail.objects.filter(
+                pk=pk,
+                approved=True,
+                investment_scheme__tenant=tenant,
+                investment_scheme__id=scheme_id
+            ).first()
+        return None
 
-        return reverse('investment_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id}) 
+    def delete(self, request, *args, **kwargs):
+        print('Started Deletion')
+        pk = kwargs.get('pk')
+        investment = self.get_object(request, pk)
 
+        if not investment:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Investment not found.'
+            }, status=404)
+
+        if investment.interest_start_date <= timezone.now().date():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'This investment has begun and cannot be deleted.'
+            }, status=400)
+
+        try:
+            investment.delete()
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Investment deleted successfully.',
+                'redirect_url': reverse('investment_list', kwargs={'scheme_name': request.scheme_name, 'tenant_id': request.tenant.id})
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'An error occurred while deleting the investment: {str(e)}.'
+            }, status=500)
 
 
 # Active Members List
@@ -682,11 +780,8 @@ class InvestmentDeleteView(DeleteView):
 class MemberListView(ListView):
     model = StaffAPI
     template_name = 'dashboard/member_list.html'
-    # context_object_name = 'member_list'
 
-    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
     def get_queryset(self):  
-        # Get Tenant
         tenant = self.request.tenant
         scheme_id = self.request.scheme_name
 
@@ -791,12 +886,16 @@ class InvestmentQuery(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return InvestmentDetail.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant).order_by('-created_date')
-        return InvestmentDetail.objects.none()
+            return InvestmentDetail.objects.filter(
+                approved=True,
+                investment_scheme__id=scheme_id,
+                investment_scheme__tenant=tenant
+            ).order_by('-created_date')
+        return None
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        queryset = self.get_queryset()
+        queryset = self.get_queryset() or self.model.objects.none()
 
         # Get filter parameters
         sort = self.request.GET.get('sort')
@@ -1060,7 +1159,7 @@ class DelayedInterestQuery(ListView):
 @method_decorator(role_required(role=['Treasury Supervisor']), name='dispatch')
 class ApproveMaturedInvestment(ListView):
     model = InvestmentDetail
-    template_name = 'dashboard/investment_approval.html'
+    template_name = 'dashboard/matured_investment_approval.html'
 
     def get_queryset(self):
         tenant = self.request.tenant
@@ -1068,7 +1167,12 @@ class ApproveMaturedInvestment(ListView):
 
         if tenant and scheme_id:
             # Matured investments to be approved
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,approval_status=False, _status='Expired')
+            return InvestmentDetail.objects.filter(
+                investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,
+                approval_status=False,
+                approved=True,
+                _status='Expired'
+            )
         else:
             return InvestmentDetail.objects.none()
         
@@ -1164,12 +1268,16 @@ class ApprovedInvestments(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-
         tenant = self.request.tenant
         scheme_id = self.request.scheme_name
 
         if tenant and scheme_id:
-            return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant, investment_scheme__id=scheme_id, approval_status=True)
+            return InvestmentDetail.objects.filter(
+                investment_scheme__tenant=tenant,
+                investment_scheme__id=scheme_id,
+                approval_status=True,
+                approved=True,
+            ).order_by('-created_date')
         else:
             return InvestmentDetail.objects.none()
 
@@ -1181,7 +1289,7 @@ class ApprovedInvestments(ListView):
 @method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
 class SchemeApplications(ListView):
     model = SchemeApproval
-    template_name = 'dashboard/scheme_approval.html'
+    template_name = 'dashboard/scheme_application_approval.html'
     context_object_name = 'schemeapproval_list'
     paginate_by = 20
 
@@ -1246,7 +1354,7 @@ class SchemeApplications(ListView):
 class RecentActivities(ListView):
     model = InvestmentDetail
     template_name = 'dashboard/all_history.html'
-    paginate_by = 2
+    paginate_by = 20
 
     def get_queryset(self):
         tenant = self.request.tenant
@@ -1449,16 +1557,13 @@ class ApproveContributions(TemplateView):
                 investment_scheme__id=scheme_id,
                 month=month,
                 year=year,
-                approved_contribution=True).aggregate(
-                    total=Sum('total_contribution')
-                    )['total'] or Decimal(0.0)
-            
-            print(f'Monthly = {month_contribution}')
+                approved_contribution=True
+            ).aggregate(
+                total=Sum('total_contribution')
+            )['total'] or Decimal(0.0)
 
             # Calculate amount due after grace period
             duration = (now - grace_period_end).days
-
-            print(f'Duration = {duration}')
 
             # convert percentage --> decimal
             daily_delayed_rate = (rate/100) 
@@ -2640,7 +2745,7 @@ class UpdateSupplierView(UpdateView):
 # RAISE REQUISITION VIEW
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst','Finance Supervisor','Finance Manager']), name='dispatch')
 class RaiseRequisitionView(TemplateView):
     template_name = 'suppliers_expenses/create_requisition.html'
 
@@ -2953,7 +3058,7 @@ class PurschaseOrderView(ListView):
     
     # Order Received
     def post(self,*args,**kwargs):
-        tenant = self.request.tenant
+        # tenant = self.request.tenant
         order_id = self.kwargs['order_id']
         list_of_item_ids = self.request.POST.getlist('item_id[]')
         list_of_received_quantity = self.request.POST.getlist('received_quantity[]')
@@ -3034,7 +3139,7 @@ class FetchPurchaseOrderView(View):
 
         try:
             order =  PurchaseOrder.objects.get(
-                tenant=tenant,
+                requisition__tenant=tenant,
                 id=order_id
             )
             items = order.requisition.items.all()

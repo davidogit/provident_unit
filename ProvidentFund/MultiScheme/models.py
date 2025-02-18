@@ -34,7 +34,8 @@ class Tenant(models.Model):
 class InvestmentScheme(models.Model):
     id = models.AutoField(
         primary_key=True,
-        editable=False
+        editable=False,
+        unique=True
     )
     code = models.CharField(
         max_length=3,
@@ -72,20 +73,28 @@ class InvestmentScheme(models.Model):
         decimal_places=2,
         default=0.00,
         null=True
-        )
-    eligibility_criteria_months = models.IntegerField(null=True)
-    description = models.TextField(blank=True, null=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-    updated_date = models.DateTimeField(auto_now=True)
+    )
+    eligibility_criteria_months = models.IntegerField(
+        null=True
+    )
+    description = models.TextField(
+        blank=True, null=True
+    )
+    created_date = models.DateTimeField(
+        auto_now_add=True
+    )
+    updated_date = models.DateTimeField(
+        auto_now=True
+    )
     administrative_costs_percentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=0.00,
         null=True
-        )
-
-    # HISTORY
-    # history = HistoricalRecords()
+    )
+    approved = models.BooleanField(
+        default=False
+    )
 
     def __str__(self):
         return f'{self.code} - {self.name}'

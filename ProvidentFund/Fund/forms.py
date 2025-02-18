@@ -3,6 +3,11 @@ from . models import InvestmentDetail
 
 # Create forms here
 
+class InvestmentCreationForm(forms.ModelForm):
+    class Meta:
+        model = InvestmentDetail
+        fields = ('investment_type','account_name','account_type','account_number','principal_amount','interest_start_date','interest_end_date','interest_percentage','type_of_tbill','compounding_frequency','years')
+
 class InvestmentUpdateForm(forms.ModelForm):
     class Meta:
         model = InvestmentDetail

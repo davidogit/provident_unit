@@ -102,7 +102,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="row d-flex flex-row justify-content-between actions">
-                                                    {% if is_manager %}
+                                                    {% if 'Finance Supervisor' in user_groups %}
                                                     <div class="col text-start">
                                                         <button class="match-order-items btn btn-outline-secondary btn">
                                                             Match Items
@@ -217,7 +217,7 @@
 
                 $(this).append(`
                     <td class="text-start align-middle">
-                        <input type="number" class="form-control received-quantity" min="0">
+                        <input type="number" class="form-control received-quantity" min="0" style="width: 100px;">
                     </td>
                 `
                 );

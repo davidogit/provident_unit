@@ -111,7 +111,8 @@ def add_user(request, tenant_id):
 @tenant_required
 @role_required(role=['Admin'])
 def manage_users(request, tenant_id):
-    tenant = get_object_or_404(Tenant, id=tenant_id)
+    # tenant = get_object_or_404(Tenant, id=tenant_id)
+    tenant = request.tenant
     users = User.objects.filter(tenant=tenant)
     roles = Group.objects.all()
 
@@ -136,7 +137,7 @@ def manage_users(request, tenant_id):
                     user.groups.add(group)
             user.save()
 
-        return redirect('manage_users', tenant_id=tenant_id)
+        return redirect('manage_users', tenant_id=tenant.id)
 
     return render(request, 'admin_panel/manage_users.html', {
         'tenant': tenant,

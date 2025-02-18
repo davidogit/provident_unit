@@ -13,7 +13,7 @@
           <div class="container">
             <!-- <h2 class="mb-5">Investment Detail</h2> -->
 
-            <form method="POST">
+            <form method="POST" class="inv_form" id="inv_form">
               {% csrf_token %}
                 <div class="row g-5">
                   <div class="col-md-4">
@@ -82,8 +82,8 @@
                     </div>
 
                     <div class="form-floating mb-3">
-                      <input type="number" min="1" step="0.01" class="form-control" id="maturityDate" name="interest_percentage" placeholder="" required>
-                      <label for="maturityDate" class="form-label">Percentage Interest</label>
+                      <input type="number" min="1" step="0.01" class="form-control" id="interest_rate" name="interest_percentage" placeholder="" required>
+                      <label for="interest_rate" class="form-label">Percentage Interest</label>
                     </div>
                   </div>
           
@@ -97,8 +97,8 @@
                       <label for="investmentTerm" class="form-label">Investment End Date</label>
                     </div>
                     <div class="form-floating mb-3">
-                      <input type="number" step="1" min="0" class="form-control" id="componding_frequency" name="componding_frequency" placeholder="" required>
-                      <label for="componding_frequency" class="form-label">Compounding frequency per year</label>
+                      <input type="number" step="1" min="0" class="form-control" id="compounding_frequency" name="compounding_frequency" placeholder="" required>
+                      <label for="compounding_frequency" class="form-label">Compounding frequency per year</label>
                     </div>
 
                   </div>
@@ -131,6 +131,33 @@
           //clear day count
           $('input[name="day_count"]').val('');
         }
+      });
+
+
+      //submit form
+      $('#inv_form').submit(function(e){
+        e.preventDefault();
+        var form = $(this);
+        var url = form.attr('action');
+        var data = form.serialize();
+        $.ajax({
+          type: 'POST',
+          url: url,
+          data: data,
+          success: function(response){
+            console.log(response);
+            if(response.status === 'success'){
+              alert('Investment created successfully');
+              //redirect to investment list
+              window.location.href = response.redirect_url;
+            }else{
+              alert('Investment creation failed');
+            }
+          },
+          error: function(error){
+            console.log(error);
+          }
+        });
       });
     });
    </script>

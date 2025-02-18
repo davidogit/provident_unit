@@ -18,6 +18,9 @@ urlpatterns =[
     path('<int:scheme_name>/investmentRollover/<int:pk>/', views.RolloverInvestment.as_view(), name='rollover_percentage'),
     path('<int:scheme_name>/investment_query/', views.InvestmentQuery.as_view(), name='query'),
 
+    # Approve New Investments
+    path('<int:scheme_name>/approve_new_investments/', views.ApproveNewInvestments.as_view(), name='approve_new_investments'),
+
     # Member URLS
     # path('<int:scheme_name>/memberUpdate/<int:pk>/', views.MemberUpdateView.as_view(), name='member_update'),
     # path('<int:scheme_name>/deleteMember/<int:pk>/', views.MemberDeleteView.as_view(), name='delete_member'),
@@ -37,7 +40,7 @@ urlpatterns =[
     path('access_denied/', views.AccessDenied.as_view(), name='access_denied'),
 
     # Scheme Approval
-    path('approvals/', views.SchemeApplications.as_view(), name='scheme_approval'),
+    path('approvals/', views.SchemeApplications.as_view(), name='scheme_application_approval'),
 
     # History of investments
     path('recent_activities/', views.RecentActivities.as_view(), name='recent_activities'),

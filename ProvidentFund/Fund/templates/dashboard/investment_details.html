@@ -80,7 +80,7 @@
                 
                 
                 <div class="row g-2 d-flex justify-content-between">
-                    {% if is_manager %}
+                    {% if 'Treasury Manager' in user_groups %}
                     {% if not investment_detail.status == 'Terminated' %}
                     <div class="col-1">
                         <a class="btn btn-outline-warning btn-lg" href="" type="submit" data-bs-toggle="modal" data-bs-target="#terminateModal">Terminate</a>
@@ -88,7 +88,7 @@
                     {% endif %}
                     {% endif %}
 
-                    {% if is_treasury_user %}
+                    {% if 'Treasury Analyst' in user_groups %}
                     <div class="col-1">
                         <a class="btn btn-outline-success btn-lg" href="{% url 'investment_update' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment_detail.pk %}">update</a>
                     </div>

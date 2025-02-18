@@ -2,7 +2,7 @@ import random
 import os
 from django.db import IntegrityError, models,transaction
 from django.dispatch import receiver
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save,pre_delete
 from django.urls import reverse
 from MultiScheme.models import InvestmentScheme,Tenant
 from django.conf import settings
@@ -10,6 +10,8 @@ from django.core.exceptions import ValidationError
 from .generate_invoice import generate_invoice_number,generate_short_alpha_numeric_id
 from Chart_of_Accounts.models import BankAccount
 from django.core.validators import FileExtensionValidator
+from django.utils import timezone
+from django.db.models import ProtectedError
 
 class InvestmentDetail(models.Model):
     invoice_number = models.CharField(
@@ -18,7 +20,7 @@ class InvestmentDetail(models.Model):
         null=True,
         blank=True,
         editable=False
-    )
+    )#Set on saving using pre-save signals
     investment_scheme = models.ForeignKey(
         InvestmentScheme,
         on_delete=models.CASCADE,
@@ -56,29 +58,29 @@ class InvestmentDetail(models.Model):
         default=current
     )
     account_name = models.CharField(
-        max_length=255
+        max_length=255,
+        null=False,
+        blank=False
     )
     account_number = models.CharField(
-        max_length=255
+        max_length=255,
+        null=False,
+        blank=False
     )
     principal_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        default=0.00
-    )
-    interest_percentage = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-        default=0.00,
+        default=0,
         null=False,
         blank=False
     )
-    rollover_interest_percentage = models.DecimalField(
-        max_digits=15,
+    interest_percentage = models.DecimalField(
+        max_digits=5,
         decimal_places=2,
-        null=True,
-        blank=True,
-        default=0.00)
+        default=0,
+        null=False,
+        blank=False
+    )
     interest_start_date = models.DateField(
         null=False,
         blank=False
@@ -106,9 +108,12 @@ class InvestmentDetail(models.Model):
         max_length=20,
         default='Pending'
     )
+    approved = models.BooleanField(
+        default=False
+    )#Approval of newly created investments
     approval_status = models.BooleanField(
         default=False
-    )
+    )#Final approval of matured investments
     closing_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -132,7 +137,9 @@ class InvestmentDetail(models.Model):
     ) # Number of times the interest is compounded per year.
     type_of_tbill = models.CharField(
         max_length=10,
-        default=''
+        default='',
+        null=True,
+        blank=True
     )#specifies if 91,182,365 day for only Tbill
 
 
@@ -142,10 +149,8 @@ class InvestmentDetail(models.Model):
         r = self.interest_percentage/100
         t = self.years
         n = self.compounding_frequency # daily,monthly,quaterly,yearly
-
         c = p*(1+(r/n))**(n*t) #compound interest
         interest = c-p #interest amount only
-
         return interest
 
     def calculate_tenure(self):
@@ -154,9 +159,6 @@ class InvestmentDetail(models.Model):
     @property
     def tenure(self):
         return self.calculate_tenure()
-
-    def calculate_rollover_principal(self):
-        return (self.interest_amount + self.principal_amount)  # Simplified to directly return interest_amount
     
     # Remaining Days
     @property
@@ -190,28 +192,12 @@ class InvestmentDetail(models.Model):
             raise ValidationError('This investment is closed and can no longer be edited')
         super().save(*args, **kwargs)
 
-    @property
-    def rollover_principal(self):
-        return self.calculate_rollover_principal()
-
-    def calculate_rollover_accumulated_amount(self):
-        rollover_interest_percentage = self.rollover_interest_percentage or 0.0
-        rollover_principal = self.rollover_principal or 0.0
-        if rollover_interest_percentage == 0.0 or rollover_principal is None:
-            return 0.0
-        return rollover_principal + (rollover_principal * (rollover_interest_percentage / 100.0))
-    
-    @property
-    def rollover_accumulated_amount(self):
-        return self.calculate_rollover_accumulated_amount()
-
     def __str__(self):
         return f"{self.account_name}'s Investment"
     
     def get_absolute_url(self):
         return reverse('investment_detail', kwargs={'pk': self.pk},) 
-
-
+    
 @receiver(pre_save,sender=InvestmentDetail)
 def set_invoice_number(sender,instance,**kwargs):
     if not instance.invoice_number:

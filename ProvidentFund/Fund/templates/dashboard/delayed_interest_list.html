@@ -53,7 +53,9 @@
                 <th class="text-center">Status</th>
                 <th class="text-center">Date created</th>
                 <th class="text-center">Remarks</th>
+                {% if 'Treasury Supervisor' in user_groups %}
                 <th class="text-center">Confirm</th>
+                {% endif %}
               </tr>
             </thead>
       
@@ -68,6 +70,7 @@
                     <td class="text-start">{{ int.status }}</td>
                     <td class="text-start">{{ int.created_date }}</td>
                     <td class="text-start">{{ int.remarks }}</td>
+                    {% if 'Treasury Supervisor' in user_groups %}
                     <td class="text-center">
                       <button class="btn btn-outline-success approve-button">Paid
                         <!-- Delayed Interest ID -->
@@ -79,6 +82,7 @@
                         
                       </button>
                     </td>
+                    {% endif %}
                   </tr>
                 {% endfor %}
               </tbody>

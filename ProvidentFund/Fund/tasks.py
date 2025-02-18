@@ -49,6 +49,7 @@ def member_interest(self):
                     _remaining_days__gt=0,
                     _status='Active',
                     approval_status=False,
+                    approved=True,
                     termination_status = False
                 )
                 logger.info(f'INVESTMENTS: {active_investments}')
@@ -157,10 +158,11 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
 
     try:
         inv = InvestmentDetail.objects.get(
-                        id=inv_id,
-                        investment_scheme=scheme,
-                        investment_scheme__tenant = tenant,
-                        approval_status=True
+            id=inv_id,
+            investment_scheme=scheme,
+            investment_scheme__tenant = tenant,
+            approval_status=True,
+            approved=True
         )
     except Exception as e:
         logger.error(f'An error occured fetching Investments for {tenant}: {str(e)}')
@@ -248,7 +250,10 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
 @shared_task(bind=True)
 def reduce_date(self):
     # Filter only unapproved investments
-    investments = InvestmentDetail.objects.filter(approval_status=False)
+    investments = InvestmentDetail.objects.filter(
+        approval_status=False,
+        approved=True
+    )
     current_date = timezone.now().date()
 
     # update[] will hold all potential updates and save them in bulk
