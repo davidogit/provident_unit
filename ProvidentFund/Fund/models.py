@@ -12,6 +12,7 @@ from Chart_of_Accounts.models import BankAccount
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
 from django.db.models import ProtectedError
+from decimal import Decimal
 
 class InvestmentDetail(models.Model):
     invoice_number = models.CharField(
@@ -577,7 +578,11 @@ class RequisitionItem(models.Model):
         max_length=255,
         null=False
     )
-    quantity = models.IntegerField()
+    quantity = models.IntegerField(
+        default=0,
+        null=True,
+        blank=True
+    )
     amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -587,7 +592,8 @@ class RequisitionItem(models.Model):
         max_digits=15,
         decimal_places=2,
         null=True,
-        blank=True
+        blank=True,
+        default=Decimal(0.0)
     )
     date_added = models.DateTimeField(
         auto_now_add=True,
@@ -681,6 +687,68 @@ class PaymentInvoice(models.Model):
         return super().save(*args,**kwargs)
 
 
+
+
+"""""
+Received model to keep track of total number of items received in a Purchase order
+"""""
+class ReceivedItems(models.Model):
+    purchase_order = models.OneToOneField(
+        PurchaseOrder,
+        on_delete=models.CASCADE,
+        null=False,
+        blank=False,
+        related_name='received_items'
+    )
+    total_number_of_items = models.PositiveBigIntegerField(
+        null=True,
+        blank=True
+    )
+    number_of_items_received = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+        default=0
+    )
+    number_of_items_remaining = models.PositiveBigIntegerField(
+        null=True,
+        blank=True
+    )
+    total_purchase_order_amount=models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    balance = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    def save(self,*args,**kwargs):
+        if self.purchase_order:
+            if not self.total_number_of_items:
+                items = self.purchase_order.requisition.items.all()
+                # Total number of items
+                self.total_number_of_items=sum(item.quantity for item in items)
+
+            # Total amount
+            if not self.total_purchase_order_amount:
+                self.total_purchase_order_amount = self.purchase_order.amount
+
+                # Set balance to same as total amount on first save
+                self.balance = self.purchase_order.amount
+
+            # Remaining quantity to be received
+            self.number_of_items_remaining = self.total_number_of_items-self.number_of_items_received
+
+            # Update status of purchase order
+            if self.number_of_items_remaining == 0:
+                self.purchase_order.received = True
+                self.purchase_order.save()
+
+        return super().save(*args,**kwargs)
 
 
 # MODEL FOR EXCEL FILES SENT TO BANK

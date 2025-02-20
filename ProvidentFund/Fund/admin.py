@@ -1,5 +1,5 @@
 from django.contrib import admin
-from Fund.models import InvestmentDetail,BankInterest,DelayedInterest,AuditTrail,BankInterestRate,Suppliers,Requisition,RequisitionItem,PurchaseOrder,PaymentInvoice,ScheduledPaymentDates
+from Fund.models import InvestmentDetail,BankInterest,DelayedInterest,AuditTrail,BankInterestRate,Suppliers,Requisition,RequisitionItem,PurchaseOrder,PaymentInvoice,ScheduledPaymentDates,ReceivedItems
 
 # Register your models here.
 
@@ -35,3 +35,4 @@ admin.site.register(RequisitionItem)
 admin.site.register(PurchaseOrder)
 admin.site.register(PaymentInvoice)
 admin.site.register(ScheduledPaymentDates)
+admin.site.register(ReceivedItems)

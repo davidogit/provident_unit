@@ -7,7 +7,7 @@ from django.http.response import HttpResponse as HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 from ProvidentFund.settings import EMAIL_HOST_USER
-from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder
+from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder,ReceivedItems
 from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
 from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings,TenantEventNotification
 from MultiScheme.models import InvestmentScheme,Tenant
@@ -29,7 +29,7 @@ from django.utils.dateparse import parse_date
 from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
-from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount
+from Chart_of_Accounts.models import BankAccount
 from Fund.tasks import calculate_staff_contribution
 from Fund.generate_invoice import generate_short_alpha_numeric_id
 from Admin.models import User
@@ -73,7 +73,8 @@ class Invest(TemplateView):
         tenant = Tenant.objects.prefetch_related('staff_api').get(id=self.request.tenant.id)
         # Fetch schemes and related investments using prefetch
         schemes = InvestmentScheme.objects.filter(
-            tenant=tenant
+            tenant=tenant,
+            approved=True
         ).prefetch_related('member')
         try:
             interest_query = InvestmentDetail.objects.filter(
@@ -339,19 +340,6 @@ class AddInvestment(CreateView):
     model=InvestmentDetail
     template_name = 'dashboard/investment_form.html'
     form_class = InvestmentCreationForm
-    # fields = (
-    #     'investment_type',
-    #     'account_name',
-    #     'account_type',
-    #     'account_number',
-    #     'principal_amount',
-    #     'interest_start_date',
-    #     'interest_end_date',
-    #     'interest_percentage',
-    #     'years',
-    #     'compounding_frequency',
-    #     'type_of_tbill'
-    # )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -3046,7 +3034,7 @@ class ApproveRequisitionView(View):
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
-class PurschaseOrderView(ListView):
+class PurchaseOrderView(ListView):
     model = PurchaseOrder
     template_name = 'suppliers_expenses/purchase_order.html'
     context_object_name = 'purchase_orders'
@@ -3054,14 +3042,23 @@ class PurschaseOrderView(ListView):
     
     def get_queryset(self):
         tenant = self.request.tenant
-        return PurchaseOrder.objects.filter(requisition__tenant=tenant)
+        return PurchaseOrder.objects.filter(
+            requisition__tenant=tenant,
+            requisition__approved=True
+        )
     
     # Order Received
     def post(self,*args,**kwargs):
         # tenant = self.request.tenant
-        order_id = self.kwargs['order_id']
+        order_id = self.kwargs.get('order_id')
         list_of_item_ids = self.request.POST.getlist('item_id[]')
         list_of_received_quantity = self.request.POST.getlist('received_quantity[]')
+
+        if not order_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid order ID.'
+            })
 
         if not all(list_of_received_quantity):
             return JsonResponse({
@@ -3074,6 +3071,18 @@ class PurschaseOrderView(ListView):
                 id=order_id
             )
 
+            # check if remaining items is less than expected received items
+            received_object = ReceivedItems.objects.filter(
+                purchase_order=order
+            ).first()
+
+            if received_object and received_object.number_of_items_remaining < sum(int(a) for a in list_of_received_quantity):
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Total remaining items do not match your provided quantity.'
+                })
+
+
             if order.received == True:
                 return JsonResponse({
                     'status':'error',
@@ -3084,24 +3093,50 @@ class PurschaseOrderView(ListView):
             # Compare original quantity against received quantity
             # get all order items from db
             items = order.requisition.items.all()
+
+            # amount list: holds cash amount of received items
+            amount_list = []
             if items:
                 for item_id, received_quantity in zip(list_of_item_ids, list_of_received_quantity):
                     
                     try:
                         item = items.get(id=item_id) 
-                        print(f'Original:{item.quantity}, Received: {received_quantity}')
-                        if not(item.quantity == int(received_quantity)):
+                        if (int(received_quantity) > item.quantity):
                             return JsonResponse({
                                 'status': 'error',
-                                'message': 'Original quantity and quantity received do not match.'
+                                'message': 'Received quantity cannot exceed ordered quantity.'
                             })
+                        # Append amount to amount list
+                        amount_list.append(
+                            (item.amount * int(received_quantity))
+                        )
                     except Exception as e:
                         return JsonResponse({
                             'status': 'error',
                             'message': f'Item with ID {item_id} not found in the order items.'
                         })
-                order.received = True
-                order.save()                 
+                # order.received = True
+                # order.save()
+                """""
+                Updating ReceivedItems 
+                """""
+                # check for received_items for order if any exist else create one
+                
+                if received_object:
+                    received_items = received_object
+                else: #If this is the first time receiving, create received_items
+                    received_items = ReceivedItems.objects.create(
+                        purchase_order=order
+                    )
+                total_quantity_received = sum(int(q) for q in list_of_received_quantity)
+                    
+                # Update number of received items
+                received_items.number_of_items_received += total_quantity_received
+                # update balance left
+                received_items.balance -= sum(Decimal(a) for a in amount_list)
+
+                # save changes
+                received_items.save()
             else:
                 return JsonResponse({
                     'status':'error',
@@ -3112,10 +3147,10 @@ class PurschaseOrderView(ListView):
                 'status':'success',
                 'message':'Proceed to invoice payment.'
             })
-        except ObjectDoesNotExist:
+        except ObjectDoesNotExist as e:
             return JsonResponse({
                 'status':'error',
-                'message':'Order does not exist.'
+                'message':f'Order does not exist. {e}'
             })
 
 
@@ -3142,6 +3177,9 @@ class FetchPurchaseOrderView(View):
                 requisition__tenant=tenant,
                 id=order_id
             )
+            received_items = ReceivedItems.objects.filter(
+                purchase_order=order
+            )
             items = order.requisition.items.all()
             items_list = []
 
@@ -3158,8 +3196,8 @@ class FetchPurchaseOrderView(View):
                 'status':'success',
                 'items':items_list,
                 'total_amount':order.amount,
-                'order_received':order.received
-
+                'order_received':order.received,
+                'balance':received_items.first().balance if received_items.exists() else order.amount
             })
         except ObjectDoesNotExist:
             return JsonResponse({

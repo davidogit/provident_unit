@@ -105,9 +105,9 @@ urlpatterns =[
 
 
     # PURCHASE ORDER URL
-    path('purchase-orders/', views.PurschaseOrderView.as_view(), name='purchase_order'),
+    path('purchase-orders/', views.PurchaseOrderView.as_view(), name='purchase_order'),
     # received order
-    path('received-order/<slug:order_id>/', views.PurschaseOrderView.as_view(), name='receive-order'),
+    path('received-order/<slug:order_id>/', views.PurchaseOrderView.as_view(), name='receive-order'),
     #fetch order items
     path('get-order-items/<slug:order_id>/', views.FetchPurchaseOrderView.as_view(), name='fetch_order_items'),
 

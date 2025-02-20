@@ -101,6 +101,14 @@
                                                         <h6><strong class="total-amount"></strong></h6>
                                                     </div>
                                                 </div>
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        <h6><strong>Balance</strong></h6>
+                                                    </div>
+                                                    <div class="col-6 text-end">
+                                                        <h6><strong class="remaining-balance"></strong></h6>
+                                                    </div>
+                                                </div>
                                                 <div class="row d-flex flex-row justify-content-between actions">
                                                     {% if 'Finance Supervisor' in user_groups %}
                                                     <div class="col text-start">
@@ -354,6 +362,7 @@
                             
                             //Update total amount
                             tableBody.closest('.order-card').find('.total-amount').text(response.total_amount);
+                            tableBody.closest('.order-card').find('.remaining-balance').text(response.balance);
                         }
                         
                     }else{
