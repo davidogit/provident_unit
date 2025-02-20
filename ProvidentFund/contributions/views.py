@@ -58,7 +58,11 @@ class OptOutMemberView(View):
         try:
             member = get_object_or_404(StaffAPI, pk=member_id,tenant=tenant)
 
-            scheme = InvestmentScheme.objects.get(tenant=tenant,id=scheme_id, approved=True)
+            scheme = InvestmentScheme.objects.get(
+                tenant=tenant,
+                id=scheme_id,
+                approved=True
+            )
             member.investment_scheme.remove(scheme)
             member.save()
             self.send_opt_out_email(member)

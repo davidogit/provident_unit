@@ -247,7 +247,11 @@ class AccountMappingView(TemplateView):
             # fetch debit and credit account
             debit_account = ChartOfAccounts.objects.get(tenant=tenant,account_code=debit_code)
             credit_account = ChartOfAccounts.objects.get(tenant=tenant,account_code=credit_code)
-            scheme = InvestmentScheme.objects.get(tenant=tenant,id=scheme_id)
+            scheme = InvestmentScheme.objects.get(
+                tenant=tenant,
+                id=scheme_id,
+                approved=True
+            )
 
             try:
                 AccountMapping.objects.create(
@@ -283,7 +287,7 @@ class AccountMappingView(TemplateView):
         tenant = self.request.tenant
         context['actions']=AccountMapping.ACTIONS
         context['accounts'] = ChartOfAccounts.objects.filter(tenant=tenant)
-        context['schemes'] = InvestmentScheme.objects.filter(tenant=tenant)
+        context['schemes'] = InvestmentScheme.objects.filter(tenant=tenant,approved=True)
         context['mappings'] = AccountMapping.objects.filter(tenant=tenant)
         return context
 
@@ -377,7 +381,8 @@ class AccountMappingUpdateView(UpdateView):
         try:
             scheme = InvestmentScheme.objects.get(
                 tenant=tenant,
-                id = scheme_id
+                id = scheme_id,
+                approved=True
             )
         except InvestmentScheme.DoesNotExist:
             return JsonResponse({
