@@ -8,22 +8,20 @@ from MultiScheme.models import InvestmentScheme,SchemeSettings
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 # Custom Decorators
-
 from Member.decorators import tenant_required
 from Admin.decorators import role_required
-
-
 from rest_framework.generics import ListAPIView,RetrieveAPIView
 from .models import Tenant
 from .serializers import TenantSerializer
 from rest_framework.response import Response
 from rest_framework import status
+from .forms import SchemeCreationForm
 
 
 # Scheme List View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager']), name='dispatch')
+@method_decorator(role_required(role=['Scheme Manager','Scheme Supervisor','Scheme Analyst']), name='dispatch')
 class SchemeList(ListView):
     template_name ='multischeme/scheme_list.html'
     model = InvestmentScheme
@@ -41,28 +39,13 @@ class SchemeList(ListView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Manager']), name='dispatch')
-class AddScheme(CreateView):
+@method_decorator(role_required(role=['Scheme Analyst']), name='dispatch')
+class CreateScheme(CreateView):
     template_name = 'multischeme/add_scheme.html'
     model = InvestmentScheme
-    fields = ('name','administrative_costs_percentage','distribution_percentage','eligibility_criteria_months','description')
-
-    def get_context_data(self, **kwargs: Any):
-        context = super().get_context_data(**kwargs)
-        tenant= self.request.tenant
-
-        if tenant:
-            # context['frequency'] = InvestmentScheme.frequency
-            # context['payout_frequency'] = InvestmentScheme.choices
-            context['options'] = InvestmentScheme.options
-        else:
-            # context['frequency'] = []
-            # context['payout_frequency'] = []
-            context['options'] = []
-
-        return context
+    form_class=SchemeCreationForm
     
-    # Assign tenant before saving
+    # Assign tenant before saving  
     def form_valid(self, form):
         tenant = self.request.tenant
         if tenant:
@@ -79,20 +62,30 @@ class AddScheme(CreateView):
                 'tenant_id':tenant.id,
                 'scheme_name':instance.id
             })
-            return JsonResponse({'status':'success',
-                                  'message':message, 'scheme_id':instance.id, 'redirect_url':redirect_url})
+            return JsonResponse({
+                'status':'success',
+                'message':message, 'scheme_id':instance.id,
+                'redirect_url':redirect_url #Redirects user to settings page.
+            })
         else:
-            return JsonResponse({'status':'error',
-                                  'message':'An error occured'})
+            return JsonResponse({
+                'status':'error',
+                'message':'An error occured'
+            })
     
     def form_invalid(self, form):
-        return JsonResponse({'status':'error',
-                             'message':'An error occured'})
+        return JsonResponse({
+            'status':'error',
+            'message':'An error occured'
+        })
 
 
 
 # Scheme Settings/Configuration
-class SchemeSettingsView(CreateView):
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
+class SchemeSettingsView(UpdateView):
     model = SchemeSettings
     fields = ('contribution_day','grace_period_contribution','delayed_interest_rate','period_of_delayed_calculation') #include all fields from model
     template_name = 'multischeme/scheme_settings.html'
@@ -113,12 +106,14 @@ class SchemeSettingsView(CreateView):
         return context
 
     # Return invalid form response using Json
-    def form_invalid(self, form: BaseModelForm) -> HttpResponse:
+    def form_invalid(self, form):
         print(f'Error: {form.errors}')
-        return JsonResponse({'status':'error',
-                              'message':'An error occured'})
+        return JsonResponse({
+            'status':'error',
+            'message':'An error occured'
+        })
 
-    def form_valid(self, form: BaseModelForm) -> HttpResponse:
+    def form_valid(self, form):
         # Get scheme and tenant
         tenant = self.request.tenant
         scheme_id = self.request.scheme_name
@@ -136,22 +131,68 @@ class SchemeSettingsView(CreateView):
                 setattr(settings,field,form.cleaned_data[field])
             settings.save()
             print('Saved successfully')
-            redirect_url = reverse('scheme_settings', kwargs={'tenant_id' : tenant.id, 'scheme_name':scheme_id})
-            return JsonResponse({'status':'success',
-                                  'message':'Settings updated successfully.',
-                                  'redirect_url':redirect_url})
+    
+            return JsonResponse({
+                'status':'success',
+                'message':'Scheme creation completed and awaiting approval.',
+                'redirect_url':self.get_success_url()
+            })
         except Exception as e:
-            return JsonResponse({'status':'error',
-                                  'message':f'An error occured: {e}'})
-
-        
-        # return HttpResponseRedirect(self.get_success_url())
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured: {e}'
+            })
     
     # After successful creation redirect to scheme list page
     def get_success_url(self):
         tenant =  self.request.tenant
         scheme_id = self.request.scheme_name
         return reverse('scheme_settings', kwargs={'tenant_id' : tenant.id, 'scheme_name':scheme_id})
+
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Scheme Manager']), name='dispatch')
+class SchemeApproval(ListView):
+    model = InvestmentScheme
+    template_name = 'multischeme/scheme_approval.html'
+    paginate_by = 10
+    context_object_name = 'scheme_list'
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        if tenant:
+            # Filter only schemes with settings
+            return InvestmentScheme.objects.filter(
+                tenant=tenant,
+                approved=False
+            ).exclude(scheme_settings=None).order_by('-created_date')
+        else:
+            return InvestmentScheme.objects.none()
+
+    
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        scheme_id = self.request.POST.get('scheme_id')
+
+        scheme = InvestmentScheme.objects.filter(
+            id=scheme_id,
+            tenant=tenant,
+            approved=False
+        ).first() if scheme_id else InvestmentScheme.objects.none()
+
+        if scheme:
+            scheme.approved = True
+            scheme.save()
+            return JsonResponse({
+                'status':'success',
+                'message':'Scheme approved successfully.'
+            })
+        return JsonResponse({
+            'status':'error',
+            'message':'Scheme does not exist.'
+        })
 
 
 # API list view

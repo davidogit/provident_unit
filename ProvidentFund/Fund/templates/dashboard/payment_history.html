@@ -13,11 +13,11 @@
         <div class="col-12">
             <div class="container">
                 <div class="col-12 d-flex justify-content-between align-items-center mb-3">
-                    <div class="col-6 col-md-3 col-lg-6 d-flex flex-row justify-content-between align-items-center">
-                        <form action="" method="GET" class="d-flex flex-row justify-content-between align-items-center">
+                    <div class="col-12 col-md-12 col-lg-10">
+                        <form action="" method="GET" class="d-flex flex-wrap gap-2" id="search_form">
                             <!-- Scheme Select -->
-                            <div class="form-floating w-100 me-2">
-                                <select class="form-select" name="scheme" id="scheme" aria-placeholder="">
+                            <div class="form-floating flex-grow-1">
+                                <select class="form-select" name="scheme" id="scheme">
                                     <option value="">--select--</option>
                                     {% for scheme in schemes %}
                                     <option value="{{ scheme.id }}">{{ scheme }}</option>
@@ -25,21 +25,21 @@
                                 </select>
                                 <label for="scheme">Scheme</label>
                             </div>
-
+                
                             <!-- Payment Type -->
-                            <div class="form-floating w-100 me-2">
-                                <select class="form-select" name="payment_type" id="payment_type" aria-placeholder="">
+                            <div class="form-floating flex-grow-1">
+                                <select class="form-select" name="payment_type" id="payment_type">
                                     <option value="">--select--</option>
-                                    {% for value,type in payment_type %}
+                                    {% for value, type in payment_type %}
                                     <option value="{{ value }}">{{ type }}</option>
                                     {% endfor %}
                                 </select>
                                 <label for="payment_type">Payment Type</label>
                             </div>
-
-                            <!-- Payment Mode Select -->
-                            <div class="form-floating w-100 me-2">
-                                <select class="form-select" name="payment_method" id="payment_method" aria-placeholder="">
+                
+                            <!-- Payment Method -->
+                            <div class="form-floating flex-grow-1">
+                                <select class="form-select" name="payment_method" id="payment_method">
                                     <option value="">--select--</option>
                                     {% for value, method in payment_methods %}
                                     <option value="{{ value }}">{{ method }}</option>
@@ -47,27 +47,36 @@
                                 </select>
                                 <label for="payment_method">Payment Method</label>
                             </div>
-
-                            <!-- Status Select -->
-                            <div class="form-floating w-100 me-2">
-                                <select class="form-select" name="status" id="status" aria-placeholder="">
+                
+                            <!-- Status -->
+                            <div class="form-floating flex-grow-1">
+                                <select class="form-select" name="status" id="status">
                                     <option value="">--select--</option>
-                                    {% for value,status in payment_status %}
-                                    <option value="{{ status }}">{{ status }}</option>
+                                    {% for value, status in payment_status %}
+                                    <option value="{{ value }}">{{ status }}</option>
                                     {% endfor %}
                                 </select>
-                                <label for="status">status</label>
+                                <label for="status">Status</label>
                             </div>
-                            <!-- search -->
-                            <button type="submit" class="btn btn-primary">Search</button>
+                
+                            <!-- Transaction ID -->
+                            <div class="form-floating flex-grow-1">
+                                <input type="text" class="form-control" name="transaction_id" id="transaction_id" placeholder="">
+                                <label for="transaction_id">Transaction ID</label>
+                            </div>
+                
+                            <!-- Search Button -->
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-outline-primary" id="search">Search</button>
+                            </div>
                         </form>
-                        
                     </div>
                 </div>
+                
 
 
                 <!-- Table to hold list of members payments to be processed -->
-                <div class="table-responsive overflow-auto" style="height: 500px;">
+                <div class="table-responsive">
                     <table class="table table-bordered table-striped" id="members_table">
                         <thead class="thead-light text-center">
                             <th></th>
@@ -79,6 +88,7 @@
                             <th>Status</th>
                         </thead>
                         <tbody>
+                            {% if transaction_queryset %}
                             {% for transaction in transaction_queryset %}
                             <tr>
                                 <td>
@@ -111,6 +121,11 @@
                                 </td>
                             </tr>
                             {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No transaction found</td>
+                            </tr>
+                            {% endif %}
                         </tbody>
                     </table>
 
@@ -118,41 +133,33 @@
                     <div class="pagination-container row position-sticky bottom-0">
                         <div class="col-12 d-flex justify-content-center ">
                             {% if is_paginated %}
-                            <nav aria-label="Page navigation example">
-                                <ul class="pagination justify-content-center">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination">
                                     {% if page_obj.has_previous %}
-                                    <li class="page-item">
-                                    <a
-                                        class="page-link"
-                                        href="?page={{ page_obj.previous_page_number }}"
-                                        aria-label="Previous"
-                                    >
-                                        <span aria-hidden="true">&laquo;</span>
-                                    </a>
-                                    </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if request.GET.scheme %}&scheme={{ request.GET.scheme }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.scheme %}&scheme={{ request.GET.scheme }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+                                        </li>
                                     {% endif %}
-                    
-                                    <li class="page-item">
-                                    <a class="page-link" href="#">{{ page_obj.number }}</a>
+
+                                    <li class="page-item disabled">
+                                        <span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
                                     </li>
+
                                     {% if page_obj.has_next %}
-                                    <li class="page-item">
-                                    <a
-                                        class="page-link"
-                                        href="?page={{ page_obj.next_page_number }}"
-                                        aria-label="Next"
-                                    >
-                                        <span aria-hidden="true">&raquo;</span>
-                                    </a>
-                                    </li>
-    
-                                    <li class="page-link">
-                                        <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
-                                    </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.scheme %}&scheme={{ request.GET.scheme }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ paginator.num_pages }}{% if request.GET.scheme %}&scheme={{ request.GET.scheme }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+                                        </li>
                                     {% endif %}
                                 </ul>
                             </nav>
-                            {% endif %}
+                        {% endif %}
+
                         </div>
                     </div>
                 </div>
@@ -160,4 +167,30 @@
         </div>
     </div>
 </div>
+
+<!-- <script>
+    $(document).ready(function(){
+        $('#search_form').submit(function(e){
+            e.preventDefault();
+            var form = $(this);
+            var scheme = $('#scheme').val();
+            if (scheme == ''){
+                alert('Please select a scheme');
+                return;
+            }
+
+            $.ajax({
+                url:'',
+                type:'GET',
+                data:form.serialize(),
+                success:function(response){
+                    window.location.reload();
+                },
+                error:function(error){
+                    console.log(error);
+                }
+            })
+        });
+    })
+</script> -->
 {% endblock %}

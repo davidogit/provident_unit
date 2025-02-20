@@ -1,5 +1,10 @@
 {% extends 'dashboard/base.html' %}
-
+{% block title %}
+<title>Delete Investment</title>
+{% endblock %}
+{% block header %}
+<h5>Delete Investment</h5>
+{% endblock %}
 {% block content %}
     
 <div class="main main-app p-3 p-lg-4">
@@ -15,7 +20,7 @@
                         </h2>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <form action="" method="POST">
+                        <form action="" method="POST" class="delete_investment">
                             {% csrf_token %}
                             <input class="btn btn-danger" type="submit" value="Delete">
                             
@@ -29,8 +34,40 @@
             </div><!-- card-body -->
           </div><!-- card-one -->
     </div>
-
-
-
 </div>
+<script>
+    $(document).ready(function(){
+        $('.delete_investment').on('submit', function(e){
+            e.preventDefault();
+            
+            if (!confirm('Are you sure you want to delete this investment?')) {
+                return;
+            }
+    
+            $.ajax({
+                url: '',
+                type: 'DELETE',
+                data: $(this).serialize(),
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        console.log(response)
+                        alert(response.message);
+                        window.location.href = response.redirect_url;
+                    } else {
+                        console.log(response)
+                        alert(response.message);
+                    }
+                },
+                error: function(jqXHR) {
+                    var message = jqXHR.responseJSON ? jqXHR.responseJSON.message : 'An unexpected error occurred.';
+                    alert(message);
+                    console.error(message);
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

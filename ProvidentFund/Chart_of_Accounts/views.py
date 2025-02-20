@@ -8,8 +8,16 @@ from MultiScheme.models import InvestmentScheme
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
+from django.contrib.auth.decorators import login_required
+from Member.decorators import tenant_required
+from Admin.decorators import role_required
+from django.utils.decorators import method_decorator
 # Create your views here.
 
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class AddChartOfAccounts(TemplateView):
     template_name = 'add_chart_of_account.html'
 
@@ -84,7 +92,11 @@ class AddChartOfAccounts(TemplateView):
         context['account_status'] = account_status
         return context
 
+
 # Update Chart of Accounts
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class UpdateChartOfAccounts(UpdateView):
     model = ChartOfAccounts
     template_name = ''
@@ -128,7 +140,11 @@ class UpdateChartOfAccounts(UpdateView):
         return url
 
 
+
 # Fetch Chart of Account Data
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class FetchChartOfAccounts(View):
     def get(self,request,*args,**kwargs):
         if self.request.method == 'GET':
@@ -168,6 +184,9 @@ class FetchChartOfAccounts(View):
 
 
 
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class DeleteChartOfAccount(DeleteView):
     model= ChartOfAccounts
     template_name = 'add_chart_of_account.html'
@@ -201,6 +220,12 @@ class DeleteChartOfAccount(DeleteView):
 
         return reverse('add_chart_of_account', kwargs={'tenant_id':tenant_id})
 
+
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class AccountMappingView(TemplateView):
     template_name='account_mapping.html'
 
@@ -263,7 +288,12 @@ class AccountMappingView(TemplateView):
         return context
 
 
+
+
 # Delete View for Account Mapping
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class AccountMappingDeleteView(DeleteView):
     model = AccountMapping
     template_name = ''
@@ -296,7 +326,12 @@ class AccountMappingDeleteView(DeleteView):
         return url
 
 
+
+
 # Update View for Account Mapping
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class AccountMappingUpdateView(UpdateView):
     model = AccountMapping
     template_name = ''
@@ -387,7 +422,12 @@ class AccountMappingUpdateView(UpdateView):
         url = reverse('map_account', kwargs={'tenant_id':tenant_id})
         return url
 
+
+
 # ACCOUNT BALANCE QUERY
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class AccountBalanceQuery(TemplateView):
     template_name = 'account_balance.html'
 
@@ -424,6 +464,9 @@ class AccountBalanceQuery(TemplateView):
 
 
 # BANK ACCOUNT CREATION AND LIST
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class BankAccountsView(TemplateView):
     template_name = 'bank_accounts.html'
 
@@ -502,6 +545,10 @@ class BankAccountsView(TemplateView):
 
         return context
 
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class DeleteBankView(DeleteView):
     model = BankAccount
 
@@ -556,7 +603,12 @@ class DeleteBankView(DeleteView):
         return url
 
 
+
+
 # Update View for Bank Account
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class BankUpdateView(UpdateView):
     model = BankAccount
     template_engine = ''
@@ -627,7 +679,12 @@ class BankUpdateView(UpdateView):
         return url
 
 
+
+
 # Fetch bank detail for update template
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
 class FetchBankDetail(TemplateView):
     def get(self, request, *args, **kwargs):
         tenant = request.tenant

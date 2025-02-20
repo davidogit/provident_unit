@@ -51,7 +51,7 @@
                                             {% if order.received %}
                                                 <span class="badge bg-success">Received</span>
                                             {% else %}
-                                                <span class="badge bg-warning">Pending</span>
+                                                <span class="badge bg-warning">Not received</span>
                                             {% endif %}
                                         </td>
                                         <td class="d-flex flex-row justify-content-start">
@@ -101,8 +101,16 @@
                                                         <h6><strong class="total-amount"></strong></h6>
                                                     </div>
                                                 </div>
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        <h6><strong>Balance</strong></h6>
+                                                    </div>
+                                                    <div class="col-6 text-end">
+                                                        <h6><strong class="remaining-balance"></strong></h6>
+                                                    </div>
+                                                </div>
                                                 <div class="row d-flex flex-row justify-content-between actions">
-                                                    {% if is_manager %}
+                                                    {% if 'Finance Supervisor' in user_groups %}
                                                     <div class="col text-start">
                                                         <button class="match-order-items btn btn-outline-secondary btn">
                                                             Match Items
@@ -217,7 +225,7 @@
 
                 $(this).append(`
                     <td class="text-start align-middle">
-                        <input type="number" class="form-control received-quantity" min="0">
+                        <input type="number" class="form-control received-quantity" min="0" style="width: 100px;">
                     </td>
                 `
                 );
@@ -354,6 +362,7 @@
                             
                             //Update total amount
                             tableBody.closest('.order-card').find('.total-amount').text(response.total_amount);
+                            tableBody.closest('.order-card').find('.remaining-balance').text(response.balance);
                         }
                         
                     }else{

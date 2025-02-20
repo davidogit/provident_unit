@@ -2,12 +2,10 @@ from datetime import timedelta
 import calendar
 from decimal import Decimal
 from celery import shared_task
-from django.http import JsonResponse
 from .models import InvestmentDetail,BankInterest,DelayedInterest
 from django.utils import timezone
 from MultiScheme.models import Tenant, InvestmentScheme,TenantEventNotification
 from django.core.exceptions import ObjectDoesNotExist
-# import contribution details from Contributions App
 from contributions.models import StaffAPI,Contribution,Membership
 from django.db import transaction
 from django.db.models import Sum,FloatField,Q,DecimalField
@@ -25,16 +23,14 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True)
 def member_interest(self):
     try:
-        tenants = Tenant.objects.prefetch_related('investment_schemes__investments','staff_api','membership') #prefetch schemes and staffs
+        tenants = Tenant.objects.prefetch_related('investment_schemes','staff_api','membership') #prefetch schemes and staffs
         logger.info(f'Starting profit calculation for {tenants.count()} tenants.')
 
         for tenant in tenants:
             schemes = tenant.investment_schemes.all() #get associated schemes to tenant
-
             for scheme in schemes:
                 # Get member allocation percentage
                 member_allocation_percentage = scheme.distribution_percentage
-
 
                 # Use reverse relationship b/n staff and contribution to calculate each members contribution
                 members = tenant.staff_api.filter(
@@ -48,64 +44,29 @@ def member_interest(self):
                     scheme=scheme
                 )
 
-
                 #get investments associated with each scheme
                 active_investments = scheme.investments.filter(
-                    # investment_scheme=scheme,
-                    # investment_scheme__tenant = tenant,
                     _remaining_days__gt=0,
                     _status='Active',
                     approval_status=False,
+                    approved=True,
                     termination_status = False
                 )
                 logger.info(f'INVESTMENTS: {active_investments}')
 
-                delayed_interests = DelayedInterest.objects.filter(
-                    investment_scheme=scheme,
-                    _status='Not used'
-                )
+                # delayed_interests = DelayedInterest.objects.filter(
+                #     investment_scheme=scheme,
+                #     _status='Not used'
+                # )
 
-                bank_interests = BankInterest.objects.filter(
-                    investment_scheme=scheme,
-                    _status='Not used'
-                )
+                # bank_interests = BankInterest.objects.filter(
+                #     investment_scheme=scheme,
+                #     _status='Not used'
+                # )
                                 
                 # Aggregate total approved contributions for the scheme and tenant
                 #prefetch staff_api in same query
                 total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or Decimal(0.0)
-
-                # logger.info(f'TOTAL CONT {scheme.name} = {total_contribution}')
-
-
-                # with transaction.atomic():
-                # # Distribute Delayed Interests
-                # for d_int in delayed_interests:
-                #     try:
-                #         if total_contribution > 0:
-                #             for member in members:
-                                
-                #                 # get staff's actual amount
-                #                 contribution = member.total_contribution or 0.0
-                                
-                #                 # Find date at which user joined the scheme
-                #                 try:
-                #                     scheme_subscription = SchemeApproval.objects.get(
-                #                         staff=member, scheme=scheme, tenant=tenant, 
-                #                         approved_by_hr=True)
-                #                     subscription_date = scheme_subscription.approval_date
-                #                 except SchemeApproval.DoesNotExist:
-                #                     subscription_date = None
-
-                #                 if subscription_date is not None and subscription_date.date() < d_int.created_date:
-                #                     member.estimated_profit += (contribution / total_contribution) * (d_int.principal + d_int.interest)
-                #                 else:
-                #                     member.estimated_profit += 0.0
-                #                 member.save()
-                #             d_int.status = 'Used'
-                #             d_int.save()
-                #     except Exception as e:
-                #         logger.error(f'Error occured{e}')
-
 
                 # Estimated Revenue Distribution
                 for inv in active_investments:
@@ -150,48 +111,62 @@ def member_interest(self):
                                         profit = (contribution / total_contribution) * inv_daily_interest
                                         membership.estimated_profit += Decimal(profit)
 
-                                        # logger.info(f'Test to see member contribution: {contribution} for {member.first_name} profit:{profit} daily:{inv_daily_interest}')
                                         logger.info(f'DISTRIBUTION PERCENTAGE: {member_allocation_percentage}')
                                         logger.info(f'MEMBERSHIPS: {membership}')
                                     else:
                                         membership.estimated_profit += Decimal(0.0)
                                     membership.save()
                     except Exception as e:
-                        logger.error(f'Error :{e}')                    
-
+                        logger.error(f'Error :{e}')
+                        continue                   
         logger.info(f'Profit successfully calculated for {timezone.now().date()}')
         return f'Profit successfully calculated for {timezone.now().date()}'
-    
     except Exception as e:
         logger.error(f'Error in member_interest task: {str(e)}', exc_info=True)
-
+        return
 
 
 # Task to calculate actual profit
 @shared_task(bind=True)
 def actual_member_interest(self,tenant_id,scheme_id,inv_id):
-    tenant = get_object_or_404(Tenant, id=tenant_id)
-    scheme = get_object_or_404(InvestmentScheme, id=scheme_id)
+    try:
+        tenant = get_object_or_404(Tenant, id=tenant_id)
+        scheme = get_object_or_404(InvestmentScheme, id=scheme_id)
+    except Exception as e:
+        logger.error(f'An error occured fetching Tenant and scheme: {str(e)}')
+        return
     # Use reverse relationship b/n staff and contribution to calculate each members contribution relating to the scheme
-    members = StaffAPI.objects.filter(
-        tenant=tenant,
-        investment_scheme=scheme,
-        exited_flag=False
-    ).annotate(total_contribution=Sum('contribution__total_contribution',filter=Q(contribution__approved_contribution=True,contribution__investment_scheme=scheme), output_field=FloatField()))
+    try:
+        members = StaffAPI.objects.filter(
+            tenant=tenant,
+            investment_scheme=scheme,
+            exited_flag=False
+        ).annotate(total_contribution=Sum('contribution__total_contribution',filter=Q(contribution__approved_contribution=True,contribution__investment_scheme=scheme), output_field=DecimalField()))
+    except Exception as e:
+        logger.error(f'An error occured while fetching members for {tenant}: {str(e)}')
+        return
 
-    from contributions.models import Membership
     # Get MEMBERSHIPS
-    memberships = Membership.objects.filter(
-        tenant=tenant,
-        scheme=scheme
-    )
+    try:
+        memberships = Membership.objects.filter(
+            tenant=tenant,
+            scheme=scheme
+        )
+    except Exception as e:
+        logger.error(f'An error occured fetching Memberships: {str(e)}')
+        return
 
-    inv = InvestmentDetail.objects.get(
-                    id=inv_id,
-                    investment_scheme=scheme,
-                    investment_scheme__tenant = tenant,
-                    approval_status=True
-                )
+    try:
+        inv = InvestmentDetail.objects.get(
+            id=inv_id,
+            investment_scheme=scheme,
+            investment_scheme__tenant = tenant,
+            approval_status=True,
+            approved=True
+        )
+    except Exception as e:
+        logger.error(f'An error occured fetching Investments for {tenant}: {str(e)}')
+        return
     
     # Get member allocation percentage
     member_allocation_percentage=scheme.distribution_percentage
@@ -201,7 +176,11 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
     
     # Get total contributions made to the scheme
     # Aggregate total approved contributions for the scheme and tenant
-    total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or Decimal(0.0)
+    try:
+        total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or Decimal(0.0)
+    except Exception as e:
+        logger.error(f'An error occured fetching contributions. {str(e)}')
+        return
 
     logger.info(f'Total: {total_contribution}')
 
@@ -253,6 +232,7 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
                     membership.total_earnings += Decimal(0.0)
         else:
             logger.info(f'No contribution found for {tenant.name} during actual interest calculation on {timezone.now}')
+            return
                     
         logger.info(f'Actual profit calculated for: {tenant.name}\'s members at: {timezone.now()}')
 
@@ -263,18 +243,17 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
         inv.approval_status = False
         inv.save()
         logger.info('Changes were not saved due to an error')
-        ##########
-
-
-
-
+        return
 
 
 # Task to reduce remaining days by 1 every midnight 12:00 am
 @shared_task(bind=True)
 def reduce_date(self):
     # Filter only unapproved investments
-    investments = InvestmentDetail.objects.filter(approval_status=False)
+    investments = InvestmentDetail.objects.filter(
+        approval_status=False,
+        approved=True
+    )
     current_date = timezone.now().date()
 
     # update[] will hold all potential updates and save them in bulk
@@ -313,6 +292,7 @@ def reduce_date(self):
             except Exception as e:
                 mapping = None
                 logger.info(f'No mapping of "Interest Earned" for {tenant.name} - {scheme.name}')
+                return
             # Fetch debit and credit accounts
 
             debit_account = mapping.debit_acc
@@ -320,11 +300,11 @@ def reduce_date(self):
 
             if not debit_account or not credit_account:
                 logger.info(f'Tenant: {tenant.name} Scheme: {scheme.name} missing debit or credit accounts')
-                continue
+                return
             
             if debit_account.current_balance < inv.interest_amount:
                 logger.info(f'Tenant: {tenant.name} Scheme: {scheme.name} Insufficient amount in {debit_account} account')
-                continue
+                return
 
             try:
                 with transaction.atomic():
@@ -338,16 +318,15 @@ def reduce_date(self):
                     logger.info(f'Interest transaction successful completed for: Tenant: {tenant.name} Scheme: {scheme.name}')
             except Exception as e:
                 logger.info(f'Transaction failed for: Tenant: {tenant.name} Scheme: {scheme.name}')
+                return
 
 
         ###########################################################################
         # Send Email to tenant
         try:
             if inv.interest_end_date == timezone.now().date():
-
                 # send email notification to tenant email
                 tenant_email = inv.investment_scheme.tenant.email
-
                 send_mail(
                     subject='Investment Due',
                     message= f'Investment with Invoice Number:{inv.invoice_number} and Acc No.: {inv.account_number} is due. Approve investment if funds have been recorgnised',
@@ -371,6 +350,7 @@ def reduce_date(self):
             logger.info('Investment Details Updated Succesfully')
     except Exception as e:
         logger.error(f'Error trying to update Investment Details {e}')
+        return
 
     return 'day_reduced_by_1'
 
@@ -387,16 +367,21 @@ def track_page_visits(self,user_id,path,view_name,user_ip,*args):
         user = get_object_or_404(get_user_model(), pk=int(user_id))
     except (ValueError,TypeError) as e:
         logger(f'Error {e}')
+        return
 
-    AuditTrail.objects.create(
-        user = user,
-        model_name = 'Page Visited',
-        action = 'visited',
-        object_id = user.pk,
-        changes = f'{user.username} visited:{view_name}  URL:{path} at:  {timezone.now()} IP:  {user_ip}',
-        timestamp = timezone.now(),
-        name = user.username
-    )
+    try:
+        AuditTrail.objects.create(
+            user = user,
+            model_name = 'Page Visited',
+            action = 'visited',
+            object_id = user.pk,
+            changes = f'{user.username} visited:{view_name}  URL:{path} at:  {timezone.now()} IP:  {user_ip}',
+            timestamp = timezone.now(),
+            name = user.username
+        )
+    except Exception as e:
+        logger.error(f'An error occured while creating AuditTrail: {str(e)}')
+        return
 
 
 @shared_task(bind=True)
@@ -423,8 +408,10 @@ def rollover_inv_creation(self,**kwargs):
     
     except Tenant.DoesNotExist as e:
         logger.info(e)
+        return
     except InvestmentScheme.DoesNotExist as e:
         logger.info(e)
+        return
 
     logger.info(type(rollover_rate))
     logger.info(type(rollover_principal))
@@ -466,6 +453,7 @@ def rollover_inv_creation(self,**kwargs):
             logger.info(f'Roll over for inv {inv_name} added')
     except Exception as e:
         logger.info(f'Inv Adding Error: {e}')
+        return
 
 
 # Task to calculate and add contribution to user contribution when a contribution is approved

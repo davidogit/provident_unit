@@ -10,13 +10,16 @@ urlpatterns =[
     path('<int:scheme_name>/memberList/', views.MemberListView.as_view(), name='member_list'),
     path('<int:scheme_name>/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('<int:scheme_name>/investmentDetail/<int:pk>/', views.InvestmentDetailView.as_view(), name='investment_detail'),
-    path('<int:scheme_name>/ivestment_approval/', views.InvestmentApproval.as_view(), name='investment_approval'),
+    path('<int:scheme_name>/ivestment_approval/', views.ApproveMaturedInvestment.as_view(), name='investment_approval'),
     path('<int:scheme_name>/approved_investments/', views.ApprovedInvestments.as_view(), name='approved_investments'),
     
     path('<int:scheme_name>/update/<int:pk>', views.InvestmentUpdateView.as_view(), name='investment_update'),
     path('<int:scheme_name>/deleteInvestment/<int:pk>/', views.InvestmentDeleteView.as_view(), name='delete_investment'),
-    path('<int:scheme_name>/investmentRollover/<int:pk>/', views.RolloverPercentage.as_view(), name='rollover_percentage'),
+    path('<int:scheme_name>/investmentRollover/<int:pk>/', views.RolloverInvestment.as_view(), name='rollover_percentage'),
     path('<int:scheme_name>/investment_query/', views.InvestmentQuery.as_view(), name='query'),
+
+    # Approve New Investments
+    path('<int:scheme_name>/approve_new_investments/', views.ApproveNewInvestments.as_view(), name='approve_new_investments'),
 
     # Member URLS
     # path('<int:scheme_name>/memberUpdate/<int:pk>/', views.MemberUpdateView.as_view(), name='member_update'),
@@ -37,7 +40,7 @@ urlpatterns =[
     path('access_denied/', views.AccessDenied.as_view(), name='access_denied'),
 
     # Scheme Approval
-    path('approvals/', views.ToBeApproved.as_view(), name='scheme_approval'),
+    path('approvals/', views.SchemeApplications.as_view(), name='scheme_application_approval'),
 
     # History of investments
     path('recent_activities/', views.RecentActivities.as_view(), name='recent_activities'),
@@ -102,13 +105,15 @@ urlpatterns =[
 
 
     # PURCHASE ORDER URL
-    path('purchase-orders/', views.PurschaseOrderView.as_view(), name='purchase_order'),
+    path('purchase-orders/', views.PurchaseOrderView.as_view(), name='purchase_order'),
     # received order
-    path('received-order/<slug:order_id>/', views.PurschaseOrderView.as_view(), name='receive-order'),
+    path('received-order/<slug:order_id>/', views.PurchaseOrderView.as_view(), name='receive-order'),
     #fetch order items
     path('get-order-items/<slug:order_id>/', views.FetchPurchaseOrderView.as_view(), name='fetch_order_items'),
 
     # PAYOUT INVOICE URL
     path('payout-invoice/', views.PayoutInvoiceView.as_view(), name='payout_invoice'),
     
+    # EVENT MAPPING
+    path('event_mapping/', views.EventMapping.as_view(), name='event_mapping')
 ]

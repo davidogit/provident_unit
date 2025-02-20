@@ -105,9 +105,10 @@
           if (response.status === 'success'){
 
             alert('Investment updated successfully');
-            if (response.redirect_url){
-              window.location.href=response.redirect_url;
-            }
+            window.location.reload();
+            //if (response.redirect_url){
+            //  window.location.href=response.redirect_url;
+            //}
           }else{
             alert(response.message);
           }

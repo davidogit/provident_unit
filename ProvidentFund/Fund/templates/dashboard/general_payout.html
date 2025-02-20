@@ -176,21 +176,8 @@
             e.preventDefault();
             var tenantId = '{{ request.tenant.id }}';
             var schemeId = $('#scheme').val();
-            //var payoutType = $('input[name=payout_type]:checked').val();
             var staffIds = [];
             var ref_ids = [];
-            //var bankId = $('#bank').val();
-            //var modeOfPayment = $('#mode_of_payment').val();
-
-            //if (!modeOfPayment){
-                //alert('Please select mode of payment');
-                //return;
-            //}
-
-            //if (modeOfPayment === 'Bank Transfer' && !bankId){
-                //alert('Please select bank');
-                //return;
-            //}
 
             $('input[name=staff_id]:checked').each(function(){
                 staffIds.push($(this).val());
@@ -204,20 +191,18 @@
                 alert('Please select at least one member');
                 return;
             }
-
             //Post data to the server
             $.ajax({
                 url:``,
                 type: 'POST',
                 //traditional:true, //This is to allow array to be sent to the server
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
                 data: {
                     'scheme_id': schemeId,
-                    //'payout_type': payoutType,
                     'staff_ids': staffIds,
                     'ref_ids': ref_ids,
-                    //'bank_id': bankId,
-                    //'mode_of_payment': modeOfPayment,
-                    csrfmiddlewaretoken: '{{ csrf_token }}',
                 },
                 success: function(response){
                     console.log(response);

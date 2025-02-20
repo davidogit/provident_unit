@@ -16,6 +16,7 @@
                 <div class="row g-4 d-flex flex-column justify-content-center align-items-center">
                     
                     <div class="col-12">
+                        {% if 'Finance Analyst' in user_groups %}
                         <div class="requisition-form border p-3 rounded position-relative">
                             <form action="" method="POST" id="requisition-form">
                                 {% csrf_token %}
@@ -36,11 +37,6 @@
                                         <label for="description">Description</label>
                                     </div>
 
-                                    <!-- <div class="form-floating col-12 col-md-4">
-                                        <input type="number" name="payout_percentage" step="0.01" id="payout_percentage" class="form-control" placeholder="">
-                                        <label for="payout_percentage" class="form-label">Payout Percentage</label>
-                                    </div> -->
-
                                     <!-- submit button -->
                                     <div class="col-12 col-md-4">
                                         <button class="btn btn-outline-primary btn-lg save_mapping w-100" type="submit">Add</button>
@@ -49,6 +45,7 @@
 
                             </form>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -66,8 +63,11 @@
                                         <th>Description</th>
                                         <th>Total Amount</th>
                                         <th>Date</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
+                                        <th>Status<th>        
+                                        <!-- <th>Action</th> -->
+                                        {% if 'Finance Manager' in user_groups %}
+                                        <th>Approve</th>
+                                        {% endif %}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -75,7 +75,7 @@
                                     <tr class="requisition-row">
                                         <td class="text-start align-middle">{{ requisition.supplier.name }}</td>
                                         <td class="text-start align-middle">{{ requisition.description }}</td>
-                                        <td class="text-start align-middle">{{ requisition.total_amount }}</td>
+                                        <td class="text-start align-middle total_amount">{{ requisition.total_amount }}</td>
                                         <td class="text-start align-middle">{{ requisition.date_created }}</td>
                                         <td class="text-start align-middle">
                                             {% if requisition.approved %}
@@ -84,16 +84,26 @@
                                                 <span class="badge bg-warning">Pending</span>
                                             {% endif %}
                                         </td>
-                                        <td class="d-flex flex-row justify-content-start">
+                                        <td class="d-flex flex-row justify-content-center">
                                             <button class="btn btn-link p-0 view-items" data-requisition-id="{{ requisition.id }}" data-bs-toggle="modal" data-bs-target="#itemModal">
-                                                <i class="ri-add-circle-fill fs-3"></i>
+                                                <i class="ri-eye-line fs-3"></i>
                                             </button>
+                                            {% if 'Finance Analyst' in user_groups %}
                                             <div class="col-2 text-start">
                                                 <button class="btn btn-link p-0 delete-requisition" data-requisition-id="{{ requisition.id }}">
                                                     <i class="ri-delete-bin-2-line fs-3" style="color: red;"></i>
                                                 </button>
                                             </div>
+                                            {% endif %}
                                         </td>
+
+                                        {% if 'Finance Manager' in user_groups %}
+                                        <td class="text-start align-middle">
+                                            <button class="approve-requisition btn btn-outline-secondary btn" data-requisition-id="{{ requisition.id }}">
+                                                Approve
+                                            </button> 
+                                        </td>
+                                        {% endif %}
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -104,7 +114,7 @@
                                 <div class="modal-dialog modal-dialog-centered modal-lg">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title" id="itemModalLabel">Item Details</h5>
+                                            <h5 class="modal-title" id="itemModalLabel">Items</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body overflow-auto" style="max-height: 400px;">
@@ -116,7 +126,9 @@
                                                             <th>Quantity</th>
                                                             <th>Amount</th>
                                                             <th>Total</th>
+                                                            {% if 'Finance Analyst' in user_groups %}
                                                             <th>Action</th>
+                                                            {% endif %}
                                                         </tr>
                                                     </thead>
                                                     <tbody class="modal-item-body">
@@ -138,20 +150,15 @@
                                                     </div>
                                                 </div>
                                                 <div class="row d-flex flex-row justify-content-between">
-                                                    {% if is_manager %}
-                                                    <div class="col-6 text-start">
-                                                        <button class="approve-requisition btn btn-outline-secondary btn" data-requisition-id="{{ requisition.id }}">
-                                                            Approve
-                                                        </button> 
-                                                    </div>
-                                                    {% endif %}
                                                 </div>
                                             </div>
 
+                                            {% if 'Finance Analyst' in user_groups %}
                                             <div>
                                                 <button type="button" class="btn btn-outline-secondary add-item">Add Item</button>
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                             </div>
+                                            {% endif %}
                                             
                                         </div>
                                     </div>
@@ -204,12 +211,14 @@
                                         align-middle">${ item.amount }</td>
                                         <td class="text-start
                                         align-middle">${ item.total_cost }</td>
+                                        {% if 'Finance Analyst' in user_groups %}
                                         <td class="text-start
                                         align-middle">
                                             <button class="btn btn-link delete-requisition-item" data-item-id="${ item.id }" data-requisition-id="${ req_id }">
                                                 <i class="ri-close-circle-fill fs-5 text-danger"></i>
                                             </button>
                                         </td>
+                                        {% endif %}
                                     </tr>
                                 `
                                 tableBody.append(row);

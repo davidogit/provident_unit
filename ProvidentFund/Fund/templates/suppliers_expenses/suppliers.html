@@ -16,6 +16,7 @@
                 <div class="row g-4 d-flex flex-column justify-content-center align-items-center">
                     
                     <div class="col-12">
+                        {% if 'Finance Analyst' in user_groups %}
                         <div class="border p-3 rounded position-relative">
                             <form action="" method="POST" id="supplier-form">
                                 {% csrf_token %}
@@ -62,6 +63,7 @@
                                 </div>
                             </form>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -80,7 +82,9 @@
                                 <th>Bank</th>
                                 <th>Account</th>
                                 <th>Branch</th>
+                                {% if 'Finance Analyst' in user_groups %}
                                 <th>Actions</th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -93,6 +97,8 @@
                                 <td contenteditable="false" class="editable" data-field="bank">{{ supplier.bank }}</td>
                                 <td contenteditable="false" class="editable" data-field="account_number">{{ supplier.account_number }}</td>
                                 <td contenteditable="false" class="editable" data-field="branch">{{ supplier.branch }}</td>
+
+                                {% if 'Finance Analyst' in user_groups %}
                                 <td>
                                     <button class="delete-supplier btn btn-warning btn-sm" data-id="{{ supplier.id }}" data-supplier_name="{{ supplier.name }}" style="display: inline;">
                                         <i class="ri-delete-bin-2-line"></i>
@@ -107,6 +113,7 @@
                                         <i class="ri-close-circle-line"></i>
                                     </button>
                                 </td>
+                                {% endif %}
                             </tr>
                             {% endfor %}
                         </tbody>

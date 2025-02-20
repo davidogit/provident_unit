@@ -1,0 +1,84 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}
+<title>Approve New Investments</title>
+{% endblock %}
+{% block header %}
+<h5>Approve New Investments</h5>
+{% endblock %}
+
+{% block content %}
+<!-- Table for investments -->
+<div class="main main-app p-3 p-lg-4">
+  <div class="row row-cols-auto g-4 g-xxl-5">
+    <div class="col-xl">
+        <div class="container">
+            <table class="table table-hover table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Invoice Number</th>
+                        <th>Investment Type</th>
+                        <th>Investment Name</th>
+                        <th>Account Type</th>
+                        <th>Principal Amount</th>
+                        <th>Account Number</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for investment in new_investment_list %}
+                    <tr>
+                        <td>{{ forloop.counter|default:0 }}</td>
+                        <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
+                        <td>{{ investment.investment_type }}</td>
+                        <td>{{ investment.account_name }}</td>
+                        <td>{{ investment.account_type }}</td>
+                        <td>{{ investment.principal_amount }}</td>
+                        <td>{{ investment.account_number }}</td>
+                        <td class="text-center">
+                            <button  class="btn btn-primary approve_investment" data-inv_id = "{{ investment.id }}">Approve</button>
+                            <button class="btn btn-danger">Reject</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+  </div>
+<script>
+    $(document).ready(function(){
+        $('.approve_investment').on('click', function(e){
+            e.preventDefault();
+
+            if (!confirm('Are you sure you want to approve this investment?')){
+                return;
+            }
+
+            var inv_id = $(this).data('inv_id');
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: {
+                    'inv_id': inv_id,
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    if (response.status === 'success'){
+                        alert('Investment approved successfully');
+                        //$(this).closest('tr').remove();
+                        window.location.reload();
+                    } else {
+                        alert('Failed to approve investment');
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                }
+            });
+        });
+    })
+</script>
+{% endblock %}
