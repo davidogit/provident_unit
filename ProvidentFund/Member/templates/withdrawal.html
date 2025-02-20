@@ -36,7 +36,7 @@
                 required
               />
               <small class="form-text text-muted">
-                Available balance: <span id="availableBalance">GHS 0.00</span>
+                Available balance: GHS<span id="availableBalance"> </span>
               </small>
             </div>
 
@@ -56,27 +56,33 @@
 
 <script>
   // Fetch and display available balance when scheme is selected
-  document.getElementById("scheme-type").addEventListener("change", function () {
-    const schemeId = this.value;
-    if (!schemeId) return;
-  
-    fetch(`${window.location.pathname}get-balance/?scheme_id=${schemeId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.status === "success") {
-          document.getElementById("availableBalance").textContent = `GHS ${data.balance.toFixed(2)}`;
-        } else {
-          console.error("Error fetching balance:", data.message);
+  $(document).ready(function(){
+    $('#scheme-type').on('change', function(){
+      var schemeId = $(this).val();
+      var staff_id = "{{request.user.member.staff_id}}"
+      console.log(staff_id)
+      var tenant = "{{request.tenant.id}}"
+      var url = `/${tenant}/members/get-balance/${schemeId}/${staff_id}/`
+      console.log(url)
+      $.ajax({
+        type: 'GET',
+        url: url,
+        success: function(response) {
+          console.log(response)
+          if (response.status==="success"){
+           
+            $('#availableBalance').text(response.balance); 
+          }else{
+            $('#availableBalance').text("0.00"); 
+          }
+        },
+        error: function(xhr, status, error) {
+          console.log(xhr.response.message)
         }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
+
+
       });
+    });
   });
   
   // Handle withdrawal request submission

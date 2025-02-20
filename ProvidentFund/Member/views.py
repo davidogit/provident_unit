@@ -824,7 +824,7 @@ class CreateTransactionView(View):
                     reference=reference
                 )
 
-                staff.total_contribution = F('contributions') + amount
+                staff.contributions = F('contributions') + amount
                 staff.save(update_fields=['contributions'])
 
                 history_url = reverse('transaction_history', kwargs={
@@ -975,14 +975,14 @@ class WithdrawalView(View):
                 staff = StaffAPI.objects.get(staff_number=member.staff_id)
 
                 # Check if the user has sufficient balance
-                balance = WithdrawalRequest.objects.filter(
-                    tenant=tenant,
-                    staff=staff,
-                    scheme=scheme
-                ).aggregate(balance=models.Sum('amount'))['balance'] or 0
-
-                if balance < amount:
-                    return JsonResponse({'status': 'error', 'message': 'Insufficient balance.'}, status=400)
+                # balance = WithdrawalRequest.objects.filter(
+                #     tenant=tenant,
+                #     staff=staff,
+                #     scheme=scheme
+                # ).aggregate(balance=models.Sum('amount'))['balance'] or 0
+                # print(balance)
+                # if balance < amount:
+                #     return JsonResponse({'status': 'error', 'message': 'Insufficient balance.'}, status=400)
 
                 # Create a withdrawal request
                 withdrawal_request = WithdrawalRequest.objects.create(
@@ -990,7 +990,7 @@ class WithdrawalView(View):
                     staff=staff,
                     scheme=scheme,
                     amount=amount,
-                    approved=False,
+                    # approved=False,
                     request_date=timezone.now(),
                 )
 
@@ -1078,117 +1078,119 @@ class WithdrawalView(View):
 
 
 
-class ManagerApprovalView(View):
-    template_name = 'manager/approval_list.html'
+# class ManagerApprovalView(View):
+#     template_name = 'manager/approval_list.html'
 
-    def get(self, request, *args, **kwargs):
-        # Fetch pending withdrawal requests
-        pending_requests = WithdrawalRequest.objects.filter(approved=False)
+#     def get(self, request, *args, **kwargs):
+#         # Fetch pending withdrawal requests
+#         pending_requests = WithdrawalRequest.objects.filter(approved=False)
 
-        context = {
-            'pending_requests': pending_requests,
-        }
-        return render(request, self.template_name, context)
+#         context = {
+#             'pending_requests': pending_requests,
+#         }
+#         return render(request, self.template_name, context)
 
-    def post(self, request, *args, **kwargs):
-        try:
-            data = json.loads(request.body)
-            withdrawal_id = data.get('withdrawal_id')
-            action = data.get('action')
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             data = json.loads(request.body)
+#             withdrawal_id = data.get('withdrawal_id')
+#             action = data.get('action')
 
-            # Validate input
-            if not withdrawal_id or not action:
-                return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
+#             # Validate input
+#             if not withdrawal_id or not action:
+#                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
-            # Retrieve the withdrawal request
-            withdrawal_request = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
+#             # Retrieve the withdrawal request
+#             withdrawal_request = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
 
-            if action == 'approve':
-                # Approve the withdrawal request
-                withdrawal_request.approved = True
-                withdrawal_request.approval_date = timezone.now()
-                withdrawal_request.save()
+#             if action == 'approve':
+#                 # Approve the withdrawal request
+#                 withdrawal_request.approved = True
+#                 withdrawal_request.approval_date = timezone.now()
+#                 withdrawal_request.save()
 
-                # Process payment if needed
-                self.process_payment(withdrawal_request)
+#                 # Process payment if needed
+#                 self.process_payment(withdrawal_request)
 
-            elif action == 'reject':
-                # Reject the withdrawal request
-                withdrawal_request.approved = False
-                withdrawal_request.save()
+#             elif action == 'reject':
+#                 # Reject the withdrawal request
+#                 withdrawal_request.approved = False
+#                 withdrawal_request.save()
 
-                # Optionally refund the amount to the user's estimated profit
-                staff = withdrawal_request.staff
-                staff.estimated_profit += withdrawal_request.amount
-                staff.save()
+#                 # Optionally refund the amount to the user's estimated profit
+#                 staff = withdrawal_request.staff
+#                 staff.estimated_profit += withdrawal_request.amount
+#                 staff.save()
 
-            else:
-                return JsonResponse({'status': 'error', 'message': 'Invalid action.'}, status=400)
+#             else:
+#                 return JsonResponse({'status': 'error', 'message': 'Invalid action.'}, status=400)
 
-            return JsonResponse({'status': 'success', 'message': 'Withdrawal request updated successfully.'})
+#             return JsonResponse({'status': 'success', 'message': 'Withdrawal request updated successfully.'})
 
-        except Exception as e:
-            logger.error(f"Error in ManagerApprovalView: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+#         except Exception as e:
+#             logger.error(f"Error in ManagerApprovalView: {str(e)}")
+#             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-    def process_payment(self, withdrawal_request):
-        """
-        Process payment for an approved withdrawal request.
-        """
-        try:
-            # Add payment processing logic here (e.g., MoMo, bank transfer)
-            logger.info(f"Processing payment for withdrawal request ID: {withdrawal_request.id}")
-            # Simulate payment success
-        except Exception as e:
-            logger.error(f"Error processing payment: {str(e)}")
-            raise
+#     def process_payment(self, withdrawal_request):
+#         """
+#         Process payment for an approved withdrawal request.
+#         """
+#         try:
+#             # Add payment processing logic here (e.g., MoMo, bank transfer)
+#             logger.info(f"Processing payment for withdrawal request ID: {withdrawal_request.id}")
+#             # Simulate payment success
+#         except Exception as e:
+#             logger.error(f"Error processing payment: {str(e)}")
+#             raise
 
 
 
 
 class GetBalanceView(View):
-    def get(self, request, tenant_id, staff_id, *args, **kwargs):
-        scheme_id = request.GET.get('scheme_id')
-
-        if not scheme_id:
-            return JsonResponse(
-                {'status': 'error', 'message': 'Scheme ID is required.'},
-                status=400
-            )
-
+    def get(self, request, *args, **kwargs):
+        scheme_id = self.kwargs["scheme_id"]
+        staff_id = self.kwargs["staff_id"]
+        tenant = self.request.tenant
         try:
-            # Fetch the investment scheme
-            scheme = InvestmentScheme.objects.get(id=scheme_id)
+            staff = StaffAPI.objects.get(staff_number=int(staff_id), tenant=tenant)
+        except ObjectDoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Staff not found'}, status=404)
+        print("tenant:",tenant)
+       
+        try:
+        # Fetch the investment scheme
+            scheme = InvestmentScheme.objects.get(id=scheme_id, tenant=tenant)
 
+        except ObjectDoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Investment scheme not found.'})
+        
+        except Exception as e:
+            logger.error(f"Error in GetBalanceView: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': 'An error occured'})
+        try:
+        
             # Validate if the staff_id matches a valid Membership
             membership = Membership.objects.filter(
+                tenant=tenant,
                 scheme=scheme,
-                staff__id=staff_id
+                staff=staff
             ).first()
-
-            if not membership:
-                return JsonResponse(
-                    {'status': 'error', 'message': 'No membership found for this staff.'},
-                    status=404
-                )
-
-            # Calculate the available balance
-            available_balance = membership.total_earnings
-
-            return JsonResponse({
-                'status': 'success',
-                'scheme_name': scheme.name,
-                'balance': float(available_balance)
-            })
-
-        except InvestmentScheme.DoesNotExist:
-            return JsonResponse(
-                {'status': 'error', 'message': 'Invalid scheme ID.'},
-                status=400
-            )
-
+            print("staff_id:",staff)
+        except ObjectDoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Membership not found.'})
+        
         except Exception as e:
-            return JsonResponse(
-                {'status': 'error', 'message': str(e)},
-                status=500
-            )
+            logger.error(f"Error in GetBalanceView: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': 'An error occured'})
+        
+
+        # Calculate the available balance
+        available_balance = membership.total_earnings
+
+        return JsonResponse({
+            'status': 'success',
+            'balance': Decimal(available_balance)
+        })
+
+
+    

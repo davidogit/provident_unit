@@ -54,6 +54,7 @@ class OptOutMemberView(View):
         tenant = self.request.tenant
         scheme_id = request.scheme_name
         
+        
         try:
             member = get_object_or_404(StaffAPI, pk=member_id,tenant=tenant)
 
@@ -68,6 +69,7 @@ class OptOutMemberView(View):
         return JsonResponse({'status': 'success', 'message':'Successful removed staff from scheme', 'redirect_url':redirect_url}, status=200)
 
     def send_opt_out_email(self, member):
+        recipient_email = member.email if member.email else 'providentfund@example.com' #fallback mail incase of no email
         html_message = loader.render_to_string(
             'contributions/message.html',
             {
@@ -79,7 +81,7 @@ class OptOutMemberView(View):
             subject='Notification Mail!',
             message='',  # Empty because we are sending html_message
             from_email=EMAIL_HOST_USER,
-            recipient_list=['dave21620@gmail.com'],
+            recipient_list=[recipient_email],
             html_message=html_message,
             fail_silently=False,
         )
