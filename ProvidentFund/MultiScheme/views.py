@@ -32,7 +32,10 @@ class SchemeList(ListView):
         
         # Filter Schemes based on tenant
         if tenant:
-            return InvestmentScheme.objects.filter(tenant=tenant)
+            return InvestmentScheme.objects.filter(
+                tenant=tenant,
+                approved=True
+            )
         else:
             return InvestmentScheme.objects.none()
 

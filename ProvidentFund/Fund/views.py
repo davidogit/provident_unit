@@ -256,7 +256,8 @@ class InvestmentDetailView(DetailView):
         try:
             scheme = InvestmentScheme.objects.filter(
                 tenant=tenant,
-                id = scheme_id
+                id = scheme_id,
+                approved=True
             ).prefetch_related('account_mapping').first()
         except Exception:
             return JsonResponse({
@@ -376,7 +377,8 @@ class AddInvestment(CreateView):
 
         scheme = InvestmentScheme.objects.filter(
             id=scheme_name,
-            tenant=tenant
+            tenant=tenant,
+            approved=True
         ).prefetch_related('account_mapping').first()
 
         if not scheme:
@@ -568,7 +570,8 @@ class RolloverInvestment(TemplateView):
         # Make sure mappings exist before we proceed further
         scheme = InvestmentScheme.objects.filter(
             id=scheme_id,
-            tenant=tenant
+            tenant=tenant,
+            approved=True
         ).prefetch_related('account_mapping').first()
 
         if not scheme:
@@ -1001,7 +1004,7 @@ class DelayedInterestListView(ListView):
 
         # Fetch investment scheme
         scheme = InvestmentScheme.objects.filter(
-            id=scheme_id, tenant=tenant
+            id=scheme_id, tenant=tenant, approved=True
         ).prefetch_related('delayed_interest', 'account_mapping').first()
 
         if not scheme:
@@ -1171,7 +1174,7 @@ class ApproveMaturedInvestment(ListView):
         scheme_id = request.scheme_name
         tenant_id = tenant.id
 
-        scheme = InvestmentScheme.objects.filter(tenant=tenant,id=scheme_id).prefetch_related('account_mapping').first()
+        scheme = InvestmentScheme.objects.filter(tenant=tenant,id=scheme_id,approved=True).prefetch_related('account_mapping').first()
 
         # Check if 'investment_id' is provided
         if not inv_id:
@@ -1422,7 +1425,9 @@ class ApproveContributions(TemplateView):
 
         scheme = InvestmentScheme.objects.filter(
             id=scheme_id,
-            tenant=tenant).prefetch_related('account_mapping').first()
+            tenant=tenant,
+            approved=True
+        ).prefetch_related('account_mapping').first()
         
         if not scheme:
             return JsonResponse({
@@ -1675,7 +1680,12 @@ class ApproveExitedMembers(TemplateView):
                         staff = get_object_or_404(StaffAPI,tenant=tenant,Id=staff_id)
 
                         # Scheme to remove from member list of schemes
-                        scheme_to_remove = get_object_or_404(InvestmentScheme, tenant=tenant,id=scheme_id)
+                        scheme_to_remove = get_object_or_404(
+                            InvestmentScheme,
+                            tenant=tenant,
+                            id=scheme_id,
+                            approved=True
+                        )
 
                         # Remove schemes and save staff instance
                         staff.investment_scheme.remove(scheme_to_remove)
@@ -1797,7 +1807,10 @@ class MassMemberUpload(CreateView ):
                             # Fetch related schemes
                             try:
                                 # Fetch related schemes
-                                schemes = InvestmentScheme.objects.filter(tenant=tenant, id__in=scheme_id)
+                                schemes = InvestmentScheme.objects.filter(
+                                    tenant=tenant, id__in=scheme_id,
+                                    approved=True
+                                )
 
                                 # Assign scheme to member
                                 member.investment_scheme.add(*schemes) #use list upacking to pass objects one by one
@@ -1871,7 +1884,8 @@ class GeneralPayoutView(TemplateView):
         try:
             scheme = InvestmentScheme.objects.get(
                 id = scheme_id,
-                tenant = tenant
+                tenant = tenant,
+                approved=True
             )
         except Exception as e:
             logger.info(f'Scheme not found: {str(e)}')
@@ -2003,7 +2017,8 @@ class GeneralPayoutView(TemplateView):
         tenant = self.request.tenant
         
         context['schemes'] = InvestmentScheme.objects.filter(
-            tenant=tenant
+            tenant=tenant,
+            approved=True
         )
 
         return context
@@ -2026,7 +2041,8 @@ class FetchWithdrawalRequests(View):
         try:
             scheme = InvestmentScheme.objects.filter(
                 id=scheme_id,
-                tenant=tenant
+                tenant=tenant,
+                approved=True
             ).first()
 
             if not scheme:
@@ -2413,7 +2429,8 @@ class SchedulePaymentDateView(TemplateView):
         try:
             scheme = InvestmentScheme.objects.get(
                 id=scheme_id,
-                tenant=tenant
+                tenant=tenant,
+                approved=True
             )
         except ObjectDoesNotExist:
             return JsonResponse({
@@ -2466,7 +2483,8 @@ class SchedulePaymentDateView(TemplateView):
         if tenant:
             try:
                 schemes = InvestmentScheme.objects.filter(
-                    tenant=tenant
+                    tenant=tenant,
+                    approved=True
                 ).prefetch_related('scheduledPaymentDate').order_by('-created_date')
                 # print(f'Payout Dates: {schemes.scheduledPaymentDate}')
             except InvestmentScheme.DoesNotExist:
