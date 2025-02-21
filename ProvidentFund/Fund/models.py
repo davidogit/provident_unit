@@ -664,12 +664,15 @@ class PurchaseOrder(models.Model):
 # Purchase Payment Invoice
 class PaymentInvoice(models.Model):
     invoice_number = models.CharField(
-        max_length=255
+        max_length=255,
+        unique=True,
+        primary_key=True
     )
-    purchase_order = models.OneToOneField(
+    purchase_order = models.ForeignKey(
         PurchaseOrder,
         on_delete=models.DO_NOTHING,
         null=False,
+        related_name='payment_invoice'
     )
     amount = models.DecimalField(
         max_digits=15,
@@ -680,6 +683,13 @@ class PaymentInvoice(models.Model):
         Suppliers,
         on_delete=models.DO_NOTHING,
         null=False
+    )
+    created_date = models.DateTimeField(
+        auto_now_add=True,
+        null=True
+    )
+    approved = models.BooleanField(
+        default=False
     )
 
     def save(self,*args,**kwargs):
@@ -724,6 +734,12 @@ class ReceivedItems(models.Model):
         decimal_places=2,
         null=True,
         blank=True
+    )
+    amount_to_pay = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        default=Decimal(0.0)
     )
 
     def save(self,*args,**kwargs):

@@ -1,0 +1,137 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}
+<title>Invoice Approval</title>
+{% endblock %}
+
+{% block header %}
+<h5>Invoice Approval</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
+        <div class="col-12">
+            <div class="container">
+                <!-- Table to hold list of members payments to be processed -->
+                <div class="table-responsive overflow-auto">
+                    <table class="table table-bordered table-striped" id="members_table">
+                        <thead class="thead-light text-center">
+                            <th>
+                                <!-- <input type="checkbox" name="select_all" id="select_all"> -->
+                            </th>
+                            <th>Invoice ID</th>
+                            <th>Purchase Desc.</th>
+                            <th>Supplier</th>
+                            <th>Amount</th>
+                            <th>Date Created</th>
+                            <th>Action</th>
+                        </thead>
+                        <tbody class="text-center">
+                            {% if invoice_list %}
+                            {% for invoice in invoice_list %}
+                            <tr>
+                                <td>
+                                    {{ forloop.counter }}
+                                </td>
+                                <td>{{ invoice.invoice_number }}</td>
+                                <td>{{ invoice.purchase_order.requisition.description }}</td>
+                                <td>{{ invoice.supplier.name }}</td>
+                                <td>{{ invoice.amount }}</td>
+                                <td>{{ invoice.created_date }}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-outline-success approve-invoice" data-invoice-id="{{ invoice.invoice_number }}">Approve</button>
+                                </td>
+
+                                
+                            </tr>
+                            {% endfor %}
+
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No pending invoice approval available</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination --> 
+                <div class="pagination-container row position-sticky bottom-0">
+                    <div class="col-12 d-flex justify-content-center ">
+                        {% if is_paginated %}
+                        <nav aria-label="Page navigation example">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                <a
+                                    class="page-link"
+                                    href="?page={{ page_obj.previous_page_number }}"
+                                    aria-label="Previous"
+                                >
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                                </li>
+                                {% endif %}
+                
+                                <li class="page-item">
+                                <a class="page-link" href="#">{{ page_obj.number }}</a>
+                                </li>
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                <a
+                                    class="page-link"
+                                    href="?page={{ page_obj.next_page_number }}"
+                                    aria-label="Next"
+                                >
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                                </li>
+
+                                <li class="page-link">
+                                    <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('.approve-invoice').on('click', function(e){
+            var invoice_number = $(this).data('invoice-id');
+            var button = $(this);
+            if (!confirm('Are you sure you want to approve this invoice?')){
+                return;
+            }
+
+            $.ajax({
+                url:'',
+                type:'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                data: {
+                    'invoice_number': invoice_number
+                },
+                success:function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        button.closest('tr').remove();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error:function(jqXHR){
+                    message = jqXHR.responseJSON.message || 'An error occured';
+                    console.log(message)
+                    alert('An error occured' + message);
+                }
+            })
+        });
+    });
+</script>
+
+{% endblock %}

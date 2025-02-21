@@ -83,9 +83,16 @@ def fetch_memberships(self):
                             # check if the incoming contribution of a member belongs to the current scheme in loop
                             scheme_id = contribution_data.get('scheme_id')
                             try:
-                                scheme = InvestmentScheme.objects.get(id=scheme_id)
+                                scheme = InvestmentScheme.objects.get(
+                                    id=scheme_id,
+                                    tenant=tenant,
+                                    approved=True
+                                )
                             except ObjectDoesNotExist:
                                 logger.info(f'Scheme with id:{scheme_id} not found')
+                                continue
+                            except Exception as e:
+                                logger.info(f'An error occured: {str(e)}')
                             
 
                             # Get staff 
@@ -98,6 +105,8 @@ def fetch_memberships(self):
                                     contribution_date = datetime.strptime(contribution_date, '%Y-%m-%d').date()
                                 except ValueError:
                                     raise ValidationError(f"Invalid date format: {contribution_date}")
+                                except Exception as e:
+                                    logger.info(f'An error occured: {str(e)}')
                                 
                             # create a contribution 
                             Contribution.objects.create(
@@ -112,12 +121,20 @@ def fetch_memberships(self):
                                 contribution_date=contribution_data['contribution_date'],
                             )
                     except ValidationError as e:
-                        print(f'Validation error: {e}')
+                        logger.info(f'Validation error: {e}')
+                        continue
+                    except Exception as e:
+                        logger.info(f'An error occured: {str(e)}')
 
             except requests.exceptions.RequestException as exc:
                 # Retry the task if there's a network error or other request-related issues
                 logger.info(f'There was an error contacting server')
                 # raise self.retry(exc=exc, countdown=30)
+                continue
+            except Exception as e:
+                logger.info(f'An error occured: {str(e)}')
+                continue
                 
     except MaxRetriesExceededError as exc:
         print(f"Max retries exceeded")
+        return

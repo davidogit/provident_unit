@@ -113,6 +113,10 @@ urlpatterns =[
 
     # PAYOUT INVOICE URL
     path('payout-invoice/', views.PayoutInvoiceView.as_view(), name='payout_invoice'),
+    # Fetch order for payment
+    path('fetch-purchase-order/<slug:order_id>/', views.FetchPurchaseOrderForPayment.as_view(), name="fetch_order_for_payment"),
+    # Approve Invoice
+    path('approve-invoice/', views.InvoiceApproval.as_view(), name='approve_invoice'),
     
     # EVENT MAPPING
     path('event_mapping/', views.EventMapping.as_view(), name='event_mapping')

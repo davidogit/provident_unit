@@ -16,3 +16,10 @@ def generate_short_alpha_numeric_id(model, length=12):
         # Check if the generated ID is unique
         if not model.objects.filter(id=gen_id).exists():
             return gen_id
+def generate_purchase_invoice_number(model, length=12):
+    while True:
+        # Generate a random alphanumeric string of the specified length
+        gen_id = ''.join(random.choices(string.digits + string.ascii_lowercase, k=length))
+        # Check if the generated ID is unique
+        if not model.objects.filter(invoice_number=gen_id).exists():
+            return gen_id

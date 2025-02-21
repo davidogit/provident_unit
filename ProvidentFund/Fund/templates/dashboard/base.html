@@ -95,6 +95,11 @@
             <a href="{% url 'payment_history' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-history-line fs-32 lh-1 me-3"></i> <span>Payment History</span></a>
           </li>
           {% endif %}
+          {% if 'Finance Manager' in user_groups %}
+          <li class="nav-item">
+            <a href="{% url 'approve_invoice' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-history-line fs-32 lh-1 me-3"></i> <span>Invoice Approval</span></a>
+          </li>
+          {% endif %}
         </ul>
         {% endif %}
       </div><!--nav-group -->

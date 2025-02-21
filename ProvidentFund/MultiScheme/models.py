@@ -211,6 +211,7 @@ class TenantEventNotification(models.Model):
         ('withdrawal_second_approval','second level approval of withdrawal request'),
         ('withdrawal_third_approval','third level approval of withdrawal request'),
         ('approve_scheduled_date','approve scheduled date'),
+        ('approve_invoice', 'approve invoice')
     ]
     event = models.CharField(
         max_length=255,

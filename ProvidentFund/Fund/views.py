@@ -31,7 +31,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
 from Chart_of_Accounts.models import BankAccount
 from Fund.tasks import calculate_staff_contribution
-from Fund.generate_invoice import generate_short_alpha_numeric_id
+from Fund.generate_invoice import generate_short_alpha_numeric_id,generate_purchase_invoice_number
 from Admin.models import User
 import openpyxl
 from django.db import transaction
@@ -76,49 +76,35 @@ class Invest(TemplateView):
             tenant=tenant,
             approved=True
         ).prefetch_related('member')
-        try:
-            interest_query = InvestmentDetail.objects.filter(
-                investment_scheme__tenant=tenant,
-                approved=True
-            )
-        except:
-            interest_query = None
+
+        interest_query = InvestmentDetail.objects.filter(
+            investment_scheme__tenant=tenant,
+            investment_scheme__approved=True,
+            approved=True
+        )
+        if not interest_query:
+            interest_query = InvestmentDetail.objects.none()
         # Total Interest - Estimated and Actual
-        try:
-            estimated_amount = interest_query.filter(approval_status=False).aggregate(total = Sum('interest_amount'))['total'] or Decimal(0.0) if interest_query else 0.0
+
+        estimated_amount = interest_query.filter(approval_status=False).aggregate(total=Sum('interest_amount'))['total'] or Decimal(0.0) if interest_query else 0.0
             
-            context['total_interest'] = estimated_amount
-        except:
-            context['total_interest'] = Decimal(0.0)
+        context['total_interest'] = estimated_amount
 
-        try: 
-            actual_revenue = interest_query.filter(approval_status=True, _status='Expired').aggregate(total = Sum('interest_amount'))['total'] or Decimal(0.0)
+        actual_revenue = interest_query.filter(approval_status=True, _status='Expired').aggregate(total=Sum('interest_amount'))['total'] or Decimal(0.0)
 
-            context['actual_revenue'] =  actual_revenue
-        except:
-            context['actual_revenue'] = Decimal(0.0)
+        context['actual_revenue'] =  actual_revenue
 
         # Active Investments
-        try:
-            context['active_inv'] = interest_query.count()
-        except:
-            context['active_inv'] = Decimal(0.0)
+        context['active_inv'] = interest_query.count()
 
         # Active Members
-    
         context['active_members'] = tenant.staff_api.count()
 
         # Bank Interest Rates
-        try:
-            context['interest_rates'] = BankInterestRate.objects.all()
-        except:
-            context['interest_rates'] = []
+        context['interest_rates'] = BankInterestRate.objects.all()
 
         # Available Investment Schemes
-        try:
-            context['investment_scheme'] = schemes
-        except:
-            context['investment_scheme'] = []
+        context['investment_scheme'] = schemes
 
         # Gender Enrollment in Each Scheme
         gender_counts_by_scheme = {}
@@ -3151,7 +3137,10 @@ class PurchaseOrderView(ListView):
                 # Update number of received items
                 received_items.number_of_items_received += total_quantity_received
                 # update balance left
-                received_items.balance -= sum(Decimal(a) for a in amount_list)
+                amount = sum(Decimal(a) for a in amount_list)
+                received_items.balance -= amount
+                # Update the amount_to_pay field
+                received_items.amount_to_pay += amount
 
                 # save changes
                 received_items.save()
@@ -3233,6 +3222,178 @@ class FetchPurchaseOrderView(View):
 class PayoutInvoiceView(TemplateView):
     template_name = 'suppliers_expenses/payout_invoice.html'
 
+    def post(self,*args,**kwargs):
+        tenant =  self.request.tenant
+        order_id = self.request.POST.get('order_number')
+        supplier_invoice_amount = self.request.POST.get('supplier_invoice_amount')
+        if not order_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid order ID.'
+            })
+        
+        if not tenant:
+            return JsonResponse({
+                'status':'error',
+                'message':'Bad request.'
+            })
+        
+        try:
+            purchase_order = PurchaseOrder.objects.get(
+                requisition__tenant=tenant,
+                id=order_id,
+            )
+            # check if requested amount is less than the amount to be paid
+            receieved_items_object = purchase_order.received_items
+            if not receieved_items_object:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'This purchase order has not been received yet.'
+                })
+            
+            if Decimal(supplier_invoice_amount) > receieved_items_object.amount_to_pay:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Supplier amount cannot be greater than the expected amount to pay.'
+                })
+            
+            # Create invoice on system to be used for payment
+            try:
+                PaymentInvoice.objects.create(
+                    invoice_number=generate_purchase_invoice_number(PaymentInvoice),
+                    purchase_order=purchase_order,
+                    amount=Decimal(supplier_invoice_amount),
+                    supplier=purchase_order.requisition.supplier
+                )
+                # Update amount_to_pay field by subtrating invoice amount to be paid
+                receieved_items_object.amount_to_pay -= Decimal(supplier_invoice_amount)
+                # Save update
+                receieved_items_object.save()
+                # Notify who is in charge of invoice payment.
+
+                return JsonResponse({
+                    'status':'success',
+                    'message':'Invoice created successfuly. Payment will be initiated once invoice is cleared.'
+                })
+            except Exception as e:
+                logger.info(f'An error occured while creating an invoice for Tenant: {tenant} Purchase Order: {purchase_order.id} || Error: {str(e)}')
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Invoice could not be created now, please try again later and contact Admin if issue persists. {str(e)}'
+                })
+
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Purchase order does not exist.'
+            })
+        except Exception as e:
+            logger.info(f'An error occured: {str(e)}')
+            print(f'An error occured: {str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'A server side error occured. {str(e)}'
+            })
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager']), name='dispatch')
+class InvoiceApproval(ListView):
+    model = PaymentInvoice
+    template_name = 'suppliers_expenses/approve_invoice.html'
+    context_object_name = 'invoice_list'
+    paginate_by = 10
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return PaymentInvoice.objects.filter(
+            purchase_order__requisition__tenant=tenant,
+            approved=False,
+        ).order_by('-created_date')
+
+    def post(self,*args,**kwargs):
+        invoice_number = self.request.POST.get('invoice_number')
+
+        if not invoice_number:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid or no invoice number found.'
+            })
+        
+        try:
+            invoice = self.get_queryset().get(
+                invoice_number=invoice_number
+            )
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invoice not found.'
+            })
+        except Exception as e:
+            logger.info(f'An error occured while fetching invoice: {str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured {str(e)}'
+            })
+
+        invoice.approved =True
+        invoice.save()
+
+        return JsonResponse({
+            'status':'success',
+            'message':f'Invoice with number: {invoice_number} approved successfully'
+        })
+        
+
+
+
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
+class FetchPurchaseOrderForPayment(View):
+    def get(self,*args,**kwargs):
+        order_id = self.kwargs.get('order_id')
+        tenant = self.request.tenant
+
+        if not order_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid order ID'
+            })
+        if not tenant:
+            return JsonResponse({
+                'status':'error',
+                'message':'An error occured'
+            })
+        
+        try:
+            purchase_order = PurchaseOrder.objects.filter(
+                id=order_id,
+                requisition__tenant=tenant,
+            ).first()
+
+            if not purchase_order:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'No order matches the provided ID.'
+                })
+            
+            return JsonResponse({
+                'status':'success',
+                'order_number':purchase_order.id,
+                'supplier':purchase_order.requisition.supplier.name,
+                'total_order_amount':purchase_order.amount,
+                'amount_to_pay':purchase_order.received_items.amount_to_pay,
+
+            })
+        except Exception as e:
+            logger.info(f'An error occured: {str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'Purchase order not found. {str(e)}'
+            })
+        
 
 
 
