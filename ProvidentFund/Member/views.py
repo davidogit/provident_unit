@@ -784,7 +784,7 @@ class CreateTransactionView(View):
 
     def get(self, request, *args, **kwargs):
         tenant = request.tenant
-        schemes = InvestmentScheme.objects.filter(tenant=tenant)
+        schemes = InvestmentScheme.objects.filter(tenant=tenant,approved=True)
         reference = str(uuid.uuid4())  # Pre-generate a unique reference
 
         context = {
@@ -808,7 +808,7 @@ class CreateTransactionView(View):
                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
             with transaction.atomic():
-                scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id)
+                scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id, approved=True)
                 staff = StaffAPI.objects.get(staff_number=staff_id)
 
                 if Transaction.objects.filter(reference=reference).exists():
@@ -947,7 +947,7 @@ class WithdrawalView(View):
 
     def get(self, request, *args, **kwargs):
         tenant = request.tenant
-        schemes = InvestmentScheme.objects.filter(tenant=tenant)
+        schemes = InvestmentScheme.objects.filter(tenant=tenant, approved=True)
         
         context = {
             'schemes': schemes,
@@ -971,7 +971,7 @@ class WithdrawalView(View):
 
             with transaction.atomic():
                 # Validate scheme and staff
-                scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id)
+                scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id, approved=True)
                 staff = StaffAPI.objects.get(staff_number=member.staff_id)
 
                 # Check if the user has sufficient balance
@@ -1008,6 +1008,7 @@ class WithdrawalView(View):
             return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
 
     def notify_manager(self, member, amount, scheme):
+        # recipient_email = member.email
         try:
             manager_email = 'osahdav@gmail.com'  # Replace with dynamic manager email if available
             subject = 'Withdrawal Request Pending Approval'
@@ -1159,7 +1160,7 @@ class GetBalanceView(View):
        
         try:
         # Fetch the investment scheme
-            scheme = InvestmentScheme.objects.get(id=scheme_id, tenant=tenant)
+            scheme = InvestmentScheme.objects.get(id=scheme_id, tenant=tenant,approved=True)
 
         except ObjectDoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Investment scheme not found.'})
