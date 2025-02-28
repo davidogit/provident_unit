@@ -29,7 +29,7 @@ from django.utils.dateparse import parse_date
 from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
-from Chart_of_Accounts.models import BankAccount
+from Chart_of_Accounts.models import BankAccount,ChartOfAccounts,AccountMapping
 from Fund.tasks import calculate_staff_contribution
 from Fund.generate_invoice import generate_short_alpha_numeric_id,generate_purchase_invoice_number
 from Admin.models import User
@@ -2043,7 +2043,8 @@ class FetchWithdrawalRequests(View):
                 scheme=scheme,
                 first_approval=False,
                 second_approval=False,
-                third_approval=False
+                third_approval=False,
+                fourth_approval=False
             )
 
             # Fetch member withdrawal applications
@@ -2098,7 +2099,8 @@ class SecondPhaseOfWithdrawalApproval(ListView):
             tenant=tenant,
             first_approval=True,
             second_approval=False,
-            third_approval=False
+            third_approval=False,
+            fourth_approval=False
         ).order_by('-date_created')
     
     def post(self,*args,**kwargs):
@@ -2120,7 +2122,7 @@ class SecondPhaseOfWithdrawalApproval(ListView):
             if not email:
                 return JsonResponse({
                     'status':'error',
-                    'message':'No event mapping found for this event: third level approval of withdrawal request.'
+                    'message':'No event mapping found for this event: second level approval of withdrawal request.'
                 })
         except Exception as e:
             logger.error(f'An error occured: {str(e)}')
@@ -2135,7 +2137,8 @@ class SecondPhaseOfWithdrawalApproval(ListView):
                 tenant=tenant,
                 first_approval=True,
                 second_approval=False,
-                third_approval=False
+                third_approval=False,
+                fourth_approval=False
             )
         except Exception as e:
             return JsonResponse({
@@ -2195,7 +2198,8 @@ class SecondPhaseOfWithdrawalApprovalEmail(TemplateView):
                 tenant=tenant,
                 first_approval=True,
                 second_approval=False,
-                third_approval=False
+                third_approval=False,
+                fourth_approval=False
             )
         except Exception as e:
             return JsonResponse({
@@ -2230,7 +2234,8 @@ class SecondPhaseOfWithdrawalApprovalEmail(TemplateView):
                 tenant=tenant,
                 first_approval=True,
                 second_approval=False,
-                third_approval=False
+                third_approval=False,
+                fourth_approval=False
             )
         return context
 
@@ -2254,6 +2259,103 @@ class BatchWithdrawalListView(ListView):
     
 
 
+# SECOND STAGE OF APPROVAL FOR WITHDRAWAL REQUEST THROUGH EMAIL
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager']), name='dispatch')
+class ThirdPhaseOfWithdrawalApproval(ListView):
+    template_name = 'dashboard/third_withdrawal_approval.html'
+    model = WithdrawalBatch
+    paginate_by = 10
+    context_object_name = 'batch_withdrawals'
+
+    def get_queryset(self):
+        tenant=self.request.tenant
+
+        return WithdrawalBatch.objects.filter(
+            tenant=tenant,
+            first_approval=True,
+            second_approval=True,
+            fourth_approval=False,
+            third_approval=False
+        ).order_by('-date_created')
+    
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        batch_id = self.request.POST.getlist('batch_id[]')
+        print(batch_id)
+        if not batch_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please select a batch to approve'
+            })
+        
+        try:
+            email = TenantEventNotification.objects.filter(
+                tenant=tenant,
+                event = 'withdrawal_final_approval'
+            ).values_list('staff__email', flat=True)
+
+            if not email:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'No event mapping found for this event: final level approval of withdrawal request.'
+                })
+        except Exception as e:
+            logger.error(f'An error occured: {str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured.'
+            })
+        
+        try:
+            batches = WithdrawalBatch.objects.filter(
+                id__in=batch_id,
+                tenant=tenant,
+                first_approval=True,
+                second_approval=True,
+                third_approval=False,
+                fourth_approval=False
+            )
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':'No withdrawal batch matches the given batch ID.'
+            })
+        
+        # Approve batch
+        try:
+            for batch in batches:
+                batch.approve_batch(approval_level=3)
+            # If level 3 approval is successful:
+
+            # Notify level 4 for final payout
+            subject = 'Withdrawal Approval'
+            message = f'A withdrawal request has been initiated and awaiting your approval.'
+            emails = list(email)
+            gen_send_email.delay(
+                subject=subject,
+                message=message,
+                recepient=emails
+            )
+
+            return JsonResponse({
+                'status':'success',
+                'message':'Withdrawal batch approved successfuly'
+            })
+        except ValueError as value_error:
+            return JsonResponse({
+                'status':'error',
+                'message':f'{str(value_error)}'
+            })
+        except Exception as return_value:
+            return JsonResponse(
+                return_value # return_value is a an object returned from the model when approve_batch is called
+            )
+        
+
+
+
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Finance Manager']), name='dispatch')
@@ -2270,7 +2372,8 @@ class FinalBatchWithdrawalApproval(ListView):
             tenant=tenant,
             first_approval=True,
             second_approval=True,
-            third_approval=False
+            third_approval=True,
+            fourth_approval=False
         ).order_by('-date_created')
     
     def post(self,*args,**kwargs):
@@ -2312,7 +2415,8 @@ class FinalBatchWithdrawalApproval(ListView):
                 tenant=tenant,
                 first_approval=True,
                 second_approval=True,
-                third_approval=False
+                third_approval=True,
+                fourth_approval=False
             )
         except Exception as e:
             return JsonResponse({
@@ -2326,9 +2430,9 @@ class FinalBatchWithdrawalApproval(ListView):
             for batch in batches:
                 batch.bank = bank
                 batch.mode_of_payment = mode_of_payment
-                batch.approve_batch(approval_level=3)
+                batch.approve_batch(approval_level=4)
                 batch.save()
-            # If level 3 approval is successful:
+            # If level 4 approval is successful:
             # create transaction object for individual requests
             all_transactions = []
             withdrawals = batch.withdrawal_request.all()
@@ -2802,6 +2906,44 @@ class RaiseRequisitionView(TemplateView):
         return context
 
 
+# UPDATE TAX ON REQUISITION
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
+class UpdateTaxOnRequisition(View):
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        req_id = self.kwargs.get('req_id')
+        tax_amount = self.request.POST.get('tax')
+        if not req_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid requisition ID.'
+            })
+        
+        requisition = Requisition.objects.filter(
+            id=req_id,
+            tenant=tenant
+        ).first()
+
+        if not requisition:
+            return JsonResponse({
+                'status':'error',
+                'message':'Requisition not found.'
+            })
+        
+        requisition.tax_amount = Decimal(tax_amount)
+        requisition.save()
+
+        return JsonResponse({
+            'status':'success',
+            'message':'Tax added successfully.',
+            'tax_amount':Decimal(tax_amount)
+        })
+
+
+
+
 # ADD REQUISITION ITEM VIEW
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
@@ -3178,7 +3320,7 @@ class FetchPurchaseOrderView(View):
                 'status':'error',
                 'message':'Invalid purchase order selected.'
             })
-
+        
         try:
             order =  PurchaseOrder.objects.get(
                 requisition__tenant=tenant,
@@ -3204,7 +3346,8 @@ class FetchPurchaseOrderView(View):
                 'items':items_list,
                 'total_amount':order.amount,
                 'order_received':order.received,
-                'balance':received_items.first().balance if received_items.exists() else order.amount
+                'balance':received_items.first().balance if received_items.exists() else order.amount,
+                'tax_amount':order.requisition.tax_amount,
             })
         except ObjectDoesNotExist:
             return JsonResponse({
@@ -3215,17 +3358,25 @@ class FetchPurchaseOrderView(View):
 
 
 
-# PAYOUT INVOICE VIEW
+# CREATE INVOICE VIEW
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
-class PayoutInvoiceView(TemplateView):
-    template_name = 'suppliers_expenses/payout_invoice.html'
+class CreateInvoiceView(TemplateView):
+    template_name = 'suppliers_expenses/create_invoice.html'
 
     def post(self,*args,**kwargs):
         tenant =  self.request.tenant
         order_id = self.request.POST.get('order_number')
         supplier_invoice_amount = self.request.POST.get('supplier_invoice_amount')
+        debit_account_id = self.request.POST.get('debit_account_id')
+        print(debit_account_id)
+        if not debit_account_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Selected accoung has no ID.'
+            })
+        
         if not order_id:
             return JsonResponse({
                 'status':'error',
@@ -3236,6 +3387,20 @@ class PayoutInvoiceView(TemplateView):
             return JsonResponse({
                 'status':'error',
                 'message':'Bad request.'
+            })
+        try:
+            debit_account = ChartOfAccounts.objects.filter(
+                tenant=tenant,
+                id=debit_account_id
+            ).first()
+            credit_account = AccountMapping.objects.filter(
+                tenant=tenant,
+                name='Supplier Invoice Creation'
+            )
+        except Exception:
+            return JsonResponse({
+                'status':'error',
+                'message':'No accounts found for this event.'
             })
         
         try:
@@ -3345,6 +3510,99 @@ class InvoiceApproval(ListView):
         
 
 
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
+class PayoutInvoiceView(ListView):
+    model = PaymentInvoice
+    template_name = 'suppliers_expenses/payout_invoice.html'
+    paginate_by = 10
+    context_object_name = 'invoice_list'
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return PaymentInvoice.objects.filter(
+            purchase_order__requisition__tenant = tenant,
+            approved = True,
+            paid = False,
+        ).order_by('-created_date')
+
+    def post(self,*args,**kwargs):
+        tenant = self.request.tenant
+        invoice_number = self.request.POST.get('invoice_number')
+        withholding_tax = self.request.POST.get('withholding_tax')
+
+        if not invoice_number:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid or no invoice number found'
+            })
+        
+        if not withholding_tax:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please enter a withholding tax amount'
+            })
+        
+        # convert tax amount to decimal value
+        withholding_tax = Decimal(withholding_tax)
+        
+        try:
+            invoice = self.get_queryset().get(
+                invoice_number=invoice_number
+            )
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invoice not found.'
+            })
+        except Exception as e:
+            logger.info(f'An error occured while fetching invoice: {str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occured {str(e)}'
+            })
+        
+        # Perform debit and credit transactions: if successful update invoice to paid
+        account_mapping = AccountMapping.objects.filter(
+            tenant=tenant,
+            name="Supplier Invoice Payment"
+        ).first()
+
+        if not account_mapping:
+            return JsonResponse({
+                'status':'error',
+                'message':'No account mapping found for this. Map this event and try again.'
+            })
+        
+        debit_account = account_mapping.debit_acc
+        credit_account = account_mapping.credit_acc
+
+        # Calculate Net amount 
+        net_amount = (invoice.amount - withholding_tax)
+
+        # Perform debit and credit transactions
+        debit_account.current_balance -= net_amount
+        credit_account.current_balance += net_amount
+
+        # Save changes
+        debit_account.save()
+        credit_account.save()
+        
+        # Set withholding tax amount on invoice
+        invoice.withholding_tax = withholding_tax
+
+        invoice.paid = True
+        invoice.date_paid = timezone.now()
+        invoice.save()
+
+        # Create a Transaction for the payment
+
+        return JsonResponse({
+            'status':'success',
+            'message':f'Invoice paid. Net amount = {net_amount}'
+        })
+
 
 
 
@@ -3367,6 +3625,15 @@ class FetchPurchaseOrderForPayment(View):
                 'message':'An error occured'
             })
         
+        # Fetch Assets/Expense accounts for tenant
+        assets_or_expense_accounts = list(
+            ChartOfAccounts.objects.filter(
+                tenant=tenant,
+                account_type__in=['EXPENSE','ASSET'],
+                account_status='ACTIVE'
+            ).values('id','account_code','name')
+        )
+
         try:
             purchase_order = PurchaseOrder.objects.filter(
                 id=order_id,
@@ -3385,7 +3652,7 @@ class FetchPurchaseOrderForPayment(View):
                 'supplier':purchase_order.requisition.supplier.name,
                 'total_order_amount':purchase_order.amount,
                 'amount_to_pay':purchase_order.received_items.amount_to_pay,
-
+                'accounts':assets_or_expense_accounts
             })
         except Exception as e:
             logger.info(f'An error occured: {str(e)}')

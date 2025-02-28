@@ -372,6 +372,9 @@ class WithdrawalBatch(models.Model):
     third_approval = models.BooleanField(
         default=False
     )
+    fourth_approval = models.BooleanField(
+        default=False
+    )
     # dynamic file path for document uploads
     def upload_file(self,filename):
         tenant_name = self.tenant.name
@@ -402,8 +405,8 @@ class WithdrawalBatch(models.Model):
 
     # approve individual request from batch withdrawal
     def approve_batch(self,approval_level):
-        if approval_level not in [1,2,3]:
-            raise ValueError('Invalid approval level, must be 1,2, or 3')
+        if approval_level not in [1,2,3,4]:
+            raise ValueError('Invalid approval level, must be 1,2,3, or 4')
         try:
             with transaction.atomic():
                 if approval_level == 1 and not self.first_approval:
@@ -417,6 +420,9 @@ class WithdrawalBatch(models.Model):
                 elif approval_level == 3 and not self.third_approval:
                     self.withdrawal_request.filter(third_approval=False).update(third_approval=True)
                     self.third_approval = True
+                elif approval_level == 4 and not self.fourth_approval:
+                    self.withdrawal_request.filter(fourth_approval=False).update(fourth_approval=True)
+                    self.fourth_approval = True
                 else:
                     raise ValueError('Approval level has already been processed')
                 
@@ -486,6 +492,9 @@ class WithdrawalRequest(models.Model):
         default=False
     )
     third_approval = models.BooleanField(
+        default=False
+    )
+    fourth_approval = models.BooleanField(
         default=False
     )
     request_date = models.DateTimeField(

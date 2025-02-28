@@ -84,7 +84,11 @@
               <a href="{% url 'second_withdrawal_approval' tenant_id=request.tenant.id %}" class="nav-sub-link">First Approval</a>
               {% endif %}
 
-              {% if 'Finance Manager' in user_groups%}
+              {% if 'Finance Manager' in user_groups %}
+              <a href="{% url 'third_withdrawal_approval' tenant_id=request.tenant.id %}" class="nav-sub-link">Second Approval</a>
+              {% endif %}
+
+              {% if 'Finance Analyst' in user_groups%}
               <a href="{% url 'final_batch_withdrawal_approval' tenant_id=request.tenant.id %}" class="nav-sub-link">Final Approval</a>
               {% endif %}
             </nav>
@@ -97,7 +101,7 @@
           {% endif %}
           {% if 'Finance Manager' in user_groups %}
           <li class="nav-item">
-            <a href="{% url 'approve_invoice' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-history-line fs-32 lh-1 me-3"></i> <span>Invoice Approval</span></a>
+            <a href="{% url 'approve_invoice' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-history-line fs-32 lh-1 me-3"></i> <span>Purchase Invoice Approval</span></a>
           </li>
           {% endif %}
         </ul>
@@ -129,7 +133,10 @@
               {% endif %}
               <a href="{% url 'purchase_order' tenant_id=request.tenant.id %}" class="nav-sub-link">Purchase Orders</a>
               {% if 'Finance Manager' in user_groups or 'Finance Analyst' in user_groups %}
-              <a href="{% url 'payout_invoice' tenant_id=request.tenant.id %}" class="nav-sub-link">Invoice</a>
+              <a href="{% url 'create_invoice' tenant_id=request.tenant.id %}" class="nav-sub-link">Invoice</a>
+              {% endif %}
+              {% if 'Finance Analyst' in user_groups %}
+              <a href="{% url 'pay_invoice' tenant_id=request.tenant.id %}" class="nav-sub-link">Payout Invoice</a>
               {% endif %}
             </nav>
           </li>

@@ -61,12 +61,13 @@
                                     <tr>
                                         <th>Supplier</th>
                                         <th>Description</th>
-                                        <th>Total Amount</th>
+                                        <th>Net Amount</th>
+                                        <th>Tax</th>
                                         <th>Date</th>
                                         <th>Status<th>        
                                         <!-- <th>Action</th> -->
                                         {% if 'Finance Manager' in user_groups %}
-                                        <th>Approve</th>
+                                        <th></th>
                                         {% endif %}
                                     </tr>
                                 </thead>
@@ -76,6 +77,7 @@
                                         <td class="text-start align-middle">{{ requisition.supplier.name }}</td>
                                         <td class="text-start align-middle">{{ requisition.description }}</td>
                                         <td class="text-start align-middle total_amount">{{ requisition.total_amount }}</td>
+                                        <td class="text-start align-middle tax_amount">{{ requisition.tax_amount }}</td>
                                         <td class="text-start align-middle">{{ requisition.date_created }}</td>
                                         <td class="text-start align-middle">
                                             {% if requisition.approved %}
@@ -97,13 +99,20 @@
                                             {% endif %}
                                         </td>
 
-                                        {% if 'Finance Manager' in user_groups %}
-                                        <td class="text-start align-middle">
+                                        
+                                        <td class="text-center align-middle">
+                                            {% if 'Finance Manager' in user_groups %}
                                             <button class="approve-requisition btn btn-outline-secondary btn" data-requisition-id="{{ requisition.id }}">
                                                 Approve
+                                            </button>
+                                            {% endif %}
+
+                                            {% if 'Finance Analyst' in user_groups %}
+                                            <button class="add-tax btn btn-outline-secondary btn" data-requisition-id="{{ requisition.id }}">
+                                                Add Tax
                                             </button> 
+                                            {% endif %}
                                         </td>
-                                        {% endif %}
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -478,6 +487,43 @@
                     }
                 },
             });
+        });
+
+        $('.add-tax').on('click', function(e){
+            e.preventDefault();
+            var requisition_id = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}'
+            var $this = $(this);
+            var tax = prompt('Enter tax amount');
+            // tax should be a decimal value
+            tax = parseFloat(tax);
+            if (!tax){
+                alert('Please enter a valid tax amount');
+                return;
+            }
+
+            $.ajax({
+                url: `/${tenantId}/fund/add-tax/${requisition_id}/`,
+                type: 'POST',
+                data: {tax: tax},
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success:function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        $this.closest('.requisition-row').find('.tax_amount').text(response.tax_amount);
+                        //window.location.reload();
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error:function(jqXHR){
+                    message = jqXHR.responseJSON.message || 'An error occured';
+                    console.log(message);
+                    alert(message);
+                }
+            })
         });
     });
 </script>

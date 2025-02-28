@@ -103,6 +103,14 @@
                                                 </div>
                                                 <div class="row">
                                                     <div class="col-6">
+                                                        <h6><strong>Tax</strong></h6>
+                                                    </div>
+                                                    <div class="col-6 text-end">
+                                                        <h6><strong class="tax-amount text-end"></strong></h6>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-6">
                                                         <h6><strong>Balance</strong></h6>
                                                     </div>
                                                     <div class="col-6 text-end">
@@ -363,6 +371,7 @@
                             //Update total amount
                             tableBody.closest('.order-card').find('.total-amount').text(response.total_amount);
                             tableBody.closest('.order-card').find('.remaining-balance').text(response.balance);
+                            tableBody.closest('.order-card').find('.tax-amount').text(response.tax_amount);
                         }
                         
                     }else{

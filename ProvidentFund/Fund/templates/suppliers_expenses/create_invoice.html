@@ -1,0 +1,185 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Generate Invoice</title>
+{% endblock %}
+
+{% block header %}
+<h5>Generate Invoice</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="row row-cols-auto g-4 g-xxl-5 order-div">
+        <div class="col-12 d-flex flex-row justify-content-center">
+            <div class="row g-2 g-lg-3 mb-4 d-flex flex-row justify-content-center w-100">
+                <div class="col-12 col-md-8 col-lg-6 col-xl-4">
+                    <div class="input-group">
+                        <input type="text" class="form-control rounded-pill py-2 px-3 flex-grow-1" placeholder="Search for purchase orders...">
+                        <button class="btn btn-secondary rounded-pill px-3 flex-shrink-0 search_order">
+                            <i class="ri-search-line"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+
+        <!-- add a div to stretch across the width which will display search results of an item -->
+        <div class="col-12">
+            <div class="card card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-nowrap table-align-middle table-vcenter">
+                        <thead>
+                            <tr>
+                                <th>Order Number</th>
+                                <th>Supplier</th>
+                                <th>Total Order Amount</th>
+                                <th>Due Amount</th>
+                                <th>Assets/Expense</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="table-striped order_table">
+                            <!-- Data added dynamically from ajax -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add modal to allow user to enter amount to pay -->
+        <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Invoice Payment</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form action="" method="POST">
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">Enter supplier invoice amount</label>
+                                <input type="number" class="form-control" id="amount" name="supplier_invoice_amount" min="0.00" step="0.01" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary pay-invoice">Pay</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('.search_order').on('click', function(e){
+            e.preventDefault();
+            var order_number = $(this).closest('.input-group').find('input').val();
+            var tenant_id = "{{ request.tenant.id }}"
+            const tableBody = $(this).closest('.order-div').find('.order_table')
+            var url = `/${tenant_id}/fund/fetch-purchase-order/${order_number}/`
+            console.log(url)
+            $.ajax({
+                url:url,
+                type:'GET',
+                success:function(response){
+                    console.log(response)
+                    console.log(response.accounts)
+                    if (response.status === 'success'){
+                        tableBody.html('') //Empty table
+                        accounts = response.accounts
+                        
+                        let account_options = accounts.map(account=> `<option value="${account.id}">${account.account_code} ${account.name}</option>`)
+                        const row = `
+                            <tr>
+                                <td>${response.order_number}</td>
+                                <td>${response.supplier}</td>
+                                <td>${response.total_order_amount}</td>
+                                <td>${response.amount_to_pay}</td>
+                                <td>
+
+                                    <div class="form-floating">
+                                        <select class="form-select" name="asset_expense" id="asset_expense">
+                                            <option value="">-select-</option>
+                                           ${account_options}
+                                        </select>
+                                        <label for="asset_expense" class="form-label">Account Parent</label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <!-- <button class="btn btn-sm btn-primary">View</button> -->
+                                    <button class="btn btn-sm btn-success pay" data-order-id="${response.order_number}" data-bs-toggle="modal" data-bs-target="#payInvoiceModal">Generate Invoice</button>
+                                </td>
+                            </tr>
+                        `
+                        tableBody.append(row)
+                        
+                        //display modal when pay is clicked
+                        $('.pay').on('click', function(){
+                            const orderId = $(this).data('order-id')
+                            //set the action on the form
+                            $('#itemModal').find('form').attr('action', `/${tenant_id}/fund/create-invoice/`)
+                            //Append order number to form
+                            $('#itemModal').find('form').append(`<input type="hidden" name="order_number" value="${orderId}">`)
+                            //get debit account id
+                            var debit_account_id = $(this).closest('tr').find('#asset_expense').val()
+                            console.log(debit_account_id)
+                            if (!debit_account_id){
+                                alert('Please select an account')
+                                return
+                            }
+                            //Append account id to form
+                            $('#itemModal').find('form').append(`<input type="hidden" name="debit_account_id" value="${debit_account_id}">`)
+
+                            //display modal
+                            $('#itemModal').modal('show')
+
+                        })
+                        
+                    }else{
+                        console.log(response)
+                        alert(response.message);
+                    }
+                    
+                },
+                error:function(jqXHR){
+                    message = jqXHR.responseJSON.message || 'An error occured';
+                    console.log(message)
+                    alert('An error occured');
+                }
+            });
+        });
+
+        $('.pay-invoice').on('click', function(e){
+            e.preventDefault();
+            var form= $(this).closest('form');
+            console.log(form.serialize())
+
+            $.ajax({
+                url:form.attr('action'),
+                type: 'POST',
+                data: form.serialize(),
+                headers:{
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success:function(response){
+                    if (response.status === 'success'){
+                        alert(response.message);
+                        window.location.reload();
+
+                    }else{
+                        alert(response.message);
+                    }
+                },
+                error:function(jqXHR){
+                    message = jqXHR.responseJSON.message || 'An error occured';
+                    console.log(message)
+                    alert(message)
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

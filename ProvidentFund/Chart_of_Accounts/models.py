@@ -117,7 +117,11 @@ class AccountMapping(models.Model):
         ('Benefit Accrued','Benefit Accrued'),
         ('Exit Payout','Exit Payout'),
         ('Redeem Investment','Redeem Investment'),
-        ('Roll Over','Roll Over')
+        ('Roll Over','Roll Over'),
+        ('Supplier Invoice Creation','Supplier Invoice Creation'),
+        ('Supplier Invoice Payment','Supplier Invoice Payment'),
+        ('Member Withdrawal Invoice','Member Withdrawal Invoice'),
+        ('Member Withdrawal Invoice Payment','Member Withdrawal Invoice Payment'),
     ]
     name = models.CharField(
         max_length=255,

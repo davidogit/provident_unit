@@ -70,6 +70,8 @@ urlpatterns =[
     path('email-batch-approval/<slug:batch_id>/<scheme_id>/', views.SecondPhaseOfWithdrawalApprovalEmail.as_view(),name='email_withdrawal_approval'),
     # Batch withdrawals list view
     path('batch-withdrawal-list/<slug:batch_id>/', views.BatchWithdrawalListView.as_view(), name='batch_withdrawal_list'),
+    # Level 3 withdrawal request approval
+    path('third-withdrawal-approval/', views.ThirdPhaseOfWithdrawalApproval.as_view(), name='third_withdrawal_approval'),
     # Final batch Withdrawal approval
     path('final-batch-approval/', views.FinalBatchWithdrawalApproval.as_view(), name='final_batch_withdrawal_approval'),
 
@@ -92,6 +94,8 @@ urlpatterns =[
 
     # REQUISITION URL
     path('create-requisition/', views.RaiseRequisitionView.as_view(), name='raise_requisition'),
+    # Add tax to requisition
+    path('add-tax/<int:req_id>/', views.UpdateTaxOnRequisition.as_view(), name='add_tax'),
     # delete requisition
     path('delete-requisition/<int:pk>/', views.DeleteRequisitionView.as_view(), name='delete_requisition'),
     # delete requisition item
@@ -112,11 +116,13 @@ urlpatterns =[
     path('get-order-items/<slug:order_id>/', views.FetchPurchaseOrderView.as_view(), name='fetch_order_items'),
 
     # PAYOUT INVOICE URL
-    path('payout-invoice/', views.PayoutInvoiceView.as_view(), name='payout_invoice'),
+    path('create-invoice/', views.CreateInvoiceView.as_view(), name='create_invoice'),
     # Fetch order for payment
     path('fetch-purchase-order/<slug:order_id>/', views.FetchPurchaseOrderForPayment.as_view(), name="fetch_order_for_payment"),
     # Approve Invoice
     path('approve-invoice/', views.InvoiceApproval.as_view(), name='approve_invoice'),
+    # Pay invoice
+    path('pay-invoice/', views.PayoutInvoiceView.as_view(), name='pay_invoice'),
     
     # EVENT MAPPING
     path('event_mapping/', views.EventMapping.as_view(), name='event_mapping')

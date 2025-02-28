@@ -8,7 +8,7 @@ from MultiScheme.models import InvestmentScheme,Tenant
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from .generate_invoice import generate_invoice_number,generate_short_alpha_numeric_id
-from Chart_of_Accounts.models import BankAccount
+from Chart_of_Accounts.models import BankAccount,ChartOfAccounts
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
 from django.db.models import ProtectedError
@@ -546,6 +546,13 @@ class Requisition(models.Model):
     approved = models.BooleanField(
         default=False
     )
+    tax_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=Decimal(0)
+    )
     class Meta:
         ordering = ['-date_created']
 
@@ -557,7 +564,8 @@ class Requisition(models.Model):
         self.approved = True
         PurchaseOrder.objects.create(
             requisition=self,
-            amount=self.total_amount
+            # Purchase order amount is sum of amount + tax
+            amount=self.total_amount + self.tax_amount
         )
         self.save()
 
@@ -647,7 +655,13 @@ class PurchaseOrder(models.Model):
         default=0.00,
         null=True,
         blank=True
-    )
+    )#Tax inclusive
+    # tax_amount = models.DecimalField(
+    #     max_digits=15,
+    #     decimal_places=2,
+    #     null=True,
+    #     blank=True
+    # )
     
     class Meta:
         ordering = ['-date_created']
@@ -656,6 +670,7 @@ class PurchaseOrder(models.Model):
         return f'{self.requisition.tenant} | {self.id} | created at: {self.date_created}'
     
     def save(self, *args, **kwargs):
+        # self.tax_amount = self.requisition.tax_amount
         if not self.id:
             self.id = generate_short_alpha_numeric_id(PurchaseOrder)
         return super().save(*args, **kwargs)
@@ -691,6 +706,26 @@ class PaymentInvoice(models.Model):
     approved = models.BooleanField(
         default=False
     )
+    paid = models.BooleanField(
+        default=False
+    )
+    date_paid = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    withholding_tax = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    debit_account = models.ForeignKey(
+        ChartOfAccounts,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payment_invoice'
+    )#Specifies account to debit when creating an invoice for a PO
 
     def save(self,*args,**kwargs):
         self.supplier = self.purchase_order.requisition.supplier
