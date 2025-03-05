@@ -252,6 +252,14 @@
                 return;
             }
 
+            var tax = prompt('Enter tax amount on received items');
+            tax = parseFloat(tax)
+            if (!tax){
+                alert('Please enter a valid tax amount');
+                return;
+            }
+            
+
             const itemId = [];
             const quantity = [];
             const receivedQuantity = [];
@@ -280,7 +288,8 @@
                 data: {
                     'item_id': itemId,
                     'quantity': quantity,
-                    'received_quantity': receivedQuantity
+                    'received_quantity': receivedQuantity,
+                    'tax': tax
                 },
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'

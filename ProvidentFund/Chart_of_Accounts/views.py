@@ -244,6 +244,7 @@ class AccountMappingView(TemplateView):
                     'message':'some fields are missing'
                 })
             
+            
             # fetch debit and credit account
             debit_account = ChartOfAccounts.objects.get(tenant=tenant,account_code=debit_code)
             credit_account = ChartOfAccounts.objects.get(tenant=tenant,account_code=credit_code)
@@ -274,12 +275,12 @@ class AccountMappingView(TemplateView):
             except ValidationError as e:
                 return JsonResponse({
                     'status':'error',
-                    'message':f'{e}'
+                    'message':f'{str(e)}'
                 })
             except Exception as e:
                 return JsonResponse({
                     'status':'error',
-                    'message':f'An error occured: {e}'
+                    'message':f'An error occured: {str(e)}'
                 })
 
     def get_context_data(self, **kwargs):

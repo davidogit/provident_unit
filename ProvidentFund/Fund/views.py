@@ -3199,11 +3199,18 @@ class PurchaseOrderView(ListView):
         order_id = self.kwargs.get('order_id')
         list_of_item_ids = self.request.POST.getlist('item_id[]')
         list_of_received_quantity = self.request.POST.getlist('received_quantity[]')
+        tax = self.request.POST.get('tax')
 
         if not order_id:
             return JsonResponse({
                 'status': 'error',
                 'message': 'Invalid order ID.'
+            })
+        
+        if not tax:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please input tax amount.'
             })
 
         if not all(list_of_received_quantity):
@@ -3261,8 +3268,7 @@ class PurchaseOrderView(ListView):
                             'status': 'error',
                             'message': f'Item with ID {item_id} not found in the order items.'
                         })
-                # order.received = True
-                # order.save()
+                    
                 """""
                 Updating ReceivedItems 
                 """""
@@ -3278,8 +3284,8 @@ class PurchaseOrderView(ListView):
                     
                 # Update number of received items
                 received_items.number_of_items_received += total_quantity_received
-                # update balance left
-                amount = sum(Decimal(a) for a in amount_list)
+                # update balance left tax included
+                amount = sum(Decimal(a) for a in amount_list) + Decimal(tax)
                 received_items.balance -= amount
                 # Update the amount_to_pay field
                 received_items.amount_to_pay += amount
@@ -3388,6 +3394,16 @@ class CreateInvoiceView(TemplateView):
                 'status':'error',
                 'message':'Bad request.'
             })
+        
+        if not AccountMapping.objects.filter(
+                tenant=tenant,
+                name='Supplier Invoice Creation'
+            ).exists():
+            return JsonResponse({
+                'status':'error',
+                'message':'Mapping for "Supplier Invoice Creation" not found.'
+            })
+        
         try:
             debit_account = ChartOfAccounts.objects.filter(
                 tenant=tenant,
@@ -3396,7 +3412,7 @@ class CreateInvoiceView(TemplateView):
             credit_account = AccountMapping.objects.filter(
                 tenant=tenant,
                 name='Supplier Invoice Creation'
-            )
+            ).first().credit_acc
         except Exception:
             return JsonResponse({
                 'status':'error',
@@ -3434,6 +3450,19 @@ class CreateInvoiceView(TemplateView):
                 receieved_items_object.amount_to_pay -= Decimal(supplier_invoice_amount)
                 # Save update
                 receieved_items_object.save()
+
+                # Debit and Credit operations
+                debit_account -= Decimal(supplier_invoice_amount)
+                credit_account += Decimal(supplier_invoice_amount)
+
+                try:
+                    debit_account.save()
+                    credit_account.save()
+                except Exception as e:
+                    return JsonResponse({
+                        'status':'error',
+                        'message':f'{str(e)}'
+                    })
                 # Notify who is in charge of invoice payment.
 
                 return JsonResponse({

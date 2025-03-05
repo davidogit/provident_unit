@@ -173,8 +173,18 @@ class AccountMapping(models.Model):
         if self.debit_acc == self.credit_acc:
             raise ValidationError('Debits and Credits account cannot be the same')
         
+    def check_for_existing(self):
+        # Allow for only one instance of supplier invoice and payment for each tenant
+        if AccountMapping.objects.filter(
+            tenant=self.tenant,
+            name=self.name
+        ).exists():
+            raise ValidationError(f'The event "{self.name}" can only be mapped once.')
+        
     def save(self,*args,**kwargs):
         self.clean()
+        if not self.pk:
+            self.check_for_existing()
         super().save(*args,**kwargs)
 
 
