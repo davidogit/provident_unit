@@ -43,7 +43,7 @@
                         <!-- Right Column -->
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                <input type="text" class="form-control" id="accountCode" name="account_code" placeholder="" required>
+                                <input type="text" class="form-control" id="accountCode" name="account_code" placeholder="" maxlength="{{ code_length }}" minlength="{{ code_length }}" required>
                                 <label for="accountCode" class="form-label">Account Code</label>
                             </div>
                             <div class="form-floating mb-3">

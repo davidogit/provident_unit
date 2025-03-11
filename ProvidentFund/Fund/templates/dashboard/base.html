@@ -163,15 +163,18 @@
               </a>
 
               <a href="{% url 'map_account' tenant_id=request.tenant.id %}"
-              class="nav-sub-link">Map Accounts
+              class="nav-sub-link">Accounts Mapping
               </a>
 
               <a href="{% url 'account_balances' tenant_id=request.tenant.id %}"
-              class="nav-sub-link">Accountn Balances
+              class="nav-sub-link">Balances
               </a>
 
               <a href="{% url 'bank_accounts' tenant_id=request.tenant.id %}"
               class="nav-sub-link">Bank Accounts
+              </a>
+              <a href="{% url 'account_parameters' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Account Parameters
               </a>
             </nav>
           </li>
@@ -212,7 +215,7 @@
 
           {% if 'Super User' in user_groups %}
           <li class="nav-item">
-            <a href="#" class="nav-link has-sub"><i class="ri-group-line fs-32 lh-1 me-3"></i> <span>Mass Enroll</span></a>
+            <a href="#" class="nav-link has-sub"><i class="ri-group-line fs-32 lh-1 me-3"></i> <span>Mass Enrollment</span></a>
             <nav class="nav nav-sub"> 
               <a href="{% url 'mass_enroll' tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Upload File

@@ -14,4 +14,5 @@ urlpatterns = [
     path('update-bank-account/<int:pk>/', views.BankUpdateView.as_view(), name='update_bank'),
     path('fetch-bank-account/<int:pk>/', views.FetchBankDetail.as_view(), name='fetch_bank_details'),
     path('update-mapping/<int:pk>/', views.AccountMappingUpdateView.as_view(), name='update_mapping'),
+    path('account-parameters/', views.SetAccountParameters.as_view(), name='account_parameters'),
 ]
