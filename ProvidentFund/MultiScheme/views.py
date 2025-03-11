@@ -93,6 +93,14 @@ class SchemeSettingsView(UpdateView):
     fields = ('contribution_day','grace_period_contribution','delayed_interest_rate','period_of_delayed_calculation') #include all fields from model
     template_name = 'multischeme/scheme_settings.html'
 
+    def get_queryset(self):
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+        return InvestmentScheme.objects.filter(
+            tenant=tenant,
+            id=scheme_id
+        ).first()
+
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
         tenant = self.request.tenant

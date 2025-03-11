@@ -1,10 +1,10 @@
 {% extends 'dashboard/base.html' %}
 
 {% block title %}
-<title>Event Mapping</title>
+<title>Action Notification Mapping</title>
 {% endblock %}
 {% block header %}
-<h5>Event Mapping</h5>
+<h5>Action Notification Mapping</h5>
 {% endblock %}
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
@@ -27,7 +27,7 @@
                                             <option value="{{ event }}">{{ act }}</option>
                                             {% endfor %}
                                         </select>
-                                        <label for="event">Event</label>
+                                        <label for="event">Action</label>
                                     </div>
                                 
                                     <div class="form-floating d-block mb-2">
@@ -52,7 +52,7 @@
 
                 <div class="row g-4 mt-5">
                     <!-- table for previous account mappings -->
-                    <h5 class="mt-2 text-center">Existing Event Mappings</h5>
+                    <h5 class="mt-2 text-center">Notification Mappings</h5>
                     <div class="table-responsive overflow-auto" style="max-height: 400px;">
                         <table class="table table-bordered table-striped">
                             <thead class="thead-light">

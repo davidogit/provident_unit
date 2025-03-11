@@ -1,10 +1,10 @@
 {% extends 'dashboard/base.html' %}
 
 {% block title %}
-<title>Contribution Approval</title>
+<title>Contribution Validation</title>
 {% endblock %}
 {% block header %}
-<h5>Contribution Approval</h5>
+<h5>Contribution Validation</h5>
 {% endblock %}
 
 {% block content %}
@@ -48,7 +48,7 @@
 
                                 </div>
                                 <div class="form-floating col m-3">
-                                    <input type="number" class="form-control form-control-lg" placeholder="YYYY" id="year" name="year">
+                                    <input type="number" class="form-control form-control-lg" placeholder="YYYY" id="year" name="year" minlength="4" maxlength="4" required>
                                     <label for="year" class="form-label">Year</label>
                                 </div>
                                 

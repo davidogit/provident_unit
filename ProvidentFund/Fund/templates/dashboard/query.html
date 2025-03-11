@@ -1,9 +1,11 @@
 {% extends 'dashboard/base.html' %}
 
-{% block search %}
-
+{% block header %}
+<h5>Investment Report</h5>
 {% endblock %}
-
+{% block title %}
+<title>Investment Report</title>
+{% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
@@ -25,7 +27,7 @@
             <label for="sort" class="me-2"></label>
             <select class="form-control rounded-pill fst-italic bg-secondary text-light" name="sort" id="sort">
                 <option value="">--Sort by--</option>
-                <option value="start_date">Start Date</option>
+                <option value="interest_start_date">Start Date</option>
                 <option value="created_date">Created Date</option>
             </select>
         </div>
@@ -98,7 +100,7 @@
                             <thead>
                                 <tr>
                                     <th scope="col"></th>
-                                    <th scope="col">Invoice No.</th>
+                                    <th scope="col">Instrument No.</th>
                                     <th scope="col">Add Date</th>
                                     <th scope="col">Start Date</th>
                                     <th scope="col">Maturity Date</th>

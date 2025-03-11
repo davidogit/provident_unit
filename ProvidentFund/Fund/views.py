@@ -912,7 +912,7 @@ class InvestmentQuery(ListView):
                     queryset = queryset.filter(_status='Not Start')
 
             if from_date and to_date:
-                if sort == 'start_date':
+                if sort == 'interest_start_date':
                     queryset = queryset.filter(interest_start_date__range=(from_date, to_date))
                 elif sort == 'created_date':
                     queryset = queryset.filter(created_date__range=(from_date, to_date))
