@@ -5,6 +5,23 @@ from django.db.models import UniqueConstraint
 from django.core.exceptions import ValidationError
 
 # Create your models here.
+class AccountParameters(models.Model):
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='account_params'
+    )
+    account_code_length = models.CharField(
+        max_length=30,
+    )
+
+    class Meta:
+        verbose_name = 'Account Parameter'
+        verbose_name_plural = 'Account Parameters'
+    
+
+
+
 
 class ChartOfAccounts(models.Model):
     ACCOUNT_TYPES =[
@@ -116,7 +133,7 @@ class AccountMapping(models.Model):
         ('Benefit Payout','Benefit Payout'),
         ('Benefit Accrued','Benefit Accrued'),
         ('Exit Payout','Exit Payout'),
-        ('Redeem Investment','Redeem Investment'),
+        ('Redeem Investment','Investment Redemption'),
         ('Roll Over','Roll Over'),
         ('Supplier Invoice Creation','Supplier Invoice Creation'),
         ('Supplier Invoice Payment','Supplier Invoice Payment'),

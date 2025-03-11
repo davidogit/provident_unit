@@ -38,8 +38,9 @@ class StaffAPI(models.Model):
         null=True,
         blank=True
     )
-    staff_number = models.IntegerField(
-        unique=True
+    staff_number = models.CharField(
+        unique=True,
+        max_length=20
     )
     date_joined = models.DateField(
         auto_now_add=True

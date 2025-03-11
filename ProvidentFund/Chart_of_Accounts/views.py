@@ -2,8 +2,8 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.views.generic import TemplateView,DeleteView,UpdateView,View
-from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount
+from django.views.generic import TemplateView,DeleteView,UpdateView,View,CreateView
+from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount,AccountParameters
 from MultiScheme.models import InvestmentScheme
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
@@ -12,7 +12,55 @@ from django.contrib.auth.decorators import login_required
 from Member.decorators import tenant_required
 from Admin.decorators import role_required
 from django.utils.decorators import method_decorator
+from .forms import AccountParameterForm
 # Create your views here.
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
+class SetAccountParameters(CreateView):
+    model = AccountParameters
+    template_name = 'account_params.html'
+    form_class = AccountParameterForm
+    context_object_name = 'accountparamform'
+    def form_valid(self, form):
+        tenant = self.request.tenant
+        if not tenant:
+            return JsonResponse({
+                'status':'Error'
+            })
+        existing_params = AccountParameters.objects.filter(
+            tenant=tenant
+        ).first()
+
+        if existing_params:
+            # update
+            existing_params.account_code_length = form.cleaned_data['account_code_length']
+            existing_params.save()
+        else:
+            # create 
+            form.instance.tenant = tenant
+            form.save()
+        return JsonResponse({
+            'status':'success',
+            'message':'Parameter updated successfully.'
+        })
+    
+    def form_invalid(self, form):
+        return JsonResponse({
+            'status':'error',
+            'message':'Invalid form submission'
+        })
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        existing_params = AccountParameters.objects.filter(
+            tenant=tenant
+        ).first()
+        context['account_code_len'] = existing_params.account_code_length if existing_params else None
+        return context
+
 
 
 @method_decorator(login_required, name='dispatch')
@@ -85,11 +133,15 @@ class AddChartOfAccounts(TemplateView):
         account_types = ChartOfAccounts.ACCOUNT_TYPES
         account_status = ChartOfAccounts.ACCOUNT_STATUS
         available_accounts = ChartOfAccounts.objects.filter(tenant=tenant)
+        account_code_lenght = AccountParameters.objects.filter(
+            tenant=tenant
+        ).first().account_code_length
 
         context['chart_of_accounts'] = available_accounts
         context['parent_accounts'] = available_accounts
         context['account_types'] = account_types
         context['account_status'] = account_status
+        context['code_length'] = account_code_lenght
         return context
 
 

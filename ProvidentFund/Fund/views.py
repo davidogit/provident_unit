@@ -63,7 +63,7 @@ class AccessDenied(TemplateView):
 # the name=dispatch means the decorators will work for POST,GET,PUT etc
 @method_decorator(login_required, name='dispatch') 
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Treasury Manager']), name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Analyst','Treasury Supervisor','Scheme Manager','Scheme Analyst','Scheme Supervisor','Contributions Manager','Contributions Analyst','Contributions Supervisor','Finance Manager','Finance Analyst','Finance Supervisor']), name='dispatch')
 class Invest(TemplateView):
     template_name = 'dashboard/finance.html'
 
@@ -256,7 +256,7 @@ class InvestmentDetailView(DetailView):
         except Exception:
             return JsonResponse({
                 'status':'error',
-                'message':'No account mapping for "Redeem Investment" found. Please create a mapping for this event and try again.'
+                'message':'No account mapping for "Investment Redemption" found. Please create a mapping for this event and try again.'
             })
         
         # fetch debit and credit accounts
@@ -753,7 +753,7 @@ class InvestmentDeleteView(TemplateView):
 # Active Members List
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=[]), name='dispatch')
+@method_decorator(role_required(role=['Scheme Manager','Scheme Analyst']), name='dispatch')
 class MemberListView(ListView):
     model = StaffAPI
     template_name = 'dashboard/member_list.html'
@@ -789,7 +789,7 @@ class MemberListView(ListView):
 # Exited Members List
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=[]), name='dispatch')
+@method_decorator(role_required(role=['Scheme Manager','Scheme Analyst']), name='dispatch')
 class ExitedMembers(ListView):
     model = StaffAPI
     template_name ='dashboard/exited_members.html'
