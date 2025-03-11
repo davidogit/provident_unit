@@ -4,102 +4,221 @@
 {% endblock %}
 
 {% block content %}
-
-
-  <div class="main main-app p-3 p-lg-4">
-    <div class="container">
-      <div class="row">
-        <div class="col-lg-8 mx-auto">
-          <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-              <h3 class="card-title mb-0">Edit Profile</h3>
-            </div>
-            <div class="card-body p-4">
-              <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="username" class="form-label">Username:</label>
-                    <input type="text" class="form-control" disabled placeholder="{{ user.username }}">
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="email" class="form-label">Email:</label>
-                    <input type="text" class="form-control" disabled placeholder="{{ user.email }}">
-                  </div>
+<div class="main main-app p-3 p-lg-4">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="card shadow border-0 rounded-3 overflow-hidden">
+          <div class="card-header bg-primary text-white p-4 d-flex align-items-center">
+            <i class="fas fa-user-edit me-2 fs-4"></i>
+            <h3 class="card-title mb-0 fw-bold">Edit Profile</h3>
+          </div>
+          
+          <div class="card-body p-4">
+            <div class="row mb-4">
+              <div class="col-md-3 text-center mb-4 mb-md-0">
+                <div class="profile-image-container mb-3">
+                  {% if user.member.image %}
+                    <img src="{{ user.member.image.url }}" alt="Profile Image" class="rounded-circle img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">
+                  {% else %}
+                    <div class="placeholder-image rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 150px; height: 150px; margin: 0 auto;">
+                      <i class="fas fa-user text-secondary" style="font-size: 60px;"></i>
+                    </div>
+                  {% endif %}
                 </div>
-                
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="staff_id" class="form-label">Staff ID:</label>
-                    <input type="text" class="form-control" disabled placeholder="{{ user.member.staff_id }}">
+                <h5 class="fw-bold text-primary">{{ user.username }}</h5>
+                <p class="text-muted">{{ user.member.job_title }}</p>
+              </div>
+              
+              <div class="col-md-9">
+                <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                  {% csrf_token %}
+                  
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <h5 class="border-bottom pb-2 mb-3 text-secondary">Personal Information</h5>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="username" class="form-label fw-semibold">Username:</label>
+                      <div class="input-group">
+                        <span class="input-group-text bg"><i class="fas fa-user"></i></span>
+                        <input type="text" class="form-control bg" disabled placeholder="{{ user.username }}">
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="email" class="form-label fw-semibold">Email:</label>
+                      <div class="input-group">
+                        <span class="input-group-text bg"><i class="fas fa-envelope"></i></span>
+                        <input type="text" class="form-control bg" disabled placeholder="{{ user.email }}">
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="staff_id" class="form-label fw-semibold">Staff ID:</label>
+                      <div class="input-group">
+                        <span class="input-group-text bg"><i class="fas fa-id-card"></i></span>
+                        <input type="text" class="form-control bg" disabled placeholder="{{ user.member.staff_id }}">
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="tel_number" class="form-label fw-semibold">Telephone Number:</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                        {{ form.tel_number }}
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="date_of_birth" class="form-label fw-semibold">Date of Birth:</label>
+                      <div class="input-group">
+                        <span class="input-group-text bg"><i class="fas fa-calendar"></i></span>
+                        <input type="text" class="form-control bg" disabled placeholder="{{ user.member.date_of_birth }}">
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="gender" class="form-label fw-semibold">Gender:</label>
+                      <div class="input-group">
+                        <span class="input-group-text bg"><i class="fas fa-venus-mars"></i></span>
+                        <input type="text" class="form-control bg" disabled placeholder="{{ user.member.gender }}">
+                      </div>
+                    </div>
+                    
+                    <div class="col-12">
+                      <h5 class="border-bottom pb-2 mb-3 mt-2 text-secondary">Contact & Employment</h5>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="address" class="form-label fw-semibold">Address:</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-home"></i></span>
+                        {{ form.address }}
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="nationality" class="form-label fw-semibold">Nationality:</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                        {{ form.nationality }}
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="marital_status" class="form-label fw-semibold">Marital Status:</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-heart"></i></span>
+                        {{ form.marital_status }}
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="image" class="form-label fw-semibold">Profile Image:</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-image"></i></span>
+                        {{ form.image }}
+                      </div>
+                      <small class="text-muted">Upload a square image for best results</small>
+                    </div>
+                    
+                    <div class="col-12">
+                      <h5 class="border-bottom pb-2 mb-3 mt-2 text-secondary">Employment Details</h5>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="employment_date" class="form-label fw-semibold">Employment Date:</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
+                        {{ form.employment_date }}
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="department" class="form-label fw-semibold">Department:</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-building"></i></span>
+                        {{ form.department }}
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                      <label for="job_title" class="form-label fw-semibold">Job Title:</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                        {{ form.job_title }}
+                      </div>
+                    </div>
                   </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="tel_number" class="form-label">Telephone Number:</label>
-                    {{ form.tel_number }}
+                  
+                  <div class="d-flex gap-2 mt-4 justify-content-end">
+                    <a href="{% url 'member_profile' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-outline-secondary px-4">
+                      <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4">
+                      <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
                   </div>
-                </div>
-                
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="address" class="form-label">Address:</label>
-                    {{ form.address }}
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="date_of_birth" class="form-label">Date of Birth:</label>
-                    <input type="text" class="form-control" disabled placeholder="{{ user.member.date_of_birth }}">
-                  </div>
-                </div>
-                
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="nationality" class="form-label">Nationality:</label>
-                    {{ form.nationality }}
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="image" class="form-label">Profile Image:</label>
-                    {{ form.image }}
-                  </div>
-                </div>
-                
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="marital_status" class="form-label">Marital Status:</label>
-                    {{ form.marital_status }}
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="gender" class="form-label">Gender:</label>
-                    <input type="text" class="form-control" disabled placeholder="{{ user.member.gender }}">
-                  </div>
-                </div>
-                
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="employment_date" class="form-label">Employment Date:</label>
-                    {{ form.employment_date }}
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="department" class="form-label">Department:</label>
-                    {{ form.department }}
-                  </div>
-                </div>
-                
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="job_title" class="form-label">Job Title:</label>
-                    {{ form.job_title }}
-                  </div>
-                </div>
-                
-                <div class="d-grid gap-2">
-                  <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
-                  <a href="{% url 'member_profile' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-secondary btn-lg">Cancel</a>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+</div>
+
+<!-- Add this to your base template if not already included -->
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<style>
+  .form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  .input-group-text {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  
+  .card {
+    transition: all 0.3s ease;
+  }
+  
+  .card-header {
+    border-bottom: 0;
+  }
+  
+  .form-label {
+    margin-bottom: 0.3rem;
+    color: #495057;
+  }
+  
+  .btn {
+    font-weight: 500;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+  }
+  
+  .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  
+  .btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+  }
+  
+  .btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: white;
+  }
+</style>
 {% endblock %}
