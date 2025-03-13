@@ -130,7 +130,7 @@ class InvestmentDetail(models.Model):
     )
     years = models.DecimalField(
         max_digits=4,
-        decimal_places=0,
+        decimal_places=2,
         null=False
     ) #Time the money is invested or borrowed for, in years.
     compounding_frequency = models.PositiveIntegerField(

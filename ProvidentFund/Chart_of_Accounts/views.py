@@ -2,8 +2,8 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.views.generic import TemplateView,DeleteView,UpdateView,View,CreateView
-from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount,AccountParameters
+from django.views.generic import TemplateView,DeleteView,UpdateView,View,CreateView,ListView
+from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount,AccountParameters,AccountTransaction
 from MultiScheme.models import InvestmentScheme
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
@@ -493,10 +493,8 @@ class AccountBalanceQuery(TemplateView):
         context = super().get_context_data(**kwargs)
         tenant = self.request.tenant
         natural_accounts_set = ChartOfAccounts.objects.filter(tenant=tenant,parent=None)
-        child_accounts = ChartOfAccounts.objects.filter(tenant=tenant).exclude(parent=None)
         
         natural_accounts=[]
-        other_accounts = []
         for account in natural_accounts_set:
             natural_accounts.append(
                 {
@@ -505,21 +503,84 @@ class AccountBalanceQuery(TemplateView):
                 }
             )
 
-
-        for other in child_accounts:
-            other_accounts.append(
-                {
-                    'account':other,
-                    'account_balance':other.calculate_total_balance()
-                }
-                )
-
         context['natural_accounts'] = natural_accounts
-        context['child_accounts'] = other_accounts
-
         return context
 
 
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
+class FetchChildrenAccounts(View):
+    """ AJAX view to fetch child accounts based on parent account ID """
+
+    def get(self, request, *args, **kwargs):
+        tenant = request.tenant
+        natural_account_id = request.GET.get('account_id', None)
+
+        if not natural_account_id:
+            return JsonResponse({'status': 'error', 'message': 'Invalid account ID.'}, status=400)
+
+        parent_account = ChartOfAccounts.objects.filter(
+            tenant=tenant,
+            id=natural_account_id
+        ).first()
+
+        if not parent_account:
+            return JsonResponse({'status': 'error', 'message': 'Parent account not found.'}, status=404)
+
+        # Get hierarchy (list of objects)
+        account_hierarchy = parent_account.get_hierarchy()
+
+        # Convert list of objects to a list of IDs
+        account_ids = [account.id for account in account_hierarchy]
+
+        # Query the database using the extracted IDs
+        accounts = ChartOfAccounts.objects.filter(id__in=account_ids).order_by('parent__name').values(
+            'id', 'name', 'account_code', 'current_balance'
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'data': list(accounts)
+        })
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
+class FetchAccountTransactions(View):
+    """
+    Ajax view to fetch selected accounts transactions
+    """
+
+    def get(self,request,*args,**kwargs):
+        tenant = self.request.tenant
+        account_id = self.kwargs.get('account_id',None)
+
+        if not account_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid account ID.'
+            })
+        account_transactions = AccountTransaction.objects.filter(
+            tenant=tenant,
+            account__id=account_id
+        ).values('date','description','amount','balance','transaction_type').order_by('-date')
+
+        formatted_transactions = [
+            {
+                'transaction_type':transaction['transaction_type'],
+                'date': transaction['date'].strftime('%Y-%m-%d %H:%M:%S'),
+                'description': transaction['description'],
+                'amount': transaction['amount'],
+                'balance': transaction['balance'],
+            }
+            for transaction in account_transactions
+        ]
+        return JsonResponse({
+            'status':'success',
+            'data':formatted_transactions
+        })
 
 # BANK ACCOUNT CREATION AND LIST
 @method_decorator(login_required, name='dispatch')

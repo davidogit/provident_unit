@@ -5,65 +5,124 @@
 {% endblock %}
 
 {% block header %}
-<h5>Generate Invoice</h5>
+<h5 class="fw-bold"><i class="bi bi-receipt me-2"></i>Generate Invoice</h5>
 {% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5 order-div">
-        <div class="col-12 d-flex flex-row justify-content-center">
-            <div class="row g-2 g-lg-3 mb-4 d-flex flex-row justify-content-center w-100">
-                <div class="col-12 col-md-8 col-lg-6 col-xl-4">
-                    <div class="input-group">
-                        <input type="text" class="form-control rounded-pill py-2 px-3 flex-grow-1" placeholder="Search for purchase orders...">
-                        <button class="btn btn-secondary rounded-pill px-3 flex-shrink-0 search_order">
-                            <i class="ri-search-line"></i>
-                        </button>
+    <div class="container-fluid order-div">
+        <!-- Search Section -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-lg-6">
+                        <h6 class="card-title mb-3 mb-lg-0">
+                            <i class="bi bi-search me-2"></i>Find Purchase Order
+                        </h6>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-hash"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0 ps-0" id="orderSearchInput" placeholder="Enter purchase order number...">
+                            <button class="btn btn-primary search_order" type="button">
+                                <i class="bi bi-search me-1"></i> Search
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        
 
-        <!-- add a div to stretch across the width which will display search results of an item -->
-        <div class="col-12">
-            <div class="card card-body">
+        <!-- Results Section -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-clipboard-data me-2"></i>Purchase Order Details
+                    </h6>
+                    <span class="badge bg-primary-soft text-primary" id="resultStatus">Ready to search</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-nowrap table-align-middle table-vcenter">
-                        <thead>
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
                             <tr>
-                                <th>Order Number</th>
+                                <th class="ps-3">Order Number</th>
                                 <th>Supplier</th>
                                 <th>Total Order Amount</th>
                                 <th>Due Amount</th>
                                 <th>Assets/Expense</th>
-                                <th>Actions</th>
+                                <th class="text-end pe-3">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="table-striped order_table">
-                            <!-- Data added dynamically from ajax -->
+                        <tbody class="order_table">
+                            <!-- Initial empty state -->
+                            <tr id="emptyState">
+                                <td colspan="6" class="text-center py-5">
+                                    <div class="py-4">
+                                        <i class="bi bi-search fs-1 text-muted"></i>
+                                        <h6 class="mt-3">Search for a purchase order</h6>
+                                        <p class="text-muted">Enter a purchase order number to view details</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- Add modal to allow user to enter amount to pay -->
+        <!-- Invoice Payment Modal -->
         <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
+            <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Invoice Payment</h5>
+                        <h5 class="modal-title">
+                            <i class="bi bi-receipt me-2"></i>Generate Invoice
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="order-summary mb-4 p-3 bg-light rounded">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Order Number:</span>
+                                <span class="fw-medium order-number-display">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Supplier:</span>
+                                <span class="fw-medium supplier-display">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Due Amount:</span>
+                                <span class="fw-bold due-amount-display">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Debit Account:</span>
+                                <span class="fw-bold debit-account">-</span>
+                            </div>
+                        </div>
+                        
                         <form action="" method="POST">
                             <div class="mb-3">
-                                <label for="amount" class="form-label">Enter supplier invoice amount</label>
-                                <input type="number" class="form-control" id="amount" name="supplier_invoice_amount" min="0.00" step="0.01" required>
+                                <label for="amount" class="form-label">Supplier Invoice Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="amount" name="supplier_invoice_amount" min="0.01" step="0.01" required>
+                                </div>
+                                <div class="form-text">Enter the amount as shown on the supplier's invoice</div>
                             </div>
-                            <button type="submit" class="btn btn-primary pay-invoice">Pay</button>
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                    <i class="bi bi-x me-1"></i> Cancel
+                                </button>
+                                <button type="submit" class="btn btn-success pay-invoice">
+                                    <i class="bi bi-check2-circle me-1"></i> Generate Invoice
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -72,114 +131,463 @@
     </div>
 </div>
 
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+        margin-bottom: 1.5rem;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-header {
+        border-top-left-radius: 0.75rem !important;
+        border-top-right-radius: 0.75rem !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1rem 1.25rem;
+    }
+    
+    /* Table Styles */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table td {
+        padding: 1rem 0.75rem;
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .input-group-text {
+        border-radius: 0.5rem 0 0 0.5rem;
+    }
+    
+    .input-group .btn {
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+    
+    /* Modal Styles */
+    .modal-content {
+        border: none;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1rem 1.25rem;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Order Summary */
+    .order-summary {
+        border-left: 4px solid var(--bs-primary);
+    }
+    
+    /* Loading Animation */
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-left-color: var(--bs-primary);
+        border-radius: 50%;
+        animation: spinner 0.75s linear infinite;
+    }
+    
+    @keyframes spinner {
+        to {transform: rotate(360deg);}
+    }
+    
+    /* Toast Notification */
+    .toast-container {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        z-index: 1050;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+        .table th, .table td {
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+
+<!-- Toast Container for Notifications -->
+<div class="toast-container"></div>
+
 <script>
     $(document).ready(function(){
-        $('.search_order').on('click', function(e){
+        // Enable pressing Enter to search
+        $('#orderSearchInput').on('keypress', function(e) {
+            if (e.which === 13) {
+                $('.search_order').click();
+            }
+        });
+        
+        // Search for purchase order
+        $('.search_order').on('click', function(e) {
             e.preventDefault();
-            var order_number = $(this).closest('.input-group').find('input').val();
-            var tenant_id = "{{ request.tenant.id }}"
-            const tableBody = $(this).closest('.order-div').find('.order_table')
-            var url = `/${tenant_id}/fund/fetch-purchase-order/${order_number}/`
-            console.log(url)
+            // Get order number
+            var orderNumber = $('#orderSearchInput').val().trim();
+            
+            // Validate input
+            if (!orderNumber) {
+                showToast('Please enter a purchase order number', 'warning');
+                $('#orderSearchInput').focus();
+                return;
+            }
+            
+            var tenantId = "{{ request.tenant.id }}";
+            var tableBody = $('.order_table');
+            var url = `/${tenantId}/fund/fetch-purchase-order/${orderNumber}/`;
+            
+            // Update status and show loading
+            $('#resultStatus').html('<span class="loading-spinner me-2"></span> Searching...');
+            
+            // Clear previous results
+            tableBody.find('tr:not(#emptyState)').remove();
+            $('#emptyState').show();
+            
             $.ajax({
-                url:url,
-                type:'GET',
-                success:function(response){
-                    console.log(response)
-                    console.log(response.accounts)
-                    if (response.status === 'success'){
-                        tableBody.html('') //Empty table
-                        accounts = response.accounts
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Hide empty state
+                        $('#emptyState').hide();
                         
-                        let account_options = accounts.map(account=> `<option value="${account.id}">${account.account_code} ${account.name}</option>`)
+                        // Update status
+                        $('#resultStatus').html('<i class="bi bi-check-circle me-1"></i> Order found');
+                        $('#resultStatus').removeClass('bg-primary-soft text-primary')
+                            .addClass('bg-success-soft text-success');
+                        
+                        // Build account options
+                        let accountOptions = response.accounts.map(account => 
+                            `<option value="${account.id}">${account.account_code} - ${account.name}</option>`
+                        ).join('');
+                        
+                        // Create row
                         const row = `
-                            <tr>
-                                <td>${response.order_number}</td>
-                                <td>${response.supplier}</td>
-                                <td>${response.total_order_amount}</td>
-                                <td>${response.amount_to_pay}</td>
+                            <tr data-order-id="${response.order_number}" data-supplier="${response.supplier}" data-amount="${response.amount_to_pay}">
+                                <td class="ps-3">
+                                    <span class="fw-medium">${response.order_number}</span>
+                                </td>
                                 <td>
-
-                                    <div class="form-floating">
-                                        <select class="form-select" name="asset_expense" id="asset_expense">
-                                            <option value="">-select-</option>
-                                           ${account_options}
-                                        </select>
-                                        <label for="asset_expense" class="form-label">Account Parent</label>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle bg-light text-primary me-2">
+                                            ${response.supplier.charAt(0)}
+                                        </div>
+                                        <span>${response.supplier}</span>
                                     </div>
                                 </td>
                                 <td>
-                                    <!-- <button class="btn btn-sm btn-primary">View</button> -->
-                                    <button class="btn btn-sm btn-success pay" data-order-id="${response.order_number}" data-bs-toggle="modal" data-bs-target="#payInvoiceModal">Generate Invoice</button>
+                                    <span class="text-muted">$</span> ${response.total_order_amount}
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning-soft text-warning">
+                                        <span class="text-muted">$</span> ${response.amount_to_pay}
+                                    </span>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm asset-expense-select" name="asset_expense" required>
+                                        <option value="">Select account</option>
+                                        ${accountOptions}
+                                    </select>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <button class="btn btn-sm btn-success generate-invoice-btn" disabled>
+                                        <i class="bi bi-receipt me-1"></i> Generate Invoice
+                                    </button>
                                 </td>
                             </tr>
-                        `
-                        tableBody.append(row)
+                        `;
                         
-                        //display modal when pay is clicked
-                        $('.pay').on('click', function(){
-                            const orderId = $(this).data('order-id')
-                            //set the action on the form
-                            $('#itemModal').find('form').attr('action', `/${tenant_id}/fund/create-invoice/`)
-                            //Append order number to form
-                            $('#itemModal').find('form').append(`<input type="hidden" name="order_number" value="${orderId}">`)
-                            //get debit account id
-                            var debit_account_id = $(this).closest('tr').find('#asset_expense').val()
-                            console.log(debit_account_id)
-                            if (!debit_account_id){
-                                alert('Please select an account')
-                                return
+                        // Add row to table
+                        tableBody.append(row);
+                        
+                        // Enable/disable generate button based on account selection
+                        $('.asset-expense-select').on('change', function() {
+                            const selectValue = $(this).val();
+                            const generateBtn = $(this).closest('tr').find('.generate-invoice-btn');
+                            
+                            if (selectValue) {
+                                generateBtn.prop('disabled', false);
+                            } else {
+                                generateBtn.prop('disabled', true);
                             }
-                            //Append account id to form
-                            $('#itemModal').find('form').append(`<input type="hidden" name="debit_account_id" value="${debit_account_id}">`)
-
-                            //display modal
-                            $('#itemModal').modal('show')
-
-                        })
+                        });
                         
-                    }else{
-                        console.log(response)
-                        alert(response.message);
+                        // Handle generate invoice button click
+                        $('.generate-invoice-btn').on('click', function() {
+                            const row = $(this).closest('tr');
+                            const orderId = row.data('order-id');
+                            const supplier = row.data('supplier');
+                            const dueAmount = row.data('amount');
+                            const accountId = row.find('.asset-expense-select').val();
+                            const accountName = row.find('.asset-expense-select option:selected').text();
+                            
+                            if (!accountId) {
+                                showToast('Please select an account', 'warning');
+                                row.find('.asset-expense-select').focus();
+                                return;
+                            }
+                            
+                            // Set modal values
+                            $('.order-number-display').text(orderId);
+                            $('.supplier-display').text(supplier);
+                            $('.due-amount-display').text('$' + dueAmount);
+                            $('.debit-account').text(accountName);
+                            
+                            // Set form values
+                            const form = $('#itemModal').find('form');
+                            form.attr('action', `/${tenantId}/fund/create-invoice/`);
+                            
+                            // Remove any existing hidden inputs
+                            form.find('input[type="hidden"]').remove();
+                            
+                            // Add hidden inputs
+                            form.append(`<input type="hidden" name="order_number" value="${orderId}">`);
+                            form.append(`<input type="hidden" name="debit_account_id" value="${accountId}">`);
+                            
+                            // Set default amount
+                            $('#amount').val(dueAmount);
+                            
+                            // Show modal
+                            $('#itemModal').modal('show');
+                        });
+                        
+                    } else {
+                        // Update status
+                        $('#resultStatus').html('<i class="bi bi-exclamation-triangle me-1"></i> Not found');
+                        $('#resultStatus').removeClass('bg-primary-soft text-primary')
+                            .addClass('bg-warning-soft text-warning');
+                        
+                        // Show empty state with message
+                        $('#emptyState td').html(`
+                            <div class="py-4">
+                                <i class="bi bi-exclamation-circle fs-1 text-warning"></i>
+                                <h6 class="mt-3">Purchase order not found</h6>
+                                <p class="text-muted">${response.message || 'No purchase order found with that number'}</p>
+                            </div>
+                        `);
+                        
+                        showToast(response.message || 'Purchase order not found', 'warning');
                     }
-                    
                 },
-                error:function(jqXHR){
-                    message = jqXHR.responseJSON.message || 'An error occured';
-                    console.log(message)
-                    alert('An error occured');
+                error: function(jqXHR) {
+                    // Update status
+                    $('#resultStatus').html('<i class="bi bi-exclamation-triangle me-1"></i> Error');
+                    $('#resultStatus').removeClass('bg-primary-soft text-primary')
+                        .addClass('bg-danger-soft text-danger');
+                    
+                    // Show error message
+                    const message = jqXHR.responseJSON?.message || 'An error occurred while searching';
+                    
+                    // Show empty state with error
+                    $('#emptyState td').html(`
+                        <div class="py-4">
+                            <i class="bi bi-exclamation-triangle fs-1 text-danger"></i>
+                            <h6 class="mt-3">Error searching for purchase order</h6>
+                            <p class="text-muted">${message}</p>
+                        </div>
+                    `);
+                    
+                    showToast(message, 'danger');
                 }
             });
         });
 
-        $('.pay-invoice').on('click', function(e){
+        // Handle invoice payment
+        $('.pay-invoice').on('click', function(e) {
             e.preventDefault();
-            var form= $(this).closest('form');
-            console.log(form.serialize())
-
+            
+            var form = $(this).closest('form');
+            var amount = $('#amount').val();
+            
+            // Validate amount
+            if (!amount || parseFloat(amount) <= 0) {
+                showToast('Please enter a valid amount', 'warning');
+                $('#amount').focus();
+                return;
+            }
+            
+            // Show loading state
+            var btn = $(this);
+            var originalText = btn.html();
+            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+            btn.prop('disabled', true);
+            
             $.ajax({
-                url:form.attr('action'),
+                url: form.attr('action'),
                 type: 'POST',
                 data: form.serialize(),
-                headers:{
+                headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                success:function(response){
-                    if (response.status === 'success'){
-                        alert(response.message);
-                        window.location.reload();
-
-                    }else{
-                        alert(response.message);
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Hide modal
+                        $('#itemModal').modal('hide');
+                        
+                        // Show success message
+                        showToast(response.message, 'success');
+                        
+                        // Clear search input
+                        $('#orderSearchInput').val('');
+                        
+                        // Reset table
+                        $('.order_table').find('tr:not(#emptyState)').remove();
+                        $('#emptyState').show();
+                        $('#emptyState td').html(`
+                            <div class="py-4">
+                                <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+                                <h6 class="mt-3">Invoice generated successfully</h6>
+                                <p class="text-muted">Search for another purchase order to generate an invoice</p>
+                            </div>
+                        `);
+                        
+                        // Reset status
+                        $('#resultStatus').html('<i class="bi bi-check-circle me-1"></i> Invoice Generated');
+                        $('#resultStatus').removeClass().addClass('badge bg-success-soft text-success');
+                        
+                    } else {
+                        showToast(response.message, 'danger');
                     }
                 },
-                error:function(jqXHR){
-                    message = jqXHR.responseJSON.message || 'An error occured';
-                    console.log(message)
-                    alert(message)
+                error: function(jqXHR) {
+                    const message = jqXHR.responseJSON?.message || 'An error occurred while processing the invoice';
+                    showToast(message, 'danger');
+                },
+                complete: function() {
+                    // Restore button state
+                    btn.html(originalText);
+                    btn.prop('disabled', false);
                 }
             });
         });
+        
+        // Toast notification function
+        function showToast(message, type) {
+            // Create toast element
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `);
+            
+            // Append to container
+            $('.toast-container').append(toast);
+            
+            // Initialize and show toast
+            const bsToast = new bootstrap.Toast(toast, {
+                autohide: true,
+                delay: 5000
+            });
+            
+            bsToast.show();
+            
+            // Remove from DOM after hidden
+            toast.on('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        }
+        
+        // Define avatar circle style if not already in your CSS
+        if (!$('.avatar-circle').length) {
+            $('head').append(`
+                <style>
+                    .avatar-circle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 600;
+                    }
+                    
+                    .bg-danger-soft {
+                        background-color: rgba(220, 53, 69, 0.15);
+                    }
+                </style>
+            `);
+        }
     });
 </script>
 {% endblock %}

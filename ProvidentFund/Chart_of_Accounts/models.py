@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from MultiScheme.models import Tenant,InvestmentScheme
@@ -76,7 +77,7 @@ class ChartOfAccounts(models.Model):
     current_balance = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        default=0.00
+        default=Decimal(0.00)
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -121,6 +122,95 @@ class ChartOfAccounts(models.Model):
         for child in children:
             total_balance += child.current_balance
         return total_balance
+
+    def record_transaction(self, amount, transaction_type, description='', created_by=None):
+        if transaction_type not in ['DEBIT', 'CREDIT']:
+            raise ValidationError('Invalid transaction type')
+
+        if transaction_type == 'DEBIT' and amount > self.current_balance:
+            raise ValidationError('Insufficient balance for debit transaction')
+
+        transaction = AccountTransaction.objects.create(
+            tenant=self.tenant,
+            account=self,
+            amount=amount,
+            transaction_type=transaction_type,
+            description=description,
+            created_by=created_by
+        )
+
+        # Update the current balance
+        if transaction_type == 'DEBIT':
+            self.current_balance -= amount
+        elif transaction_type == 'CREDIT':
+            self.current_balance += amount
+
+        self.save()
+        return transaction
+
+    def __str__(self):
+        return f'{self.account_code} - {self.name}'
+
+
+class AccountTransaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('DEBIT', 'Debit'),
+        ('CREDIT', 'Credit'),
+    ]
+
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='account_transactions'
+    )
+    account = models.ForeignKey(
+        ChartOfAccounts,
+        on_delete=models.CASCADE,
+        related_name='transactions'
+    )
+    date = models.DateTimeField(
+        auto_now_add=True
+    )
+    description = models.TextField(
+        null=True, blank=True
+    )
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+    transaction_type = models.CharField(
+        max_length=6,
+        choices=TRANSACTION_TYPES
+    )
+    balance = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal(0.00)
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        verbose_name = 'Account Transaction'
+        verbose_name_plural = 'Account Transactions'
+        ordering = ['-date']
+
+    def __str__(self):
+        return f'{self.account.name} - {self.transaction_type} - {self.amount}'
+
+    def save(self, *args, **kwargs):
+        # Calculate the balance after the transaction
+        if self.transaction_type == 'DEBIT':
+            self.balance = self.account.current_balance - self.amount
+        elif self.transaction_type == 'CREDIT':
+            self.balance = self.account.current_balance + self.amount
+
+        super().save(*args, **kwargs)
+
 
 class AccountMapping(models.Model):
     ACTIONS = [

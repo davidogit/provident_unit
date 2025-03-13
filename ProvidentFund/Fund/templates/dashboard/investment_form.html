@@ -1,165 +1,296 @@
 {% extends 'dashboard/base.html' %}
 {% block title %}
-<title>Investment Detail</title>
+<title>Investment Form</title>
 {% endblock %}
 {% block header %}
-<h5>Investment Detail</h5>
+<h5 class="fw-bold"><i class="bi bi-graph-up me-2"></i>Add Investment</h5>
 {% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-  <div class="row row-cols-auto g-4 g-xxl-5">
-      <div class="col-xl">
-          <div class="container">
-            <!-- <h2 class="mb-5">Investment Detail</h2> -->
-
-            <form method="POST" class="inv_form" id="inv_form">
-              {% csrf_token %}
-                <div class="row g-5">
-                  <div class="col-md-4">
-                    <div class="form-floating mb-3">
-                      <select class="form-control" name="investment_type" id="investmentType">
-                        <option value="">--select--</option>
-                        {% for acc,label in inv_type %}
-                        <option value="{{acc}}">{{ label }}</option>
-                        {% endfor %}
-                      </select>
-                      <label for="investmentType" class="form-label">Investment Type</label>
-                      
-                      <div class="row group">
-                        <div class="col-md-6"><div class="mt-2" aria-hidden="true">
-                          <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio1" autocomplete="off" value="91 days">
-                            <label class="btn btn-outline-primary" for="btnradio1">91 days</label>
-                          
-                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio2" autocomplete="off" value="182 days">
-                            <label class="btn btn-outline-primary" for="btnradio2">182 days</label>
-                          
-                            <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio3" autocomplete="off" value="365 days">
-                            <label class="btn btn-outline-primary" for="btnradio3">365 days</label>
-                          </div>
-                        </div></div>
-                        <div class="form-floating col-md-6 daycount mt-2">
-                          <input type="number" class="form-control" name="day_count" id="day_count" placeholder="">
-                          <label for="day_count">Day Count</label>
-                        </div>
-                      </div>
-                      
-                    
-
-                    </div>
-                    <div class="form-floating mb-3">
-                      <input type="text" class="form-control" id="investmentId" min="1" name="account_name" placeholder="" required>
-                      <label for="investmentId" class="form-label">Investment Name</label>
-                    </div>
-
-                    <div class="form-floating mb-3">
-                      <select class="form-control" name="account_type" id="investmentName" required>
-                        <option value="">--select--</option>
-                      {% for acc,label in account_type %}
-                      <option value="{{acc}}">{{ label }}</option>
-                      {% endfor %}
-                      </select>
-                      <label for="investmentName" class="form-label">Account Type</label>
-                    </div>
-                    
-                    <div class="form-floating mb-3">
-                      <input type="number" step="0.01" class="form-control" id="years" name="years" placeholder="convert months to years" required>
-                      <label class="form-label" for="years">Investment duration (years)</label>
-                    </div>
-
-                  </div>
-          
-                  <div class="col-md-4">
-                    <div class="form-floating mb-3">
-                      <input type="number" class="form-control" id="principal_amount" name="principal_amount" placeholder="" required>
-                      <label class="form-label" for="principal_amount">Principal Amount</label>
-                    </div>
-
-                    <div class="form-floating mb-3">
-                      <input type="number" class="form-control" id="investmentDate" name="account_number" placeholder="" required>
-                      <label for="investmentDate" class="form-label">Account Number</label>
-                    </div>
-
-                    <div class="form-floating mb-3">
-                      <input type="number" min="1" step="0.01" class="form-control" id="interest_rate" name="interest_percentage" placeholder="" required>
-                      <label for="interest_rate" class="form-label">Percentage Interest</label>
-                    </div>
-                  </div>
-          
-                  <div class="col-md-4">
-                    <div class="form-floating mb-3">
-                      <input type="date" class="form-control" id="investmentAmount" name="interest_start_date" placeholder="" required>
-                      <label for="investmentAmount" class="form-label">Investment Start Date</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                      <input type="date" class="form-control" id="investmentTerm" name="interest_end_date" placeholder="" required>
-                      <label for="investmentTerm" class="form-label">Investment End Date</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                      <input type="number" step="1" min="0" class="form-control" id="compounding_frequency" name="compounding_frequency" placeholder="" required>
-                      <label for="compounding_frequency" class="form-label">Compounding frequency per year</label>
-                    </div>
-
-                  </div>
+  <div class="container-fluid">
+    <div class="card shadow-sm border-0">
+      <div class="card-header">
+        <h6 class="card-title mb-0">Investment Details</h6>
+      </div>
+      <div class="card-body">
+        <form method="POST" class="inv_form needs-validation" id="inv_form" novalidate>
+          {% csrf_token %}
+          <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="investmentType" class="form-label">Investment Type</label>
+                <select class="form-select" name="investment_type" id="investmentType" required>
+                  <option value="" selected disabled>Select investment type</option>
+                  {% for acc,label in inv_type %}
+                  <option value="{{acc}}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <div class="invalid-feedback">Please select an investment type.</div>
               </div>
-              <input type="submit" class="btn btn-outline-primary btn-lg" value="create">
-            </form>
+              
+              <!-- T-Bill Options - Hidden by default -->
+              <div class="tbill-options mb-3 d-none">
+                <label class="form-label">T-Bill Duration</label>
+                <div class="d-flex gap-2 mb-2">
+                  <div class="btn-group w-100" role="group" aria-label="T-Bill duration options">
+                    <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio1" value="91 days">
+                    <label class="btn btn-outline-primary" for="btnradio1">91 days</label>
+                  
+                    <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio2" value="182 days">
+                    <label class="btn btn-outline-primary" for="btnradio2">182 days</label>
+                  
+                    <input type="radio" class="btn-check" name="type_of_tbill" id="btnradio3" value="365 days">
+                    <label class="btn btn-outline-primary" for="btnradio3">365 days</label>
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <label for="day_count" class="form-label">Custom Day Count</label>
+                  <input type="number" class="form-control" name="day_count" id="day_count" placeholder="Enter custom days">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="investmentId" class="form-label">Investment Name</label>
+                <input type="text" class="form-control" id="investmentId" name="account_name" required>
+                <div class="invalid-feedback">Please provide an investment name.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="investmentName" class="form-label">Account Type</label>
+                <select class="form-select" name="account_type" id="investmentName" required>
+                  <option value="" selected disabled>Select account type</option>
+                  {% for acc,label in account_type %}
+                  <option value="{{acc}}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <div class="invalid-feedback">Please select an account type.</div>
+              </div>
+            </div>
+            
+            <!-- Middle Column -->
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="principal_amount" class="form-label">Principal Amount</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" class="form-control" id="principal_amount" name="principal_amount" required>
+                  <div class="invalid-feedback">Please enter the principal amount.</div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="investmentDate" class="form-label">Account Number</label>
+                <input type="number" class="form-control" id="investmentDate" name="account_number" required>
+                <div class="invalid-feedback">Please provide an account number.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="interest_rate" class="form-label">Interest Rate (%)</label>
+                <div class="input-group">
+                  <input type="number" min="0.01" step="0.01" class="form-control" id="interest_rate" name="interest_percentage" required>
+                  <span class="input-group-text">%</span>
+                  <div class="invalid-feedback">Please enter a valid interest rate.</div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="years" class="form-label">Investment Duration (years)</label>
+                <input type="number" step="0.01" class="form-control" id="years" name="years" required>
+                <div class="invalid-feedback">Please enter the investment duration.</div>
+                <div class="form-text">Enter decimal values for partial years (e.g., 1.5 for 18 months)</div>
+              </div>
+            </div>
+            
+            <!-- Right Column -->
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="investmentAmount" class="form-label">Investment Start Date</label>
+                <input type="date" class="form-control" id="investmentAmount" name="interest_start_date" required>
+                <div class="invalid-feedback">Please select a start date.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="investmentTerm" class="form-label">Investment End Date</label>
+                <input type="date" class="form-control" id="investmentTerm" name="interest_end_date" required>
+                <div class="invalid-feedback">Please select an end date.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="compounding_frequency" class="form-label">Compounding Frequency (per year)</label>
+                <select class="form-select" id="compounding_frequency" name="compounding_frequency" required>
+                  <option value="" selected disabled>Select frequency</option>
+                  <option value="1">Annually (1)</option>
+                  <option value="2">Semi-annually (2)</option>
+                  <option value="4">Quarterly (4)</option>
+                  <option value="12">Monthly (12)</option>
+                  <option value="365">Daily (365)</option>
+                  <option value="0">Custom</option>
+                </select>
+                <div class="invalid-feedback">Please select a compounding frequency.</div>
+                <div id="custom-frequency" class="mt-2 d-none">
+                  <input type="number" class="form-control" id="custom_compounding_frequency" placeholder="Enter custom frequency">
+                </div>
+              </div>
+            </div>
           </div>
+
+          <div class="d-flex justify-content-end mt-4">
+            <button type="button" class="btn btn-outline-secondary me-2">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-plus-circle me-1"></i> Create Investment
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- main -->
-   <script>
-    $(document).ready(function(){
-      $('.group').hide();
-      $('#investmentType').change(function(){
-        var investmentType = $(this).val();
-        if(investmentType == 'Treasury Bill'){
-          $('.group').show();
+<script>
+  $(document).ready(function(){
+    // Handle T-Bill options visibility
+    $('#investmentType').change(function(){
+      var investmentType = $(this).val();
+      if(investmentType == 'Treasury Bill'){
+        $('.tbill-options').removeClass('d-none');
+        
+        // Make T-Bill options required when visible
+        $('input[name="type_of_tbill"]').prop('required', true);
+      } else {
+        $('.tbill-options').addClass('d-none');
+        
+        // Remove required attribute when hidden
+        $('input[name="type_of_tbill"]').prop('required', false);
+        
+        // Reset T-Bill form elements
+        $('input[name="type_of_tbill"]').prop('checked', false);
+        $('#day_count').val('');
+      }
+    });
+
+    // Handle custom compounding frequency
+    $('#compounding_frequency').change(function(){
+      if($(this).val() == '0'){
+        $('#custom-frequency').removeClass('d-none');
+        $('#custom_compounding_frequency').prop('required', true);
+      } else {
+        $('#custom-frequency').addClass('d-none');
+        $('#custom_compounding_frequency').prop('required', false);
+        $('#custom_compounding_frequency').val('');
+      }
+    });
+
+    // Auto-calculate end date based on start date and years
+    $('#investmentAmount, #years').change(function(){
+      var startDate = $('#investmentAmount').val();
+      var years = $('#years').val();
+      
+      if(startDate && years) {
+        var endDate = new Date(startDate);
+        endDate.setFullYear(endDate.getFullYear() + Math.floor(years));
+        
+        // Handle decimal part of years as months
+        var remainingMonths = Math.round((years % 1) * 12);
+        endDate.setMonth(endDate.getMonth() + remainingMonths);
+        
+        // Format date as YYYY-MM-DD for input
+        var formattedDate = endDate.toISOString().split('T')[0];
+        $('#investmentTerm').val(formattedDate);
+      }
+    });
+
+    // Form validation
+    (function() {
+      'use strict';
+      
+      // Fetch all forms we want to apply validation to
+      var forms = document.querySelectorAll('.needs-validation');
+      
+      // Loop over them and prevent submission
+      Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    })();
+
+    // Form submission with AJAX
+    $('#inv_form').submit(function(e){
+      e.preventDefault();
+      
+      // If using custom compounding frequency, update the main field
+      if($('#compounding_frequency').val() == '0') {
+        $('#compounding_frequency').val($('#custom_compounding_frequency').val());
+      }
+      
+      var form = $(this);
+      var url = form.attr('action');
+      var data = form.serialize();
+      
+      // Show loading state
+      const submitBtn = form.find('button[type="submit"]');
+      const originalBtnText = submitBtn.html();
+      submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...');
+      submitBtn.prop('disabled', true);
+      
+      $.ajax({
+        type: 'POST',
+        url: url,
+        data: data,
+        success: function(response){
+          if(response.status === 'success'){
+            // Show success message
+            const successAlert = `
+              <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <strong>Success!</strong> Investment created successfully.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            `;
+            form.before(successAlert);
+            
+            // Redirect after a short delay
+            setTimeout(function() {
+              window.location.href = response.redirect_url;
+            }, 1500);
+          } else if (response.status === "error") {
+            // Show error message
+            const errorAlert = `
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Error!</strong> ${response.message || "Unknown error occurred."}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            `;
+            form.before(errorAlert);
+            
+            // Reset button state
+            submitBtn.html(originalBtnText);
+            submitBtn.prop('disabled', false);
+          }
+        },
+        error: function(error){
+          console.error(error);
           
-          //change required attribute to true
-          $('input[name="type_of_tbill"]').attr('required', true);
-
-        }else{
-          $('.group').hide();
-          //change required attribute to false
-          $('input[name="type_of_tbill"]').attr('required', false);
-          //uncheck all radio buttons
-          $('input[name="type_of_tbill"]').prop('checked', false);
-          //clear day count
-          $('input[name="day_count"]').val('');
+          // Show generic error message
+          const errorAlert = `
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <strong>Error!</strong> An error occurred while processing your request.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          `;
+          form.before(errorAlert);
+          
+          // Reset button state
+          submitBtn.html(originalBtnText);
+          submitBtn.prop('disabled', false);
         }
       });
-
-
-      //submit form
-      $('#inv_form').submit(function(e){
-        e.preventDefault();
-        var form = $(this);
-        var url = form.attr('action');
-        var data = form.serialize();
-        $.ajax({
-          type: 'POST',
-          url: url,
-          data: data,
-          success: function(response){
-            console.log(response);
-            if(response.status === 'success'){
-              alert('Investment created successfully');
-              //redirect to investment list
-              window.location.href = response.redirect_url;
-            }else{
-              alert('Investment creation failed');
-            }
-          },
-          error: function(error){
-            console.log(error);
-          }
-        });
-      });
     });
-   </script>
+  });
+</script>
 {% endblock %}
-
