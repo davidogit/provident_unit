@@ -3,86 +3,284 @@
 {% block title %}
 <title>Scheme Settings</title>
 {% endblock %}
+
 {% block header %}
 <h5 class="fw-bold"><i class="bi bi-gear me-2"></i>Scheme Settings</h5>
 {% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-  <div class="row row-cols-auto g-4 g-xxl-5">
-    <!-- Scheme Settings -->
-    <div class="col-xl">
-      <div class="container border-bottom border-secondary border-5 rounded p-5">
-        <!-- <h2 class="mb-5 text-center">Scheme Settings</h2> -->
-
-        <form method="POST" id="scheme-settings">
+  <div class="container-fluid">
+    <!-- Settings Card -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header d-flex align-items-center">
+        <i class="bi bi-sliders me-2 text-primary"></i>
+        <h5 class="card-title mb-0">Configuration Parameters</h5>
+      </div>
+      
+      <div class="card-body p-4">
+        <form method="POST" id="scheme-settings" class="needs-validation" novalidate>
           {% csrf_token %}
-            <div class="row g-5 justify-content-center">
-              <div class="col-md-4">
-
-                <div class="form-floating mb-3">
-                  <input class="form-control" type="number" step="1" min="1" max="31" name="contribution_day" id="contribution_day"  value="{{ settings.contribution_day }}" placeholder="" required>
-                  <label for="contribution_day" class="form-label">Contribution Day of Month</label>
-                </div>
-
-                <div class="form-floating mb-3">
-                  <input type="number" step="1" min="0" max="31" class="form-control"id="grace_period_contribution"name="grace_period_contribution" value="{{ settings.grace_period_contribution }}" placeholder="" required>
-                  <label for="grace_period_contribution" class="form-label">Grace Period for Contribution Deadline (days)</label>
-                </div>
-                <div class="form-floating mb-3">
-                  <input type="number" step="1" min="0" class="form-control"id="period_of_delayed_calculation"name="period_of_delayed_calculation" value="{{ settings.period_of_delayed_calculation }}" placeholder="" required>
-                  <label for="period_of_delayed_calculation" class="form-label">Period of delayed interest calculation (days)</label>
-                </div>
-                <div class="form-floating mb-3">
-                  <input type="number" step="0.001" min="0" class="form-control"id="delayed_interest_rate"name="delayed_interest_rate" value="{{ settings.delayed_interest_rate }}" placeholder="" required>
-                  <label for="delayed_interest_rate" class="form-label">Current Rate: %</label>
-                </div>
+          
+          <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+              <div class="form-floating">
+                <input 
+                  class="form-control" 
+                  type="number" 
+                  step="1" 
+                  min="1" 
+                  max="31" 
+                  name="contribution_day" 
+                  id="contribution_day" 
+                  value="{{ settings.contribution_day }}" 
+                  placeholder=""
+                  required
+                >
+                <label for="contribution_day">Contribution Day of Month</label>
+                <div class="form-text">Day when contributions are due each month</div>
+                <div class="invalid-feedback">Please enter a valid day (1-31)</div>
               </div>
-
-              <!-- <div class="col-md-4">
-                
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+              <div class="form-floating">
+                <input 
+                  type="number" 
+                  step="1" 
+                  min="0" 
+                  max="31" 
+                  class="form-control"
+                  id="grace_period_contribution"
+                  name="grace_period_contribution" 
+                  value="{{ settings.grace_period_contribution }}" 
+                  placeholder=""
+                  required
+                >
+                <label for="grace_period_contribution">Grace Period (days)</label>
+                <div class="form-text">Additional days allowed after the due date</div>
+                <div class="invalid-feedback">Please enter a valid number of days (0-31)</div>
               </div>
-      
-              <div class="col-md-4">
-                
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+              <div class="form-floating">
+                <input 
+                  type="number" 
+                  step="1" 
+                  min="0" 
+                  class="form-control"
+                  id="period_of_delayed_calculation"
+                  name="period_of_delayed_calculation" 
+                  value="{{ settings.period_of_delayed_calculation }}" 
+                  placeholder=""
+                  required
+                >
+                <label for="period_of_delayed_calculation">Delayed Calculation Period</label>
+                <div class="form-text">Days before delayed interest is calculated</div>
+                <div class="invalid-feedback">Please enter a valid number of days</div>
               </div>
-      
-              <div class="col-md-4">
-
-              </div> -->
-              
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+              <div class="form-floating">
+                <input 
+                  type="number" 
+                  step="0.001" 
+                  min="0" 
+                  class="form-control"
+                  id="delayed_interest_rate"
+                  name="delayed_interest_rate" 
+                  value="{{ settings.delayed_interest_rate }}" 
+                  placeholder=""
+                  required
+                >
+                <label for="delayed_interest_rate">Delayed Interest Rate (%)</label>
+                <div class="form-text">Interest rate applied to delayed payments</div>
+                <div class="invalid-feedback">Please enter a valid rate (≥ 0)</div>
+              </div>
+            </div>
           </div>
-          <button type="submit" class="btn btn-outline-primary btn-lg">Save</button>
+          
+          <div class="d-flex justify-content-end mt-4">
+            <button type="button" class="btn btn-outline-secondary me-2" id="reset-form">Reset</button>
+            <button type="submit" class="btn btn-primary" id="save-button">
+              <i class="bi bi-save me-2"></i>Save Changes
+            </button>
+          </div>
         </form>
+      </div>
+    </div>
+    
+    <!-- Settings Summary Card -->
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex align-items-center">
+        <i class="bi bi-info-circle me-2 text-primary"></i>
+        <h5 class="card-title mb-0">Current Configuration Summary</h5>
+      </div>
+      
+      <div class="card-body p-4">
+        <div class="row g-4">
+          <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0">
+              <div class="card-body text-center">
+                <i class="bi bi-calendar-check fs-1 text-primary mb-3"></i>
+                <h6 class="text-muted mb-2">Contribution Day</h6>
+                <h3 class="mb-0">{{ settings.contribution_day }}</h3>
+                <p class="text-muted">of each month</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0">
+              <div class="card-body text-center">
+                <i class="bi bi-hourglass-split fs-1 text-primary mb-3"></i>
+                <h6 class="text-muted mb-2">Grace Period</h6>
+                <h3 class="mb-0">{{ settings.grace_period_contribution }}</h3>
+                <p class="text-muted">days</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0">
+              <div class="card-body text-center">
+                <i class="bi bi-clock-history fs-1 text-primary mb-3"></i>
+                <h6 class="text-muted mb-2">Delayed Calculation</h6>
+                <h3 class="mb-0">{{ settings.period_of_delayed_calculation }}</h3>
+                <p class="text-muted">days</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0">
+              <div class="card-body text-center">
+                <i class="bi bi-percent fs-1 text-primary mb-3"></i>
+                <h6 class="text-muted mb-2">Interest Rate</h6>
+                <h3 class="mb-0">{{ settings.delayed_interest_rate }}%</h3>
+                <p class="text-muted">for delayed payments</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
-  <!-- main -->
+
 <script>
-  // Scheme settings
   $(document).ready(function(){
+    // Form validation
+    (function() {
+      'use strict';
+      
+      // Fetch all forms we want to apply validation to
+      var forms = document.querySelectorAll('.needs-validation');
+      
+      // Loop over them and prevent submission
+      Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    })();
+    
+    // Reset form button
+    $('#reset-form').on('click', function() {
+      Swal.fire({
+        title: 'Reset Form?',
+        text: 'This will revert all changes to the current saved values.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, reset it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          $('#scheme-settings')[0].reset();
+          $('#scheme-settings').removeClass('was-validated');
+          
+          Swal.fire({
+            position: 'top-end',
+            icon: 'info',
+            title: 'Form Reset',
+            text: 'The form has been reset to its original values.',
+            showConfirmButton: false,
+            timer: 1500,
+            toast: true
+          });
+        }
+      });
+    });
+    
+    // Form submission
     $('#scheme-settings').on('submit', function(event){
       event.preventDefault();
+      
+      if (!this.checkValidity()) {
+        return;
+      }
+      
       var form = $(this);
+      
+      // Show loading state on button
+      var saveButton = $('#save-button');
+      var originalButtonText = saveButton.html();
+      saveButton.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...');
+      saveButton.prop('disabled', true);
+      
       $.ajax({
         url: form.attr('action'),
         type: form.attr('method'),
         data: form.serialize(),
         success: function(response){
+          // Reset button state
+          saveButton.html(originalButtonText);
+          saveButton.prop('disabled', false);
+          
           if (response.status === 'success'){
-            alert(response.message);
-            window.location.href = response.redirect_url;
-          }else{
-            alert(response.message);
+            // Show success message with SweetAlert
+            Swal.fire({
+              icon: 'success',
+              title: 'Settings Saved',
+              text: response.message,
+              confirmButtonColor: '#3085d6',
+              confirmButtonText: 'Okay!'
+            }).then((result) => {
+              // Redirect after confirmation
+              window.location.href = response.redirect_url;
+            });
+          } else {
+            // Show error message with SweetAlert
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: response.message || 'An error occurred while saving settings.',
+              confirmButtonColor: '#3085d6'
+            });
           }
         },
         error: function(response){
-          alert('An error occurred');
+          // Reset button state
+          saveButton.html(originalButtonText);
+          saveButton.prop('disabled', false);
+          
+          // Show error message with SweetAlert
+          Swal.fire({
+            icon: 'error',
+            title: 'Server Error',
+            text: 'An error occurred while saving settings. Please try again.',
+            confirmButtonColor: '#3085d6'
+          });
         }
       });
     });
   });
 </script>
 {% endblock %}
-

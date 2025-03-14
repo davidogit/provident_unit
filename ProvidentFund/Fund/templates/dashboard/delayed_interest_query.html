@@ -3,184 +3,250 @@
 <title>Delayed Interest Query</title>
 {% endblock %}
 {% block header %}
-<h5 class="fw-bold"><i class=""></i>Delayed Interest Query</h5>
+<h5 class="fw-bold"><i class="bi bi-search me-2"></i>Delayed Interest Query</h5>
 {% endblock %}
 
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-
-    <div class="d-md-flex align-items-center justify-content-between mb-4">
-        <div>
-
-        </div>
-        <div class="d-flex gap-2 mt-3 mt-md-0">
-          <!-- <button type="button" class="btn btn-white d-flex align-items-center gap-2"><i class="ri-share-line fs-18 lh-1"></i>Share</button> -->
-          <button type="button" class="btn btn-white d-flex align-items-center gap-2"onclick="printTable()" ><i class="ri-printer-line fs-18 lh-1"></i>Print</button>
-          <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="exportTableToCSV('table_data.csv')"><i class="ri-bar-chart-2-line fs-18 lh-1"></i>Export<span class="d-none d-sm-inline"> Sheet</span></button>
-        </div>
-    </div>
-
-    <div class="row g-3 justify-content-center">
-        <div class="col-md-12 col-xl-10">
-            <form method="GET" class="justify-content-center">
-                <div class="form-search d-flex align-items-center justify-content-center">
-                    Invoice Number:
-                    <input type="text" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="invoice_number">
-
-                    From:
-                    <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="from-date">
-                    To:
-                    <input type="date" class="form-control m-2 rounded-pill fst-italic bg-secondary text-light" name="to-date">
-        
-                    <button type="submit" class="btn btn-primary rounded-pill fst-italic"><i class="ri-search-line"></i></button>
-
-                </div>
-            </form>
-        </div>
-    </div>
-
-
-
-
-<!-- Form for query -->
-    <div class="row g-3 justify-content-center">
-
-        <div class="col-md-12 col-xl-10">
-
-        </div>
-<!-- Form for query --> 
-
-
-        <!--Search Results Table -->
-        <div class="col-md-12 col-xl-10">
-            <div class="card card-two">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table id="data-table" class="table table-hover table-striped table-borderless">
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    <th scope="col">Invoice Number</th>
-                                    <th scope="col">Principal</th>
-                                    <!-- <th scope="col">Acrued Interest</th> -->
-                                    <th scope="col">Paid</th>
-                                    <th scope="col">Date Created</th>
-                                    <th scope="col">Date Paid</th>
-                                    <th scope="col">Approved by</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if results %}
-                                    {% for d_int in results %}
-                                        <tr>
-                                            <td> {{ forloop.counter }} </td>
-                                            <td>{{ d_int.invoice_number }}</td>
-                                            <td>{{ d_int.principal|floatformat:2 }}</td>
-                                            <!-- <td>{{ d_int.interest|floatformat:2 }}</td> -->
-                                            <td>{{ d_int.approved }}</td>
-                                            <td>{{ d_int.created_date }}</td>
-                                            <td>{{ d_int.date_paid }}</td>
-                                            <td>{{ d_int.approved_by }}</td>
-
-                                        </tr>
-                                    {% endfor %}
-                                {% else %}
-                                    <tr>
-                                        <td class="text-center text-danger " colspan="8">No records match your search</td>
-                                    </tr>
-                                {% endif %}
-                                
-                            </tbody>
-                        </table>
-                    </div>
+    <!-- Card Container -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <!-- Header with Action Buttons -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+                <h5 class="card-title mb-0">Search Delayed Interests</h5>
+                <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2" onclick="printTable()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+                <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="exportTableToCSV('investment_report.csv')">
+                    <i class="bi bi-file-earmark-excel"></i> Export CSV
+                </button>
                 </div>
             </div>
-            {% if is_paginated %}
-            <nav aria-label="Page navigation example">
-              <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                    <a
-                        class="page-link"
-                        href="?page={{ page_obj.previous_page_number }}"
-                        aria-label="Previous"
-                    >
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                    </li>
-                    {% endif %}
-                    <!-- {% comment %}
-                    <li class="page-item"><a class="page-link" href="#">1</a></li>
-                    {% endcomment %} -->
-                    <li class="page-item">
-                    <a class="page-link" href="#">{{ page_obj.number }}</a>
-                    </li>
-                    <!-- {% comment %}
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    {% endcomment %} {% if page_obj.has_next %} -->
-                    <li class="page-item">
-                    <a
-                        class="page-link"
-                        href="?page={{ page_obj.next_page_number }}"
-                        aria-label="Next"
-                    >
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                    </li>
 
-                    <li class="page-link">
-                        <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
-                    </li>
+            <!-- Search Form -->
+            <form class="search-form mb-4" method="GET">
+                <div class="row g-3">
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <input type="text" class="form-control" name="invoice_number" id="invoice" placeholder="DI Number">
+                    <label for="invoice">DI Number</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <input type="date" class="form-control" name="from-date" id="from-date">
+                    <label for="from-date">From Date</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <input type="date" class="form-control" name="to-date" id="to-date">
+                    <label for="to-date">To Date</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <button type="submit" class="btn btn-primary h-100 w-100">
+                    <i class="bi bi-search me-2"></i>Search
+                    </button>
+                </div>
+                </div>
+            </form>
+
+            <!-- Results Table -->
+            <div class="table-responsive">
+                <table id="data-table" class="table table-hover table-striped">
+                <thead class="">
+                    <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Instrument No.</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Paid</th>
+                    <th scope="col">Date Created</th>
+                    <th scope="col">Date Paid</th>
+                    <th scope="col">Approved by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if results %}
+                    {% for d_int in results %}
+                        <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ d_int.invoice_number }}</td>
+                        <td>{{ d_int.principal|floatformat:2 }}</td>
+                        <td>{{ d_int.approved }}</td>
+                        <td>{{ d_int.created_date }}</td>
+                        <td>{{ d_int.date_paid }}</td>
+                        <td>{{ d_int.approved_by }}</td>
+                        </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td class="text-center py-4" colspan="7">
+                        <div class="d-flex flex-column align-items-center">
+                            <i class="bi bi-search fs-1 text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No records match your search criteria</p>
+                        </div>
+                        </td>
+                    </tr>
                     {% endif %}
-              </ul>
+                </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if results.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1&{{ query_string }}" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ results.previous_page_number }}&{{ query_string }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                <span class="page-link">{{ results.number }} of {{ results.paginator.num_pages }}</span>
+                </li>
+                
+                {% if results.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ results.next_page_number }}&{{ query_string }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ results.paginator.num_pages }}&{{ query_string }}" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
             </nav>
             {% endif %}
-        
+        </div>
     </div>
 </div>
 
 
-
-<!-- PRINTING AND EXPORTING AS CSV -->
-
+<!-- Print and Export Scripts -->
 <script>
-    function printTable() {
-        var printContents = document.getElementById('data-table').outerHTML;
-        var originalContents = document.body.innerHTML;
-        document.body.innerHTML = printContents;
-        window.print();
-        document.body.innerHTML = originalContents;
-    }
-
-    function exportTableToCSV(filename) {
-        var csv = [];
-        var rows = document.querySelectorAll("#data-table tr");
-
-        for (var i = 0; i < rows.length; i++) {
-            var row = [], cols = rows[i].querySelectorAll("td, th");
-            
-            for (var j = 0; j < cols.length; j++) {
-                row.push(cols[j].innerText);
-            }
-            
-            csv.push(row.join(","));        
+    $(document).ready(function() {
+      // Show/hide T-Bill type dropdown based on investment type selection
+      $('#investmentType').change(function() {
+        if ($(this).val() === 'Treasury Bill') {
+          $('.t_bill_type').show();
+        } else {
+          $('.t_bill_type').hide();
+          $('#Type').val('');
         }
-
-        // Create a link to download CSV
-        var csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
-        var downloadLink = document.createElement("a");
-        downloadLink.download = filename;
-        downloadLink.href = window.URL.createObjectURL(csvFile);
-        downloadLink.style.display = "none";
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
+      });
+      
+      // Initialize - hide T-Bill type if not selected
+      if ($('#investmentType').val() !== 'Treasury Bill') {
+        $('.t_bill_type').hide();
+      }
+    });
+  
+    function printTable() {
+      // Create a new window for printing
+      var printWindow = window.open('', '_blank');
+      
+      // Add styles for the print view
+      var printContent = `
+        <html>
+        <head>
+          <title>Delayed Interest Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background-color: #f2f2f2; }
+            h2 { text-align: center; margin-bottom: 20px; }
+            .print-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+            .print-date { text-align: right; }
+          </style>
+        </head>
+        <body>
+          <div class="print-header">
+            <h2>Delayed Interest Report</h2>
+            <div class="print-date">Date: ${new Date().toLocaleDateString()}</div>
+          </div>
+          ${document.getElementById('data-table').outerHTML}
+        </body>
+        </html>
+      `;
+      
+      printWindow.document.open();
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      
+      // Wait for content to load before printing
+      printWindow.onload = function() {
+        printWindow.print();
+      };
     }
-</script>
-
-
-<!-- PRINTING AND EXPORTING AS CSV -->
-
-
-{% endblock %}
+  
+    function exportTableToCSV(filename) {
+      var csv = [];
+      var rows = document.querySelectorAll("#data-table tr");
+  
+      for (var i = 0; i < rows.length; i++) {
+        var row = [], cols = rows[i].querySelectorAll("td, th");
+        
+        for (var j = 0; j < cols.length; j++) {
+          // Clean the text - remove commas and wrap in quotes if needed
+          var text = cols[j].innerText.replace(/"/g, '""');
+          if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+            text = '"' + text + '"';
+          }
+          row.push(text);
+        }
+        
+        csv.push(row.join(","));        
+      }
+  
+      // Create a link to download CSV
+      var csvFile = new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+      var downloadLink = document.createElement("a");
+      downloadLink.download = filename;
+      downloadLink.href = window.URL.createObjectURL(csvFile);
+      downloadLink.style.display = "none";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+  </script>
+  {% endblock %}

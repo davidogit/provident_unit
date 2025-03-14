@@ -990,7 +990,7 @@ class DelayedInterestListView(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id,approved=False).order_by('-created_date')
+            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('status','-created_date')
         else:
             return DelayedInterest.objects.none()
     
@@ -1092,7 +1092,11 @@ class DelayedInterestListView(ListView):
         page_number = self.request.GET.get('page', 1)
         start_index = (int(page_number) - 1) * self.paginate_by + 1
         queryset = self.get_queryset()
-        context['delayed_int_count'] = queryset.count()
+        total_d_int = queryset.count()
+        paid_d_interest = queryset.filter(status='Paid',approved=True).count()
+        context['delayed_int_count'] = total_d_int
+        context['total_paid']=paid_d_interest
+        context['not_paid_d_interest'] = (total_d_int-paid_d_interest)
         context['total_amount'] = queryset.all().aggregate(total=Sum('principal'))['total'] or Decimal(0.0)
         context['start_index'] = start_index
         return context
@@ -1311,7 +1315,7 @@ class SchemeApplications(ListView):
         if tenant:
             try:
                 # Filter where scheme hasnt been approved and tenant
-                return SchemeApproval.objects.filter(tenant=tenant,approved_by_hr=False)
+                return SchemeApproval.objects.filter(tenant=tenant)
             except SchemeApproval.DoesNotExist:
                 return SchemeApproval.objects.none()
         return super().get_queryset().none()
@@ -1359,6 +1363,16 @@ class SchemeApplications(ListView):
             return JsonResponse({'status':'success', 'approved_by_hr':approved_by_hr})
         except SchemeApproval.DoesNotExist:
             return JsonResponse({'status':'error'},status=400)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        queryset = self.get_queryset()
+        total = queryset.count()
+        pending = queryset.filter(approved_by_hr=False).count()
+        context['total_applications'] = total
+        context['pending_applications'] = pending
+        context['approved'] = (total-pending)
+        return context
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
@@ -1655,7 +1669,7 @@ class FetchContributions(TemplateView):
         try:
             # Fetch data
             # from contributions.models import Contribution
-            queryset = Contribution.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,month=month,year=year,approved_contribution=False)
+            queryset = Contribution.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,month=month,year=year)
 
 
             # If no contributions are found, return an appropriate response
@@ -1673,7 +1687,7 @@ class FetchContributions(TemplateView):
                 'number_of_contributions':total_number,
                 'total_amount':total_amount,
                 'date_of_contribution':contribution_date,
-                'contribution_status':contribution_status,
+                'contribution_status':'Validated' if contribution_status else 'Pending',
                 'status':'success'
             })
         except Exception as e:

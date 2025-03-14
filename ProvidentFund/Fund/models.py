@@ -239,8 +239,13 @@ class DelayedInterest(models.Model):
     remarks = models.CharField(
         max_length=50
     )
-    _status = models.CharField(
+    choice = [
+        ('Paid','Paid'),
+        ('Not Paid','Not Paid')
+    ]
+    status = models.CharField(
         max_length=20,
+        choices=choice,
         default='Not paid'
     )
     # due_date = models.DateField()
@@ -269,13 +274,6 @@ class DelayedInterest(models.Model):
         null=True
     )
     
-    @property
-    def status(self):
-        return self._status
-    
-    @status.setter
-    def status(self,value):
-        self._status = value
 
 # SIGNAL FOR DelayedInterest
 # Setting invoice number before saving DI

@@ -1,228 +1,964 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}
-<title>Approval list</title>
-{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-</head>
+{% block title %}
+<title>Member Approval List</title>
 {% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-{% block css %}
-<style>
-  .nav-tabs {
-      border-bottom: none !important; /* Remove the bottom border of the container */
-  }
-  .nav-tabs .nav-link {
-      position: relative;
-      border: none !important; /* Remove border for all tabs */
-      margin-bottom: -3px; /* Adjusts the margin to align the underline correctly */
-      transition: color 0.3s ease; /* Smooth color transition for text */
-  }
-  .nav-tabs .nav-link:hover {
-      border: none !important; /* Remove border on hover */
-  }
-  .nav-tabs .nav-link.active {
-      color: #000; /* Optionally change the active text color */
-  }
-  .nav-tabs .nav-link::after {
-      content: '';
-      display: block;
-      width: 0;
-      height: 3px;
-      background-color: blue;
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      transition: width 0.3s ease, left 0.3s ease;
-  }
-  .nav-tabs .nav-link.active::after {
-      width: 100%;
-  }
+    <div class="container-fluid">
+        <!-- Header Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1">Member Approval List</h4>
+                <p class="text-muted mb-0">Review and approve scheme applications</p>
+            </div>
+            <div class="d-flex gap-2">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by staff ID or scheme...">
+                    <button class="btn btn-outline-primary" type="button" id="searchButton">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+                <button class="btn btn-primary d-flex align-items-center" id="approveSelectedBtn" disabled>
+                    <i class="bi bi-check-circle me-2"></i>
+                    <span>Approve Selected</span>
+                    <span class="badge text-primary ms-2 selected-count">0</span>
+                </button>
+            </div>
+        </div>
 
-  .nav-tabs .nav-link.active {
-    color: var(--tab-active-text-color, #000);
-    background-color: transparent; /* Remove background color for active tab */
-  }
-
-  /* Dark Mode Styles */
-  .dark-mode .nav-tabs {
-    background-color: var(--dark-mode-background-color, #333);
-  }
-
-  .dark-mode .nav-tabs .nav-link {
-    color: #fff; /* Set text color to white in dark mode */
-  }
-
-  .dark-mode .nav-tabs .nav-link:hover {
-    color: #fff;
-  }
-
-  .dark-mode .nav-tabs .nav-link.active {
-    color: var(--dark-mode-tab-active-text-color, #fff);
-    background-color: transparent; /* Remove background color for active tab in dark mode */
-  }
-
-  .dark-mode .nav-tabs .nav-link::after {
-    background-color: var(--dark-mode-tab-underline-color, #fff);
-  }
-
-  
-  /* Hide the arrows in Chrome, Safari, Edge, and Opera */
-  input[type="number"].form-control::-webkit-outer-spin-button,
-  input[type="number"].form-control::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-  }
-
-</style>
-{% endblock %}
-
-<div class="container mt-5">
-    <div class="tab-content">
-        <div id="approvals">
-            <div class="card card-one mt-3">
-                <div class="card-body p-3">
-                    <div class="table-responsive">
-                        <h4 class="card-title text-center">Member Approval List</h4>
-                        <table class="table table-four table-bordered">
-                        <thead>
-                            <th></th>
-                            <th class="text-center">Approve</th>
-                            <th class="text-center">Staff ID</th>
-                            <th class="text-center">Scheme Name</th>
-                            <th class="text-center">Application Date</th>
-                            <th class="text-center">Approval Status</th>
-                            <th class="text-center">Attached File</th>
-                        
+        <!-- Main Content Card -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        <label class="form-check-label" for="selectAllCheckbox">
+                            Select All
+                        </label>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary text-dark rounded-pill me-2">{{ total_applications }}</span>
+                            <span class="text-muted d-none d-sm-inline">Total Applications</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-warning text-dark rounded-pill me-2">{{ pending_applications }}</span>
+                            <span class="text-muted d-none d-sm-inline">Pending</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success text-dark rounded-pill me-2">{{ approved }}</span>
+                            <span class="text-muted d-none d-sm-inline">Approved</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="dropdown me-2">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-funnel me-1"></i> Filter
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+                                <li><a class="dropdown-item filter-option" href="#" data-filter="all">All Applications</a></li>
+                                <li><a class="dropdown-item filter-option" href="#" data-filter="approved">Approved</a></li>
+                                <li><a class="dropdown-item filter-option" href="#" data-filter="pending">Pending</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item filter-option" href="#" data-filter="has-file">With Attachments</a></li>
+                                <li><a class="dropdown-item filter-option" href="#" data-filter="no-file">Without Attachments</a></li>
+                            </ul>
+                        </div>
+                        <span class="badge bg-primary" id="currentFilter">All Applications</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="approvalTable">
+                        <thead class="">
+                            <tr>
+                                <th width="5%"></th>
+                                <th width="15%">Staff ID</th>
+                                <th width="20%">Scheme Name</th>
+                                <th width="15%">Application Date</th>
+                                <th width="15%">Status</th>
+                                <th width="15%">Document</th>
+                                <th width="15%">Actions</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for application in schemeapproval_list %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
+                            <tr data-id="{{ application.id }}" class="application-row {% if application.approved_by_hr %}approved{% else %}pending{% endif %}">
                                 <td>
-                                    <form class="approval-form d-flex" action="" method="post">
+                                    <div class="form-check">
+                                        <input class="form-check-input application-checkbox" type="checkbox" value="{{ application.id }}" id="checkbox-{{ application.id }}" {% if application.approved_by_hr %}disabled{% endif %}>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle bg-primary bg-opacity-10 text-primary me-2">
+                                            {{ application.staff.staff_number|slice:":1" }}
+                                        </div>
+                                        <span>{{ application.staff.staff_number }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ application.scheme.name }}</td>
+                                <td>
+                                    <span class="text-muted">{{ application.application_date|date:"M d, Y" }}</span>
+                                </td>
+                                <td>
+                                    {% if application.approved_by_hr %}
+                                    <span class="badge bg-success-soft text-success">
+                                        <i class="bi bi-check-circle me-1"></i>Approved
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-warning-soft text-warning">
+                                        <i class="bi bi-hourglass-split me-1"></i>Pending
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if application.document %}
+                                    <a href="{{ application.document.url }}" class="btn btn-sm btn-outline-primary" download>
+                                        <i class="bi bi-file-earmark-arrow-down me-1"></i>Download
+                                    </a>
+                                    {% else %}
+                                    <span class="badge text-muted">No file</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form class="approval-form" action="" method="post">
                                         {% csrf_token %}
                                         <input type="hidden" name="application_id" value="{{ application.id }}">
-                                        <input type="checkbox" class="form-check-input m-1" name="approved_by_hr" id="approve-checkbox-{{ application.id }}" 
-                                            {% if application.approved_by_hr %}checked{% endif %}
-                                            onchange="toggleApproveButton('{{ application.id }}');">
-                                        <button type="submit" class="btn btn-success" id="approve-button-{{ application.id }}" disabled>Approve</button>
+                                        <button type="submit" class="btn btn-sm btn-success approve-btn" {% if application.approved_by_hr %}disabled{% endif %}>
+                                            <i class="bi bi-check-lg me-1"></i>Approve
+                                        </button>
                                     </form>
                                 </td>
-                                <td>{{ application.staff.staff_number }}</td>
-                                <td>{{ application.scheme.name }}</td>
-                                <td>{{ application.application_date }}</td>
-                                <td>
-                                    {{ application.approved_by_hr }}</td>
-                                <td>{% if applicatio.document %}<a href="{{ application.document.url }}" download=""><i class="fas fa-download"></i> Download File</a>
-                                    {% else %} No file uploaded{% endif %}</td>
-                                
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="py-5">
+                                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                                        <h5 class="mt-3">No applications found</h5>
+                                        <p class="text-muted">There are no pending applications to approve</p>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
-                        </table>
+                    </table>
+                </div>
+                
+                <!-- Empty State (Hidden by default) -->
+                <div id="emptyState" class="text-center py-5 d-none">
+                    <div class="py-5">
+                        <i class="bi bi-search fs-1 text-muted"></i>
+                        <h5 class="mt-3">No matching applications</h5>
+                        <p class="text-muted">Try adjusting your search or filter criteria</p>
                     </div>
-                </div><!-- card-body -->
-            </div><!-- card -->
-
-          <!-- PAGINATION -->
-          
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="card-footer py-3">
             <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                {% if t_bill_page.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?t_bill_page=1" aria-label="First">
-                    <span aria-hidden="true">&laquo;&laquo;</span>
+                <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
                     </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?t_bill_page={{ t_bill_page.previous_page_number }}" aria-label="Previous">
-                    <span aria-hidden="true">&laquo;</span>
+                    </li>
+                    <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
                     </a>
-                </li>
-                {% endif %}
-
-                {% for i in t_bill_page.paginator.page_range %}
-                {% if t_bill_page.number == i %}
-                <li class="page-item active"><a class="page-link" href="?t_bill_page={{ i }}">{{ i }}</a></li>
+                    </li>
                 {% else %}
-                <li class="page-item"><a class="page-link" href="?t_bill_page={{ i }}">{{ i }}</a></li>
+                    <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                    </li>
+                    <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                    </li>
                 {% endif %}
-                {% endfor %}
-
-                {% if t_bill_page.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?t_bill_page={{ t_bill_page.next_page_number }}" aria-label="Next">
-                    <span aria-hidden="true">&raquo;</span>
-                    </a>
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
                 </li>
-                <li class="page-item">
-                    <a class="page-link" href="?t_bill_page={{ t_bill_page.paginator.num_pages }}" aria-label="Last">
-                    <span aria-hidden="true">&raquo;&raquo;</span>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
                     </a>
-                </li>
+                    </li>
+                    <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                    </li>
+                    <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                    </li>
                 {% endif %}
                 </ul>
             </nav>
-      
-
-          <!-- PAGINATION -->
+            </div>
+        {% endif %}
         </div>
     </div>
 </div>
 
+<!-- Toast Container for Notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050">
+    <div id="notificationToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto toast-title">Notification</strong>
+            <small class="text-muted toast-time">just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <!-- Toast message will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Approval Modal -->
+<div class="modal fade" id="bulkApprovalModal" tabindex="-1" aria-labelledby="bulkApprovalModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkApprovalModalLabel">
+                    <i class="bi bi-check2-all me-2"></i>Bulk Approval
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <div>
+                        You are about to approve <strong><span id="bulkApprovalCount">0</span> applications</strong>. This action cannot be undone.
+                    </div>
+                </div>
+                
+                <div class="selected-applications-list">
+                    <!-- Selected applications will be listed here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmBulkApproval">
+                    <i class="bi bi-check-lg me-1"></i>Confirm Approval
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border-radius: 0.75rem;
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-header {
+        border-top-left-radius: 0.75rem !important;
+        border-top-right-radius: 0.75rem !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Table Styles */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table td {
+        padding: 0.75rem;
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    /* Avatar Circle */
+    .avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Pagination */
+    .pagination {
+        margin-bottom: 0;
+    }
+    
+    .page-link {
+        border-radius: 0.375rem;
+        margin: 0 0.125rem;
+    }
+    
+    /* Selected Applications List */
+    .selected-applications-list {
+        max-height: 200px;
+        overflow-y: auto;
+        margin-top: 1rem;
+    }
+    
+    .selected-application-item {
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        background-color: rgba(0, 0, 0, 0.03);
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Highlight search results */
+    .highlight {
+        background-color: rgba(255, 243, 205, 0.5);
+        padding: 0.125rem 0;
+        border-radius: 0.25rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+        .table th, .table td {
+            padding: 0.5rem;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
 
 <script>
-    function toggleApproveButton(applicationId) {
-        var checkbox = document.getElementById('approve-checkbox-' + applicationId);
-        var button = document.getElementById('approve-button-' + applicationId);
-        button.disabled = !checkbox.checked;
-    }
     $(document).ready(function() {
+        // Initialize pagination
+        initPagination();
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Handle individual approval form submission
         $('.approval-form').on('submit', function(event) {
-            event.preventDefault(); // Prevent the default form submission
-    
+            event.preventDefault();
+            
             var form = $(this);
+            var btn = form.find('button[type="submit"]');
+            var originalText = btn.html();
+            
+            // Show loading state
+            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            btn.prop('disabled', true);
+            
             $.ajax({
                 type: form.attr('method'),
                 url: form.attr('action'),
                 data: form.serialize(),
                 success: function(response) {
                     if (response.status === 'success') {
-                        alert('Application approved successfully.');
-                        form.closest('tr').remove();
-
+                        // Update UI
+                        var row = form.closest('tr');
+                        row.find('.badge').removeClass('bg-warning-soft text-warning').addClass('bg-success-soft text-success');
+                        row.find('.badge').html('<i class="bi bi-check-circle me-1"></i>Approved');
+                        
+                        // Disable checkbox and button
+                        row.find('.application-checkbox').prop('disabled', true).prop('checked', false);
+                        btn.html('<i class="bi bi-check-lg me-1"></i>Approved');
+                        btn.prop('disabled', true);
+                        
+                        // Add approved class to row
+                        row.removeClass('pending').addClass('approved');
+                        
+                        // Update counts
+                        updateCounts();
+                        
+                        // Show success message
+                        showToast('Application approved successfully', 'success');
+                    } else {
+                        // Restore button
+                        btn.html(originalText);
+                        btn.prop('disabled', false);
+                        
+                        // Show error message
+                        showToast(response.message || 'Failed to approve application', 'danger');
                     }
                 },
-                error: function(jqXHR,) {
-                    var response = jqXHR.responseJSON; // Get the JSON response from the server
+                error: function(jqXHR) {
+                    // Restore button
+                    btn.html(originalText);
+                    btn.prop('disabled', false);
+                    
+                    // Get error message
+                    var response = jqXHR.responseJSON;
                     var errorMessage = 'An error occurred. Please try again.';
-
+                    
                     if (response && response.message) {
                         errorMessage = response.message;
                     }
-
-                    alert(errorMessage);
+                    
+                    // Show error message
+                    showToast(errorMessage, 'danger');
                 }
-            }); 
+            });
         });
-    
-
+        
+        // Handle select all checkbox
+        $('#selectAllCheckbox').on('change', function() {
+            var isChecked = $(this).prop('checked');
+            
+            // Only select checkboxes that aren't disabled (already approved)
+            $('.application-checkbox:not(:disabled)').prop('checked', isChecked);
+            
+            // Update selected count
+            updateSelectedCount();
+            
+            // Enable/disable bulk approve button
+            toggleBulkApproveButton();
+        });
+        
+        // Handle individual checkboxes
+        $('.application-checkbox').on('change', function() {
+            // Update selected count
+            updateSelectedCount();
+            
+            // Enable/disable bulk approve button
+            toggleBulkApproveButton();
+            
+            // Update select all checkbox state
+            updateSelectAllCheckbox();
+        });
+        
+        // Handle bulk approve button click
+        $('#approveSelectedBtn').on('click', function() {
+            // Get selected application IDs
+            var selectedIds = [];
+            $('.application-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            // Update modal content
+            $('#bulkApprovalCount').text(selectedIds.length);
+            
+            // Clear previous list
+            $('.selected-applications-list').empty();
+            
+            // Add selected applications to list
+            $('.application-checkbox:checked').each(function() {
+                var row = $(this).closest('tr');
+                var staffId = row.find('td:nth-child(2)').text().trim();
+                var schemeName = row.find('td:nth-child(3)').text().trim();
+                
+                $('.selected-applications-list').append(`
+                    <div class="selected-application-item">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-medium">${staffId}</span>
+                            <span class="text-muted">${schemeName}</span>
+                        </div>
+                    </div>
+                `);
+            });
+            
+            // Show modal
+            var bulkModal = new bootstrap.Modal(document.getElementById('bulkApprovalModal'));
+            bulkModal.show();
+        });
+        
+        // Handle confirm bulk approval
+        $('#confirmBulkApproval').on('click', function() {
+            var btn = $(this);
+            var originalText = btn.html();
+            
+            // Show loading state
+            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+            btn.prop('disabled', true);
+            
+            // Get selected application IDs
+            var selectedIds = [];
+            $('.application-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            // Process each application
+            var successCount = 0;
+            var errorCount = 0;
+            var totalToProcess = selectedIds.length;
+            var processed = 0;
+            
+            // Process applications one by one
+            selectedIds.forEach(function(id) {
+                var form = $(`#checkbox-${id}`).closest('tr').find('.approval-form');
+                
+                $.ajax({
+                    type: form.attr('method'),
+                    url: form.attr('action'),
+                    data: form.serialize(),
+                    success: function(response) {
+                        processed++;
+                        
+                        if (response.status === 'success') {
+                            successCount++;
+                            
+                            // Update UI for this row
+                            var row = form.closest('tr');
+                            row.find('.badge').removeClass('bg-warning-soft text-warning').addClass('bg-success-soft text-success');
+                            row.find('.badge').html('<i class="bi bi-check-circle me-1"></i>Approved');
+                            
+                            // Disable checkbox and button
+                            row.find('.application-checkbox').prop('disabled', true).prop('checked', false);
+                            row.find('.approve-btn').html('<i class="bi bi-check-lg me-1"></i>Approved').prop('disabled', true);
+                            
+                            // Add approved class to row
+                            row.removeClass('pending').addClass('approved');
+                        } else {
+                            errorCount++;
+                        }
+                        
+                        // Check if all processed
+                        if (processed === totalToProcess) {
+                            finishBulkProcess(successCount, errorCount);
+                        }
+                    },
+                    error: function() {
+                        processed++;
+                        errorCount++;
+                        
+                        // Check if all processed
+                        if (processed === totalToProcess) {
+                            finishBulkProcess(successCount, errorCount);
+                        }
+                    }
+                });
+            });
+            
+            function finishBulkProcess(successCount, errorCount) {
+                // Hide modal
+                var bulkModal = bootstrap.Modal.getInstance(document.getElementById('bulkApprovalModal'));
+                bulkModal.hide();
+                
+                // Update counts
+                updateCounts();
+                
+                // Reset select all checkbox
+                $('#selectAllCheckbox').prop('checked', false);
+                
+                // Update selected count
+                updateSelectedCount();
+                
+                // Disable bulk approve button
+                $('#approveSelectedBtn').prop('disabled', true);
+                
+                // Show result message
+                if (errorCount === 0) {
+                    showToast(`Successfully approved ${successCount} applications`, 'success');
+                } else if (successCount === 0) {
+                    showToast(`Failed to approve ${errorCount} applications`, 'danger');
+                } else {
+                    showToast(`Approved ${successCount} applications, failed to approve ${errorCount}`, 'warning');
+                }
+                
+                // Restore button
+                btn.html(originalText);
+                btn.prop('disabled', false);
+            }
+        });
+        
+        // Handle search
+        $('#searchButton').on('click', function() {
+            performSearch();
+        });
+        
+        $('#searchInput').on('keypress', function(e) {
+            if (e.which === 13) {
+                performSearch();
+            }
+        });
+        
+        function performSearch() {
+            var searchTerm = $('#searchInput').val().toLowerCase().trim();
+            var visibleCount = 0;
+            var hasVisibleRows = false;
+            
+            if (searchTerm === '') {
+                // Reset search
+                $('.application-row').show();
+                $('#emptyState').addClass('d-none');
+                updateVisibleCount();
+                return;
+            }
+            
+            // Filter rows
+            $('.application-row').each(function() {
+                var row = $(this);
+                var staffId = row.find('td:nth-child(2)').text().toLowerCase();
+                var schemeName = row.find('td:nth-child(3)').text().toLowerCase();
+                
+                if (staffId.includes(searchTerm) || schemeName.includes(searchTerm)) {
+                    row.show();
+                    visibleCount++;
+                    hasVisibleRows = true;
+                    
+                    // Highlight matching text
+                    highlightText(row, searchTerm);
+                } else {
+                    row.hide();
+                }
+            });
+            
+            // Show/hide empty state
+            if (hasVisibleRows) {
+                $('#emptyState').addClass('d-none');
+            } else {
+                $('#emptyState').removeClass('d-none');
+            }
+            
+            // Update visible count
+            updateVisibleCount();
+        }
+        
+        // Handle filter options
+        $('.filter-option').on('click', function(e) {
+            e.preventDefault();
+            
+            var filter = $(this).data('filter');
+            var filterText = $(this).text();
+            
+            // Update current filter badge
+            $('#currentFilter').text(filterText);
+            
+            // Apply filter
+            applyFilter(filter);
+        });
+        
+        function applyFilter(filter) {
+            var visibleCount = 0;
+            
+            switch(filter) {
+                case 'all':
+                    $('.application-row').show();
+                    visibleCount = $('.application-row').length;
+                    break;
+                case 'approved':
+                    $('.application-row').hide();
+                    $('.application-row.approved').show();
+                    visibleCount = $('.application-row.approved').length;
+                    break;
+                case 'pending':
+                    $('.application-row').hide();
+                    $('.application-row.pending').show();
+                    visibleCount = $('.application-row.pending').length;
+                    break;
+                case 'has-file':
+                    $('.application-row').hide();
+                    $('.application-row').each(function() {
+                        if ($(this).find('td:nth-child(6) a').length > 0) {
+                            $(this).show();
+                            visibleCount++;
+                        }
+                    });
+                    break;
+                case 'no-file':
+                    $('.application-row').hide();
+                    $('.application-row').each(function() {
+                        if ($(this).find('td:nth-child(6) a').length === 0) {
+                            $(this).show();
+                            visibleCount++;
+                        }
+                    });
+                    break;
+            }
+            
+            // Show/hide empty state
+            if (visibleCount > 0) {
+                $('#emptyState').addClass('d-none');
+            } else {
+                $('#emptyState').removeClass('d-none');
+            }
+            
+            // Update visible count
+            updateVisibleCount();
+        }
+        
+        // Helper functions
+        function updateSelectedCount() {
+            var count = $('.application-checkbox:checked').length;
+            $('.selected-count').text(count);
+        }
+        
+        function toggleBulkApproveButton() {
+            var count = $('.application-checkbox:checked').length;
+            $('#approveSelectedBtn').prop('disabled', count === 0);
+        }
+        
+        function updateSelectAllCheckbox() {
+            var totalCheckboxes = $('.application-checkbox:not(:disabled)').length;
+            var checkedCheckboxes = $('.application-checkbox:not(:disabled):checked').length;
+            
+            // If all eligible checkboxes are checked, check the "select all" checkbox
+            $('#selectAllCheckbox').prop('checked', totalCheckboxes > 0 && checkedCheckboxes === totalCheckboxes);
+        }
+        
+        function updateCounts() {
+            // Update pending count
+            var pendingCount = $('.application-row.pending').length;
+            $('.pending-count').text(pendingCount);
+            
+            // Update approved count (this is just a placeholder - in a real app you'd track daily approvals)
+            var approvedCount = $('.application-row.approved').length;
+            $('.approved-today-count').text(approvedCount);
+            
+            // Update total count
+            var totalCount = $('.application-row').length;
+            $('.total-count').text(totalCount);
+            
+            // Update visible count
+            updateVisibleCount();
+        }
+        
+        function updateVisibleCount() {
+            var visibleCount = $('.application-row:visible').length;
+            var totalCount = $('.application-row').length;
+            
+            $('#visibleCount').text(visibleCount);
+            $('#totalCount').text(totalCount);
+        }
+        
+        function highlightText(row, term) {
+            // Remove existing highlights first
+            row.find('.highlight').each(function() {
+                var parent = $(this).parent();
+                parent.html(parent.text());
+            });
+            
+            // Add new highlights to staff ID and scheme name
+            var cells = row.find('td:nth-child(2), td:nth-child(3)');
+            
+            cells.each(function() {
+                var cell = $(this);
+                var content = cell.text();
+                
+                // Skip cells with complex content
+                if (cell.find('.avatar-circle').length > 0) {
+                    // For staff ID cell, only highlight the text part
+                    var textNode = cell.contents().filter(function() {
+                        return this.nodeType === 3;
+                    });
+                    
+                    if (textNode.length > 0) {
+                        var text = textNode.text().trim();
+                        var regex = new RegExp('(' + term + ')', 'gi');
+                        var newText = text.replace(regex, '<span class="highlight">$1</span>');
+                        
+                        if (text !== newText) {
+                            textNode.replaceWith(newText);
+                        }
+                    }
+                } else {
+                    // For other cells, highlight the whole content
+                    var regex = new RegExp('(' + term + ')', 'gi');
+                    var newContent = content.replace(regex, '<span class="highlight">$1</span>');
+                    
+                    if (content !== newContent) {
+                        cell.html(newContent);
+                    }
+                }
+            });
+        }
+        
+        // Initialize pagination
+        function initPagination() {
+            // This is a client-side pagination example
+            // In a real application, you would implement server-side pagination
+            
+            var itemsPerPage = 10;
+            var currentPage = 1;
+            var totalItems = $('.application-row').length;
+            var totalPages = Math.ceil(totalItems / itemsPerPage);
+            
+            // If only one page, hide pagination
+            if (totalPages <= 1) {
+                $('.pagination').parent().hide();
+                return;
+            }
+            
+            // Generate pagination links
+            $('.pagination').empty();
+            
+            // Previous button
+            $('.pagination').append(`
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" aria-label="Previous" data-page="${currentPage - 1}">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `);
+            
+            // Page numbers
+            for (var i = 1; i <= totalPages; i++) {
+                $('.pagination').append(`
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `);
+            }
+            
+            // Next button
+            $('.pagination').append(`
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" aria-label="Next" data-page="${currentPage + 1}">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `);
+            
+            // Handle pagination clicks
+            $('.page-link').on('click', function(e) {
+                e.preventDefault();
+                
+                var page = $(this).data('page');
+                
+                // Validate page
+                if (page < 1 || page > totalPages || page === currentPage) {
+                    return;
+                }
+                
+                // Update current page
+                currentPage = page;
+                
+                // Show/hide rows based on current page
+                $('.application-row').hide();
+                $('.application-row').slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).show();
+                
+                // Update pagination links
+                updatePaginationLinks();
+                
+                // Update visible count
+                updateVisibleCount();
+            });
+            
+            // Initial page setup
+            $('.application-row').hide();
+            $('.application-row').slice(0, itemsPerPage).show();
+            
+            function updatePaginationLinks() {
+                // Update previous button
+                $('.pagination .page-item:first-child').toggleClass('disabled', currentPage === 1);
+                $('.pagination .page-item:first-child .page-link').data('page', currentPage - 1);
+                
+                // Update page numbers
+                $('.pagination .page-item:not(:first-child):not(:last-child)').removeClass('active');
+                $(`.pagination .page-item:not(:first-child):not(:last-child) .page-link[data-page="${currentPage}"]`).parent().addClass('active');
+                
+                // Update next button
+                $('.pagination .page-item:last-child').toggleClass('disabled', currentPage === totalPages);
+                $('.pagination .page-item:last-child .page-link').data('page', currentPage + 1);
+            }
+        }
+        
+        // Toast notification function
+        function showToast(message, type) {
+            var toast = $('#notificationToast');
+            
+            // Set toast content
+            toast.find('.toast-title').text(type === 'success' ? 'Success' : type === 'danger' ? 'Error' : 'Notification');
+            toast.find('.toast-body').text(message);
+            
+            // Set toast header icon based on type
+            var iconClass = type === 'success' ? 'bi-check-circle-fill text-success' : 
+                           type === 'danger' ? 'bi-exclamation-circle-fill text-danger' : 
+                           type === 'warning' ? 'bi-exclamation-triangle-fill text-warning' : 
+                           'bi-info-circle-fill text-info';
+            
+            toast.find('.toast-header i').attr('class', 'bi ' + iconClass + ' me-2');
+            
+            // Show toast
+            var bsToast = new bootstrap.Toast(toast, {
+                delay: 5000
+            });
+            bsToast.show();
+        }
     });
 </script>
-
-<!-- $('input[type="checkbox"]').on('change', function() {
-    var $button = $(this).siblings('button');
-    $button.prop('disabled', !$(this).is(':checked'));
-}); -->
-
-<!-- var applicationId = $form.find('input[name="application_id"]').val();
-var approvalStatus = response.approved_by_hr ? 'Approved' : 'Not Approved';
-$('#approve-button-' + applicationId).prop('disabled', true);
-$('#approve-checkbox-' + applicationId).prop('checked', response.approved_by_hr);
-$('#approval-status-' + applicationId).text(approvalStatus);
-alert('Application approved successfully.'); -->
 {% endblock %}

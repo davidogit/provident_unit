@@ -26,6 +26,10 @@
   <!-- Sweetalert CSS -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+  <!-- Toast CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 
   {% block title %}
   <!-- Title goes here. -->
@@ -45,6 +49,9 @@
 
   <!-- Hiding Serch Results -->
   <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
     #serach-results {
       display: none;
     }
@@ -393,7 +400,7 @@
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Settings</span></a>
             <nav class="nav nav-sub">
-              <a href="{% url 'scheme_settings' tenant_id=request.tenant.id scheme_name=scheme.id %}"
+              <a href="{% url 'scheme_settings' tenant_id=request.tenant.id pk=scheme.id %}"
                 class="nav-sub-link">Settings
               </a>
             </nav>
