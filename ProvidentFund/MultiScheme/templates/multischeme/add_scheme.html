@@ -1,96 +1,348 @@
 {% extends 'dashboard/base.html' %}
 
 {% block title %}
-<title>configure scheme</title>
+<title>Configure Scheme</title>
 {% endblock %}
+
 {% block header %}
-<h5 class="fw-bold"><i class=""></i>Configure Scheme</h5>
+<h5 class="fw-bold"><i class="bi bi-gear-fill me-2"></i>Create Scheme</h5>
 {% endblock %}
 
 {% block content %}
+<!-- SweetAlert2 and Toastr CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<style>
+  .scheme-card {
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+  }
+  
+  .scheme-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+  
+  .form-floating > .form-control:focus ~ label,
+  .form-floating > .form-control:not(:placeholder-shown) ~ label {
+    opacity: 0.8;
+    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+  }
+  
+  .form-floating > textarea.form-control {
+    height: 100px;
+  }
+  
+  .scheme-header {
+    position: relative;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .scheme-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50px;
+    height: 3px;
+    background-color: var(--bs-primary);
+  }
+  
+  .percentage-input {
+    position: relative;
+  }
+  
+  .percentage-input::after {
+    content: '%';
+    position: absolute;
+    right: 2.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.6;
+  }
+  
+  .btn-submit {
+    padding: 0.75rem 2rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-submit:hover {
+    transform: translateY(-2px);
+  }
+  
+  .info-icon {
+    cursor: help;
+    color: var(--bs-primary);
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+  
+  .info-icon:hover {
+    opacity: 1;
+  }
+  
+  /* Style for the scheme code input */
+  .scheme-code-input {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 500;
+  }
+</style>
+
 <div class="main main-app p-3 p-lg-4">
-  <div class="row row-cols-auto g-4 g-xxl-5">
-    <div class="col-xl">
-      <div class="container border-bottom border-secondary border-5 rounded p-5">
-        <!-- <h2 class="mb-5 text-center">Scheme Configuration</h2> -->
-
-        <form method="POST" id="scheme-form">
-          {% csrf_token %}
-            <div class="row g-5 justify-content-center">
-              <div class="col-md-4">
-
-                <div class="form-floating mb-3">
-                  <input class="form-control" type="text" name="name" id="scheme_name" placeholder="">
-                  <label for="scheme_name" class="form-label">Scheme Name</label>
-                </div>
-
-                <div class="form-floating mb-3">
-                  <input type="number" class="form-control" id="eligbility" name="eligibility_criteria_months" placeholder="" required>
-                  <label for="eligbility" class="form-label">Eligibility Criteria: Number of Months</label>
-                </div>
-                <div class="form-floating mb-3">
-                    <textarea class="form-control" id="desc" name="description" cols="9" rows="2" required placeholder=""></textarea>
-                    <label for="desc" class="form-label">Description</label>
-                </div>
-              </div>
-
-              <div class="col-md-4">
-                <div class="mb-3">
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-lg-10 col-xl-8">
+        <div class="card scheme-card">
+          <div class="card-body p-4 p-lg-5">
+            <div class="scheme-header">
+              <h4 class="mb-1">Create New Scheme</h4>
+              <p class="text-muted mb-0">Configure a new scheme for your members</p>
+            </div>
+            
+            <form method="POST" id="scheme-form" class="needs-validation" novalidate>
+              {% csrf_token %}
+              
+              <div class="row g-4">
+                <!-- Basic Information -->
+                <div class="col-md-6">
+                  <h5 class="mb-3">Basic Information</h5>
+                  
                   <div class="form-floating mb-3">
-                    <input type="number" step="0.01" min="1" class="form-control" id="dist_perc" name="distribution_percentage" placeholder="" required>
-                    <label class="form-label" for="dist_perc">Member Percentage Allocation</label>
+                    <input class="form-control scheme-code-input" type="text" name="code" id="scheme_code" placeholder=" " required pattern="[A-Za-z0-9]+" maxlength="15">
+                    <label for="scheme_code">Scheme Code</label>
+                    <div class="invalid-feedback">Please enter a valid scheme code (alphanumeric only)</div>
+                    <small class="form-text text-muted">Enter a unique alphanumeric code for this scheme</small>
                   </div>
-
-
+                  
                   <div class="form-floating mb-3">
-                    <input type="number" step="0.01" min="1" class="form-control" id="admin_cost" name="administrative_costs_percentage" placeholder="" required>
-                    <label class="form-label" for="admin_cost">Administrative cost Percentage Allocation</label>
+                    <input class="form-control" type="text" name="name" id="scheme_name" placeholder=" " required>
+                    <label for="scheme_name">Scheme Name</label>
+                    <div class="invalid-feedback">Please enter a scheme name</div>
+                  </div>
+                  
+                  <div class="form-floating mb-3">
+                    <input type="number" class="form-control" id="eligbility" name="eligibility_criteria_months" placeholder=" " required min="1">
+                    <label for="eligbility">Eligibility Criteria (Months)</label>
+                    <div class="invalid-feedback">Please enter a valid number of months</div>
+                  </div>
+                  
+                  <div class="form-floating mb-3">
+                    <textarea class="form-control" id="desc" name="description" placeholder=" " required></textarea>
+                    <label for="desc">Description</label>
+                    <div class="invalid-feedback">Please provide a description</div>
+                    <small class="form-text text-muted">Briefly describe the purpose and benefits of this scheme</small>
                   </div>
                 </div>
-              </div>
-      
-              <!-- <div class="col-md-4">
                 
+                <!-- Allocation Settings -->
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center mb-3">
+                    <h5 class="mb-0">Allocation Settings</h5>
+                    <i class="bi bi-info-circle ms-2 info-icon" data-bs-toggle="tooltip" title="The sum of all allocations should equal 100%"></i>
+                  </div>
+                  
+                  <div class="form-floating mb-3 percentage-input">
+                    <input type="number" step="0.01" min="1" max="100" class="form-control" id="dist_perc" name="distribution_percentage" placeholder=" " required>
+                    <label for="dist_perc">Member Percentage Allocation</label>
+                    <div class="invalid-feedback">Please enter a valid percentage (1-100)</div>
+                    <small class="form-text text-muted">Percentage of funds allocated to members</small>
+                  </div>
+                  
+                  <div class="form-floating mb-3 percentage-input">
+                    <input type="number" step="0.01" min="1" max="100" class="form-control" id="admin_cost" name="administrative_costs_percentage" placeholder=" " required>
+                    <label for="admin_cost">Administrative Cost Percentage</label>
+                    <div class="invalid-feedback">Please enter a valid percentage (1-100)</div>
+                    <small class="form-text text-muted">Percentage of funds allocated to administrative costs</small>
+                  </div>
+                  
+                  <div class="alert alert-info mt-4" id="allocation-alert" role="alert">
+                    <div class="d-flex">
+                      <i class="bi bi-exclamation-circle me-2 fs-5"></i>
+                      <div>
+                        <strong>Total Allocation: <span id="total-allocation">0</span>%</strong>
+                        <div id="allocation-message">Please ensure total allocation equals 100%</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-12 mt-4">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.history.back();">
+                      <i class="bi bi-arrow-left me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                      <i class="bi bi-save me-2"></i>Create Scheme
+                    </button>
+                  </div>
+                </div>
               </div>
-      
-              <div class="col-md-4">
-
-              </div> -->
+            </form>
           </div>
-          <button type="submit" class="btn btn-outline-primary btn-lg" value="">Save</button>
-        </form>
+        </div>
       </div>
     </div>
-
-    <!-- Scheme Settings -->
- 
   </div>
 </div>
-  <!-- main -->
+
 <script>
-  //Scheme creation
   $(document).ready(function(){
+    // Configure Toastr
+    toastr.options = {
+      closeButton: true,
+      progressBar: true,
+      positionClass: "toast-bottom-right",
+      timeOut: 3000,
+      extendedTimeOut: 1000,
+      preventDuplicates: true,
+      newestOnTop: true
+    };
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Auto-capitalize scheme code input
+    $('#scheme_code').on('input', function() {
+      $(this).val($(this).val().toUpperCase());
+    });
+    
+    // Form validation
+    (function() {
+      'use strict';
+      
+      var forms = document.querySelectorAll('.needs-validation');
+      
+      Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    })();
+    
+    // Calculate total allocation
+    function calculateTotalAllocation() {
+      var memberAllocation = parseFloat($('#dist_perc').val()) || 0;
+      var adminAllocation = parseFloat($('#admin_cost').val()) || 0;
+      var total = memberAllocation + adminAllocation;
+      
+      $('#total-allocation').text(total.toFixed(2));
+      
+      var $alert = $('#allocation-alert');
+      var $message = $('#allocation-message');
+      
+      if (total === 100) {
+        $alert.removeClass('alert-info alert-danger').addClass('alert-success');
+        $message.text('Perfect! Your allocation equals 100%');
+      } else if (total > 100) {
+        $alert.removeClass('alert-info alert-success').addClass('alert-danger');
+        $message.text('Total allocation exceeds 100%. Please adjust your values.');
+      } else {
+        $alert.removeClass('alert-success alert-danger').addClass('alert-info');
+        $message.text('Total allocation should equal 100%. Current: ' + total.toFixed(2) + '%');
+      }
+    }
+    
+    // Update total allocation when inputs change
+    $('#dist_perc, #admin_cost').on('input', calculateTotalAllocation);
+    
+    // Initial calculation
+    calculateTotalAllocation();
+    
+    // Scheme creation
     $('#scheme-form').on('submit', function(event){
       event.preventDefault();
+      
+      // Check if form is valid
+      if (!this.checkValidity()) {
+        return;
+      }
+      
+      // Check if allocation equals 100%
+      var memberAllocation = parseFloat($('#dist_perc').val()) || 0;
+      var adminAllocation = parseFloat($('#admin_cost').val()) || 0;
+      var total = memberAllocation + adminAllocation;
+      
+      if (total !== 100) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Invalid Allocation',
+          text: 'Total allocation must equal 100%. Current total: ' + total.toFixed(2) + '%',
+          confirmButtonColor: '#3085d6'
+        });
+        return;
+      }
+      
+      // Ensure scheme code is capitalized
+      var schemeCode = $('#scheme_code').val().toUpperCase();
+      $('#scheme_code').val(schemeCode);
+      
       var form = $(this);
+      var submitBtn = form.find('button[type="submit"]');
+      var originalBtnText = submitBtn.html();
+      
+      // Show loading state
+      submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating...');
+      submitBtn.prop('disabled', true);
+      
       $.ajax({
         url: form.attr('action'),
         type: form.attr('method'),
         data: form.serialize(),
         success: function(response){
+          // Reset button state
+          submitBtn.html(originalBtnText);
+          submitBtn.prop('disabled', false);
+          
           if (response.status === 'success'){
-            alert(response.message);
-            window.location.href = response.redirect_url;
-          }else{
-            alert(response.message);
+            // Show success message with SweetAlert
+            Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: response.message,
+              confirmButtonColor: '#3085d6'
+            }).then(() => {
+              // Redirect to the specified URL
+              window.location.href = response.redirect_url;
+            });
+          } else {
+            // Show error message with SweetAlert
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: response.message || 'An error occurred',
+              confirmButtonColor: '#3085d6'
+            });
           }
         },
         error: function(response){
-          alert('An error occurred');
+          // Reset button state
+          submitBtn.html(originalBtnText);
+          submitBtn.prop('disabled', false);
+          
+          // Show error message with SweetAlert
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred while creating the scheme',
+            confirmButtonColor: '#3085d6'
+          });
         }
       });
     });
   });
 </script>
 {% endblock %}
-

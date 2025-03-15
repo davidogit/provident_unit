@@ -1,9 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
-<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:16:10 GMT -->
-
 <head>
   {% block head %}
   {% endblock %}
@@ -35,15 +32,8 @@
   <!-- Title goes here. -->
   {% endblock %}
 
-  <!-- Vendor CSS -->
-  <!-- <link rel="stylesheet" href="../lib/remixicon/fonts/remixicon.css">
-    <link rel="stylesheet" href="../lib/apexcharts/apexcharts.css"> -->
-
   <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
   <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
-
-  <!-- Template CSS -->
-  <!-- <link rel="stylesheet" href="../assets/css/style.min.css"> -->
 
   <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
 
@@ -210,11 +200,6 @@
                 class="nav-sub-link">Add Scheme
               </a>
               {% endif %}
-              {% if 'Scheme Analyst' in user_groups %}
-              <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
-              class="nav-sub-link">Schemes Pending Approval
-              </a>
-              {% endif %}
               {% if 'Scheme Manager' in user_groups %}
               <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
               class="nav-sub-link">Scheme Approval
@@ -235,7 +220,7 @@
                 class="nav-sub-link">Upload File
               </a>
 
-              <a href=""
+              <a href="#"
                 class="nav-sub-link">Recent Uploads
               </a>
               
@@ -538,9 +523,8 @@
         <div class="col-12">
           {% block content %}
 
-
+          <!-- Extended templates -->
           {% endblock %}
-            <!-- Your existing content goes here -->
         </div>
     </div>
   </div>
@@ -565,7 +549,4 @@
   <script src="{% static 'assets/js/db.data.js' %}"></script>
   <script src="{% static 'assets/js/db.finance.js' %}"></script>
 </body>
-
-<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:17:10 GMT -->
-
 </html>
