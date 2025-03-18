@@ -5,96 +5,377 @@
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-   {% if pending_schemes %}
-    <div class="col">
-        <!-- New Cards Column -->
-        <h3 class="mt-4 text-center">PENDING SCHEME APPLICATIONS</h3>
-        <div class="row justify-content-center g-5 g-lg-5 pt-5">
-          {% for scheme in pending_schemes %}
-            <div class="col-sm-10 col-lg-10 ">
-                <div class="card border border-danger">
-                    <div class="card-body">
-                        <div id="response-message-{{ scheme.id }}" class="response-message text-center" style="color: red;">
-                            
-                        </div>
-                        
-                        <div class="row g-3">
-                            <div class="col-4 col-sm-4 col-md-4 col-lg-4">
-                                <h6 class="card-title "><strong>Scheme Name:</strong> <em> {{ scheme.name|upper }}</em></h6>
-                                <p><strong>Date added: </strong> {{ scheme.created_date|date }}</p>
-                            </div>
-                            
-                            <div class="col-8 col-sm-8 col-md-8 col-lg-8 mb-5">
-                                <p class="card-text"><strong>Description:</strong> <em>{{ scheme.description }}</em></p>
-                            </div>
-                        </div>
-
-                        
-
-                        <form action="" class="form-control pending-application-form border border-warning" method="POST">
-                            {% csrf_token %}
-                            <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
-                            <div class="d-flex justify-content-end">
-                                
-                                <button class="btn btn-danger p-3" type="submit">Delete</button>
-                            </div>
-                            
-                        </form>
-                    </div>
-
-                </div>
-            </div><!-- col -->
-          {% endfor %}
-        </div><!-- row -->
-    </div><!-- col -->
-    {% else %}
-    <div class="col">
-        <div class="card">
-            <div class="card-body text-center">
-                <h6 class="card-title h3">You have no pending scheme applications.</h6>
-                <p class="card-text">Pending schemes will appear here after you have applied to join a scheme <a href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}">here</a>.</p>
-            </div>
-        </div>
+  <div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-1">Pending Applications</h4>
+        <p class="text-muted mb-0">Track the status of your scheme applications</p>
+      </div>
+      <div class="d-flex mt-3 mt-md-0">
+        <a href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-primary">
+          <i class="ri-add-line me-1"></i> Apply to New Schemes
+        </a>
+      </div>
     </div>
+
+    {% if pending_schemes %}
+      <div class="row g-4">
+        {% for scheme in pending_schemes %}
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100 scheme-card">
+              <div class="card-header bg-white p-4 border-bottom">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="d-flex align-items-center">
+                    <div class="scheme-icon me-3">
+                      <div class="icon-circle bg-warning-subtle text-warning">
+                        <i class="ri-time-line"></i>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 class="card-title fw-bold mb-0">{{ scheme.name|upper }}</h5>
+                      <p class="text-muted small mb-0">
+                        <i class="ri-calendar-line me-1"></i> Applied: {{ scheme.created_date|date:"M d, Y" }}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="scheme-status">
+                    <span class="badge bg-warning rounded-pill px-3 py-2">
+                      <i class="ri-hourglass-line me-1"></i> Pending Approval
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card-body p-4">
+                <div id="response-message-{{ scheme.id }}" class="response-message alert alert-danger p-2 mb-3" style="display: none;"></div>
+                
+                <div class="scheme-description mb-4">
+                  <h6 class="fw-medium mb-2">Description</h6>
+                  <p class="mb-0">{{ scheme.description }}</p>
+                </div>
+                
+                <!-- Application Status Timeline -->
+                <div class="application-timeline mb-4">
+                  <h6 class="fw-medium mb-3">Application Status</h6>
+                  <div class="timeline">
+                    <div class="timeline-item d-flex mb-3">
+                      <div class="timeline-marker bg-success text-white rounded-circle me-3">
+                        <i class="ri-check-line"></i>
+                      </div>
+                      <div>
+                        <h6 class="fw-medium mb-0">Application Submitted</h6>
+                        <p class="text-muted small mb-0">{{ scheme.created_date|date:"M d, Y" }}</p>
+                      </div>
+                    </div>
+                    
+                    <div class="timeline-item d-flex mb-3">
+                      <div class="timeline-marker bg-warning text-white rounded-circle me-3">
+                        <i class="ri-time-line"></i>
+                      </div>
+                      <div>
+                        <h6 class="fw-medium mb-0">Under Review</h6>
+                        <p class="text-muted small mb-0">Your application is being reviewed by administrators</p>
+                      </div>
+                    </div>
+                    
+                    <div class="timeline-item d-flex opacity-50">
+                      <div class="timeline-marker bg-light text-muted rounded-circle me-3">
+                        <i class="ri-checkbox-circle-line"></i>
+                      </div>
+                      <div>
+                        <h6 class="fw-medium mb-0">Approval Decision</h6>
+                        <p class="text-muted small mb-0">Pending administrator review</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="scheme-actions d-flex justify-content-between align-items-center">
+                  <div class="estimated-time">
+                    <span class="badge bg-light-subtle text-muted rounded-pill px-3 py-2">
+                      <i class="ri-time-line me-1"></i> Est. processing time: 1-3 business days
+                    </span>
+                  </div>
+                  <button class="btn btn-outline-danger delete-application" data-scheme-id="{{ scheme.id }}" data-scheme-name="{{ scheme.name }}">
+                    <i class="ri-delete-bin-line me-1"></i> Cancel Application
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-5 text-center">
+          <div class="empty-state mb-4">
+            <div class="icon-circle bg-light-subtle mx-auto mb-3" style="width: 80px; height: 80px;">
+              <i class="ri-file-list-3-line text-primary" style="font-size: 2.5rem;"></i>
+            </div>
+            <h5 class="fw-bold">No Pending Applications</h5>
+            <p class="text-muted mb-4">You don't have any pending scheme applications at the moment.</p>
+            <a href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-primary">
+              <i class="ri-add-line me-1"></i> Apply to Schemes
+            </a>
+          </div>
+        </div>
+      </div>
     {% endif %}
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteConfirmModalLabel">
+          <i class="ri-delete-bin-line text-danger me-2"></i> Cancel Application
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="alert alert-warning mb-4">
+          <div class="d-flex">
+            <i class="ri-alert-line fs-5 me-2 mt-1"></i>
+            <div>
+              <h6 class="fw-medium mb-1">Are you sure?</h6>
+              <p class="mb-0 small">This action cannot be undone. You will need to reapply if you change your mind.</p>
+            </div>
+          </div>
+        </div>
+        
+        <p>You are about to cancel your application for:</p>
+        <h5 id="schemeNameToDelete" class="fw-bold mb-0"></h5>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="ri-close-line me-1"></i> Keep Application
+        </button>
+        <button type="button" class="btn btn-danger" id="confirmDelete">
+          <i class="ri-delete-bin-line me-1"></i> Yes, Cancel Application
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Custom styles for pending schemes page */
+  .icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .timeline-marker {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  
+  .bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1);
+  }
+  
+  .bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1);
+  }
+  
+  .bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1);
+  }
+  
+  .bg-light-subtle {
+    background-color: rgba(248, 249, 250, 0.6);
+  }
+  
+  .scheme-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .scheme-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .timeline {
+    position: relative;
+    padding-left: 10px;
+  }
+  
+  .timeline::before {
+    content: '';
+    position: absolute;
+    top: 16px;
+    bottom: 0;
+    left: 16px;
+    width: 2px;
+    background-color: #e9ecef;
+    height: calc(100% - 32px);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 767.98px) {
+    .scheme-actions {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+  }
+</style>
 
 <script>
-    $(document).ready(function(){
-        $('.pending-application-form').on('submit', function(e){
-            e.preventDefault();
-
-            var form = $(this);
-
-            $.ajax({
-                method: form.attr('method'),
-                action: form.attr('action'),
-                data: form.serialize(),
-
-                success: function(response){
-                    if (response.status === 'success'){
-                        window.location.reload()
-                    }
-                    else{
-                        if (response.status === 'error'){
-                            alert(response.message)
-                        }
-                    }
-
-                },
-                error: function(jqXHR){
-                    var response = jqXHR.responseJSON;
-
-                    if (response && response.message){
-                        message = (response + response.message)
-                        alert(message)
-                    }
-
-                    alert(response)
-                }
-            });
-
-        });
+  document.addEventListener('DOMContentLoaded', function() {
+    // Delete application confirmation
+    const deleteButtons = document.querySelectorAll('.delete-application');
+    const confirmDeleteBtn = document.getElementById('confirmDelete');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    let currentSchemeId = null;
+    
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const schemeId = this.getAttribute('data-scheme-id');
+        const schemeName = this.getAttribute('data-scheme-name');
+        
+        // Set the scheme name in the modal
+        document.getElementById('schemeNameToDelete').textContent = schemeName;
+        
+        // Store the current scheme ID for deletion
+        currentSchemeId = schemeId;
+        
+        // Show the modal
+        deleteModal.show();
+      });
     });
+    
+    // Handle confirmation
+    confirmDeleteBtn.addEventListener('click', function() {
+      if (!currentSchemeId) return;
+      
+      // Show loading state
+      this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...';
+      this.disabled = true;
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('scheme_id', currentSchemeId);
+      formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+      
+      // Send AJAX request
+      fetch('', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.status === 'success') {
+          // Hide the modal
+          deleteModal.hide();
+          
+          // Show success toast
+          showToast('Success', 'Your application has been cancelled successfully.', 'success');
+          
+          // Reload the page after a short delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+          // Hide the modal
+          deleteModal.hide();
+          
+          // Show error toast
+          showToast('Error', data.message || 'An error occurred while cancelling your application.', 'danger');
+          
+          // Reset button
+          this.innerHTML = '<i class="ri-delete-bin-line me-1"></i> Yes, Cancel Application';
+          this.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        
+        // Hide the modal
+        deleteModal.hide();
+        
+        // Show error toast
+        showToast('Error', 'An error occurred while processing your request. Please try again.', 'danger');
+        
+        // Reset button
+        this.innerHTML = '<i class="ri-delete-bin-line me-1"></i> Yes, Cancel Application';
+        this.disabled = false;
+      });
+    });
+    
+    // Toast notification function
+    window.showToast = function(title, message, type) {
+      // Check if toast container exists, if not create it
+      let toastContainer = document.querySelector('.toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+      }
+      
+      // Create toast element
+      const toastId = 'toast-' + Date.now();
+      const toastEl = document.createElement('div');
+      toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+      toastEl.id = toastId;
+      toastEl.setAttribute('role', 'alert');
+      toastEl.setAttribute('aria-live', 'assertive');
+      toastEl.setAttribute('aria-atomic', 'true');
+      
+      // Toast content
+      toastEl.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            <strong>${title}:</strong> ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      
+      // Add toast to container
+      toastContainer.appendChild(toastEl);
+      
+      // Initialize and show toast
+      const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+      toast.show();
+      
+      // Remove toast after it's hidden
+      toastEl.addEventListener('hidden.bs.toast', function() {
+        toastEl.remove();
+      });
+    };
+    
+    // Add hover effect to scheme cards
+    const schemeCards = document.querySelectorAll('.scheme-card');
+    schemeCards.forEach(card => {
+      card.addEventListener('mouseenter', function() {
+        this.querySelector('.scheme-icon i').classList.add('animate__animated', 'animate__heartBeat');
+      });
+      
+      card.addEventListener('mouseleave', function() {
+        this.querySelector('.scheme-icon i').classList.remove('animate__animated', 'animate__heartBeat');
+      });
+    });
+  });
 </script>
-
 {% endblock %}

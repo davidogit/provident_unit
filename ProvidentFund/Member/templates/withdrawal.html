@@ -2,57 +2,220 @@
 {% block title %}Withdraw Funds{% endblock %}
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-  <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <div class="card">
-        <div class="card-header text-center bg-primary text-white">
-          <h4>Withdraw Funds</h4>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <!-- Page Header -->
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div>
+            <h4 class="fw-bold mb-1">Withdraw Funds</h4>
+            <p class="text-muted mb-0">Request a withdrawal from your account</p>
+          </div>
+          <a href="{% url 'transaction_history' tenant_id=request.tenant.id staff_id=request.user.member.staff_id %}" class="btn btn-outline-primary btn-sm">
+            <i class="ri-history-line me-1"></i> Transaction History
+          </a>
         </div>
-        <div class="card-body">
-          <form id="withdrawalForm">
-            {% csrf_token %}
-            <!-- Scheme Selection -->
-            <div class="form-group mb-3">
-              <label for="scheme-type" class="form-label">Select Scheme</label>
-              <select name="scheme_id" id="scheme-type" class="form-control" required>
-                <option value="" disabled selected>Choose scheme type</option>
-                {% for scheme in schemes %}
-                <option value="{{ scheme.id }}">{{ scheme.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
 
-            <!-- Amount Input -->
-            <div class="form-group mb-3">
-              <label for="amount" class="form-label">Amount (GHS)</label>
-              <input
-                name="amount"
-                type="number"
-                id="amount"
-                class="form-control"
-                placeholder="Enter amount in GHS"
-                min="1"
-                step="0.01"
-                required
-              />
-              <small class="form-text text-muted">
-                Available balance: GHS<span id="availableBalance"> </span>
-              </small>
-            </div>
+        <div class="row">
+          <!-- Withdrawal Form Card -->
+          <div class="col-lg-7 mb-4 mb-lg-0">
+            <div class="card shadow-sm border-0 rounded-3 h-100">
+              <div class="card-header  p-4 border-bottom">
+                <div class="d-flex align-items-center">
+                  <div class="icon-circle bg-primary-subtle text-primary me-3">
+                    <i class="ri-arrow-down-circle-line fs-4"></i>
+                  </div>
+                  <h5 class="card-title mb-0 fw-bold">Request Withdrawal</h5>
+                </div>
+              </div>
+              <div class="card-body p-4">
+                <form id="withdrawalForm">
+                  {% csrf_token %}
+                  
+                  <!-- Scheme Selection -->
+                  <div class="form-group mb-4">
+                    <label for="scheme-type" class="form-label fw-medium">Select Scheme</label>
+                    <div class="input-group">
+                      <span class="input-group-text  border-end-0">
+                        <i class="ri-bank-line text-primary"></i>
+                      </span>
+                      <select name="scheme_id" id="scheme-type" class="form-select border-start-0 ps-0" required>
+                        <option value="" disabled selected>Choose scheme type</option>
+                        {% for scheme in schemes %}
+                        <option value="{{ scheme.id }}">{{ scheme.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
 
-            <!-- Submit Button -->
-            <div class="form-submit text-center">
-              <button type="button" id="withdrawButton" class="btn btn-primary btn-block">
-                <span id="buttonText">Request Withdrawal</span>
-                <span id="loadingSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-              </button>
+                  <!-- Amount Input -->
+                  <div class="form-group mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <label for="amount" class="form-label fw-medium mb-0">Amount (GHS)</label>
+                      <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">
+                        Available: GHS <span id="availableBalance" class="fw-bold">0.00</span>
+                      </span>
+                    </div>
+                    <div class="input-group">
+                      <span class="input-group-text  border-end-0">
+                        <i class="ri-money-cedi-circle-line text-primary"></i>
+                      </span>
+                      <input
+                        name="amount"
+                        type="number"
+                        id="amount"
+                        class="form-control border-start-0 ps-0"
+                        placeholder="Enter amount in GHS"
+                        min="1"
+                        step="0.01"
+                        required
+                      />
+                    </div>
+                    <div class="progress mt-3" style="height: 6px;">
+                      <div id="amountProgress" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+                    </div>
+                  </div>
+
+                  <!-- Withdrawal Notes -->
+                  <div class="alert alert-light border-0 bg-light-subtle rounded-3 mb-4">
+                    <div class="d-flex">
+                      <i class="ri-information-line text-primary fs-5 me-2 mt-1"></i>
+                      <div>
+                        <h6 class="fw-medium mb-1">Withdrawal Information</h6>
+                        <p class="mb-0 small">Withdrawals are typically processed within 1-3 business days. A minimum withdrawal amount of GHS 1.00 is required.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Submit Button -->
+                  <div class="form-submit">
+                    <button type="button" id="withdrawButton" class="btn btn-primary btn-lg w-100 py-3">
+                      <span id="buttonText">Request Withdrawal</span>
+                      <span id="loadingSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          </form>
+          </div>
+
+          <!-- Info Card -->
+          <div class="col-lg-5">
+            <div class="card shadow-sm border-0 rounded-3 bg-light-subtle h-100">
+              <div class="card-body p-4">
+                <h5 class="fw-bold mb-4"><i class="ri-question-line text-primary me-2"></i> Withdrawal Guidelines</h5>
+                
+                <div class="timeline">
+                  <div class="timeline-item mb-4 pb-4 border-bottom">
+                    <div class="d-flex">
+                      <div class="timeline-marker bg-primary text-white rounded-circle me-3">1</div>
+                      <div>
+                        <h6 class="fw-medium mb-1">Select Your Scheme</h6>
+                        <p class="text-muted mb-0 small">Choose the scheme from which you want to withdraw funds.</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="timeline-item mb-4 pb-4 border-bottom">
+                    <div class="d-flex">
+                      <div class="timeline-marker bg-primary text-white rounded-circle me-3">2</div>
+                      <div>
+                        <h6 class="fw-medium mb-1">Enter Amount</h6>
+                        <p class="text-muted mb-0 small">Specify the amount you wish to withdraw. The system will check if you have sufficient funds.</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="timeline-item mb-4 pb-4 border-bottom">
+                    <div class="d-flex">
+                      <div class="timeline-marker bg-primary text-white rounded-circle me-3">3</div>
+                      <div>
+                        <h6 class="fw-medium mb-1">Submit Request</h6>
+                        <p class="text-muted mb-0 small">Your withdrawal request will be reviewed and processed according to the scheme's terms.</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="timeline-item">
+                    <div class="d-flex">
+                      <div class="timeline-marker bg-primary text-white rounded-circle me-3">4</div>
+                      <div>
+                        <h6 class="fw-medium mb-1">Receive Funds</h6>
+                        <p class="text-muted mb-0 small">Once approved, funds will be transferred to your registered account.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 pt-3 border-top">
+                  <h6 class="fw-medium mb-3">Need Help?</h6>
+                  <a href="#" class="btn btn-outline-primary btn-sm mb-2 me-2">
+                    <i class="ri-customer-service-2-line me-1"></i> Contact Support
+                  </a>
+                  <a href="#" class="btn btn-outline-secondary btn-sm mb-2">
+                    <i class="ri-file-list-3-line me-1"></i> Withdrawal Policy
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  /* Custom styles for withdraw page */
+  .icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1);
+  }
+  
+  .bg-light-subtle {
+    background-color: rgba(248, 249, 250, 0.6);
+  }
+  
+  .timeline-marker {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  .badge {
+    font-weight: 500;
+  }
+  
+  .alert {
+    border-left: 4px solid #0d6efd;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 991.98px) {
+    .timeline-item {
+      padding-bottom: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+  }
+</style>
 
 <script>
   // Fetch and display available balance when scheme is selected
@@ -60,28 +223,58 @@
     $('#scheme-type').on('change', function(){
       var schemeId = $(this).val();
       var staff_id = "{{request.user.member.staff_id}}"
-      console.log(staff_id)
       var tenant = "{{request.tenant.id}}"
       var url = `/${tenant}/members/get-balance/${schemeId}/${staff_id}/`
-      console.log(url)
+      
+      // Reset amount input
+      $('#amount').val('');
+      $('#amountProgress').css('width', '0%');
+      
+      // Show loading state
+      $('#availableBalance').html('<small class="spinner-border spinner-border-sm" role="status"></small>');
+      
       $.ajax({
         type: 'GET',
         url: url,
         success: function(response) {
-          console.log(response)
-          if (response.status==="success"){
-           
-            $('#availableBalance').text(response.balance); 
-          }else{
-            $('#availableBalance').text("0.00"); 
+          if (response.status === "success"){
+            $('#availableBalance').text(response.balance);
+            
+            // Enable amount input
+            $('#amount').prop('disabled', false);
+            
+            // Set max attribute
+            $('#amount').attr('max', response.balance);
+          } else {
+            $('#availableBalance').text("0.00");
+            $('#amount').prop('disabled', true);
           }
         },
         error: function(xhr, status, error) {
-          console.log(xhr.response.message)
+          $('#availableBalance').text("0.00");
+          console.log("Error fetching balance:", error);
         }
-
-
       });
+    });
+    
+    // Update progress bar when amount changes
+    $('#amount').on('input', function() {
+      const amount = parseFloat($(this).val()) || 0;
+      const balance = parseFloat($('#availableBalance').text()) || 0;
+      
+      if (balance > 0) {
+        const percentage = Math.min((amount / balance) * 100, 100);
+        $('#amountProgress').css('width', percentage + '%');
+        
+        // Change color based on percentage
+        if (percentage > 90) {
+          $('#amountProgress').removeClass('bg-primary').addClass('bg-danger');
+        } else if (percentage > 70) {
+          $('#amountProgress').removeClass('bg-primary bg-danger').addClass('bg-warning');
+        } else {
+          $('#amountProgress').removeClass('bg-warning bg-danger').addClass('bg-primary');
+        }
+      }
     });
   });
   
@@ -89,15 +282,22 @@
   document.getElementById("withdrawButton").addEventListener("click", function () {
     const schemeId = document.getElementById("scheme-type").value;
     const amount = document.getElementById("amount").value;
+    const availableBalance = parseFloat(document.getElementById("availableBalance").textContent) || 0;
 
     if (!schemeId || !amount) {
-      alert("Please fill in all fields.");
+      showToast("Please fill in all fields.", "warning");
       return;
     }
 
     // Validate amount
     if (parseFloat(amount) < 1) {
-      alert("Minimum withdrawal amount is GHS 1.00.");
+      showToast("Minimum withdrawal amount is GHS 1.00.", "warning");
+      return;
+    }
+    
+    // Validate against available balance
+    if (parseFloat(amount) > availableBalance) {
+      showToast("Withdrawal amount exceeds available balance.", "danger");
       return;
     }
 
@@ -124,17 +324,18 @@
       .then((response) => response.json())
       .then((data) => {
         if (data.status === "success") {
-          alert(data.message);
+          showToast(data.message, "success");
           // Reset form on success
           document.getElementById("withdrawalForm").reset();
-          document.getElementById("availableBalance").textContent = "GHS 0.00";
+          document.getElementById("availableBalance").textContent = "0.00";
+          $('#amountProgress').css('width', '0%');
         } else {
-          alert("Error: " + data.message);
+          showToast("Error: " + data.message, "danger");
         }
       })
       .catch((error) => {
         console.error("Error:", error);
-        alert("An error occurred while processing the request.");
+        showToast("An error occurred while processing the request.", "danger");
       })
       .finally(() => {
         // Re-enable button and hide spinner
@@ -143,5 +344,45 @@
         loadingSpinner.classList.add("d-none");
       });
   });
+  
+  // Toast notification function
+  function showToast(message, type) {
+    // Check if toast container exists, if not create it
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+      toastContainer = document.createElement('div');
+      toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+      document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast element
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+    toastEl.setAttribute('role', 'alert');
+    toastEl.setAttribute('aria-live', 'assertive');
+    toastEl.setAttribute('aria-atomic', 'true');
+    
+    // Toast content
+    toastEl.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">
+          ${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    `;
+    
+    // Add toast to container
+    toastContainer.appendChild(toastEl);
+    
+    // Initialize and show toast
+    const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+    toast.show();
+    
+    // Remove toast after it's hidden
+    toastEl.addEventListener('hidden.bs.toast', function() {
+      toastEl.remove();
+    });
+  }
 </script>
 {% endblock %}
