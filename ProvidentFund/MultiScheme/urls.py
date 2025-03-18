@@ -4,7 +4,7 @@ from MultiScheme import views
 urlpatterns = [
     path('scheme_list/', views.SchemeList.as_view(), name='scheme_list'),
     path('add_scheme/', views.CreateScheme.as_view(), name='add_scheme'),
-    path('<int:scheme_name>/scheme_settings/', views.SchemeSettingsView.as_view(), name='scheme_settings'),
+    path('scheme_settings/<int:pk>/', views.SchemeSettingsView.as_view(), name='scheme_settings'),
     path('scheme_approval/', views.SchemeApproval.as_view(), name='scheme_approval'),
 
     #TENANT API URLS

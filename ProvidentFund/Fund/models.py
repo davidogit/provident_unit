@@ -130,7 +130,7 @@ class InvestmentDetail(models.Model):
     )
     years = models.DecimalField(
         max_digits=4,
-        decimal_places=0,
+        decimal_places=2,
         null=False
     ) #Time the money is invested or borrowed for, in years.
     compounding_frequency = models.PositiveIntegerField(
@@ -239,8 +239,13 @@ class DelayedInterest(models.Model):
     remarks = models.CharField(
         max_length=50
     )
-    _status = models.CharField(
+    choice = [
+        ('Paid','Paid'),
+        ('Not Paid','Not Paid')
+    ]
+    status = models.CharField(
         max_length=20,
+        choices=choice,
         default='Not paid'
     )
     # due_date = models.DateField()
@@ -269,13 +274,6 @@ class DelayedInterest(models.Model):
         null=True
     )
     
-    @property
-    def status(self):
-        return self._status
-    
-    @status.setter
-    def status(self,value):
-        self._status = value
 
 # SIGNAL FOR DelayedInterest
 # Setting invoice number before saving DI

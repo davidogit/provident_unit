@@ -1,182 +1,503 @@
 {% extends 'dashboard/base.html' %}
-{% block content %}
+
+{% block title %}
+<title>Mass Enrollment</title>
+{% endblock %}
+
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-people-fill me-2"></i>Mass Enrollment</h5>
+{% endblock %}
+
 {% block head %}
 <meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
+{% block content %}
+<!-- SweetAlert2 and Toastr CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
-    /* Center the spinner */
-    .spinner-wrapper {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(255, 255, 255, 0.8);
-      z-index: 9999;
-      justify-content: center;
-      align-items: center;
-    }
+  .file-drop-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    border: 2px dashed #dee2e6;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+  }
   
-    .spinner {
-      width: 50px;
-      height: 50px;
-      border: 6px solid #ddd;
-      border-top-color: #4285F4;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
+  .file-drop-area.is-active {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+  }
   
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-      100% {
-        transform: rotate(360deg);
-      }
-    }
+  .file-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+    opacity: 0;
+  }
+  
+  .file-msg {
+    font-size: 1.2rem;
+    margin-top: 1rem;
+    color: #6c757d;
+  }
+  
+  .file-preview {
+    margin-top: 1rem;
+    display: none;
+    width: 100%;
+  }
+  
+  .file-details {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+  }
+  
+  .file-icon {
+    font-size: 2rem;
+    margin-right: 1rem;
+    color: #0d6efd;
+  }
+  
+  .file-info {
+    flex-grow: 1;
+  }
+  
+  .file-name {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+  
+  .file-size {
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+  
+  .file-remove {
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: color 0.2s;
+  }
+  
+  .file-remove:hover {
+    color: #b02a37;
+  }
+  
+  .preview-container {
+    margin-top: 2rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+  
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+  
+  .preview-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+  
+  .preview-body {
+    max-height: 400px;
+    overflow: auto;
+  }
+  
+  .preview-table {
+    margin-bottom: 0;
+  }
+  
+  .preview-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  
+  .upload-btn-container {
+    margin-top: 1.5rem;
+    text-align: center;
+  }
 </style>
-{% endblock %}
-{% block title %}
-<title>Mass Enroll</title>
-{% endblock %}
-{% block header %}
-<h5>Mass Enrollment</h5>
-{% endblock %}
 
 <div class="main main-app p-3 p-lg-4">
-    <div class="d-md-flex align-items-center justify-content-between mb-4">
-        <form method="post" action="" enctype="multipart/form-data" id="file-form">
-            {% csrf_token %}
-            <div class="form-group" style="display: in-line;">
-                <label for="document" class="form-label">Upload File(.xls)</label>
-                <input class="form-control" type="file" name="excel_sheet" id="file-input" accept=".xlsx, .xls">
-                <button class="btn btn-outline-secondary" type="button" id="upload-btn" disabled>Upload File</button>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="card shadow-sm border-0">
+          <div class="card-header py-3">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-cloud-upload text-primary me-2"></i>
+              <h5 class="card-title mb-0">Upload Enrollment Data</h5>
             </div>
-        </form>
+          </div>
+          
+          <div class="card-body">
+            <div class="row">
+              <div class="col-lg-12">
+                <form method="post" action="" enctype="multipart/form-data" id="file-form">
+                  {% csrf_token %}
+                  
+                  <div class="file-drop-area">
+                    <i class="bi bi-file-earmark-excel fs-1 text-success"></i>
+                    <span class="file-msg">Drag & drop your Excel file here or click to browse</span>
+                    <input type="file" class="file-input" name="excel_sheet" id="file-input" accept=".xlsx, .xls">
+                  </div>
+                  
+                  <div class="file-preview" id="file-preview">
+                    <div class="file-details">
+                      <div class="file-icon">
+                        <i class="bi bi-file-earmark-excel"></i>
+                      </div>
+                      <div class="file-info">
+                        <div class="file-name" id="file-name"></div>
+                        <div class="file-size" id="file-size"></div>
+                      </div>
+                      <div class="file-remove" id="file-remove">
+                        <i class="bi bi-x-circle"></i>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="preview-container" id="preview-container" style="display: none;">
+                    <div class="preview-header">
+                      <h6 class="preview-title">
+                        <i class="bi bi-table me-2"></i>Data Preview
+                      </h6>
+                      <span class="badge bg-primary" id="row-count"></span>
+                    </div>
+                    <div class="preview-body">
+                      <div id="table-container"></div>
+                    </div>
+                  </div>
+                  
+                  <div class="upload-btn-container">
+                    <button class="btn btn-primary btn-lg" type="button" id="upload-btn" disabled>
+                      <i class="bi bi-cloud-arrow-up me-2"></i>Upload File
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="overflow-auto p-1" id="preview-area" style="margin-top: 20px; display: none; max-height:500px">
-        <h4>Preview File</h4>
-        <div id="table-container"></div>
-    </div>
+  </div>
 </div>
-<!-- Spinner -->
-<div class="spinner-wrapper" id="spinner-wrapper">
-    <div class="spinner"></div>
-</div> 
 
-
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-  // Handle file input change event
-  document.getElementById("file-input").addEventListener("change", handleFile, false);
-  // Handle upload button click event
-  document.getElementById("upload-btn").addEventListener("click", submitFile, false);
-  
-  // To store the file data
-  let fileData = null; 
-
-  // Get CSRF token from the meta tag
-  var csrfToken = $('meta[name="csrf-token"]').attr('content');
-
-  function handleFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      fileData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-
-      // Display the preview
-      displayPreview(fileData);
+  $(document).ready(function() {
+    // Configure Toastr
+    toastr.options = {
+      closeButton: true,
+      progressBar: true,
+      positionClass: "toast-bottom-right",
+      timeOut: 3000,
+      extendedTimeOut: 1000,
+      preventDuplicates: true,
+      newestOnTop: true
     };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function displayPreview(data) {
-    if (!data || data.length === 0) return;
-
-    const container = document.getElementById("table-container");
-    container.innerHTML = ""; // Clear any previous content
-
-    const table = document.createElement("table");
-    table.className = "table table-bordered";
-    const tbody = document.createElement("tbody");
-
-    data.forEach((row, rowIndex) => {
-      const tr = document.createElement("tr");
-      row.forEach((cell) => {
-        const td = document.createElement(rowIndex === 0 ? "th" : "td");
-        td.textContent = cell !== undefined ? cell : "";
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
+    
+    // Variables
+    let fileData = null;
+    const csrfToken = $('meta[name="csrf-token"]').attr('content');
+    const fileDropArea = $('.file-drop-area');
+    const fileInput = $('#file-input');
+    const filePreview = $('#file-preview');
+    const fileName = $('#file-name');
+    const fileSize = $('#file-size');
+    const fileRemove = $('#file-remove');
+    const previewContainer = $('#preview-container');
+    const tableContainer = $('#table-container');
+    const uploadBtn = $('#upload-btn');
+    const rowCount = $('#row-count');
+    
+    // Drag and drop functionality
+    fileDropArea.on('dragover dragenter', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      $(this).addClass('is-active');
     });
-
-    table.appendChild(tbody);
-    container.appendChild(table);
-
-    // Show preview area and enable upload button
-    document.getElementById("preview-area").style.display = "block";
-    document.getElementById("upload-btn").disabled = false;
-  }
-
-  function submitFile() {
-    const fileInput = document.getElementById("file-input");// Get the file input element
-    const file = fileInput.files[0]; // Get the file object
-
-    if (!file){
-        alert('Please select a file to upload');
+    
+    fileDropArea.on('dragleave dragend drop', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      $(this).removeClass('is-active');
+    });
+    
+    fileDropArea.on('drop', function(e) {
+      const droppedFiles = e.originalEvent.dataTransfer.files;
+      fileInput.prop('files', droppedFiles);
+      handleFile(droppedFiles[0]);
+    });
+    
+    // File input change event
+    fileInput.on('change', function() {
+      const file = this.files[0];
+      if (file) {
+        handleFile(file);
+      }
+    });
+    
+    // Remove file button
+    fileRemove.on('click', function() {
+      resetFileUpload();
+    });
+    
+    // Upload button click event
+    uploadBtn.on('click', function() {
+      submitFile();
+    });
+    
+    // Handle file selection
+    function handleFile(file) {
+      if (!file) return;
+      
+      // Check file type
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      if (fileExtension !== 'xls' && fileExtension !== 'xlsx') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Invalid File Type',
+          text: 'Please select an Excel file (.xls or .xlsx)',
+          confirmButtonColor: '#3085d6'
+        });
+        resetFileUpload();
         return;
+      }
+      
+      // Display file info
+      fileName.text(file.name);
+      fileSize.text(formatFileSize(file.size));
+      filePreview.show();
+      
+      // Read file data
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          fileData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          
+          // Display preview
+          displayPreview(fileData);
+        } catch (error) {
+          console.error("Error reading Excel file:", error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error Reading File',
+            text: 'The selected file could not be read. Please ensure it is a valid Excel file.',
+            confirmButtonColor: '#3085d6'
+          });
+          resetFileUpload();
+        }
+      };
+      
+      reader.onerror = function() {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error Reading File',
+          text: 'An error occurred while reading the file.',
+          confirmButtonColor: '#3085d6'
+        });
+        resetFileUpload();
+      };
+      
+      reader.readAsArrayBuffer(file);
     }
     
-    // Show spinner
-    document.getElementById("spinner-wrapper").style.display = "flex";
-
-    //pass the file to the form data
-    const formData = new FormData();
-    formData.append('excel_sheet', file);
-    //append csrf_token to the form data
-    formData.append('csrfmiddlewaretoken', csrfToken);
-
-
-    // Send the fileData to the server via AJAX
-    $.ajax({
+    // Check if a row has data (not empty)
+    function hasData(row) {
+      if (!row || row.length === 0) return false;
+      
+      // Check if any cell in the row has data
+      return row.some(cell => {
+        return cell !== undefined && cell !== null && cell.toString().trim() !== '';
+      });
+    }
+    
+    // Display file preview
+    function displayPreview(data) {
+      if (!data || data.length === 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Empty File',
+          text: 'The selected file does not contain any data.',
+          confirmButtonColor: '#3085d6'
+        });
+        resetFileUpload();
+        return;
+      }
+      
+      // Filter out empty rows
+      const nonEmptyRows = data.filter(hasData);
+      
+      if (nonEmptyRows.length <= 1) { // Only header or empty
+        Swal.fire({
+          icon: 'error',
+          title: 'No Data Found',
+          text: 'The selected file does not contain any data rows.',
+          confirmButtonColor: '#3085d6'
+        });
+        resetFileUpload();
+        return;
+      }
+      
+      // Create table
+      tableContainer.empty();
+      const table = $('<table class="table table-bordered table-striped preview-table"></table>');
+      const thead = $('<thead></thead>');
+      const tbody = $('<tbody></tbody>');
+      
+      // Add header row
+      const headerRow = $('<tr></tr>');
+      nonEmptyRows[0].forEach(function(cell) {
+        headerRow.append(`<th>${cell !== undefined ? cell : ''}</th>`);
+      });
+      thead.append(headerRow);
+      
+      // Add data rows (limit to 100 rows for performance)
+      const displayRows = Math.min(nonEmptyRows.length - 1, 100);
+      for (let i = 1; i <= displayRows; i++) {
+        const row = $('<tr></tr>');
+        nonEmptyRows[i].forEach(function(cell) {
+          row.append(`<td>${cell !== undefined ? cell : ''}</td>`);
+        });
+        tbody.append(row);
+      }
+      
+      // Append table
+      table.append(thead).append(tbody);
+      tableContainer.append(table);
+      
+      // Show preview container and enable upload button
+      previewContainer.show();
+      uploadBtn.prop('disabled', false);
+      
+      // Show row count (excluding header)
+      const dataRowCount = nonEmptyRows.length - 1;
+      rowCount.text(`${dataRowCount} row${dataRowCount !== 1 ? 's' : ''}`);
+      
+      // Show toast notification
+      toastr.success('File preview generated successfully');
+    }
+    
+    // Submit file to server
+    function submitFile() {
+      const file = fileInput[0].files[0];
+      
+      if (!file) {
+        Swal.fire({
+          icon: 'error',
+          title: 'No File Selected',
+          text: 'Please select a file to upload.',
+          confirmButtonColor: '#3085d6'
+        });
+        return;
+      }
+      
+      // Show loading state
+      uploadBtn.prop('disabled', true);
+      uploadBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Uploading...');
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('excel_sheet', file);
+      formData.append('csrfmiddlewaretoken', csrfToken);
+      
+      // Send AJAX request
+      $.ajax({
         type: "POST",
         url: "",
         data: formData,
         processData: false,
         contentType: false,
-        success: function (response) {
-            if (response.status === 'success'){
-                document.getElementById("spinner-wrapper").style.display = "none";
-                alert(response.message);
-                console.log(response);
-            }else{
-                document.getElementById("spinner-wrapper").style.display = "none";
-                setTimeout(() => {
-                    alert(response.message);
-                }, 100);
-                console.log(response);
-            }
-
+        success: function(response) {
+          // Reset button state
+          uploadBtn.prop('disabled', false);
+          uploadBtn.html('<i class="bi bi-cloud-arrow-up me-2"></i>Upload File');
+          
+          if (response.status === 'success') {
+            // Show success message
+            Swal.fire({
+              icon: 'success',
+              title: 'Upload Successful',
+              text: response.message,
+              confirmButtonColor: '#3085d6'
+            }).then(() => {
+              // Reset form
+              resetFileUpload();
+            });
+          } else {
+            // Show error message
+            Swal.fire({
+              icon: 'error',
+              title: 'Upload Failed',
+              text: response.message,
+              confirmButtonColor: '#3085d6'
+            });
+          }
         },
-        error: function (error) {
-            document.getElementById("spinner-wrapper").style.display = "none";
-            // delay the alert to allow the spinner to hide
-            setTimeout(() => {
-                alert("An error occurred while uploading the file.");
-            }, 100);
-            console.error("Error uploading file:", error);
-            alert("An error occurred while uploading the file.");
+        error: function(error) {
+          // Reset button state
+          uploadBtn.prop('disabled', false);
+          uploadBtn.html('<i class="bi bi-cloud-arrow-up me-2"></i>Upload File');
+          
+          // Show error message
+          Swal.fire({
+            icon: 'error',
+            title: 'Upload Failed',
+            text: 'An error occurred while uploading the file.',
+            confirmButtonColor: '#3085d6'
+          });
+          console.error("Error uploading file:", error);
         }
-    });
-
-  }
+      });
+    }
+    
+    // Reset file upload form
+    function resetFileUpload() {
+      fileInput.val('');
+      filePreview.hide();
+      previewContainer.hide();
+      tableContainer.empty();
+      uploadBtn.prop('disabled', true);
+      fileData = null;
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+  });
 </script>
-
 {% endblock %}

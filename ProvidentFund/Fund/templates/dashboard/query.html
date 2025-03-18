@@ -1,226 +1,316 @@
 {% extends 'dashboard/base.html' %}
 
-{% block search %}
-
+{% block title %}
+<title>Investment Report</title>
 {% endblock %}
 
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-search me-2"></i>Investment Report</h5>
+{% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-
-    <div class="d-md-flex align-items-center justify-content-between mb-4">
-        <div>
-
-        </div>
-        <div class="d-flex gap-2 mt-3 mt-md-0">
-          <button type="button" class="btn btn-white d-flex align-items-center gap-2"onclick="printTable()" ><i class="ri-printer-line fs-18 lh-1"></i>Print</button>
-          <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="exportTableToCSV('table_data.csv')"><i class="ri-bar-chart-2-line fs-18 lh-1"></i>Generate<span class="d-none d-sm-inline"> Report</span></button>
-        </div>
-    </div>
-
-
-    <!--Search Form -->
-    <form class="form-search d-flex flex-wrap align-items-center justify-content-between" method="GET">
-        <div class="d-flex align-items-center mb-2 mb-md-0">
-            <label for="sort" class="me-2"></label>
-            <select class="form-control rounded-pill fst-italic bg-secondary text-light" name="sort" id="sort">
-                <option value="">--Sort by--</option>
-                <option value="start_date">Start Date</option>
-                <option value="created_date">Created Date</option>
-            </select>
-        </div>
-    
-        <div class="d-flex align-items-center mb-2 mb-md-0">
-            <label for="invoice" class="me-2"></label>
-            <input type="text" class="form-control rounded-pill fst-italic bg-secondary text-light" name="invoice_number" id="from-date" placeholder="Invoice Number">
-        </div>
-        <div class="d-flex align-items-center mb-2 mb-md-0">
-            <label for="from-date" class="me-2">From:</label>
-            <input type="date" class="form-control rounded-pill fst-italic bg-secondary text-light" name="from-date" id="from-date">
-        </div>
-    
-        <div class="d-flex align-items-center mb-2 mb-md-0">
-            <label for="to-date" class="me-2">To:</label>
-            <input type="date" class="form-control rounded-pill fst-italic bg-secondary text-light" name="to-date" id="to-date">
-        </div>
-    
-        <div class="d-flex align-items-center mb-2 mb-md-0" id="inv_type">
-            <label for="investmentType" class="me-2"></label>
-            <select class="form-control rounded-pill fst-italic bg-secondary text-light" name="inv_type" id="investmentType">
-                <option value="">--Category--</option>
-                <option value="Treasury Bill">Treasury Bill</option>
-                <option value="Fixed Deposit">Fixed Deposit</option>
-            </select>
-        </div>
-    
-        <div class="t_bill_type d-flex align-items-center mb-2 mb-md-0">
-            <label for="Type" class="me-2"></label>
-            <select class="form-control rounded-pill fst-italic bg-secondary text-light" name="type_of_tbill" id="Type">
-                <option value="">--Type--</option>
-                <option value="91 days">91 days</option>
-                <option value="182 days">182 days</option>
-                <option value="365 days">365 days</option>
-            </select>
-        </div>
-    
-        <div class="d-flex align-items-center mb-2 mb-md-0">
-            <label for="status" class="me-2"></label>
-            <select class="form-control rounded-pill fst-italic bg-secondary text-light" name="status" id="status">
-                <option value="">--Status--</option>
-                <option value="Not started">Not started</option>
-                <option value="active">Active</option>
-                <option value="matured">Matured/Expired</option>
-            </select>
-        </div>
-    
-        <div class="mb-2 mb-md-0">
-            <button type="submit" class="btn btn-primary rounded-pill fst-italic w-100 w-md-auto">
-                <i class="ri-search-line"></i> Search
-            </button>
-        </div>
-    </form>
-
-
-<!-- Form for query -->
-<div class="row g-3 justify-content-center">
-
-    <div class="col-md-12 col-xl-10">
-
-    </div>
-<!-- Form for query -->
-
-        <!--Search Results Table -->
-        <div class="col-md-12 col-xl-10">
-            <div class="card card-two">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table id="data-table" class="table table-hover table-striped table-borderless">
-                            <thead>
-                                <tr>
-                                    <th scope="col"></th>
-                                    <th scope="col">Invoice No.</th>
-                                    <th scope="col">Add Date</th>
-                                    <th scope="col">Start Date</th>
-                                    <th scope="col">Maturity Date</th>
-                                    <th scope="col">Investment Type</th>
-                                    <th scope="col">Interest Rate</th>
-                                    <th scope="col">Principal</th>
-                                    <th scope="col">Interest</th>
-                                    <th scope="col">Status</th>
-                                </tr>
-                            </thead>
-                            <div>
-                                <div class="paginated-data">
-                                    {% if results %}
-                                    {% for inv in results %}
-                                    
-                                        <tr>
-                                            <td>{{ forloop.counter0|add:results.start_index|default:forloop.counter }}</td>
-                                            <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=inv.pk %}">{{ inv.invoice_number }}</a></td>
-                                            <td>{{ inv.created_date }}</td>
-                                            <td>{{ inv.interest_start_date }}</td>
-                                            <td>{{ inv.interest_end_date }}</td>
-                                            <td>{{ inv.investment_type }}</td>
-                                            <td>{{ inv.interest_percentage }}</td>
-                                            <td>{{ inv.principal_amount }}</td>
-                                            <td>{{ inv.interest_amount|floatformat:2 }}</td>
-                                            <td>{{ inv.status }}</td>
-
-                                        </tr>
-                                    
-                                        
-                                    {% endfor %}
-                                    {% else %}
-                                    <tr>
-                                        <td class="text-center text-danger " colspan="10">No records match your search</td>
-                                    </tr>
-                                    {% endif %}
-                                </div>
-                                
-                            </tbody>
-                        </table>
-                    </div>
+  <!-- Card Container -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <!-- Header with Action Buttons -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+                <h5 class="card-title mb-0">Search Investments</h5>
+                <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2" onclick="printTable()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+                <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="exportTableToCSV('investment_report.csv')">
+                    <i class="bi bi-file-earmark-excel"></i> Export CSV
+                </button>
                 </div>
             </div>
-            {% if is_paginated %}
-            <nav aria-label="Page navigation example">
-              <ul class="pagination justify-content-center">
-                    {% if results.has_previous %}
-                    <li class="page-item">
-                    <a
-                        class="page-link"
-                        href="?page={{ results.previous_page_number }}&{{ query_string }}"
-                        aria-label="Previous"
-                    >
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                    </li>
-                    {% endif %}
-                    <li class="page-item">
-                    <a class="page-link" href="#">{{ results.number }}</a>
-                    </li>
-                    {% if results.has_next %}
-                    <li class="page-item">
-                    <a
-                        class="page-link"
-                        href="?page={{ results.next_page_number }}&{{  query_string}}"
-                        aria-label="Next"
-                    >
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                    </li>
 
-                    <li class="page-link">
-                        <a href="?page={{ results.paginator.num_pages }}&{{ query_string }}">&raquo;&raquo;</a>
-                    </li>
+            <!-- Search Form -->
+            <form class="search-form mb-4" method="GET">
+                <div class="row g-3">
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <select class="form-select" name="sort" id="sort">
+                        <option value="">All</option>
+                        <option value="interest_start_date">Start Date</option>
+                        <option value="created_date">Created Date</option>
+                    </select>
+                    <label for="sort">Sort by</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <input type="text" class="form-control" name="invoice_number" id="invoice" placeholder="INV Number">
+                    <label for="invoice">INV Number</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <input type="date" class="form-control" name="from-date" id="from-date">
+                    <label for="from-date">From Date</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <input type="date" class="form-control" name="to-date" id="to-date">
+                    <label for="to-date">To Date</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <select class="form-select" name="inv_type" id="investmentType">
+                        <option value="">All</option>
+                        <option value="Treasury Bill">Treasury Bill</option>
+                        <option value="Fixed Deposit">Fixed Deposit</option>
+                    </select>
+                    <label for="investmentType">Category</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2 t_bill_type">
+                    <div class="form-floating">
+                    <select class="form-select" name="type_of_tbill" id="Type">
+                        <option value="">All</option>
+                        <option value="91 days">91 days</option>
+                        <option value="182 days">182 days</option>
+                        <option value="365 days">365 days</option>
+                    </select>
+                    <label for="Type">T-Bill Type</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <div class="form-floating">
+                    <select class="form-select" name="status" id="status">
+                        <option value="">All</option>
+                        <option value="Not started">Not started</option>
+                        <option value="active">Active</option>
+                        <option value="matured">Matured/Expired</option>
+                    </select>
+                    <label for="status">Status</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 col-lg-2">
+                    <button type="submit" class="btn btn-primary h-100 w-100">
+                    <i class="bi bi-search me-2"></i>Search
+                    </button>
+                </div>
+                </div>
+            </form>
+
+            <!-- Results Table -->
+            <div class="table-responsive">
+                <table id="data-table" class="table table-hover table-striped">
+                <thead class="">
+                    <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Instrument No.</th>
+                    <th scope="col">Date Added</th>
+                    <th scope="col">Start Date</th>
+                    <th scope="col">Maturity Date</th>
+                    <th scope="col">Investment Type</th>
+                    <th scope="col">Interest Rate</th>
+                    <th scope="col">Principal</th>
+                    <th scope="col">Interest</th>
+                    <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if results %}
+                    {% for inv in results %}
+                        <tr>
+                        <td>{{ forloop.counter0|add:results.start_index|default:forloop.counter }}</td>
+                        <td>
+                            <a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=inv.pk %}" class="fw-medium text-decoration-none">
+                            {{ inv.invoice_number }}
+                            </a>
+                        </td>
+                        <td>{{ inv.created_date }}</td>
+                        <td>{{ inv.interest_start_date }}</td>
+                        <td>{{ inv.interest_end_date }}</td>
+                        <td>{{ inv.investment_type }}</td>
+                        <td>{{ inv.interest_percentage }}%</td>
+                        <td>{{ inv.principal_amount|floatformat:2 }}</td>
+                        <td>{{ inv.interest_amount|floatformat:2 }}</td>
+                        <td>
+                            <span class="badge rounded-pill 
+                                {% if inv.status == 'Active' %}bg-success
+                                {% elif inv.status == 'Matured/Expired' %}bg-secondary
+                                {% else %}bg-warning{% endif %}">
+                                {{ inv.status }}
+                            </span>
+
+                        </td>
+                        </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td class="text-center py-4" colspan="10">
+                        <div class="d-flex flex-column align-items-center">
+                            <i class="bi bi-search fs-1 text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No records match your search criteria</p>
+                        </div>
+                        </td>
+                    </tr>
                     {% endif %}
-              </ul>
+                </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if results.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1&{{ query_string }}" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ results.previous_page_number }}&{{ query_string }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                <span class="page-link">{{ results.number }} of {{ results.paginator.num_pages }}</span>
+                </li>
+                
+                {% if results.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ results.next_page_number }}&{{ query_string }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ results.paginator.num_pages }}&{{ query_string }}" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
             </nav>
             {% endif %}
-        
+        </div>
     </div>
 </div>
 
-
-
-<!-- PRINTING AND EXPORTING AS CSV -->
+<!-- Print and Export Scripts -->
 <script>
-    function printTable() {
-        var printContents = document.getElementById('data-table').outerHTML;
-        var originalContents = document.body.innerHTML;
-        document.body.innerHTML = printContents;
-        window.print();
-        document.body.innerHTML = originalContents;
+  $(document).ready(function() {
+    // Show/hide T-Bill type dropdown based on investment type selection
+    $('#investmentType').change(function() {
+      if ($(this).val() === 'Treasury Bill') {
+        $('.t_bill_type').show();
+      } else {
+        $('.t_bill_type').hide();
+        $('#Type').val('');
+      }
+    });
+    
+    // Initialize - hide T-Bill type if not selected
+    if ($('#investmentType').val() !== 'Treasury Bill') {
+      $('.t_bill_type').hide();
+    }
+  });
+
+  function printTable() {
+    // Create a new window for printing
+    var printWindow = window.open('', '_blank');
+    
+    // Add styles for the print view
+    var printContent = `
+      <html>
+      <head>
+        <title>Investment Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background-color: #f2f2f2; }
+          h2 { text-align: center; margin-bottom: 20px; }
+          .print-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+          .print-date { text-align: right; }
+        </style>
+      </head>
+      <body>
+        <div class="print-header">
+          <h2>Investment Report</h2>
+          <div class="print-date">Date: ${new Date().toLocaleDateString()}</div>
+        </div>
+        ${document.getElementById('data-table').outerHTML}
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.open();
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load before printing
+    printWindow.onload = function() {
+      printWindow.print();
+    };
+  }
+
+  function exportTableToCSV(filename) {
+    var csv = [];
+    var rows = document.querySelectorAll("#data-table tr");
+
+    for (var i = 0; i < rows.length; i++) {
+      var row = [], cols = rows[i].querySelectorAll("td, th");
+      
+      for (var j = 0; j < cols.length; j++) {
+        // Clean the text - remove commas and wrap in quotes if needed
+        var text = cols[j].innerText.replace(/"/g, '""');
+        if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+          text = '"' + text + '"';
+        }
+        row.push(text);
+      }
+      
+      csv.push(row.join(","));        
     }
 
-    function exportTableToCSV(filename) {
-        var csv = [];
-        var rows = document.querySelectorAll("#data-table tr");
-
-        for (var i = 0; i < rows.length; i++) {
-            var row = [], cols = rows[i].querySelectorAll("td, th");
-            
-            for (var j = 0; j < cols.length; j++) {
-                row.push(cols[j].innerText);
-            }
-            
-            csv.push(row.join(","));        
-        }
-
-        // Create a link to download CSV
-        var csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
-        var downloadLink = document.createElement("a");
-        downloadLink.download = filename;
-        downloadLink.href = window.URL.createObjectURL(csvFile);
-        downloadLink.style.display = "none";
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-    }    
+    // Create a link to download CSV
+    var csvFile = new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+    var downloadLink = document.createElement("a");
+    downloadLink.download = filename;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  }
 </script>
-
-
-<!-- PRINTING AND EXPORTING AS CSV -->
-
-
 {% endblock %}

@@ -5,277 +5,597 @@
 {% endblock %}
 
 {% block header %}
-<h5>Suppliers</h5>
+<h5 class="fw-bold"><i class="bi bi-person-badge-fill me-2"></i>Suppliers</h5>
 {% endblock %}
 
 {% block content %}
+<!-- SweetAlert2 and Toastr CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5">
-        <div class="col-12">
-            <div class="container">
-                <div class="row g-4 d-flex flex-column justify-content-center align-items-center">
-                    
-                    <div class="col-12">
-                        {% if 'Finance Analyst' in user_groups %}
-                        <div class="border p-3 rounded position-relative">
-                            <form action="" method="POST" id="supplier-form">
-                                {% csrf_token %}
-                                <div class="row g-3 d-flex justify-content-center align-items-center">
-
-                                    <div class="form-floating col-6 col-md-3">
-                                        <input type="text" name="supplier_name" id="supplier_name" class="form-control" placeholder="">
-                                        <label for="supplier_name">Name</label>
-                                    </div>
-
-                                    <div class="form-floating col-6 col-md-3">
-                                        <input type="text" name="supplier_address" id="supplier_address" class="form-control" placeholder="">
-                                        <label for="supplier_address">Address</label>
-                                    </div>
-
-                                    <div class="form-floating col-6 col-md-3">
-                                        <input type="text" name="supplier_phone" id="supplier_phone" class="form-control" placeholder="">
-                                        <label for="supplier_phone">Phone</label>
-                                    </div>
-
-                                    <div class="form-floating col-6 col-md-3">
-                                        <input type="text" name="supplier_email" id="supplier_email" class="form-control" placeholder="">
-                                        <label for="supplier_email">Email</label>
-                                    </div>
-
-                                    <div class="form-floating col-6 col-md-3">
-                                        <input type="text" name="supplier_bank" id="supplier_bank" class="form-control" placeholder="">
-                                        <label for="supplier_bank">Bank</label>
-                                    </div>
-
-                                    <div class="form-floating col-6 col-md-3">
-                                        <input type="text" name="supplier_account" id="supplier_account" class="form-control" placeholder="">
-                                        <label for="supplier_account">Account</label>
-                                    </div>
-
-                                    <div class="form-floating col-6 col-md-3">
-                                        <input type="text" name="supplier_branch" id="supplier_branch" class="form-control" placeholder="">
-                                        <label for="supplier_branch">Branch</label>
-                                    </div>
-                                    
-                                    <div class="col-6 col-md-3">
-                                        <button class="btn btn-outline-primary btn-lg save_supplier w-100" type="submit">Add</button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+  <div class="container-fluid">
+    <div class="row g-4">
+      <!-- Supplier Form -->
+      {% if 'Finance Analyst' in user_groups %}
+      <div class="col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-header py-3">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-plus-circle text-primary me-2"></i>
+              <h5 class="card-title mb-0">Add Supplier</h5>
             </div>
-
-            <!-- Suppliers Table with update and delete options -->
-             <div class="container mt-5">
-                <div class="col-12 overflow-auto" style="height: 500px;">
-                    {% if suppliers %}
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Address</th>
-                                <th>Phone</th>
-                                <th>Email</th>
-                                <th>Bank</th>
-                                <th>Account</th>
-                                <th>Branch</th>
-                                {% if 'Finance Analyst' in user_groups %}
-                                <th>Actions</th>
-                                {% endif %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for supplier in suppliers %}
-                            <tr data-supplier-id="{{ supplier.id }}">
-                                <td contenteditable="false" class="editable" data-field="name">{{ supplier.name }}</td>
-                                <td contenteditable="false" class="editable" data-field="address">{{ supplier.address }}</td>
-                                <td contenteditable="false" class="editable" data-field="phone">{{ supplier.phone }}</td>
-                                <td contenteditable="false" class="editable" data-field="email">{{ supplier.email }}</td>
-                                <td contenteditable="false" class="editable" data-field="bank">{{ supplier.bank }}</td>
-                                <td contenteditable="false" class="editable" data-field="account_number">{{ supplier.account_number }}</td>
-                                <td contenteditable="false" class="editable" data-field="branch">{{ supplier.branch }}</td>
-
-                                {% if 'Finance Analyst' in user_groups %}
-                                <td>
-                                    <button class="delete-supplier btn btn-warning btn-sm" data-id="{{ supplier.id }}" data-supplier_name="{{ supplier.name }}" style="display: inline;">
-                                        <i class="ri-delete-bin-2-line"></i>
-                                    </button>
-                                    <button class="edit-supplier btn btn-secondary btn-sm" data-id="{{ supplier.id }}" style="display: inline;">
-                                        <i class="ri-edit-line"></i>
-                                    </button>
-                                    <button class="update-supplier btn btn-success btn-sm" data-id="{{ supplier.id }}" style="display: none;">
-                                        <i class="ri-save-line"></i>
-                                    </button>
-                                    <button class="cancel btn btn-danger btn-sm" data-id="{{ supplier.id }}" style="display: none;">
-                                        <i class="ri-close-circle-line"></i>
-                                    </button>
-                                </td>
-                                {% endif %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p class="text-center">No suppliers available</p>
-                    {% endif %}
+          </div>
+          
+          <div class="card-body">
+            <form method="POST" id="supplier-form" class="needs-validation" novalidate>
+              {% csrf_token %}
+              
+              <div class="mb-3">
+                <div class="form-floating">
+                  <input type="text" class="form-control form-control-sm" id="supplier_name" name="supplier_name" placeholder="" required>
+                  <label for="supplier_name">Name</label>
+                  <div class="invalid-feedback">Please enter supplier name</div>
                 </div>
-             </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-floating">
+                  <input type="text" class="form-control form-control-sm" id="supplier_address" name="supplier_address" placeholder="">
+                  <label for="supplier_address">Address</label>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-floating">
+                  <input type="tel" class="form-control form-control-sm" id="supplier_phone" name="supplier_phone" placeholder="">
+                  <label for="supplier_phone">Phone</label>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-floating">
+                  <input type="email" class="form-control form-control-sm" id="supplier_email" name="supplier_email" placeholder="">
+                  <label for="supplier_email">Email</label>
+                  <div class="invalid-feedback">Please enter a valid email</div>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-floating">
+                  <input type="text" class="form-control form-control-sm" id="supplier_bank" name="supplier_bank" placeholder="">
+                  <label for="supplier_bank">Bank</label>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-floating">
+                  <input type="text" class="form-control form-control-sm" id="supplier_account" name="supplier_account" placeholder="">
+                  <label for="supplier_account">Account</label>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-floating">
+                  <input type="text" class="form-control form-control-sm" id="supplier_branch" name="supplier_branch" placeholder="">
+                  <label for="supplier_branch">Branch</label>
+                </div>
+              </div>
+              
+              <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-save me-2"></i>Save Supplier
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
+      </div>
+      {% endif %}
+      
+      <!-- Suppliers List -->
+      <div class="col-lg-{% if 'Finance Analyst' in user_groups %}8{% else %}12{% endif %}">
+        <div class="card shadow-sm border-0">
+          <div class="card-header py-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-people text-primary me-2"></i>
+                <h5 class="card-title mb-0">Suppliers</h5>
+                <span class="badge bg-primary rounded-pill ms-2">{{ suppliers|length }}</span>
+              </div>
+              
+              <div class="d-flex gap-2">
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                  </span>
+                  <input type="text" id="searchInput" class="form-control" placeholder="Search suppliers...">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 600px;">
+              <table class="table table-hover mb-0" id="suppliersTable">
+                <thead class="sticky-top">
+                  <tr>
+                    <th>Name</th>
+                    <th>Contact</th>
+                    <th>Banking Details</th>
+                    {% if 'Finance Analyst' in user_groups %}
+                    <th class="text-end">Actions</th>
+                    {% endif %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for supplier in suppliers %}
+                  <tr data-supplier-id="{{ supplier.id }}" data-name="{{ supplier.name }}" data-email="{{ supplier.email }}" data-phone="{{ supplier.phone }}">
+                    <td>
+                      <div class="d-flex flex-column">
+                        <span class="fw-medium" data-field="name">{{ supplier.name }}</span>
+                        <small class="text-muted" data-field="address">{{ supplier.address }}</small>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="d-flex flex-column">
+                        <span data-field="phone">{{ supplier.phone }}</span>
+                        <small class="text-muted" data-field="email">{{ supplier.email }}</small>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="d-flex flex-column">
+                        <span data-field="bank">{{ supplier.bank }}</span>
+                        <small class="text-muted">
+                          <span data-field="account_number">{{ supplier.account_number }}</span>
+                          {% if supplier.branch %} | <span data-field="branch">{{ supplier.branch }}</span>{% endif %}
+                        </small>
+                      </div>
+                    </td>
+                    {% if 'Finance Analyst' in user_groups %}
+                    <td class="text-end">
+                      <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary edit-supplier" data-id="{{ supplier.id }}">
+                          <i class="bi bi-pencil me-1"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-supplier" data-id="{{ supplier.id }}" data-name="{{ supplier.name }}">
+                          <i class="bi bi-trash me-1"></i> Delete
+                        </button>
+                        <button class="btn btn-sm btn-success update-supplier" data-id="{{ supplier.id }}" style="display: none;">
+                          <i class="bi bi-check-lg me-1"></i> Save
+                        </button>
+                        <button class="btn btn-sm btn-secondary cancel" data-id="{{ supplier.id }}" style="display: none;">
+                          <i class="bi bi-x-lg me-1"></i> Cancel
+                        </button>
+                      </div>
+                    </td>
+                    {% endif %}
+                  </tr>
+                  {% empty %}
+                  <tr id="no-suppliers-row">
+                    <td colspan="{% if 'Finance Analyst' in user_groups %}4{% else %}3{% endif %}" class="text-center py-5">
+                      <div class="d-flex flex-column align-items-center">
+                        <i class="bi bi-people text-muted fs-1 mb-3"></i>
+                        <h5 class="mb-1">No Suppliers</h5>
+                        <p class="text-muted mb-0">Add your first supplier using the form.</p>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                  <tr id="no-results-row" style="display: none;">
+                    <td colspan="{% if 'Finance Analyst' in user_groups %}4{% else %}3{% endif %}" class="text-center py-5">
+                      <div class="d-flex flex-column align-items-center">
+                        <i class="bi bi-search text-muted fs-1 mb-3"></i>
+                        <h5 class="mb-1">No Matching Results</h5>
+                        <p class="text-muted mb-0">Try adjusting your search criteria.</p>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
+<!-- Edit Supplier Modal -->
+<div class="modal fade" id="editSupplierModal" tabindex="-1" aria-labelledby="editSupplierModalLabel" aria-hidden="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editSupplierModalLabel">
+            <i class="bi bi-pencil-square me-2"></i>Update Supplier</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="edit-supplier-form">
+            {% csrf_token %}
+            <div class="row g-3">
+                <input type="hidden" id="edit_supplier_id">
+            
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="edit_supplier_name" placeholder="Name" required>
+                        <label for="edit_supplier_name">Name</label>
+                    </div>
+                </div>
+            
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="edit_supplier_address" placeholder="Address">
+                        <label for="edit_supplier_address">Address</label>
+                    </div>
+                </div>
+            
+                <div class="col-md-4">
+                    <div class="form-floating mb-3">
+                        <input type="tel" class="form-control" id="edit_supplier_phone" placeholder="Phone">
+                        <label for="edit_supplier_phone">Phone</label>
+                    </div>
+                </div>
+            
+                <div class="col-md-4">
+                    <div class="form-floating mb-3">
+                        <input type="email" class="form-control" id="edit_supplier_email" placeholder="Email">
+                        <label for="edit_supplier_email">Email</label>
+                    </div>
+                </div>
+            
+                <div class="col-md-4">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="edit_supplier_bank" placeholder="Bank">
+                        <label for="edit_supplier_bank">Bank</label>
+                    </div>
+                </div>
+            
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="edit_supplier_account" placeholder="Account">
+                        <label for="edit_supplier_account">Account</label>
+                    </div>
+                </div>
+            
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="edit_supplier_branch" placeholder="Branch">
+                        <label for="edit_supplier_branch">Branch</label>
+                    </div>
+                </div>
+            
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="save-edit-supplier">
+                <i class="bi bi-save me-2"></i>Update Supplier
+                </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+</div>
+  
 <script>
-    //Function to change td to contenteditable to true
-    $(document).on('click', '.edit-supplier', function(){
-        var supplierId = $(this).data('id');
-        var supplierRow = $(this).closest('tr');
-        var saveSuplierBtn = supplierRow.find('.update-supplier');
-        var updateSuplierBtn = supplierRow.find('.edit-supplier');
-        var deleteSuplierBtn = supplierRow.find('.delete-supplier');
-        var cancelBtn = supplierRow.find('.cancel');
-        var supplierName = supplierRow.find('td[data-field]');
-
-        updateSuplierBtn.addClass('d-none');
-        deleteSuplierBtn.addClass('d-none');
-        saveSuplierBtn.addClass('d-inline');
-        cancelBtn.addClass('d-inline');
-        supplierName.attr('contenteditable', 'true');
-        supplierRow.focus();
-        supplierRow.css('background-color', '#9CDBA6');
-        supplierName.css('background-color', '#9CDBA6');
-        //supplierName.css('padding', '3px');
-        supplierName.css('cursor', 'text');
-        //supplierName.css('text-align', 'center');
-        supplierName.css('font-style', 'italic');
-    });
-
-    // Cancel editing
-    $(document).on('click', '.cancel', function(){
-        var row = $(this).closest('tr');
-
-        row.find('td').attr('contenteditable', 'false');
-        row.css('background-color', 'transparent');
-        row.find('td').css('background-color', 'transparent');
-        row.find('td').css('cursor', 'cursor');
-        row.find('td').css('text-transform', 'none');
-        row.find('td').css('text-align', 'left');
-        row.find('td').css('font-style', 'normal');
+  $(document).ready(function() {
+    // Configure Toastr
+    toastr.options = {
+      closeButton: true,
+      progressBar: true,
+      positionClass: "toast-bottom-right",
+      timeOut: 3000,
+      extendedTimeOut: 1000,
+      preventDuplicates: true,
+      newestOnTop: true
+    };
+    
+    // Form validation
+    (function() {
+      'use strict';
+      
+      var forms = document.querySelectorAll('.needs-validation');
+      
+      Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    })();
+    
+    // Search functionality
+    $("#searchInput").on("keyup", function() {
+      const value = $(this).val().toLowerCase();
+      let visibleCount = 0;
+      
+      $("#suppliersTable tbody tr").each(function() {
+        if ($(this).attr('id') === 'no-suppliers-row' || $(this).attr('id') === 'no-results-row') {
+          return; // Skip the "no suppliers" and "no results" rows
+        }
         
-        row.find('.update-supplier').removeClass('d-inline');
-        row.find('.edit-supplier').removeClass('d-none');
-        row.find('.delete-supplier').removeClass('d-none');
-        row.find('.cancel').removeClass('d-inline');
+        const name = $(this).data('name').toString().toLowerCase();
+        const email = $(this).data('email') ? $(this).data('email').toString().toLowerCase() : '';
+        const phone = $(this).data('phone') ? $(this).data('phone').toString().toLowerCase() : '';
+        
+        if (name.includes(value) || email.includes(value) || phone.includes(value)) {
+          $(this).show();
+          visibleCount++;
+        } else {
+          $(this).hide();
+        }
+      });
+      
+      // Show/hide "no results" message
+      if (visibleCount === 0 && $("#suppliersTable tbody tr").length > 1) {
+        $("#no-results-row").show();
+      } else {
+        $("#no-results-row").hide();
+      }
     });
-
-
-
-    $(document).ready(function(){
-        //Add Supplier
-        $('#supplier-form').on('submit', function(e){
-            e.preventDefault();
-            var form = $(this);
-
-            $.ajax({
-                type: 'POST',
-                url: '',
-                data: form.serialize(),
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                success: function(response){
-                    if (response.status === 'success'){
-                        location.reload();
-                    }else{
-                        alert(response.message);
-                    }
-                },
-                error: function(){
-                    alert('Failed to add supplier');
-                }
+    
+    // Add Supplier
+    $('#supplier-form').on('submit', function(e) {
+      e.preventDefault();
+      
+      if (!this.checkValidity()) {
+        return;
+      }
+      
+      var form = $(this);
+      var submitBtn = form.find('button[type="submit"]');
+      var originalBtnText = submitBtn.html();
+      
+      // Show loading state
+      submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...');
+      submitBtn.prop('disabled', true);
+      
+      $.ajax({
+        type: 'POST',
+        url: '',
+        data: form.serialize(),
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          // Reset button state
+          submitBtn.html(originalBtnText);
+          submitBtn.prop('disabled', false);
+          
+          if (response.status === 'success') {
+            // Show success message with SweetAlert
+            Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: 'Supplier added successfully',
+              confirmButtonColor: '#3085d6'
+            }).then(() => {
+              // Reload the page
+              window.location.reload();
             });
-        });
-
-        //Delete Supplier
-        $('.delete-supplier').on('click', function(){
-            var supplierId = $(this).data('id');
-            var tenantId = '{{ request.tenant.id }}';
-            var supplierName = $(this).data('supplier_name');
-            var confirmDelete = confirm('Are you sure you want to delete ' + supplierName +'?');
-            if(!confirmDelete){
-                return false;
+            
+            // Reset form
+            form[0].reset();
+            form.removeClass('was-validated');
+          } else {
+            // Show error message with SweetAlert
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: response.message || 'An error occurred',
+              confirmButtonColor: '#3085d6'
+            });
+          }
+        },
+        error: function() {
+          // Reset button state
+          submitBtn.html(originalBtnText);
+          submitBtn.prop('disabled', false);
+          
+          // Show error message with SweetAlert
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to add supplier',
+            confirmButtonColor: '#3085d6'
+          });
+        }
+      });
+    });
+    
+    // Delete Supplier
+    $('.delete-supplier').on('click', function() {
+      var supplierId = $(this).data('id');
+      var supplierName = $(this).data('name');
+      var tenantId = '{{ request.tenant.id }}';
+      var row = $(this).closest('tr');
+      
+      // Show confirmation dialog with SweetAlert
+      Swal.fire({
+        title: 'Delete Supplier?',
+        text: `Are you sure you want to delete ${supplierName}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: `/${tenantId}/fund/delete-supplier/${supplierId}/`,
+            type: 'DELETE',
+            data: {
+              'supplier_id': supplierId
+            },
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+              if (response.status === 'success') {
+                // Show success toast
+                toastr.success('Supplier deleted successfully');
+                
+                // Remove row with animation
+                row.fadeOut(400, function() {
+                  $(this).remove();
+                  
+                  // Check if table is empty
+                  if ($("#suppliersTable tbody tr").not('#no-results-row').length === 0) {
+                    $("#no-suppliers-row").show();
+                  }
+                });
+              } else {
+                // Show error message with SweetAlert
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: response.message || 'Failed to delete supplier',
+                  confirmButtonColor: '#3085d6'
+                });
+              }
+            },
+            error: function() {
+              // Show error message with SweetAlert
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to delete supplier',
+                confirmButtonColor: '#3085d6'
+              });
             }
-            var url = `/${tenantId}/fund/delete-supplier/${supplierId}/`;
-
-            $.ajax({
-                type: 'DELETE',
-                url: url,
-                data: {
-                    'supplier_id': supplierId
-                },
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                success: function(response){
-                    if (response.status === 'success'){
-                        alert(response.message);
-                        location.reload();
-                    }else{
-                        alert(response.message);
-                    }
-                },
-                error: function(){
-                    alert('Failed to delete supplier');
-                }
-            });
-        });
-
-        //Update Supplier
-        $('.update-supplier').on('click', function(){
-            var supplierId = $(this).data('id');
-            var tenantId = '{{ request.tenant.id }}';
-            var supplierRow = $(this).closest('tr');
-            var supplierName = supplierRow.find('td[data-field="name"]').text();
-            var supplierAddress = supplierRow.find('td[data-field="address"]').text();
-            var supplierPhone = supplierRow.find('td[data-field="phone"]').text();
-            var supplierEmail = supplierRow.find('td[data-field="email"]').text();
-            var supplierBank = supplierRow.find('td[data-field="bank"]').text();
-            var supplierAccount = supplierRow.find('td[data-field="account_number"]').text();
-            var supplierBranch = supplierRow.find('td[data-field="branch"]').text();
-
-            var url = `/${tenantId}/fund/update-supplier/${supplierId}/`;
-            console.log(supplierAccount);
-            $.ajax({
-                type: 'POST',
-                url: url,
-                data: {
-                    //'supplier_id': supplierId,
-                    'name': supplierName,
-                    'address': supplierAddress,
-                    'phone': supplierPhone,
-                    'email': supplierEmail,
-                    'bank': supplierBank,
-                    'account_number': supplierAccount,
-                    'branch': supplierBranch
-                },
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                success: function(response){
-                    if (response.status === 'success'){
-                        alert(response.message);
-                        location.reload();
-                    }else{
-                        alert(response.message + response.errors);
-                    }
-                },
-                error: function(){
-                    alert('Failed to update supplier');
-                }
-            });
-        });
+          });
+        }
+      });
     });
+    
+    // Edit Supplier (Inline)
+    $('.edit-supplier').on('click', function() {
+      var supplierId = $(this).data('id');
+      var row = $(this).closest('tr');
+      
+      // Get current values
+      var name = row.find('[data-field="name"]').text();
+      var address = row.find('[data-field="address"]').text();
+      var phone = row.find('[data-field="phone"]').text();
+      var email = row.find('[data-field="email"]').text();
+      var bank = row.find('[data-field="bank"]').text();
+      var account = row.find('[data-field="account_number"]').text();
+      var branch = row.find('[data-field="branch"]').text();
+      
+      // Populate modal
+      $('#edit_supplier_id').val(supplierId);
+      $('#edit_supplier_name').val(name);
+      $('#edit_supplier_address').val(address);
+      $('#edit_supplier_phone').val(phone);
+      $('#edit_supplier_email').val(email);
+      $('#edit_supplier_bank').val(bank);
+      $('#edit_supplier_account').val(account);
+      $('#edit_supplier_branch').val(branch);
+      
+      // Show modal
+      $('#editSupplierModal').modal('show');
+    });
+    
+    // Save edited supplier
+    $('#save-edit-supplier').on('click', function() {
+      var supplierId = $('#edit_supplier_id').val();
+      var tenantId = '{{ request.tenant.id }}';
+      
+      // Get values from form
+      var name = $('#edit_supplier_name').val();
+      var address = $('#edit_supplier_address').val();
+      var phone = $('#edit_supplier_phone').val();
+      var email = $('#edit_supplier_email').val();
+      var bank = $('#edit_supplier_bank').val();
+      var account = $('#edit_supplier_account').val();
+      var branch = $('#edit_supplier_branch').val();
+      
+      // Validate required fields
+      if (!name) {
+        toastr.error('Supplier name is required');
+        return;
+      }
+      
+      // Show loading state
+      var saveBtn = $(this);
+      var originalBtnText = saveBtn.html();
+      saveBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...');
+      saveBtn.prop('disabled', true);
+      
+      $.ajax({
+        type: 'POST',
+        url: `/${tenantId}/fund/update-supplier/${supplierId}/`,
+        data: {
+          'name': name,
+          'address': address,
+          'phone': phone,
+          'email': email,
+          'bank': bank,
+          'account_number': account,
+          'branch': branch
+        },
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          // Reset button state
+          saveBtn.html(originalBtnText);
+          saveBtn.prop('disabled', false);
+          
+          if (response.status === 'success') {
+            // Show success toast
+            toastr.success('Supplier updated successfully');
+            
+            // Close modal
+            $('#editSupplierModal').modal('hide');
+            
+            // Update row in table
+            var row = $(`tr[data-supplier-id="${supplierId}"]`);
+            row.find('[data-field="name"]').text(name);
+            row.find('[data-field="address"]').text(address);
+            row.find('[data-field="phone"]').text(phone);
+            row.find('[data-field="email"]').text(email);
+            row.find('[data-field="bank"]').text(bank);
+            row.find('[data-field="account_number"]').text(account);
+            row.find('[data-field="branch"]').text(branch);
+            
+            // Update data attributes for search
+            row.attr('data-name', name);
+            row.attr('data-email', email);
+            row.attr('data-phone', phone);
+          } else {
+            // Show error message with SweetAlert
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: response.message || 'Failed to update supplier',
+              confirmButtonColor: '#3085d6'
+            });
+          }
+        },
+        error: function() {
+          // Reset button state
+          saveBtn.html(originalBtnText);
+          saveBtn.prop('disabled', false);
+          
+          // Show error message with SweetAlert
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to update supplier',
+            confirmButtonColor: '#3085d6'
+          });
+        }
+      });
+    });
+  });
 </script>
 {% endblock %}

@@ -15,4 +15,6 @@ urlpatterns = [
     path('fetch-bank-account/<int:pk>/', views.FetchBankDetail.as_view(), name='fetch_bank_details'),
     path('update-mapping/<int:pk>/', views.AccountMappingUpdateView.as_view(), name='update_mapping'),
     path('account-parameters/', views.SetAccountParameters.as_view(), name='account_parameters'),
+    path('get-child-accounts/', views.FetchChildrenAccounts.as_view(),name='get_child_accounts'),
+    path('get-account-transactions/<int:account_id>/', views.FetchAccountTransactions.as_view(),name='fetch_account_transactions'),
 ]

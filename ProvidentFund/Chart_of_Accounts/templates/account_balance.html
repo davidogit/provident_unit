@@ -3,78 +3,243 @@
 <title>Accounts</title>
 {% endblock %}
 {% block header %}
-<h5>Accounts</h5>
+<h5 class="fw-bold"><i class="bi bi-wallet2"></i> Accounts</h5>
 {% endblock %}
 {% block content %}
+<!-- Main content area with reduced vertical spacing -->
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5">
-        <div class="col-xl">
-            <div class="container">
-                <div class="row g-4">
-                    
-                    <div class="col-xl">
-                        <div class="border p-3 rounded position-relative">
-                            <div class="form-floating mb-3 d-flex justify-content-center">
-                            
-                                <div class="form-floating m-2">
-                                    <select name="natural_accounts" id="natural_accounts" class="form-select">
-                                        <option value="">-select-</option>
-                                        {% for account in natural_accounts %}
-                                        <option value="{{ account.account.id }}">{{ account.account }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <label for="natural_accounts">Natutal Accounts</label>
-                                </div>
-                                <div class="form-floating m-2">
-                                    <select name="child_accounts" id="child_accounts" class="form-select">
-                                        <option value="">-select-</option>
-                                        {% for account in child_accounts %}
-                                        <option value="{{ account.id }}">{{ account.account }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <label for="child_accounts">Other Accounts</label>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-
-                <!-- cards to hold each account and balances -->
-                 <div class="container mt-5">
-                    <h5 class="text-center mb-3">Natural Accounts</h5>
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+    <!-- Account Selection - Positioned at the top with minimal spacing -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-3">
+            <div class="d-flex justify-content-center">
+                <div class="form-floating" style="max-width: 400px; width: 100%;">
+                    <select name="natural_accounts" id="natural_accounts" class="form-select">
+                        <option value="">-select-</option>
                         {% for account in natural_accounts %}
-                        <div class="col">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ account.account }}</h5>
-                                    <p class="card-text">{{ account.account_balance }}</p>
-                                </div>
-                            </div>
-                        </div>
+                        <option value="{{ account.account.id }}">{{ account.account }}</option>
                         {% endfor %}
-                    </div>
-                 </div>
-                <!-- cards to hold each account and balances -->
-                 <div class="container mt-5">
-                    <h5 class="text-center mb-3">Other Accounts</h5>
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
-                        {% for account in child_accounts %}
-                        <div class="col">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ account.account }}</h5>
-                                    <p class="card-text">{{ account.account_balance }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                 </div>
+                    </select>
+                    <label for="natural_accounts">Natural Accounts</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div id="loading_indicator" class="text-center my-3 d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading accounts...</p>
+    </div>
+    
+    <!-- Accounts Container -->
+    <div class="row g-3" id="accounts_container">
+        <!-- Cards will be appended here -->
+        <div class="col-12 text-center text-muted py-4">
+            <p>Select a natural account to view child accounts</p>
+        </div>
+    </div>
+</div>
 
+<!-- Modal for viewing account transactions -->
+<div class="modal fade" id="accountTransactionsModal" tabindex="-1" aria-labelledby="accountTransactionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="accountTransactionsModalLabel">
+                    <i class="bi bi-list-ul me-2"></i>Account Transactions
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Transactions Loading Indicator -->
+                <div id="transactions_loading" class="text-center my-3 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading transactions...</p>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover" id="transactions_table">
+                        <thead class="">
+                            <tr>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Transactions will be appended here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Custom CSS -->
+<style>
+    .account-card {
+        transition: transform 0.2s;
+        height: 100%;
+    }
+    .account-card:hover {
+        transform: translateY(-5px);
+    }
+    .account-balance {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    .transaction-row-debit {
+        background-color: rgba(255, 92, 92, 0.1) !important;
+    }
+    .transaction-row-credit {
+        background-color: rgba(40, 167, 69, 0.1) !important;
+    }
+</style>
+
+<script>
+    $(document).ready(function(){
+        $('#natural_accounts').on('change', function(e){
+            var account_id = $(this).val();
+            if(account_id != ''){
+                var tenant_id = '{{ request.tenant.id }}';
+                var url = `/${tenant_id}/accounts/get-child-accounts/`;
+                
+                // Show loading indicator
+                $('#loading_indicator').removeClass('d-none');
+                $('#accounts_container').empty();
+                
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    data: {
+                        'account_id': account_id
+                    },
+                    success: function(response){
+                        // Hide loading indicator
+                        $('#loading_indicator').addClass('d-none');
+                        
+                        if (response.status === 'success'){
+                            var accountsContainer = $('#accounts_container');
+                            accountsContainer.empty(); // Clear existing data
+                            
+                            if (response.data.length > 0){
+                                $.each(response.data, function(index, account){
+                                    // Determine if balance is positive or negative for styling
+                                    var balanceClass = parseFloat(account.current_balance) >= 0 ? 'text-success' : 'text-danger';
+                                    var balancePrefix = parseFloat(account.current_balance) >= 0 ? '+' : '';
+                                    
+                                    var card = `
+                                        <div class="col-12 col-md-6 col-lg-4">
+                                            <div class="card account-card shadow-sm">
+                                                <div class="card-header py-2">
+                                                    <h5 class="card-title mb-0">${account.name}</h5>
+                                                    <small class="text-muted">${account.account_code}</small>
+                                                </div>
+                                                <div class="card-body d-flex flex-column py-3">
+                                                    <div class="mb-2">
+                                                        <span class="text-muted">Account Balance:</span>
+                                                        <div class="account-balance ${balanceClass}">
+                                                            ${balancePrefix}${account.current_balance}
+                                                        </div>
+                                                    </div>
+                                                    <button class="btn btn-primary mt-auto view-transactions" data-account-id="${account.id}">
+                                                        <i class="bi bi-list-ul me-2"></i>View Transactions
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    accountsContainer.append(card);
+                                });
+
+                                // Add click event for "View Transactions" buttons
+                                $('.view-transactions').on('click', function(){
+                                    var accountId = $(this).data('account-id');
+                                    fetchAccountTransactions(accountId);
+                                });
+                            } else {
+                                accountsContainer.append('<div class="col-12 text-center py-4"><p class="text-muted">No accounts found</p></div>');
+                            }
+                        } else {
+                            $('#accounts_container').html('<div class="col-12 text-center py-4"><p class="text-danger">Error loading accounts</p></div>');
+                        }
+                    },
+                    error: function() {
+                        $('#loading_indicator').addClass('d-none');
+                        $('#accounts_container').html('<div class="col-12 text-center py-4"><p class="text-danger">Error connecting to server</p></div>');
+                    }
+                });
+            } else {
+                // Clear accounts container if no account is selected
+                $('#accounts_container').html('<div class="col-12 text-center text-muted py-4"><p>Select a natural account to view child accounts</p></div>');
+            }
+        });
+
+        function fetchAccountTransactions(accountId){
+            var tenant_id = '{{ request.tenant.id }}';
+            var url = `/${tenant_id}/accounts/get-account-transactions/${accountId}/`;
+            
+            // Show loading indicator and clear previous transactions
+            $('#transactions_loading').removeClass('d-none');
+            $('#transactions_table tbody').empty();
+            
+            // Show the modal
+            $('#accountTransactionsModal').modal('show');
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response){
+                    // Hide loading indicator
+                    $('#transactions_loading').addClass('d-none');
+                    
+                    if (response.status === 'success'){
+                        var transactionsTable = $('#transactions_table tbody');
+                        transactionsTable.empty(); // Clear existing data
+                        
+                        if (response.data.length > 0){
+                            $.each(response.data, function(index, transaction){
+                                var rowClass = transaction.transaction_type === 'DEBIT' ? 'transaction-row-debit' : 'transaction-row-credit';
+                                var typeIcon = transaction.transaction_type === 'DEBIT' ? 
+                                    '<i class="bi bi-arrow-down-right text-danger"></i>' : 
+                                    '<i class="bi bi-arrow-up-right text-success"></i>';
+                                var amountClass = transaction.transaction_type === 'DEBIT' ? 'text-danger' : 'text-success';
+                                var amountPrefix = transaction.transaction_type === 'DEBIT' ? '-' : '+';
+                                
+                                var row = `
+                                    <tr class="${rowClass}">
+                                        <td>${typeIcon} ${transaction.transaction_type}</td>
+                                        <td>${transaction.date}</td>
+                                        <td>${transaction.description}</td>
+                                        <td class="${amountClass}">${amountPrefix}${transaction.amount}</td>
+                                        <td>${transaction.balance}</td>
+                                    </tr>
+                                `;
+                                transactionsTable.append(row);
+                            });
+                        } else {
+                            transactionsTable.append('<tr><td colspan="5" class="text-center text-muted">No transactions found</td></tr>');
+                        }
+                    } else {
+                        $('#transactions_table tbody').html('<tr><td colspan="5" class="text-center text-danger">Error loading transactions</td></tr>');
+                    }
+                },
+                error: function() {
+                    $('#transactions_loading').addClass('d-none');
+                    $('#transactions_table tbody').html('<tr><td colspan="5" class="text-center text-danger">Error connecting to server</td></tr>');
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

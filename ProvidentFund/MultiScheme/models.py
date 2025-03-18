@@ -38,7 +38,7 @@ class InvestmentScheme(models.Model):
         unique=True
     )
     code = models.CharField(
-        max_length=3,
+        max_length=15,
         default=''
     )
     tenant = models.ForeignKey(

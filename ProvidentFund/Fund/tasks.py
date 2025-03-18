@@ -309,12 +309,17 @@ def reduce_date(self):
             try:
                 with transaction.atomic():
                     # perform credit and debit
-                    debit_account.current_balance -= inv.interest_amount
-                    credit_account.current_balance += inv.interest_amount
-
+                    debit_account.record_transaction(
+                        amount=Decimal(inv.interest_amount),transaction_type='DEBIT',created_by=None,description='Interest earned on investment at maturity date'
+                    )
+                    credit_account.record_transaction(
+                        amount=Decimal(inv.interest_amount),transaction_type='CREDIT',created_by=None,description='Interest earned on investment at maturity date'
+                    )
+                    """
                     # Save accounts 
                     debit_account.save()
                     credit_account.save()
+                    """
                     logger.info(f'Interest transaction successful completed for: Tenant: {tenant.name} Scheme: {scheme.name}')
             except Exception as e:
                 logger.info(f'Transaction failed for: Tenant: {tenant.name} Scheme: {scheme.name}')
@@ -442,14 +447,21 @@ def rollover_inv_creation(self,**kwargs):
                 debit_account = mapping.debit_acc
                 credit_account = mapping.credit_acc
                 logger.info('Start debit and credit operations')
+
                 # perform debit anf credit operations
-                debit_account.current_balance -= Decimal(debit_or_credit_amount)
-                credit_account.current_balance += Decimal(debit_or_credit_amount)
+                debit_account.record_transaction(
+                    amount=Decimal(debit_or_credit_amount),transaction_type='DEBIT',description='Investment Rollover'
+                )
+                credit_account.record_transaction(
+                    amount=Decimal(debit_or_credit_amount),transaction_type='CREDIT',description='Investment Rollover'
+                )
                 logger.info('Done with debit and credit operations')
 
+                """
                 # save account balances
                 debit_account.save()
                 credit_account.save()
+                """
             logger.info(f'Roll over for inv {inv_name} added')
     except Exception as e:
         logger.info(f'Inv Adding Error: {e}')

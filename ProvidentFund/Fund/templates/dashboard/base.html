@@ -1,9 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
-<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:16:10 GMT -->
-
 <head>
   {% block head %}
   {% endblock %}
@@ -19,25 +16,32 @@
   <!-- Favicon -->
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
 
+  <!-- bootstrap icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <!-- <title>Provident Fund</title> -->
+
+  <!-- Sweetalert CSS -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Toast CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+
   {% block title %}
   <!-- Title goes here. -->
   {% endblock %}
 
-  <!-- Vendor CSS -->
-  <!-- <link rel="stylesheet" href="../lib/remixicon/fonts/remixicon.css">
-    <link rel="stylesheet" href="../lib/apexcharts/apexcharts.css"> -->
-
   <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
   <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
-
-  <!-- Template CSS -->
-  <!-- <link rel="stylesheet" href="../assets/css/style.min.css"> -->
 
   <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
 
   <!-- Hiding Serch Results -->
   <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
     #serach-results {
       display: none;
     }
@@ -71,7 +75,7 @@
       <!-- General Payout -->
       <div class="nav-item">
         {% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups or 'Scheme Supervisor' in user_groups %}
-        <a href="#" class="nav-label">{% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups %}Payout & Benefits {% elif 'Scheme Supervisor' in user_groups %}Validate Withdrawal Request{% endif %}</a>
+        <a href="#" class="nav-label">{% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups %}Payments {% elif 'Scheme Supervisor' in user_groups %}Validate Withdrawal Request{% endif %}</a>
         <ul class="nav nav-sidebar">
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-wallet-line fs-32 lh-1 me-3"></i> <span>Process Withdrawal Requests</span></a>
@@ -196,11 +200,6 @@
                 class="nav-sub-link">Add Scheme
               </a>
               {% endif %}
-              {% if 'Scheme Analyst' in user_groups %}
-              <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
-              class="nav-sub-link">Schemes Pending Approval
-              </a>
-              {% endif %}
               {% if 'Scheme Manager' in user_groups %}
               <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
               class="nav-sub-link">Scheme Approval
@@ -221,7 +220,7 @@
                 class="nav-sub-link">Upload File
               </a>
 
-              <a href=""
+              <a href="#"
                 class="nav-sub-link">Recent Uploads
               </a>
               
@@ -245,7 +244,7 @@
 
           {% if 'Super User' in user_groups %}
           <li class="nav-item">
-            <a href="{% url 'event_mapping' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-notification-4-line fs-32 lh-1 me-3"></i> <span>Event Notification Mapping</span></a>
+            <a href="{% url 'event_mapping' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-notification-4-line fs-32 lh-1 me-3"></i> <span>Action Notification Mapping</span></a>
           </li>
           {% endif %}
         </ul>
@@ -353,7 +352,7 @@
             </a>
 
             <nav class="nav nav-sub">
-                <a href="{% url 'approve_contributions' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">View Contributions</a>
+                <a href="{% url 'approve_contributions' scheme_name=scheme.id tenant_id=request.tenant.id %}" class="nav-sub-link">Validate Contributions</a>
             </nav>
           </li>
           {% endif %}
@@ -386,7 +385,7 @@
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Settings</span></a>
             <nav class="nav nav-sub">
-              <a href="{% url 'scheme_settings' tenant_id=request.tenant.id scheme_name=scheme.id %}"
+              <a href="{% url 'scheme_settings' tenant_id=request.tenant.id pk=scheme.id %}"
                 class="nav-sub-link">Settings
               </a>
             </nav>
@@ -524,9 +523,8 @@
         <div class="col-12">
           {% block content %}
 
-
+          <!-- Extended templates -->
           {% endblock %}
-            <!-- Your existing content goes here -->
         </div>
     </div>
   </div>
@@ -551,7 +549,4 @@
   <script src="{% static 'assets/js/db.data.js' %}"></script>
   <script src="{% static 'assets/js/db.finance.js' %}"></script>
 </body>
-
-<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:17:10 GMT -->
-
 </html>

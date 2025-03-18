@@ -1,84 +1,291 @@
 {% extends 'dashboard/base.html' %}
+
 {% block title %}
 <title>Approve New Investments</title>
 {% endblock %}
+
 {% block header %}
-<h5>Approve New Investments</h5>
+<h5 class="fw-bold"><i class="bi bi-check-square me-2"></i>Approve New Investments</h5>
 {% endblock %}
 
 {% block content %}
-<!-- Table for investments -->
 <div class="main main-app p-3 p-lg-4">
-  <div class="row row-cols-auto g-4 g-xxl-5">
-    <div class="col-xl">
-        <div class="container">
-            <table class="table table-hover table-striped table-bordered">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>Invoice Number</th>
-                        <th>Investment Type</th>
-                        <th>Investment Name</th>
-                        <th>Account Type</th>
-                        <th>Principal Amount</th>
-                        <th>Account Number</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for investment in new_investment_list %}
-                    <tr>
-                        <td>{{ forloop.counter|default:0 }}</td>
-                        <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.invoice_number }}</a></td>
-                        <td>{{ investment.investment_type }}</td>
-                        <td>{{ investment.account_name }}</td>
-                        <td>{{ investment.account_type }}</td>
-                        <td>{{ investment.principal_amount }}</td>
-                        <td>{{ investment.account_number }}</td>
-                        <td class="text-center">
-                            <button  class="btn btn-primary approve_investment" data-inv_id = "{{ investment.id }}">Approve</button>
-                            <button class="btn btn-danger">Reject</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+  <div class="container-fluid">
+    <!-- Main Card -->
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-list-check text-primary me-2 fs-5"></i>
+          <h5 class="card-title mb-0">Pending Investments</h5>
         </div>
+        
+        <div class="col-md-3">
+            <div class="d-flex justify-content-md-end">
+                <span class="badge bg-primary rounded-pill inv-count">{{ new_investment_list|length }} Pending</span>
+            </div>
+        </div>
+      </div>
+      
+      <div class="card-body p-0">
+        {% if new_investment_list %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="">
+                <tr>
+                  <th class="ps-3">#</th>
+                  <th>Instrument No.</th>
+                  <th>Investment Type</th>
+                  <th>Investment Name</th>
+                  <th>Account Type</th>
+                  <th>Principal Amount</th>
+                  <th>Account Number</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for investment in new_investment_list %}
+                  <tr data-investment-id="{{ investment.id }}">
+                    <td class="ps-3">{{ forloop.counter|default:0 }}</td>
+                    <td>
+                      <a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}" class="text-decoration-none fw-medium">
+                        {{ investment.invoice_number }}
+                      </a>
+                    </td>
+                    <td>
+                      <span class="badge text-dark">
+                        {{ investment.investment_type }}
+                      </span>
+                    </td>
+                    <td>{{ investment.account_name }}</td>
+                    <td>{{ investment.account_type }}</td>
+                    <td class="fw-medium">{{ investment.principal_amount|floatformat:2 }}</td>
+                    <td>{{ investment.account_number }}</td>
+                    <td>
+                      <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-sm btn-success approve_investment" data-inv_id="{{ investment.id }}">
+                          <i class="bi bi-check-lg me-1"></i> Approve
+                        </button>
+                        <button class="btn btn-sm btn-danger reject_investment" data-inv_id="{{ investment.id }}">
+                          <i class="bi bi-x-lg me-1"></i> Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-center py-5">
+            <i class="bi bi-check-circle text-success fs-1 mb-3"></i>
+            <h5>No Pending Investments</h5>
+            <p class="text-muted">All investments have been reviewed.</p>
+          </div>
+        {% endif %}
+      </div>
     </div>
   </div>
+</div>
+
+<style>
+    .inv-count {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+</style>
+
 <script>
-    $(document).ready(function(){
-        $('.approve_investment').on('click', function(e){
-            e.preventDefault();
-
-            if (!confirm('Are you sure you want to approve this investment?')){
-                return;
-            }
-
-            var inv_id = $(this).data('inv_id');
-            $.ajax({
-                url: '',
-                type: 'POST',
-                data: {
-                    'inv_id': inv_id,
-                },
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                success: function(response){
-                    if (response.status === 'success'){
-                        alert('Investment approved successfully');
-                        //$(this).closest('tr').remove();
-                        window.location.reload();
-                    } else {
-                        alert('Failed to approve investment');
+  $(document).ready(function(){
+    // Configure Toastr
+    toastr.options = {
+      closeButton: true,
+      progressBar: true,
+      positionClass: "toast-top-right",
+      timeOut: 3000,
+      extendedTimeOut: 1000,
+      preventDuplicates: true,
+      newestOnTop: true
+    };
+    
+    // Approve Investment
+    $('.approve_investment').on('click', function(e){
+      e.preventDefault();
+      
+      const button = $(this);
+      const investmentId = button.data('inv_id');
+      const row = button.closest('tr');
+      
+      // Show confirmation dialog with SweetAlert
+      Swal.fire({
+        title: 'Approve Investment?',
+        text: 'Are you sure you want to approve this investment?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, approve it!',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Show loading state
+          button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+          button.prop('disabled', true);
+          
+          // Send AJAX request
+          $.ajax({
+            url: '',
+            type: 'POST',
+            data: {
+              'inv_id': investmentId,
+            },
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response){
+              if (response.status === 'success'){
+                // Show success message with SweetAlert
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Approved!',
+                  text: 'Investment has been approved successfully.',
+                  confirmButtonColor: '#28a745'
+                }).then(() => {
+                  // Remove row with animation
+                  row.fadeOut(400, function(){
+                    $(this).remove();
+                    
+                    // Show toast notification
+                    toastr.success('Investment approved successfully');
+                    
+                    // Check if table is empty
+                    if ($('table tbody tr').length === 0) {
+                      location.reload();
                     }
-                },
-                error: function(error){
-                    console.log(error);
-                }
-            });
-        });
-    })
+                  });
+                });
+              } else {
+                // Show error message
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error!',
+                  text: response.message || 'Failed to approve investment',
+                  confirmButtonColor: '#dc3545'
+                });
+                
+                // Reset button state
+                button.html('<i class="bi bi-check-lg me-1"></i> Approve');
+                button.prop('disabled', false);
+              }
+            },
+            error: function(error){
+              console.log(error);
+              
+              // Show error message
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: 'An error occurred while processing your request',
+                confirmButtonColor: '#dc3545'
+              });
+              
+              // Reset button state
+              button.html('<i class="bi bi-check-lg me-1"></i> Approve');
+              button.prop('disabled', false);
+            }
+          });
+        }
+      });
+    });
+    
+    // Reject Investment
+    $('.reject_investment').on('click', function(e){
+      e.preventDefault();
+      
+      const button = $(this);
+      const investmentId = button.data('inv_id');
+      const row = button.closest('tr');
+      
+      // Show confirmation dialog with SweetAlert
+      Swal.fire({
+        title: 'Reject Investment?',
+        text: 'Are you sure you want to reject this investment?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, reject it!',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Show loading state
+          button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+          button.prop('disabled', true);
+          
+          // Send AJAX request
+          $.ajax({
+            url: '',
+            type: 'POST',
+            data: {
+              'inv_id': investmentId,
+            },
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response){
+              if (response.status === 'success'){
+                // Show success message with SweetAlert
+                Swal.fire({
+                  icon: 'info',
+                  title: 'Rejected!',
+                  text: response.message || 'Investment has been rejected.',
+                  confirmButtonColor: '#17a2b8'
+                }).then(() => {
+                  // Remove row with animation
+                  row.fadeOut(400, function(){
+                    $(this).remove();
+                    
+                    // Show toast notification
+                    toastr.info('Investment rejected');
+                    
+                    // Check if table is empty
+                    if ($('table tbody tr').length === 0) {
+                      location.reload();
+                    }
+                  });
+                });
+              } else {
+                // Show error message
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error!',
+                  text: 'Failed to reject investment',
+                  confirmButtonColor: '#dc3545'
+                });
+                
+                // Reset button state
+                button.html('<i class="bi bi-x-lg me-1"></i> Reject');
+                button.prop('disabled', false);
+              }
+            },
+            error: function(error){
+              console.log(error);
+              
+              // Show error message
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: 'An error occurred while processing your request',
+                confirmButtonColor: '#dc3545'
+              });
+              
+              // Reset button state
+              button.html('<i class="bi bi-x-lg me-1"></i> Reject');
+              button.prop('disabled', false);
+            }
+          });
+        }
+      });
+    });
+  });
 </script>
 {% endblock %}

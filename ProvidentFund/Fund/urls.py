@@ -13,7 +13,7 @@ urlpatterns =[
     path('<int:scheme_name>/ivestment_approval/', views.ApproveMaturedInvestment.as_view(), name='investment_approval'),
     path('<int:scheme_name>/approved_investments/', views.ApprovedInvestments.as_view(), name='approved_investments'),
     
-    path('<int:scheme_name>/update/<int:pk>', views.InvestmentUpdateView.as_view(), name='investment_update'),
+    path('<int:scheme_name>/update/<int:pk>/', views.InvestmentUpdateView.as_view(), name='investment_update'),
     path('<int:scheme_name>/deleteInvestment/<int:pk>/', views.InvestmentDeleteView.as_view(), name='delete_investment'),
     path('<int:scheme_name>/investmentRollover/<int:pk>/', views.RolloverInvestment.as_view(), name='rollover_percentage'),
     path('<int:scheme_name>/investment_query/', views.InvestmentQuery.as_view(), name='query'),
@@ -78,7 +78,7 @@ urlpatterns =[
     # Schedule Payment Date URL
     path('schedule_payment_dates/', views.SchedulePaymentDateView.as_view(), name='schedule_payment_date'),
     # delete scheduled date
-    path('delete_scheduled_date/<int:pk>/', views.DeleteSchedulePaymentDate.as_view(), name='delete_scheduled_dates'),
+    path('delete-scheduled-date/<int:pk>/', views.DeleteSchedulePaymentDate.as_view(), name='delete_scheduled_dates'),
     # Approve scheduled date
     path('approve-payout-date/<int:date_id>/', views.ApproveScheduledPaymentDateView.as_view(), name='approve_scheduled_date'),
     # Pause scheduled date

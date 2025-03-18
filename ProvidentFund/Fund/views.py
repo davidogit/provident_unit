@@ -308,12 +308,18 @@ class InvestmentDetailView(DetailView):
             inv.save()
 
             # Perform debit and credit operations
-            debit_account.current_balance -= termination_interest
-            credit_account.current_balance += termination_interest
+            debit_account.record_transaction(
+                amount=Decimal(termination_interest),transaction_type='DEBIT',created_now=self.request.user,description='Redeemed Investment'
+            )
+            credit_account.record_transaction(
+                amount=Decimal(termination_interest),transaction_type='CREDIT',created_now=self.request.user,description='Redeemed Investment'
+            )
 
-            # Save debit and credit operaions
+            """
+            The record transaction saves the details so no need to call save() on here 
             debit_account.save()
             credit_account.save()
+            """
         
         return JsonResponse({'status': 'success', 'message': 'Investment terminated successfully.'})
 
@@ -348,10 +354,10 @@ class AddInvestment(CreateView):
         return form
     
     def form_invalid(self, form):
-        print(f'Form is invalid: {form.errors}')
+        print(f'Form is invalid')
         return JsonResponse({
             'status':'error',
-            'message':f'An error occured: {form.errors}'
+            'message':f'An error occured:'
         })
         # return super().form_invalid(form)
 
@@ -402,18 +408,36 @@ class AddInvestment(CreateView):
             #     })
             
             # perform debit anf credit operations
-            debit_account.current_balance -= investment_amount
-            credit_account.current_balance += investment_amount
+            try:
+                debit_account.record_transaction(
+                    amount=Decimal(investment_amount),transaction_type='DEBIT',created_by=self.request.user,description='Investment bought.'
+                )
+                credit_account.record_transaction(
+                    amount=Decimal(investment_amount),transaction_type='CREDIT',created_by=self.request.user,description='Investment bought.'
+                )
+            except ValidationError as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'{str(e)}'
+                })
 
+            """
             # save account balances
             debit_account.save()
             credit_account.save()
+            """
         # Set type of Tbill for Fixed Deposit to Fixed Deposit
         if self.request.POST.get('type_of_tbill') == '':
             form.instance.type_of_tbill == 'Fixed Deposit'
         # set scheme on investment object
         form.instance.investment_scheme = scheme
-        super().form_valid(form)
+        try:
+            super().form_valid(form)
+        except ValidationError as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'{str(e)}'
+            })
 
         return JsonResponse({
             'status':'success',
@@ -484,7 +508,6 @@ class ApproveNewInvestments(ListView):
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
 class InvestmentUpdateView(UpdateView):
-
     model = InvestmentDetail
     form_class = InvestmentUpdateForm
     template_name = 'dashboard/investment_update_form.html'
@@ -495,9 +518,9 @@ class InvestmentUpdateView(UpdateView):
         scheme_id = self.request.scheme_name
         # get inv pk
         pk = self.kwargs['pk']
+        print(f'SCHEME ID: {scheme_id}')
         return InvestmentDetail.objects.filter(
             pk=pk,
-            approved=True,
             investment_scheme__tenant=tenant,
             investment_scheme__id = scheme_id
         ).first()
@@ -912,7 +935,7 @@ class InvestmentQuery(ListView):
                     queryset = queryset.filter(_status='Not Start')
 
             if from_date and to_date:
-                if sort == 'start_date':
+                if sort == 'interest_start_date':
                     queryset = queryset.filter(interest_start_date__range=(from_date, to_date))
                 elif sort == 'created_date':
                     queryset = queryset.filter(created_date__range=(from_date, to_date))
@@ -967,7 +990,7 @@ class DelayedInterestListView(ListView):
 
         # Filtering Queryset by Tenant
         if tenant:
-            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id,approved=False).order_by('-created_date')
+            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('status','-created_date')
         else:
             return DelayedInterest.objects.none()
     
@@ -1037,12 +1060,18 @@ class DelayedInterestListView(ListView):
                 })
 
             # Perform debit and credit operations
-            debit_account.current_balance -= delayed_interest_amount
-            credit_account.current_balance += delayed_interest_amount
+            debit_account.record_transaction(
+                amount=delayed_interest_amount,transaction_type='DEBIT',created_by=self.request.user,description='Delayed Interest'
+            )
+            credit_account.record_transaction(
+                amount=delayed_interest_amount,transaction_type='CREDIT',created_by=self.request.user,description='Delayed Interest'
+            )
 
+            """
             # Save account balances
             debit_account.save()
             credit_account.save()
+            """
 
             # Update delayed interest status
             delayed_interest_object.approved = True
@@ -1063,7 +1092,11 @@ class DelayedInterestListView(ListView):
         page_number = self.request.GET.get('page', 1)
         start_index = (int(page_number) - 1) * self.paginate_by + 1
         queryset = self.get_queryset()
-        context['delayed_int_count'] = queryset.count()
+        total_d_int = queryset.count()
+        paid_d_interest = queryset.filter(status='Paid',approved=True).count()
+        context['delayed_int_count'] = total_d_int
+        context['total_paid']=paid_d_interest
+        context['not_paid_d_interest'] = (total_d_int-paid_d_interest)
         context['total_amount'] = queryset.all().aggregate(total=Sum('principal'))['total'] or Decimal(0.0)
         context['start_index'] = start_index
         return context
@@ -1209,12 +1242,18 @@ class ApproveMaturedInvestment(ListView):
                     investment.save()
 
                     # perform debit and credit operation
-                    debit_account.current_balance -= investment.interest_amount
-                    credit_account.current_balance += investment.interest_amount
+                    debit_account.record_transaction(
+                        amount=Decimal(investment.interest_amount),transaction_type='DEBIT',created_by=self.request.user,description='Investment Recorgnized'
+                    )
+                    credit_account.record_transaction(
+                        amount=Decimal(investment.interest_amount),transaction_type='CREDIT',created_by=self.request.user,description='Investment Recorgnized'
+                    )
 
+                    """
                     # Save accounts
                     debit_account.save()
                     credit_account.save()
+                    """
 
                     # After saving changes now we calculate members actual profit using tasks
                     actual_member_interest.delay(tenant_id,scheme_id,inv_id)
@@ -1276,7 +1315,7 @@ class SchemeApplications(ListView):
         if tenant:
             try:
                 # Filter where scheme hasnt been approved and tenant
-                return SchemeApproval.objects.filter(tenant=tenant,approved_by_hr=False)
+                return SchemeApproval.objects.filter(tenant=tenant)
             except SchemeApproval.DoesNotExist:
                 return SchemeApproval.objects.none()
         return super().get_queryset().none()
@@ -1324,6 +1363,16 @@ class SchemeApplications(ListView):
             return JsonResponse({'status':'success', 'approved_by_hr':approved_by_hr})
         except SchemeApproval.DoesNotExist:
             return JsonResponse({'status':'error'},status=400)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        queryset = self.get_queryset()
+        total = queryset.count()
+        pending = queryset.filter(approved_by_hr=False).count()
+        context['total_applications'] = total
+        context['pending_applications'] = pending
+        context['approved'] = (total-pending)
+        return context
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
@@ -1494,13 +1543,18 @@ class ApproveContributions(TemplateView):
             contributions.update(approved_contribution=True)
             
             # perform debit anf credit operations
-            debit_account.current_balance -= total_contribution
-            credit_account.current_balance += total_contribution
+            debit_account.record_transaction(
+                amount=total_contribution,transaction_type='DEBIT',created_by=self.request.user,description='Contributions'
+            ) 
+            credit_account.record_transaction(
+                amount=total_contribution,transaction_type='CREDIT',created_by=self.request.user,description='Contributions'
+            ) 
 
+            """
             # save account balances
             debit_account.save()
             credit_account.save()
-
+            """
 
         # update staff contributions using task
         calculate_staff_contribution.delay(
@@ -1578,13 +1632,18 @@ class ApproveContributions(TemplateView):
                     })
                 
                 # perform debit anf credit operations
-                debit_account_delayed.current_balance -= delayed_principal
-                credit_account_delayed.current_balance += delayed_principal
+                debit_account_delayed.record_transaction(
+                    amount=delayed_principal,transaction_type='DEBIT',created_by=self.request.user,description='Delayed Interest Created'
+                )
+                credit_account_delayed.record_transaction(
+                    amount=delayed_principal,transaction_type='CREDIT',created_by=self.request.user,description='Delayed Interest Created'
+                )
 
+                """
                 # save account balances
                 debit_account_delayed.save()
                 credit_account_delayed.save()
-
+                """
 
             message_1 = (
                 f'This payment is overdue hence a delayed interest entry is created for '
@@ -1610,7 +1669,7 @@ class FetchContributions(TemplateView):
         try:
             # Fetch data
             # from contributions.models import Contribution
-            queryset = Contribution.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,month=month,year=year,approved_contribution=False)
+            queryset = Contribution.objects.filter(investment_scheme__id=scheme_id,investment_scheme__tenant=tenant,month=month,year=year)
 
 
             # If no contributions are found, return an appropriate response
@@ -1628,7 +1687,7 @@ class FetchContributions(TemplateView):
                 'number_of_contributions':total_number,
                 'total_amount':total_amount,
                 'date_of_contribution':contribution_date,
-                'contribution_status':contribution_status,
+                'contribution_status':'Validated' if contribution_status else 'Pending',
                 'status':'success'
             })
         except Exception as e:
@@ -2590,6 +2649,7 @@ class SchedulePaymentDateView(TemplateView):
             context['available_schemes'] = schemes
             context['banks'] = banks
             context['months'] = ScheduledPaymentDates.month_choices
+            context['payment_days'] = range(1,32) #1st to 31st
         return context
     
 
@@ -2691,7 +2751,7 @@ class DeleteSchedulePaymentDate(DeleteView):
             self.object.delete()
             return JsonResponse({
                 'status':'success',
-                'message':'object deleted successfully.'
+                'message':'Scheduled date deleted successfully.'
             })
         except Exception as e:
             return JsonResponse({
@@ -2944,7 +3004,7 @@ class UpdateTaxOnRequisition(View):
 
 
 
-# ADD REQUISITION ITEM VIEW
+# ADD REQUISITION ITEM VIEW MODAL
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
@@ -2997,7 +3057,7 @@ class AddRequisitionItemView(CreateView):
             'status':'error',
             'message':f'Invalid Form Data: {str(form.errors)}'
         })
-    
+
     def get_success_url(self):
         tenant = self.request.tenant
         url = reverse('raise_requisition', kwargs={'tenant_id':tenant.id})
@@ -3005,7 +3065,7 @@ class AddRequisitionItemView(CreateView):
 
 
 
-# FETCH REQUISITION ITEMS
+# FETCH REQUISITION ITEMS When viewing PO
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
@@ -3036,7 +3096,8 @@ class FetchItemsView(View):
             return JsonResponse({
                 'status':'success',
                 'items':items_list,
-                'total_amount':requisition.total_amount
+                'total_amount':requisition.total_amount,
+                'tax_amount':requisition.tax_amount if requisition else 0.00
             })
         except ObjectDoesNotExist:
             return JsonResponse({
@@ -3444,7 +3505,8 @@ class CreateInvoiceView(TemplateView):
                     invoice_number=generate_purchase_invoice_number(PaymentInvoice),
                     purchase_order=purchase_order,
                     amount=Decimal(supplier_invoice_amount),
-                    supplier=purchase_order.requisition.supplier
+                    supplier=purchase_order.requisition.supplier,
+                    debit_account = debit_account
                 )
                 # Update amount_to_pay field by subtrating invoice amount to be paid
                 receieved_items_object.amount_to_pay -= Decimal(supplier_invoice_amount)
@@ -3452,9 +3514,14 @@ class CreateInvoiceView(TemplateView):
                 receieved_items_object.save()
 
                 # Debit and Credit operations
-                debit_account -= Decimal(supplier_invoice_amount)
-                credit_account += Decimal(supplier_invoice_amount)
+                debit_account.record_transaction(
+                    amount=Decimal(supplier_invoice_amount),transaction_type='DEBIT',created_by=self.request.user,description='Supplier invoice creted'
+                )
+                credit_account.record_transaction(
+                    amount=Decimal(supplier_invoice_amount),transaction_type='CREDIT',created_by=self.request.user,description='Supplier invoice creted'
+                )
 
+                """
                 try:
                     debit_account.save()
                     credit_account.save()
@@ -3463,6 +3530,7 @@ class CreateInvoiceView(TemplateView):
                         'status':'error',
                         'message':f'{str(e)}'
                     })
+                """
                 # Notify who is in charge of invoice payment.
 
                 return JsonResponse({
@@ -3473,7 +3541,7 @@ class CreateInvoiceView(TemplateView):
                 logger.info(f'An error occured while creating an invoice for Tenant: {tenant} Purchase Order: {purchase_order.id} || Error: {str(e)}')
                 return JsonResponse({
                     'status':'error',
-                    'message':f'Invoice could not be created now, please try again later and contact Admin if issue persists. {str(e)}'
+                    'message':f'Invoice could not be created now, please try again later and contact Admin if issue persists.'
                 })
 
         except ObjectDoesNotExist:
@@ -3611,13 +3679,19 @@ class PayoutInvoiceView(ListView):
         net_amount = (invoice.amount - withholding_tax)
 
         # Perform debit and credit transactions
-        debit_account.current_balance -= net_amount
-        credit_account.current_balance += net_amount
+        debit_account.record_transaction(
+            amount=Decimal(net_amount),transaction_type='DEBIT',created_by=self.request.user,description='Invoice Payment'
+        )
+        credit_account.record_transaction(
+            amount=Decimal(net_amount),transaction_type='CREDIT',created_by=self.request.user,description='Invoice Payment'
+        )
 
+        """ 
         # Save changes
         debit_account.save()
         credit_account.save()
-        
+        """
+    
         # Set withholding tax amount on invoice
         invoice.withholding_tax = withholding_tax
 

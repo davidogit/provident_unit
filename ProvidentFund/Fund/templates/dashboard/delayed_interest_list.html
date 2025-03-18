@@ -1,178 +1,362 @@
 {% extends 'dashboard/base.html' %}
 
-{% block content %}
 {% block title %}
 <title>Delayed Interest</title>
 {% endblock %}
+
 {% load number_filter %}
+
 {% block header %}
-<h5>Delayed Interest</h5>
+<h5 class="fw-bold"><i class="bi bi-piggy-bank me-2"></i>Delayed Interest</h5>
 {% endblock %}
 
+{% block content %}
+<!-- SweetAlert2 and Toastr CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 <div class="main main-app p-3 p-lg-4">
-  
-  <div class="row g-3 justify-content-center">
-    <div class="col-md-12 col-xl-8">
-      <div class="card card-one">
-        <div class="card-body">
-          <div class="row justify-content-center">
-            <div class="col-4 d-flex flex-column align-items-center justify-content-center">
-              <h3 class="card-value">
-                {{ delayed_int_count }}
-              </h3>
-              <p class="card-label">Outstanding Delayed Interests</p>
+  <div class="container-fluid">
+    <!-- Delayed Interest Table -->
+    <div class="card shadow-sm border-0">
+      <div class="card-header py-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-list-ul text-primary me-2"></i>Delayed Interest List
+          </h5>
+          
+          <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center">
+              <span class="badge bg-primary text-dark rounded-pill me-2">{{ delayed_int_count }}</span>
+              <span class="text-muted d-none d-sm-inline">Total</span>
             </div>
-            <div class="col-4 d-flex flex-column align-items-center justify-content-center">
-              <h3 class="card-value">
-                {{ total_amount|abbreviate_number }}
-              </h3>
-              <p class="card-label">Total Amount</p>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-warning text-dark rounded-pill me-2">{{ not_paid_d_interest }}</span>
+              <span class="text-muted d-none d-sm-inline">Outstanding</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-success text-dark rounded-pill me-2">{{ total_paid }}</span>
+              <span class="text-muted d-none d-sm-inline">Paid</span>
+            </div>
+            
+            <div class="d-flex align-items-center">
+              <span class="badge bg-success rounded-pill me-2">{{ total_amount|abbreviate_number }}</span>
+              <span class="text-muted d-none d-sm-inline">Total Amount</span>
             </div>
           </div>
         </div>
+        
+        <!-- Search/Filter Form -->
+        <div class="row g-2 mt-2">
+          <div class="col-md-6">
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="bi bi-search text-muted"></i>
+              </span>
+              <input type="text" id="instrument-search" class="form-control" placeholder="Search by instrument number...">
+            </div>
+          </div>
+          
+          <div class="col-md-4">
+            <select id="status-filter" class="form-select">
+              <option value="">All Statuses</option>
+              <option value="Not Paid">Pending</option>
+              <option value="Paid">Paid</option>
+            </select>
+          </div>
+          
+          <div class="col-md-2">
+            <button id="reset-filters" class="btn btn-outline-secondary w-100">
+              <i class="bi bi-x-circle me-1"></i> Reset
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  
-    <div class="card card-one mt-3">
-      <div class="card-body p-3">
+      
+      <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-four table-bordered">
-            <thead>
-              <!-- <tr>
-                <th>&nbsp;</th>
-                <th colspan="3">Identification</th>
-                <th colspan="2">Finance</th>
-                <th colspan="1">Status</th>
-              </tr> -->
+          <table class="table table-hover mb-0" id="delayed-interest-table">
+            <thead class="">
               <tr>
-                <th class="text-center"></th>
-                <th class="text-center">Invoice No.</th>
-                <th class="text-center">Princioal</th>
-                <th class="text-center">Rate %</th>
-                <!-- <th class="text-center">Acrued interest</th> -->
-                <th class="text-center">Status</th>
-                <th class="text-center">Date created</th>
-                <th class="text-center">Remarks</th>
+                <th class="ps-3">#</th>
+                <th>Instrument No.</th>
+                <th>Principal</th>
+                <th>Rate %</th>
+                <th>Status</th>
+                <th>Date Created</th>
+                <th>Remarks</th>
                 {% if 'Treasury Supervisor' in user_groups %}
-                <th class="text-center">Confirm</th>
+                <th class="text-center">Action</th>
                 {% endif %}
               </tr>
             </thead>
-      
-              <tbody>
-                {% for int in delayed_interest %}
-                  <tr class="">
-                    <td class="text-center">{{ forloop.counter0|add:start_index|default:forloop.counter }}</td>
-                    <td class="text-start">{{ int.invoice_number }}</td>
-                    <td class="text-start">{{ int.principal| floatformat:2 }}</td>
-                    <!-- <td class="text-start">{{ int.rate_d_int }}</td> -->
-                    <td class="text-start">{{ int.interest| floatformat:2 }}</td>
-                    <td class="text-start">{{ int.status }}</td>
-                    <td class="text-start">{{ int.created_date }}</td>
-                    <td class="text-start">{{ int.remarks }}</td>
-                    {% if 'Treasury Supervisor' in user_groups %}
-                    <td class="text-center">
-                      <button class="btn btn-outline-success approve-button">Paid
-                        <!-- Delayed Interest ID -->
-                        <input type="text" name="int_id" value="{{ int.id }}" hidden readonly>
-                        <!-- Invoice Number -->
-                        <input type="text" name="invoice_number" value="{{ int.invoice_number }}" hidden readonly>
-                        <!-- Scheme ID -->
-                        <input type="text" name="invoice_number" value="{{ int.invoice_number }}" hidden readonly>
-                        
-                      </button>
-                    </td>
-                    {% endif %}
-                  </tr>
-                {% endfor %}
-              </tbody>
-  
+            <tbody>
+              {% for int in delayed_interest %}
+                <tr data-instrument="{{ int.invoice_number }}" data-status="{{ int.status }}">
+                  <td class="ps-3">{{ forloop.counter0|add:start_index|default:forloop.counter }}</td>
+                  <td>
+                    <span class="fw-medium">{{ int.invoice_number }}</span>
+                  </td>
+                  <td>{{ int.principal|floatformat:2 }}</td>
+                  <td>{{ int.interest|floatformat:2 }}%</td>
+                  <td>
+                    <span class="badge {% if int.status == 'Paid' %}bg-success{% else %} bg-warning %} {% endif %} rounded-pill">
+                      {{ int.status }}
+                    </span>
+                  </td>
+                  <td>{{ int.created_date }}</td>
+                  <td>
+                    <span class="text-muted">{{ int.remarks|default:"--" }}</span>
+                  </td>
+                  {% if 'Treasury Supervisor' in user_groups %}
+                  <td class="text-center">
+                    <button 
+                      class="btn btn-sm btn-outline-success approve-button" 
+                      data-int-id="{{ int.id }}" 
+                      data-invoice="{{ int.invoice_number }}"
+                      {% if int.status == 'Paid' %}disabled{% endif %}
+                    >
+                      <i class="bi bi-check-circle me-1"></i> Mark as Paid
+                    </button>
+                  </td>
+                  {% endif %}
+                </tr>
+              {% empty %}
+                <tr id="no-results-row" style="display: none;">
+                  <td colspan="{% if 'Treasury Supervisor' in user_groups %}8{% else %}7{% endif %}" class="text-center py-5">
+                    <div class="d-flex flex-column align-items-center">
+                      <i class="bi bi-search text-muted fs-1 mb-3"></i>
+                      <h5 class="mb-1">No Matching Results</h5>
+                      <p class="text-muted mb-0">Try adjusting your search or filter criteria.</p>
+                    </div>
+                  </td>
+                </tr>
+                <tr id="empty-table-row">
+                  <td colspan="{% if 'Treasury Supervisor' in user_groups %}8{% else %}7{% endif %}" class="text-center py-5">
+                    <div class="d-flex flex-column align-items-center">
+                      <i class="bi bi-check-circle-fill text-success fs-1 mb-3"></i>
+                      <h5 class="mb-1">No Delayed Interests</h5>
+                      <p class="text-muted mb-0">There are no outstanding delayed interests at this time.</p>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
           </table>
-
-          <!-- Pagination -->
-
-          {% if is_paginated %}
-          <nav aria-label="Page navigation example">
-            <ul class="pagination justify-content-center">
-                  {% if page_obj.has_previous %}
-                  <li class="page-item">
-                  <a
-                      class="page-link"
-                      href="?page={{ page_obj.previous_page_number }}"
-                      aria-label="Previous"
-                  >
-                      <span aria-hidden="true">&laquo;</span>
-                  </a>
-                  </li>
-                  {% endif %}
-                  <!-- {% comment %}
-                  <li class="page-item"><a class="page-link" href="#">1</a></li>
-                  {% endcomment %} -->
-                  <li class="page-item">
-                  <a class="page-link" href="#">{{ page_obj.number }}</a>
-                  </li>
-                  <!-- {% comment %}
-                  <li class="page-item"><a class="page-link" href="#">3</a></li>
-                  {% endcomment %} {% if page_obj.has_next %} -->
-                  <li class="page-item">
-                  <a
-                      class="page-link"
-                      href="?page={{ page_obj.next_page_number }}"
-                      aria-label="Next"
-                  >
-                      <span aria-hidden="true">&raquo;</span>
-                  </a>
-                  </li>
-
-                  <li class="page-link">
-                      <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
-                  </li>
-                  {% endif %}
-            </ul>
-          </nav>
-          {% endif %}
-
-
-          <!-- Pagination -->
-
         </div>
-      </div><!-- card-body -->
-    </div><!-- card -->
-
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+          <div class="card-footer py-3">
+            <nav aria-label="Page navigation">
+              <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="First">
+                      <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                      <span aria-hidden="true">&laquo;</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="First">
+                      <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                  </li>
+                  <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Previous">
+                      <span aria-hidden="true">&laquo;</span>
+                    </a>
+                  </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                  <span class="page-link">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                  </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                      <span aria-hidden="true">&raquo;</span>
+                    </a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                      <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Next">
+                      <span aria-hidden="true">&raquo;</span>
+                    </a>
+                  </li>
+                  <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Last">
+                      <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   $(document).ready(function(){
-    $('.approve-button').on('click', function(e){
-      e.preventDefault();
-      var d_int_id = $(this).find('input[name="int_id"]').val();
-      var invoice_number = $(this).find('input[name="invoice_number"]').val();
-      var prompt = confirm(`Are you sure you want to confirm this payment for ${invoice_number}?`);
-
-
-      if(prompt){
-        $.ajax({
-          type: 'POST',
-          url: '',
-          data: {
-            'd_int_id': d_int_id,
-            'csrfmiddlewaretoken': '{{ csrf_token }}'
-          },
-          success: function(response){
-            if(response.status === 'success'){
-              alert('Payment confirmed successfully');
-              location.reload();
-            }else{
-              alert(response.message);
-            }
-          },
-          error: function(response){
-            alert('Payment confirmation failed');
-          }
-        });
+    // Configure Toastr
+    toastr.options = {
+      closeButton: true,
+      progressBar: true,
+      positionClass: "toast-bottom-right",
+      timeOut: 3000,
+      extendedTimeOut: 1000,
+      preventDuplicates: true,
+      newestOnTop: true
+    };
+    
+    // Search and filter functionality
+    function applyFilters() {
+      const instrumentSearch = $('#instrument-search').val().toLowerCase();
+      const statusFilter = $('#status-filter').val();
+      let visibleCount = 0;
+      
+      // Loop through all table rows
+      $('#delayed-interest-table tbody tr').each(function() {
+        if ($(this).attr('id') === 'no-results-row' || $(this).attr('id') === 'empty-table-row') {
+          return; // Skip the "no results" and "empty table" rows
+        }
+        
+        const instrument = $(this).data('instrument').toString().toLowerCase();
+        const status = $(this).data('status');
+        
+        // Check if row matches both filters
+        const matchesInstrument = instrument.includes(instrumentSearch);
+        const matchesStatus = statusFilter === '' || status === statusFilter;
+        
+        // Show/hide row based on filter match
+        if (matchesInstrument && matchesStatus) {
+          $(this).show();
+          visibleCount++;
+        } else {
+          $(this).hide();
+        }
+      });
+      
+      // Show/hide "no results" message
+      if (visibleCount === 0 && $('#delayed-interest-table tbody tr').length > 0) {
+        $('#no-results-row').show();
+        $('#empty-table-row').hide();
+      } else {
+        $('#no-results-row').hide();
+        if ($('#delayed-interest-table tbody tr').length === 0) {
+          $('#empty-table-row').show();
+        }
       }
+    }
+    
+    // Event listeners for search and filter inputs
+    $('#instrument-search').on('keyup', applyFilters);
+    $('#status-filter').on('change', applyFilters);
+    
+    // Reset filters button
+    $('#reset-filters').on('click', function() {
+      $('#instrument-search').val('');
+      $('#status-filter').val('');
+      applyFilters();
+      toastr.info('Filters have been reset');
+    });
+    
+    // Handle approve button click
+    $('.approve-button').on('click', function(e) {
+      e.preventDefault();
+      
+      const button = $(this);
+      const intId = button.data('int-id');
+      const invoiceNumber = button.data('invoice');
+      
+      // Show confirmation dialog with SweetAlert
+      Swal.fire({
+        title: 'Confirm Payment',
+        text: `Are you sure you want to mark payment for ${invoiceNumber} as paid?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, confirm payment',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Show loading state
+          button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+          button.prop('disabled', true);
+          
+          // Send AJAX request
+          $.ajax({
+            type: 'POST',
+            url: '',
+            data: {
+              'd_int_id': intId,
+              'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+              if (response.status === 'success') {
+                // Show success toast
+                toastr.success('Payment confirmed successfully');
+                
+                // Update UI
+                const row = button.closest('tr');
+                row.find('td:nth-child(5) .badge')
+                  .removeClass('bg-warning')
+                  .addClass('bg-success')
+                  .text('Paid');
+                
+                // Update row data attribute for filtering
+                row.attr('data-status', 'Paid');
+                
+                // Disable button
+                button.prop('disabled', true);
+                button.html('<i class="bi bi-check-circle me-1"></i> Paid');
+                
+                // Update outstanding count in header
+                const countBadge = $('.card-header .badge.bg-warning');
+                let count = parseInt(countBadge.text());
+                if (!isNaN(count) && count > 0) {
+                  countBadge.text(count - 1);
+                }
+              } else {
+                // Show error toast
+                toastr.error(response.message || 'Payment confirmation failed');
+                
+                // Reset button
+                button.html('<i class="bi bi-check-circle me-1"></i> Mark as Paid');
+                button.prop('disabled', false);
+              }
+            },
+            error: function(response) {
+              // Show error toast
+              toastr.error('Payment confirmation failed');
+              
+              // Reset button
+              button.html('<i class="bi bi-check-circle me-1"></i> Mark as Paid');
+              button.prop('disabled', false);
+            }
+          });
+        }
+      });
     });
   });
 </script>
-
-
 {% endblock %}

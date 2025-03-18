@@ -63,7 +63,7 @@ class CreateScheme(CreateView):
 
             redirect_url = reverse('scheme_settings', kwargs={
                 'tenant_id':tenant.id,
-                'scheme_name':instance.id
+                'pk':instance.id
             })
             return JsonResponse({
                 'status':'success',
@@ -93,19 +93,18 @@ class SchemeSettingsView(UpdateView):
     fields = ('contribution_day','grace_period_contribution','delayed_interest_rate','period_of_delayed_calculation') #include all fields from model
     template_name = 'multischeme/scheme_settings.html'
 
+    def get_object(self, queryset = ...):
+        tenant=self.request.tenant
+        pk = self.kwargs.get('pk')
+        return get_object_or_404(
+            SchemeSettings,
+            investment_scheme__tenant=tenant,
+            investment_scheme__id=pk
+        )
+
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-
-        # get scheme object
-        scheme = InvestmentScheme.objects.filter(id=scheme_id,tenant=tenant).prefetch_related('scheme_settings').first()
-        # Try to get settings object
-        try:
-            settings = scheme.scheme_settings
-            context['settings'] = settings
-        except SchemeSettings.DoesNotExist:
-            context['settings'] = SchemeSettings.objects.none()
+        context['settings'] = self.object
         return context
 
     # Return invalid form response using Json
@@ -117,40 +116,18 @@ class SchemeSettingsView(UpdateView):
         })
 
     def form_valid(self, form):
-        # Get scheme and tenant
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-
-        scheme = InvestmentScheme.objects.filter(id=scheme_id,tenant=tenant).prefetch_related('scheme_settings').first()
-
-        try:
-            # get settings data from prefetched data
-            settings = scheme.scheme_settings
-
-            if not settings:
-                return JsonResponse({'status':'error','message':'No settings file was found'})
-            # Update fields
-            for field in form.cleaned_data:
-                setattr(settings,field,form.cleaned_data[field])
-            settings.save()
-            print('Saved successfully')
-    
-            return JsonResponse({
-                'status':'success',
-                'message':'Scheme creation completed and awaiting approval.',
-                'redirect_url':self.get_success_url()
-            })
-        except Exception as e:
-            return JsonResponse({
-                'status':'error',
-                'message':f'An error occured: {e}'
-            })
+        self.object = form.save()  # Simply save the form
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Settings updated successfully.',
+            'redirect_url': self.get_success_url()
+        })
     
     # After successful creation redirect to scheme list page
     def get_success_url(self):
         tenant =  self.request.tenant
-        scheme_id = self.request.scheme_name
-        return reverse('scheme_settings', kwargs={'tenant_id' : tenant.id, 'scheme_name':scheme_id})
+        scheme_id = self.kwargs.get('pk')
+        return reverse('scheme_settings', kwargs={'tenant_id' : tenant.id, 'pk':scheme_id})
 
 
 
