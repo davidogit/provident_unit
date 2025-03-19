@@ -1,136 +1,392 @@
 {% extends 'member_base.html' %}
-
-{% block title %}
-<title>contributions</title>
-{% endblock %}
-
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-  <div class="d-md-flex align-items-center justify-content-between mb-4">
+  <!-- Page Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-      <h2>Contribution Details</h2>
+      <h4 class="fw-bold mb-1">Contribution Details</h4>
+      <p class="text-muted mb-0">Track your scheme contributions over time</p>
     </div>
     <div class="d-flex gap-2 mt-3 mt-md-0">
-      <button type="button" class="btn btn-white d-flex align-items-center gap-2" onclick="printTable()"><i class="ri-printer-line fs-18 lh-1"></i>Print</button>
-      <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="exportTableToCSV('table_data.csv')"><i class="ri-bar-chart-2-line fs-18 lh-1"></i>Generate<span class="d-none d-sm-inline"> Report</span></button>
+      <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-2" onclick="printTable()">
+        <i class="ri-printer-line"></i><span class="d-none d-sm-inline">Print</span>
+      </button>
+      <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="exportTableToCSV('contribution_data.csv')">
+        <i class="ri-download-2-line"></i><span class="d-none d-sm-inline">Export</span>
+      </button>
     </div>
   </div>
 
-  <div class="container mt-5">
-    <div class="row justify-content-center">
-      <div class="col-lg-10">
-        <div class="card shadow-sm">
-          <div class="card-body">
-
-            <form method="GET" action="">
-
-              <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="mb-0">Contributions</h4>
-                <select id="year-select" name="year" class="form-select w-auto">
-                  <option value="">Select Year</option>
-                  {% for year in years %}
-                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-            </form>
-
-
-            <div class="table-responsive">
-              <table class="table table-striped" id="data-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Month</th>
-                    <th scope="col">Total Amount Contributed</th>
-                    <th scope="col">Date of Contribution</th>
-                  </tr>
-                </thead>
-                <tbody>
-
-                  {% for contribution in contributions %}
-                  {% if contribution.contribution_date|date:"Y" == selected_year %}
-                  <tr>
-                    
-                    <td>{{ contribution.contribution_date|date:"F" }}</td>
-                    <td>{{ contribution.total_contribution|floatformat:2 }}</td>
-                    <td>{{ contribution.contribution_date|date:"Y-m-d" }}</td>
-                    
-                  </tr>
-                  {% endif %}
-                  {% endfor %}
-
-
-                </tbody>
-              </table>
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="card-title mb-0 fw-bold">Total Contributions</h6>
+            <div class="icon-circle bg-primary-subtle text-primary">
+              <i class="ri-money-cedi-circle-line"></i>
             </div>
-
-            {% if is_paginated %}
-              <nav aria-label="Page navigation example" class="mt-4">
-                <ul class="pagination justify-content-center">
-                  {% if page_obj.has_previous %}
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{ page_obj.previous_page_number }}&year={{ selected_year }}" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                      </a>
-                    </li>
-                  {% endif %}
-                  <li class="page-item">
-                    <a class="page-link" href="#">{{ page_obj.number }}</a>
-                  </li>
-                  {% if page_obj.has_next %}
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{ page_obj.next_page_number }}&year={{ selected_year }}" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                      </a>
-                    </li>
-                  {% endif %}
-                </ul>
-              </nav>
-            {% endif %}
           </div>
+          <h3 class="fw-bold mb-0">GH₵ {{ total_contributions|default:"0.00"|floatformat:2 }}</h3>
+          <p class="text-muted small mb-0 mt-2">
+            <i class="ri-calendar-line me-1"></i> All time contributions
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="card-title mb-0 fw-bold">{{ selected_year }} Contributions</h6>
+            <div class="icon-circle bg-success-subtle text-success">
+              <i class="ri-funds-line"></i>
+            </div>
+          </div>
+          <h3 class="fw-bold mb-0">GH₵ {{ yearly_contributions|default:"0.00"|floatformat:2 }}</h3>
+          <p class="text-muted small mb-0 mt-2">
+            <i class="ri-calendar-check-line me-1"></i> Contributions for {{ selected_year }}
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="card-title mb-0 fw-bold">Last Contribution</h6>
+            <div class="icon-circle bg-info-subtle text-info">
+              <i class="ri-time-line"></i>
+            </div>
+          </div>
+          <h3 class="fw-bold mb-0">GH₵ {{ last_contribution_amount|default:"0.00"|floatformat:2 }}</h3>
+          <p class="text-muted small mb-0 mt-2">
+            <i class="ri-calendar-event-line me-1"></i> 
+            {{ last_contribution_date|default:"No contributions yet"|date:"F d, Y" }}
+          </p>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Contributions Table -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-white p-4 border-bottom">
+      <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div class="d-flex align-items-center">
+          <h5 class="card-title mb-0 fw-bold">
+            <i class="ri-table-line text-primary me-2"></i> Contribution History
+          </h5>
+          <span class="badge bg-primary-subtle text-primary rounded-pill ms-2">
+            {{ contributions|length }} Entries
+          </span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <form method="GET" action="" id="yearFilterForm" class="d-flex align-items-center">
+            <label for="year-select" class="form-label me-2 mb-0 text-nowrap">Filter by Year:</label>
+            <select id="year-select" name="year" class="form-select" style="min-width: 120px;">
+              <option value="">All Years</option>
+              {% for year in years %}
+                <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+              {% endfor %}
+            </select>
+          </form>
+          
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="ri-more-2-fill"></i> Actions
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+              <li><a class="dropdown-item" href="#" onclick="printTable()"><i class="ri-printer-line me-2"></i> Print Table</a></li>
+              <li><a class="dropdown-item" href="#" onclick="exportTableToCSV('contribution_data.csv')"><i class="ri-download-2-line me-2"></i> Export to CSV</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" id="data-table">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">Month</th>
+              <th>Employee Amount</th>
+              <th>Employer Amount</th>
+              <th>Total Contribution</th>
+              <th class="pe-4">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if contributions %}
+              {% for contribution in contributions %}
+                {% if not selected_year or contribution.contribution_date|date:"Y" == selected_year %}
+                  <tr>
+                    <td class="ps-4">{{ contribution.contribution_date|date:"F" }}</td>
+                    <td>GH₵ {{ contribution.employee_amount|default:"0.00"|floatformat:2 }}</td>
+                    <td>GH₵ {{ contribution.employer_amount|default:"0.00"|floatformat:2 }}</td>
+                    <td class="fw-medium">GH₵ {{ contribution.total_contribution|default:"0.00"|floatformat:2 }}</td>
+                    <td class="pe-4">{{ contribution.contribution_date|date:"M d, Y" }}</td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="text-center py-5">
+                  <div class="empty-state">
+                    <i class="ri-inbox-line text-muted" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3">No contributions found</h6>
+                    <p class="text-muted small">No contribution records available for the selected period</p>
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Enhanced Pagination -->
+    {% if is_paginated %}
+      <div class="card-footer bg-white p-3 border-top">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+          <div class="mb-3 mb-md-0">
+            <span class="text-muted small">
+              Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+            </span>
+          </div>
+          
+          <nav aria-label="Contribution pagination">
+            <ul class="pagination pagination-sm mb-0">
+              <!-- First Page -->
+              <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                <a class="page-link" href="?page=1{% if selected_year %}&year={{ selected_year }}{% endif %}" aria-label="First page">
+                  <i class="ri-arrow-left-double-line"></i>
+                </a>
+              </li>
+              
+              <!-- Previous Page -->
+              <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                <a class="page-link" href="?page={% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}" aria-label="Previous page">
+                  <i class="ri-arrow-left-s-line"></i>
+                </a>
+              </li>
+              
+              <!-- Page Numbers -->
+              {% with ''|center:page_obj.paginator.num_pages as range %}
+              {% for _ in range %}
+                {% with forloop.counter as page_num %}
+                  {% if page_num == page_obj.number %}
+                    <li class="page-item active" aria-current="page">
+                      <span class="page-link">{{ page_num }}</span>
+                    </li>
+                  {% elif page_num > page_obj.number|add:"-3" and page_num < page_obj.number|add:"3" %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page_num }}{% if selected_year %}&year={{ selected_year }}{% endif %}">{{ page_num }}</a>
+                    </li>
+                  {% endif %}
+                {% endwith %}
+              {% endfor %}
+              {% endwith %}
+              
+              <!-- Next Page -->
+              <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                <a class="page-link" href="?page={% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}" aria-label="Next page">
+                  <i class="ri-arrow-right-s-line"></i>
+                </a>
+              </li>
+              
+              <!-- Last Page -->
+              <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_year %}&year={{ selected_year }}{% endif %}" aria-label="Last page">
+                  <i class="ri-arrow-right-double-line"></i>
+                </a>
+              </li>
+            </ul>
+          </nav>
+          
+          <!-- Page Size Selector -->
+          <div class="d-none d-md-block">
+            <form id="pageSizeForm" class="d-flex align-items-center">
+              <label for="pageSize" class="text-muted small me-2">Show:</label>
+              <select id="pageSize" name="page_size" class="form-select form-select-sm" style="width: 70px;">
+                <option value="10" {% if request.GET.page_size == '10' or not request.GET.page_size %}selected{% endif %}>10</option>
+                <option value="25" {% if request.GET.page_size == '25' %}selected{% endif %}>25</option>
+                <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+              </select>
+              {% if selected_year %}
+                <input type="hidden" name="year" value="{{ selected_year }}">
+              {% endif %}
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
 </div>
 
-<script>
-  document.getElementById('year-select').addEventListener('change', function() {
-    window.location.href = '?year=' + this.value;
-  });
-
-  function printTable() {
-    var printContents = document.getElementById('data-table').outerHTML;
-    var originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
+<style>
+  /* Custom styles for contribution details page */
+  .icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
   }
+  
+  .bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1);
+  }
+  
+  .bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1);
+  }
+  
+  .bg-info-subtle {
+    background-color: rgba(13, 202, 240, 0.1);
+  }
+  
+  .bg-light-subtle {
+    background-color: rgba(248, 249, 250, 0.6);
+  }
+  
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 767.98px) {
+    .pagination {
+      justify-content: center;
+    }
+  }
+</style>
 
-  function exportTableToCSV(filename) {
-    var csv = [];
-    var rows = document.querySelectorAll("#data-table tr");
-
-    for (var i = 0; i < rows.length; i++) {
-      var row = [], cols = rows[i].querySelectorAll("td, th");
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Year filter change event
+    document.getElementById('year-select').addEventListener('change', function() {
+      document.getElementById('yearFilterForm').submit();
+    });
+    
+    // Page size selector
+    document.getElementById('pageSize').addEventListener('change', function() {
+      document.getElementById('pageSizeForm').submit();
+    });
+    
+    // Print table function
+    window.printTable = function() {
+      // Create a new window
+      const printWindow = window.open('', '_blank');
       
-      for (var j = 0; j < cols.length; j++) {
-        row.push(cols[j].innerText);
+      // Create print content
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Contribution Details - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #0d6efd; font-size: 24px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .footer { margin-top: 30px; font-size: 12px; color: #6c757d; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <h1>Contribution Details - ${new Date().toLocaleDateString()}</h1>
+          <p>Year: ${document.getElementById('year-select').value || 'All Years'}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Employee Amount</th>
+                <th>Employer Amount</th>
+                <th>Total Amount</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Array.from(document.querySelectorAll('#data-table tbody tr')).map(row => {
+                return `<tr>${Array.from(row.cells).map(cell => `<td>${cell.textContent}</td>`).join('')}</tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>Generated on ${new Date().toLocaleString()}</p>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Write to the new window and print
+      printWindow.document.open();
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      
+      // Wait for content to load then print
+      printWindow.onload = function() {
+        printWindow.print();
+      };
+    };
+    
+    // Export table to CSV function
+    window.exportTableToCSV = function(filename) {
+      const rows = document.querySelectorAll("#data-table tr");
+      let csv = [];
+      
+      for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll("td, th");
+        
+        for (let j = 0; j < cols.length; j++) {
+          // Clean the text content (remove currency symbols, etc.)
+          let text = cols[j].textContent.trim();
+          text = text.replace(/GH₵\s*/g, ''); // Remove currency symbol
+          
+          // Escape quotes and wrap in quotes
+          text = text.replace(/"/g, '""');
+          row.push(`"${text}"`);
+        }
+        
+        csv.push(row.join(","));
       }
       
-      csv.push(row.join(","));        
-    }
-
-    var csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
-    var downloadLink = document.createElement("a");
-    downloadLink.download = filename;
-    downloadLink.href = window.URL.createObjectURL(csvFile);
-    downloadLink.style.display = "none";
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-  }
+      // Add metadata
+      const metadata = [
+        `"Contribution Details"`,
+        `"Generated on","${new Date().toLocaleString()}"`,
+        `"Year","${document.getElementById('year-select').value || 'All Years'}"`,
+        `""` // Empty line
+      ];
+      
+      // Combine metadata and CSV data
+      const csvContent = metadata.join("\n") + "\n" + csv.join("\n");
+      
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+  });
 </script>
-
 {% endblock %}

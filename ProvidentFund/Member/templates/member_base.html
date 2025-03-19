@@ -37,8 +37,35 @@
           </ul>
         </div> -->
         <!-- nav-group -->
+        <div id="sidebarMenu" class="sidebar-body">
+          <!-- Existing nav groups -->
+          
+          <!-- Add this new nav group for Transactions -->
+          <div class="nav-group">
+            <a href="#" class="nav-label">Transactions</a>
+            <ul class="nav nav-sidebar">
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'create_transaction' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">
+                  <i class="ri-arrow-up-circle-line"></i> Deposit
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'transaction_history' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">
+                  <i class="ri-history-line"></i> View Transaction History
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'withdraw' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">
+                  <i class="ri-arrow-down-circle-line"></i> Withdraw Funds
+                </a>
+              </li>
+            </ul>
+          </div>
+          
+        </div>
       </div>
       <!-- sidebar-body -->
+       
 
       <div class="sidebar-footer">
         <div class="sidebar-footer-top">

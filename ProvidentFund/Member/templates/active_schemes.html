@@ -1,4 +1,5 @@
 {% extends 'member_base.html' %}
+{% load contribution_tags %}
 {% block title %}
 <title>Active Schemes</title>
 {% endblock %}
@@ -7,248 +8,440 @@
 
 
 <div class="main main-app p-3 p-lg-4">
-   {% if active_schemes %}
-    <div class="col">
-        <!-- New Cards Column -->
-        <h3 class="mt-4 text-center">YOUR SCHEMES</h3>
-        <div class="row justify-content-center g-5 g-lg-5 pt-5">
-          {% for scheme in active_schemes %}
-            <div class="col-sm-10 col-lg-10 ">
-                <div class="card border border-info">
-                    <div class="card-body">
-                        <div id="response-message-{{ scheme.id }}" class="response-message text-center" style="color: red;">
-                            
-                        </div>
-                        
-                        <div class="row g-3">
-                            <div class="col-4 col-sm-4 col-md-4 col-lg-4">
-                                <h6 class="card-title "><strong>Scheme Name:</strong> <em> {{ scheme.name|upper }}</em></h6>
-                                <p><strong>Date added: </strong> {{ scheme.created_date|date }}</p>
-                            </div>
-                            
-                            <div class="col-8 col-sm-8 col-md-8 col-lg-8 mb-5">
-                                <p class="card-text"><strong>Description:</strong> <em>{{ scheme.description }}</em></p>
-                            </div>
-                        </div>
-
-                        
-
-                        <form action="" class="form-control application-form border border-info-subtle" method="POST">
-                            {% csrf_token %}
-                            <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
-                            <div class="d-flex  justify-content-between">
-                                <a class="btn btn-primary" href="{% url 'member_contribution' tenant_id=request.tenant.id scheme_name=scheme.id member_id=user.member.staff_id %}">View Contributions</a>
-                                <a class="btn btn-danger p-3" id="optOutBtn" data-bs-toggle="modal" data-bs-target="#optOutModal">Opt Out</a>
-                            </div>
-                            
-                        </form>
-                    </div>
-
-                </div>
-            </div><!-- col -->
-
-            <!-- Modal Structure -->
-            <div class="modal fade" id="optOutModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="modalTitle">Opt Out Confirmation</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <form class="opt-out-form" action="" method="POST">
-                            {% csrf_token %}
-                            <div class="modal-body text-left">
-                                <p>Select reason a for opting out.</p>
-                                <div class="status-message text-center">
-                                    <!-- holds status messages from checkbox submission -->
-                                </div>
-                                <!-- checkboxes to accept user input -->
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="I am no longer interested in the scheme" id="reason1" name="reason1">
-                                    <label class="form-check" for="reason1">
-                                        I am no longer interested in the scheme
-                                    </label>
-
-                                    <input class="form-check-input" type="checkbox" value="I am no longer able to contribute to the scheme" id="reason2" name="reason2">
-                                    <label class="form-check" for="reason2">
-                                        I am no longer able to contribute to the scheme
-                                    </label>
-
-                                    <input class="form-check-input" type="checkbox" value="Financial emergency or need for funds" id="reason3" name="reason3">
-                                    <label class="form-check" for="reason3">
-                                        Financial emergency or need for funds
-                                    </label>
-
-                                    <input class="form-check-input" type="checkbox" value="Tax implications" id="reason4" name="reason4">
-                                    <label class="form-check" for="reason4">
-                                        Tax implications
-                                    </label>
-
-                                    <input class="form-check-input" type="checkbox" value="Long lock-in period" id="reason5" name="reason5">
-                                    <label class="form-check" for="reason5">
-                                        Long lock-in period
-                                    </label>
-
-                                    <input class="form-check-input" type="checkbox" value="other" id="reason6" name="reason6">
-                                    <label class="form-check" for="reason6">
-                                        Other
-                                    </label>
-
-                                    <!-- Text area for user reason -->
-                                    <div class="form-group other-reason">
-                                        <label for="otherReason" class="form-label">Please specify other reason</label>
-                                        <textarea class="form-control" id="otherReason" rows="3"
-                                        name="custom_reason"></textarea>
-                                    </div>
-                                </div>
-                                
-                            </div>
-                            <div class="modal-footer">
-                                <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
-                                <input type="hidden" name="member_id" value="{{ user.member.staff_id }}">
-                                <button type="submit" class="btn btn-warning" id="confirmOptOut">Yes, Opt Out</button>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-          {% endfor %}
-        
-
-
-        </div><!-- row -->
-    </div><!-- col -->
-{% else %}
-    <div class="col">
-        <div class="alert alert-info text-center" role="alert">
-            <h4 class="alert-heading">No active schemes</h4>
-            <p>You have not been added to any schemes yet.</p>
-        </div>
+  <div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-1">Active Schemes</h4>
+        <p class="text-muted mb-0">Manage your current scheme participations</p>
+      </div>
+      <div class="d-flex mt-3 mt-md-0">
+        <a href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-primary">
+          <i class="ri-add-line me-1"></i> Apply to New Schemes
+        </a>
+      </div>
     </div>
-{% endif %}
 
+    {% if active_schemes %}
+      <div class="row g-4">
+        {% for scheme in active_schemes %}
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100 scheme-card">
+              <div class="card-header bg-white p-4 border-bottom">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="d-flex align-items-center">
+                    <div class="scheme-icon me-3">
+                      <div class="icon-circle bg-primary-subtle text-primary">
+                        <i class="ri-funds-box-line"></i>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 class="card-title fw-bold mb-0">{{ scheme.name|upper }}</h5>
+                      <p class="text-muted small mb-0">
+                        <i class="ri-calendar-line me-1"></i> Joined: {{ scheme.created_date|date:"M d, Y" }}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="scheme-status">
+                    <span class="badge bg-success rounded-pill px-3 py-2">
+                      <i class="ri-checkbox-circle-line me-1"></i> Active
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card-body p-4">
+                <div id="response-message-{{ scheme.id }}" class="response-message alert alert-danger p-2 mb-3" style="display: none;"></div>
+                
+                <div class="scheme-description mb-4">
+                  <h6 class="fw-medium mb-2">Description</h6>
+                  <p class="mb-0">{{ scheme.description }}</p>
+                </div>
+                
+                <!-- Scheme Stats -->
+                <div class="row g-3 mb-4">
+                  <div class="col-6">
+                    <div class="stat-card bg-light-subtle p-3 rounded-3 h-100">
+                      <div class="d-flex align-items-center">
+                        <div class="icon-circle bg-primary-subtle text-primary me-3" style="width: 36px; height: 36px;">
+                          <i class="ri-money-cedi-circle-line"></i>
+                        </div>
+                        <div>
+                          <p class="text-muted small mb-0">Total Contribution</p>
+                          <h6 class="fw-bold mb-0">GH₵ {% get_total_contribution scheme request.tenant request.user.member.staff_id %}</h6>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="stat-card bg-light-subtle p-3 rounded-3 h-100">
+                      <div class="d-flex align-items-center">
+                        <div class="icon-circle bg-success-subtle text-success me-3" style="width: 36px; height: 36px;">
+                          <i class="ri-calendar-check-line"></i>
+                        </div>
+                        <div>
+                          <p class="text-muted small mb-0">Duration</p>
+                          <h6 class="fw-bold mb-0">{{ scheme.application_date|default:"N/A" }}</h6>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="scheme-actions d-flex justify-content-between">
+                  <a class="btn btn-primary" href="{% url 'member_contribution' tenant_id=request.tenant.id scheme_name=scheme.id member_id=user.member.staff_id %}">
+                    <i class="ri-file-list-3-line me-1"></i> View Contributions
+                  </a>
+                  <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#optOutModal-{{ scheme.id }}">
+                    <i class="ri-logout-box-r-line me-1"></i> Opt Out
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Opt Out Modal for each scheme -->
+          <div class="modal fade" id="optOutModal-{{ scheme.id }}" tabindex="-1" aria-labelledby="optOutModalLabel-{{ scheme.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="optOutModalLabel-{{ scheme.id }}">
+                    <i class="ri-logout-box-r-line text-danger me-2"></i> Opt Out of {{ scheme.name }}
+                  </h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form class="opt-out-form" action="" method="POST">
+                  {% csrf_token %}
+                  <div class="modal-body p-4">
+                    <div class="alert alert-warning mb-4">
+                      <div class="d-flex">
+                        <i class="ri-information-line fs-5 me-2 mt-1"></i>
+                        <div>
+                          <h6 class="fw-medium mb-1">Important Information</h6>
+                          <p class="mb-0 small">Opting out may have financial implications. Please review the scheme terms before proceeding.</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <h6 class="fw-medium mb-3">Please select a reason for opting out:</h6>
+                    <div class="status-message alert alert-danger p-2 mb-3" style="display: none;"></div>
+                    
+                    <div class="opt-out-reasons">
+                      <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="I am no longer interested in the scheme" id="reason1-{{ scheme.id }}" name="reason1">
+                        <label class="form-check-label" for="reason1-{{ scheme.id }}">
+                          I am no longer interested in the scheme
+                        </label>
+                      </div>
+                      
+                      <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="I am no longer able to contribute to the scheme" id="reason2-{{ scheme.id }}" name="reason2">
+                        <label class="form-check-label" for="reason2-{{ scheme.id }}">
+                          I am no longer able to contribute to the scheme
+                        </label>
+                      </div>
+                      
+                      <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="Financial emergency or need for funds" id="reason3-{{ scheme.id }}" name="reason3">
+                        <label class="form-check-label" for="reason3-{{ scheme.id }}">
+                          Financial emergency or need for funds
+                        </label>
+                      </div>
+                      
+                      <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="Tax implications" id="reason4-{{ scheme.id }}" name="reason4">
+                        <label class="form-check-label" for="reason4-{{ scheme.id }}">
+                          Tax implications
+                        </label>
+                      </div>
+                      
+                      <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="Long lock-in period" id="reason5-{{ scheme.id }}" name="reason5">
+                        <label class="form-check-label" for="reason5-{{ scheme.id }}">
+                          Long lock-in period
+                        </label>
+                      </div>
+                      
+                      <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="other" id="reason6-{{ scheme.id }}" name="reason6">
+                        <label class="form-check-label" for="reason6-{{ scheme.id }}">
+                          Other reason
+                        </label>
+                      </div>
+                      
+                      <div class="form-group other-reason mt-3" style="display: none;">
+                        <label for="otherReason-{{ scheme.id }}" class="form-label">Please specify your reason:</label>
+                        <textarea class="form-control" id="otherReason-{{ scheme.id }}" rows="3" name="custom_reason" placeholder="Please provide details..."></textarea>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="modal-footer">
+                    <input type="hidden" name="scheme_id" value="{{ scheme.id }}">
+                    <input type="hidden" name="member_id" value="{{ user.member.staff_id }}">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                      <i class="ri-close-line me-1"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger" id="confirmOptOut-{{ scheme.id }}">
+                      <i class="ri-logout-box-r-line me-1"></i> Confirm Opt Out
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-5 text-center">
+          <div class="empty-state mb-4">
+            <div class="icon-circle bg-light-subtle mx-auto mb-3" style="width: 80px; height: 80px;">
+              <i class="ri-file-list-3-line text-primary" style="font-size: 2.5rem;"></i>
+            </div>
+            <h5 class="fw-bold">No Active Schemes</h5>
+            <p class="text-muted mb-4">You are not currently participating in any schemes.</p>
+            <a href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-primary">
+              <i class="ri-add-line me-1"></i> Apply to Schemes
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  /* Custom styles for active schemes page */
+  .icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1);
+  }
+  
+  .bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1);
+  }
+  
+  .bg-light-subtle {
+    background-color: rgba(248, 249, 250, 0.6);
+  }
+  
+  .scheme-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .scheme-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  
+  .form-check-label {
+    cursor: pointer;
+  }
+  
+  .stat-card {
+    transition: background-color 0.2s ease;
+  }
+  
+  .stat-card:hover {
+    background-color: rgba(248, 249, 250, 1) !important;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 767.98px) {
+    .scheme-actions {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .scheme-actions .btn {
+      width: 100%;
+    }
+  }
+</style>
 
 <script>
-    //Hide other-reason text area when page loads
-    $(document).ready(function(){
-        $('.other-reason').hide();
-    });
-    // Display other-reson when user selcts other as reason for opting out
-    $(document).ready(function(){
-        $('other-reason').hide();
-        $('#reason6').on('click', function(){
-            if ($(this).is(':checked')){
-                $('.other-reason').show();
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle "Other" reason checkbox for each scheme
+    {% for scheme in active_schemes %}
+      const otherReasonCheckbox{{ scheme.id }} = document.getElementById('reason6-{{ scheme.id }}');
+      const otherReasonTextarea{{ scheme.id }} = document.querySelector('#optOutModal-{{ scheme.id }} .other-reason');
+      
+      if (otherReasonCheckbox{{ scheme.id }}) {
+        otherReasonCheckbox{{ scheme.id }}.addEventListener('change', function() {
+          if (this.checked) {
+            otherReasonTextarea{{ scheme.id }}.style.display = 'block';
+          } else {
+            otherReasonTextarea{{ scheme.id }}.style.display = 'none';
+          }
+        });
+      }
+      
+      // Ensure only one checkbox is selected at a time for each scheme
+      const checkboxes{{ scheme.id }} = document.querySelectorAll('#optOutModal-{{ scheme.id }} .form-check-input');
+      checkboxes{{ scheme.id }}.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+          if (this.checked) {
+            checkboxes{{ scheme.id }}.forEach(function(cb) {
+              if (cb !== checkbox) {
+                cb.checked = false;
+              }
+            });
+          }
+        });
+      });
+      
+      // Form validation for each scheme
+      const optOutForm{{ scheme.id }} = document.querySelector('#optOutModal-{{ scheme.id }} .opt-out-form');
+      const statusMessage{{ scheme.id }} = document.querySelector('#optOutModal-{{ scheme.id }} .status-message');
+      
+      if (optOutForm{{ scheme.id }}) {
+        optOutForm{{ scheme.id }}.addEventListener('submit', function(event) {
+          event.preventDefault();
+          
+          // Check if at least one reason is selected
+          let reasonSelected = false;
+          checkboxes{{ scheme.id }}.forEach(function(checkbox) {
+            if (checkbox.checked) {
+              reasonSelected = true;
+            }
+          });
+          
+          if (!reasonSelected) {
+            statusMessage{{ scheme.id }}.textContent = 'Please select a reason for opting out.';
+            statusMessage{{ scheme.id }}.style.display = 'block';
+            return;
+          }
+          
+          // Check if "Other" is selected but no text is provided
+          if (otherReasonCheckbox{{ scheme.id }}.checked) {
+            const otherReasonText = document.getElementById('otherReason-{{ scheme.id }}').value.trim();
+            if (otherReasonText === '') {
+              statusMessage{{ scheme.id }}.textContent = 'Please specify your reason for opting out.';
+              statusMessage{{ scheme.id }}.style.display = 'block';
+              return;
+            }
+          }
+          
+          // Submit the form via AJAX
+          const formData = new FormData(this);
+          
+          // Show loading state
+          const submitButton = document.getElementById('confirmOptOut-{{ scheme.id }}');
+          const originalButtonText = submitButton.innerHTML;
+          submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...';
+          submitButton.disabled = true;
+          
+          fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success') {
+              // Show success message
+              const modal = bootstrap.Modal.getInstance(document.getElementById('optOutModal-{{ scheme.id }}'));
+              modal.hide();
+              
+              // Show success toast
+              showToast('Success', data.message, 'success');
+              
+              // Reload the page after a short delay
+              setTimeout(() => {
+                window.location.reload();
+              }, 2000);
             } else {
-                $('.other-reason').hide();
+              // Show error message
+              statusMessage{{ scheme.id }}.textContent = data.message;
+              statusMessage{{ scheme.id }}.style.display = 'block';
+              
+              // Reset button
+              submitButton.innerHTML = originalButtonText;
+              submitButton.disabled = false;
             }
-        });
-    });
-
-
-    // only one checkbox can be selected at a time, when user tries to select a second checkbox, the first checkbox is unchecked
-    $(document).ready(function(){
-        $('.form-check-input').on('click', function(){
-            var checkboxes = document.querySelectorAll('.form-check-input');
-            checkboxes.forEach(function(checkbox){
-                if (checkbox.checked){
-                    checkboxes.forEach(function(box){
-                        if (box != checkbox){
-                            box.checked = false;
-                        }
-                    });
-                }
-            });
-        });
-    });
-
-
-
-
-
-
-
-    // user should only select one reason for opting out
-    $(document).ready(function(){
-        $('#confirmOptOut').on('click', function(){
-            var reasons = document.querySelectorAll('.form-check-input');
-            var count = 0;
-            reasons.forEach(function(reason){
-                if (reason.checked){
-                    count++;
-                }
-            });
-            if (count > 1){
-                $('.status-message').text('Please select only one reason for opting out');
-                return false;
-            }
-        });
-    });
-
-
-    // at least a reason must be selected before submitting form
-    $(document).ready(function(){
-        $('#confirmOptOut').on('click', function(){
-            var reasons = document.querySelectorAll('.form-check-input');
-            var checked = false;
-            reasons.forEach(function(reason){
-                if (reason.checked){
-                    checked = true;
-                }
-            });
-            if (!checked){
-                $('.status-message').text('Please select at a reason for opting out');
-                return false;
-            }
-        });
-    });
-
-
-    //when user selects other as reason for opting out, the text area must be filled
-    $(document).ready(function(){
-        $('#confirmOptOut').on('click', function(){
-            var otherReason = document.querySelector('#otherReason');
-            var other = document.querySelector('#reason6');
-            if (other.checked && otherReason.value == ''){
-                $('.status-message').text('Please specify other reason for opting out');
-                return false;
-            }
-        });
-    });
-
-
-    $(document).ready(function(){
-        $('.opt-out-form').on('submit', function(event){
-            event.preventDefault();
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            statusMessage{{ scheme.id }}.textContent = 'There was an error processing your request. Please try again.';
+            statusMessage{{ scheme.id }}.style.display = 'block';
             
-            var form = $(this);
-            $.ajax({
-                type: form.attr('method'),
-                url: form.attr('action'),
-                data: form.serialize(),
-                success: function(response){
-                    if (response.status === 'success'){
-                        $('.status-message').text(response.message).css('color', 'green');
-                        //$('#optOutModal').modal('hide');
-                        //location.reload();
-                    }else{
-                        if (response.status === 'error'){
-                            //$('#response-message-' + response.scheme_id).text(response.message);
-                            $('.status-message').text(response.message).css('color', 'red');
-                        }                        
-                    }
-                },
-                error: function(response){
-                    if (response.status == 'error'){
-                        //var modal = document.querySelector('.modal-body.text-center');
-                        //modal.textContent = 'There was an error processing your request. Please try again later.';
-                        alert('There was an error processing your request. Please try again later.');
-                        //$('#optOutModal').modal('hide');
-                    }
-                }
-            });
+            // Reset button
+            submitButton.innerHTML = originalButtonText;
+            submitButton.disabled = false;
+          });
         });
+      }
+    {% endfor %}
+    
+    // Toast notification function
+    window.showToast = function(title, message, type) {
+      // Check if toast container exists, if not create it
+      let toastContainer = document.querySelector('.toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+      }
+      
+      // Create toast element
+      const toastId = 'toast-' + Date.now();
+      const toastEl = document.createElement('div');
+      toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+      toastEl.id = toastId;
+      toastEl.setAttribute('role', 'alert');
+      toastEl.setAttribute('aria-live', 'assertive');
+      toastEl.setAttribute('aria-atomic', 'true');
+      
+      // Toast content
+      toastEl.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            <strong>${title}:</strong> ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      
+      // Add toast to container
+      toastContainer.appendChild(toastEl);
+      
+      // Initialize and show toast
+      const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+      toast.show();
+      
+      // Remove toast after it's hidden
+      toastEl.addEventListener('hidden.bs.toast', function() {
+        toastEl.remove();
+      });
+    };
+    
+    // Add hover effect to scheme cards
+    const schemeCards = document.querySelectorAll('.scheme-card');
+    schemeCards.forEach(card => {
+      card.addEventListener('mouseenter', function() {
+        this.querySelector('.scheme-icon i').classList.add('animate__animated', 'animate__heartBeat');
+      });
+      
+      card.addEventListener('mouseleave', function() {
+        this.querySelector('.scheme-icon i').classList.remove('animate__animated', 'animate__heartBeat');
+      });
     });
+  });
 </script>
 {% endblock %}

@@ -23,7 +23,7 @@ from django.utils.decorators import method_decorator
 from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
 from .forms import CombinedProfileForm
-from MultiScheme.models import Tenant,InvestmentScheme
+from MultiScheme.models import Tenant,InvestmentScheme, TenantEventNotification
 from contributions.models import Contribution, Membership, StaffAPI
 # Importing the user model 
 from django.contrib.auth import get_user_model
@@ -32,7 +32,7 @@ from .decorators import unauthenticated_user
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 # Import task to send otp via email
-from .tasks import send_otp_code,gen_send_email
+from .tasks import  send_otp_code,gen_send_email
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -62,6 +62,13 @@ from twilio.rest import Client
 import logging
 from .models import WithdrawalRequest, InvestmentScheme, StaffAPI, Tenant, Transaction
 from django.db.models import F
+from django.db.models import Q
+from .models import InvestmentScheme
+from .models import WithdrawalRequest
+from contributions.models import StaffAPI 
+from MultiScheme.models import TenantEventNotification
+from .tasks import notify_user_email_sms,notify_withdrawal_approval
+
 
 
 @unauthenticated_user
@@ -706,10 +713,11 @@ class PendingSchemes(ListView):
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
+
 class Contributed(ListView):
     model = Contribution
-    template_name = 'member_contributions.html'  # Template for contributions page
-    paginate_by = 12  # Optional, for paginating the contributions list
+    template_name = 'member_contributions.html'
+    paginate_by = 12  
 
     def dispatch(self, request, *args, **kwargs):
         member_id = kwargs.get('member_id')
@@ -722,55 +730,72 @@ class Contributed(ListView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        # Get the member_id and year from the request
         member_id = self.kwargs.get('member_id')
-        selected_year = self.request.GET.get('year')
-
-        # Get tenant and scheme details from the request
+        selected_year = self.request.GET.get('year', datetime.now().year)
         tenant = self.request.tenant
         scheme_id = self.request.scheme_name
 
-        # Retrieve the member (StaffAPI) instance based on the tenant and staff number
         member = StaffAPI.objects.filter(staff_number=member_id, investment_scheme__tenant=tenant).first()
 
-        # Set default year to current year if not provided
-        if not selected_year:
-            selected_year = datetime.now().year
-
-        # Filter the contributions based on the member, scheme, tenant, and selected year
-        if tenant and scheme_id:
-            member_contributions=Contribution.objects.filter(
-                member=member,
-                investment_scheme__id=scheme_id,
-                investment_scheme__tenant=tenant,
-                year=selected_year,
-                approved_contribution=True
-            )
-            return member_contributions
-        else:
+        if not member or not tenant or not scheme_id:
             return Contribution.objects.none()
+
+        # Filter contributions for the selected year
+        member_contributions = Contribution.objects.filter(
+            member=member,
+            investment_scheme__id=scheme_id,
+            investment_scheme__tenant=tenant,
+            year=selected_year,
+            approved_contribution=True
+        )
+
+        return member_contributions
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Get selected year and list of years for dropdown
+        member_id = self.kwargs.get('member_id')
         selected_year = self.request.GET.get('year', datetime.now().year)
-        years = list(range(2020, datetime.now().year + 1))
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
 
-        context['years'] = years
-        context['selected_year'] = str(selected_year)
+        member = StaffAPI.objects.filter(staff_number=member_id, investment_scheme__tenant=tenant).first()
+        if not member or not tenant or not scheme_id:
+            context['contributions'] = []
+            context['total_contributions'] = 0
+            context['yearly_contributions'] = 0
+            context['last_contribution_amount'] = 0
+            context['last_contribution_date'] = None
+            return context
 
-        # Get contributions and organize them by month
         contributions = self.get_queryset()
-        context['contributions'] = contributions
 
-        # Group contributions by month
-        monthly_contributions = defaultdict(list)
-        for contribution in contributions:
-            month_name = contribution.contribution_date.strftime('%B')
-            monthly_contributions[month_name].append(contribution)
-    
-        context['monthly_contributions'] = dict(monthly_contributions)
+        # Calculate Total Contributions (All Time)
+        total_contributions = Contribution.objects.filter(
+            member=member,
+            investment_scheme__tenant=tenant,
+            approved_contribution=True
+        ).aggregate(Sum('total_contribution'))['total_contribution__sum'] or 0.00
+
+        # Calculate Yearly Contributions (For Selected Year)
+        yearly_contributions = contributions.aggregate(Sum('total_contribution'))['total_contribution__sum'] or 0.00
+
+        # Get Last Contribution
+        last_contribution = contributions.order_by('-contribution_date').first()
+        last_contribution_amount = last_contribution.total_contribution if last_contribution else 0.00
+        last_contribution_date = last_contribution.contribution_date if last_contribution else None
+
+        # Prepare context
+        context['contributions'] = contributions
+        context['total_contributions'] = total_contributions
+        context['yearly_contributions'] = yearly_contributions
+        context['last_contribution_amount'] = last_contribution_amount
+        context['last_contribution_date'] = last_contribution_date
+
+        # Populate Year Selection Dropdown
+        years = Contribution.objects.filter(member=member).values_list('year', flat=True).distinct()
+        context['years'] = sorted(set(years), reverse=True)
+        context['selected_year'] = str(selected_year)
 
         return context
 
@@ -881,79 +906,77 @@ def verify_transaction(request, reference):
 @method_decorator(tenant_login_required, name="dispatch")
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Member']), name='dispatch')
-
 class TransactionView(ListView):
     model = Transaction
     template_name = 'transaction_history.html'
-    paginate_by = 10
+    paginate_by = 10 # Ensures pagination works
     context_object_name = 'transactions'
 
     def get_queryset(self):
         tenant = self.request.tenant
         staff_id = self.kwargs.get('staff_id')
+
+        # Get filter parameters
+        scheme_id = self.request.GET.get('scheme_id')
+        status = self.request.GET.get('status')
+        transaction_type = self.request.GET.get('transaction_type')
+        payment_method = self.request.GET.get('payment_method')
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        sort_by = self.request.GET.get('sort', '-transaction_date')
+
+        # Get staff object
         staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
-        # Fetch deposit transactions
-        deposit_transactions = Transaction.objects.filter(staff=staff, tenant=tenant).order_by('-transaction_date')
-        return deposit_transactions
+
+        # Query Transactions (includes WithdrawalRequest transactions)
+        transactions = Transaction.objects.filter(staff=staff, tenant=tenant)
+
+        # Apply filters
+        if scheme_id:
+            transactions = transactions.filter(scheme__id=scheme_id)
+        if status:
+            transactions = transactions.filter(status=status)
+        if transaction_type:
+            transactions = transactions.filter(transaction_type=transaction_type)
+        if payment_method:
+            transactions = transactions.filter(payment_method=payment_method)
+        if date_from:
+            transactions = transactions.filter(transaction_date__gte=date_from)
+        if date_to:
+            transactions = transactions.filter(transaction_date__lte=date_to)
+
+        # Sorting
+        transactions = transactions.order_by(sort_by)
+        return transactions
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         tenant = self.request.tenant
         staff_id = self.kwargs.get('staff_id')
-        sort = self.request.GET.get('sort', '-transaction_date')
-        scheme_id = self.request.GET.get('scheme_id')
-        status = self.request.GET.get('status')
 
         try:
             staff = get_object_or_404(StaffAPI, tenant=tenant, staff_number=staff_id)
             context['schemes'] = staff.investment_scheme.all()
-
-            # Fetch deposit and withdrawal transactions
-            deposit_transactions = self.get_queryset().order_by(sort)
-            withdrawal_requests = WithdrawalRequest.objects.filter(staff=staff, tenant=tenant).order_by('-request_date')
-
-            # Filter by scheme if needed
-            if scheme_id:
-                deposit_transactions = deposit_transactions.filter(scheme__id=scheme_id)
-                withdrawal_requests = withdrawal_requests.filter(scheme__id=scheme_id)
-
-            # Filter by status if needed
-            if status:
-                deposit_transactions = deposit_transactions.filter(status=status)
-                withdrawal_requests = withdrawal_requests.filter(approved=(status.lower() == 'completed'))
-
-            # Combine and sort by date
-            combined_transactions = sorted(
-                chain(deposit_transactions, withdrawal_requests),
-                key=lambda x: x.transaction_date if hasattr(x, 'transaction_date') else x.request_date,
-                reverse=True
-            )
-
-            context['transactions'] = combined_transactions
-
         except StaffAPI.DoesNotExist:
             context['error'] = 'No transaction data available for this user'
 
         return context
 
-    
 
 
 
-logger = logging.getLogger(__name__)
-
-class WithdrawalView(View):
+@method_decorator(tenant_login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
+class WithdrawalView(TemplateView):
     template_name = 'withdrawal.html'
 
-    def get(self, request, *args, **kwargs):
-        tenant = request.tenant
-        schemes = InvestmentScheme.objects.filter(tenant=tenant, approved=True)
-        
-        context = {
-            'schemes': schemes,
-        }
-        return render(request, self.template_name, context)
-
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        context["schemes"] = InvestmentScheme.objects.filter(tenant=tenant, approved=True)
+        return context
+    
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
@@ -962,27 +985,19 @@ class WithdrawalView(View):
             scheme_id = data.get('scheme_id')
             amount = data.get('amount')
 
-            # Validate inputs
-            if not all([scheme_id, amount]):
+            #  Validate inputs
+            if not all([scheme_id, amount, member]):
                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
-            # Convert amount to Decimal for calculations
             amount = Decimal(amount)
 
             with transaction.atomic():
-                # Validate scheme and staff
-                scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id, approved=True)
-                staff = StaffAPI.objects.get(staff_number=member.staff_id)
+                #  Validate scheme and staff
+                scheme = InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id, approved=True).first()
+                staff = StaffAPI.objects.filter(staff_number=member.staff_id).first()
 
-                # Check if the user has sufficient balance
-                # balance = WithdrawalRequest.objects.filter(
-                #     tenant=tenant,
-                #     staff=staff,
-                #     scheme=scheme
-                # ).aggregate(balance=models.Sum('amount'))['balance'] or 0
-                # print(balance)
-                # if balance < amount:
-                #     return JsonResponse({'status': 'error', 'message': 'Insufficient balance.'}, status=400)
+                if not scheme or not staff:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid scheme or staff information.'}, status=400)
 
                 # Create a withdrawal request
                 withdrawal_request = WithdrawalRequest.objects.create(
@@ -990,163 +1005,48 @@ class WithdrawalView(View):
                     staff=staff,
                     scheme=scheme,
                     amount=amount,
-                    # approved=False,
                     request_date=timezone.now(),
                 )
+                logger.info(f" WithdrawalRequest created with ID: {withdrawal_request.id}")
 
-                # Notify manager and user
-                self.notify_manager(member, amount, scheme)
-                self.notify_user(member, amount, scheme)
+                # Get all recipients for `withdrawal_request` event
+                recipients = TenantEventNotification.objects.filter(
+                    tenant=tenant,
+                    event="withdrawal_request"
+                ).values_list('staff__email', flat=True)  # Get list of emails
+
+                if not recipients:
+                    logger.warning(f"No recipients assigned for withdrawal_request event in tenant {tenant.id}")
+
+                # Trigger Celery task to notify approvers
+                transaction.on_commit(lambda: notify_withdrawal_approval.delay(tenant.id, withdrawal_request.id))
+
+
+                # Trigger Celery task to notify the user
+                notify_user_email_sms.delay(
+                    tenant_id=tenant.id,  
+                    member_name=member.user.get_full_name(),
+                    first_name=member.user.first_name,
+                    last_name=member.user.last_name,
+                    user_email=member.user.email,
+                    tel_number=member.tel_number,
+                    amount=amount,
+                    scheme_name=scheme.name
+                )
 
                 return JsonResponse({
                     'status': 'success',
-                    'message': 'Withdrawal request submitted for approval. Notification sent to your email and phone.'
+                    'message': 'Withdrawal request submitted for approval. Notifications sent to user and approvers.'
                 })
 
         except Exception as e:
             logger.error(f"Unexpected error in WithdrawalView: {str(e)}")
             return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
-
-    def notify_manager(self, member, amount, scheme):
-        # recipient_email = member.email
-        try:
-            manager_email = 'osahdav@gmail.com'  # Replace with dynamic manager email if available
-            subject = 'Withdrawal Request Pending Approval'
-            message = (
-                f"A withdrawal request has been submitted by {member.user.get_full_name()} ID: {member.staff_id}.\n"
-                f"Details:\n"
-                f"Scheme: {scheme.name}\n"
-                f"Amount: ₵{amount:.2f}\n"
-                f"Status: Pending Approval\n"
-                f"Please review and take the necessary actions."
-            )
-
-            send_mail(
-                subject,
-                message,
-                'osahdav@gmail.com',  # Replace with your sender email
-                [manager_email],
-                fail_silently=False,
-            )
-
-            logger.info(f"Notification email sent to {manager_email} for withdrawal request.")
-        except Exception as e:
-            logger.error(f"Error sending notification email: {str(e)}")
-
-    def notify_user(self, member, amount, scheme):
-        try:
-            # Send email to the user
-            subject = 'Withdrawal Request Submitted'
-            message = (
-                f"Dear {member.user.get_full_name()},\n"
-                f"Your withdrawal request of ₵{amount:.2f} from the {scheme.name} scheme has been submitted successfully.\n"
-                f"Please note that it is pending approval and may take 2-3 business days to process."
-            )
-
-            send_mail(
-                subject,
-                message,
-                'dave21620@gmail.com',  # Replace with your sender email
-                [member.user.email],
-                fail_silently=False,
-            )
-
-            raw_phone = member.tel_number
-            parsed_phone = parse_phone(raw_phone, "GH")  # "GH" is the country code for Ghana
-            if not phonenumbers.is_valid_number(parsed_phone):
-                raise ValueError(f"Invalid phone number: {raw_phone}")
-            formatted_phone = format_number(parsed_phone, PhoneNumberFormat.E164)
-
-            # Send SMS to the user (using Twilio or another SMS service)
-            account_sid = 'ACe6e705f0732d1a51651131aa2516ab10'
-            auth_token = 'eb8dec355cd270700f0b00e341d3dc46'
-            client = Client(account_sid, auth_token)
-
-            sms_message = (
-                f"Hi { member.user.last_name } { member.user.first_name }, your withdrawal request of ₵{amount:.2f} has been submitted. "
-                f"It is pending approval and may take 2-3 business days."
-            )
-
-            client.messages.create(
-                body=sms_message,
-                from_='+14068004910',  # Replace with your Twilio phone number
-                to=formatted_phone,  # Ensure the phone number is stored in the Member model
-            )
-
-            logger.info(f"Notification email and SMS sent to {member.user.email} and {member.formatted_phone}.")
-        except Exception as e:
-            logger.error(f"Error notifying user: {str(e)}")
-
-
-
-# class ManagerApprovalView(View):
-#     template_name = 'manager/approval_list.html'
-
-#     def get(self, request, *args, **kwargs):
-#         # Fetch pending withdrawal requests
-#         pending_requests = WithdrawalRequest.objects.filter(approved=False)
-
-#         context = {
-#             'pending_requests': pending_requests,
-#         }
-#         return render(request, self.template_name, context)
-
-#     def post(self, request, *args, **kwargs):
-#         try:
-#             data = json.loads(request.body)
-#             withdrawal_id = data.get('withdrawal_id')
-#             action = data.get('action')
-
-#             # Validate input
-#             if not withdrawal_id or not action:
-#                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
-
-#             # Retrieve the withdrawal request
-#             withdrawal_request = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
-
-#             if action == 'approve':
-#                 # Approve the withdrawal request
-#                 withdrawal_request.approved = True
-#                 withdrawal_request.approval_date = timezone.now()
-#                 withdrawal_request.save()
-
-#                 # Process payment if needed
-#                 self.process_payment(withdrawal_request)
-
-#             elif action == 'reject':
-#                 # Reject the withdrawal request
-#                 withdrawal_request.approved = False
-#                 withdrawal_request.save()
-
-#                 # Optionally refund the amount to the user's estimated profit
-#                 staff = withdrawal_request.staff
-#                 staff.estimated_profit += withdrawal_request.amount
-#                 staff.save()
-
-#             else:
-#                 return JsonResponse({'status': 'error', 'message': 'Invalid action.'}, status=400)
-
-#             return JsonResponse({'status': 'success', 'message': 'Withdrawal request updated successfully.'})
-
-#         except Exception as e:
-#             logger.error(f"Error in ManagerApprovalView: {str(e)}")
-#             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-#     def process_payment(self, withdrawal_request):
-#         """
-#         Process payment for an approved withdrawal request.
-#         """
-#         try:
-#             # Add payment processing logic here (e.g., MoMo, bank transfer)
-#             logger.info(f"Processing payment for withdrawal request ID: {withdrawal_request.id}")
-#             # Simulate payment success
-#         except Exception as e:
-#             logger.error(f"Error processing payment: {str(e)}")
-#             raise
-
-
-
-
+        
+        
+@method_decorator(tenant_login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Member']), name='dispatch')
 class GetBalanceView(View):
     def get(self, request, *args, **kwargs):
         scheme_id = self.kwargs["scheme_id"]

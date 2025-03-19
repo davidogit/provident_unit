@@ -5,178 +5,386 @@
 {% endblock %}
 
 {% block content %}
-
-<!-- row -->
-
-      <div class="main main-app p-3 p-lg-4">
-        <div class="d-md-flex align-items-center justify-content-between mb-4">
-          <div>
-            <h4 class="main-title mb-0">Welcome to Dashboard</h4>
-            <a class="btn btn-primary mt-3" href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}">Apply to schemes here</a>
-          </div>
-          <div class="d-flex align-items-center gap-2 mt-3 mt-md-0">
-            <button type="button" class="btn btn-white btn-icon"><i class="ri-share-line fs-18 lh-1"></i></button>
-            <button type="button" class="btn btn-white btn-icon"><i class="ri-printer-line fs-18 lh-1"></i></button>
-            <button type="button" class="btn btn-primary btn-icon"><i class="ri-bar-chart-2-line fs-18 lh-1"></i></button>
-          </div>
-        </div>
-  
-        <div class="row g-3">
-
-
-          <div class="col-xl-12">
-            <div class="row g-3">
-              <div class="col-6">
-                <div class="card card-one card-ticket-available">
-                  <div class="card-body p-3">
-                    <div class="d-flex justify-content-center">
-                      <div class="w-100">
-                        <h1 class="card-value mb-2 fs-30 ls--2"><span>GH₵</span> {{ staff.estimated_profit|floatformat:2 }}</h1>
-                        <label class="card-label fw-semibold text-dark mb-1">Estimated Earnings</label>
-                        <p class="text-secondary text-center fs-sm mb-0">
-                        <em>
-                          NB: This is an estimated value and may not be the actual value.
-                        </em></p>
-                        <!-- <a class="btn btn-primary mt-3" href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}">View your schemes</a> -->
-                      </div>
-                    </div>
-                  </div><!-- card-body -->
-                </div><!-- card -->
-              </div><!-- col -->
-
-              <div class="col-6">
-                <div class="card card-one card-ticket-sold">
-                  <div class="card-body p-4">
-                    <div class="d-flex flex-column align-items-center">
-                      <h1 class="card-value fs-30 mb-2 ls--1"><span class="">GH₵</span> {{ staff.actual_amount|floatformat:2 }}</h1>
-                      <label class="card-label fw-semibold text-dark mb-2">Actual Earnings</label>
-                      <p class="text-secondary text-center fs-sm mb-0">This amount can be withdrawn.</p>
-                    </div>
-                  </div><!-- card-body -->
-                  <div id="apexChart4" class="apex-chart"></div>
-                </div><!-- card -->
-              </div><!-- col -->
+<div class="main main-app p-3 p-lg-4">
+  <!-- Welcome Section -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-gradient">
+    <div class="card-body p-4">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <div class="d-flex align-items-center mb-3">
+            <div class="avatar-wrapper me-3">
+              {% if user.member.image %}
+                <img src="{{ user.member.image.url }}" alt="Profile" class="avatar rounded-circle" width="60" height="60">
+              {% else %}
+                <div class="avatar-initial bg-primary text-white rounded-circle">
+                  {{ user.first_name|first }}{{ user.last_name|first }}
+                </div>
+              {% endif %}
             </div>
-        
-            <!-- card-body -->
-            {% comment %} <div id="apexChart4" class="apex-chart"></div>
-          </div>
-          <!-- card -->
-        </div>
-        <!-- col -->
-      </div> {% endcomment %}
-    </div> 
-    <!-- col -->
-    <div class="col-xl-12">
-      <div class="row g-3">
-        <div class="col-6 col-sm-6 col-lg-4">
-          <div class="card card-one">
-            <div class="card-body p-3">
-              <div class="d-block fs-40 lh-1 text-primary mb-1">
-                <i class="ri-calendar-todo-line"></i>
-              </div>
-              <h1 class="card-value mb-0 ls--1 fs-32">
-                {{ active_schemes_count }}
-              </h1>
-              <label class="d-block mb-1 fw-medium text-dark"
-                >Active Schemes</label
-              >
-              <!-- <small><span class="d-inline-flex text-danger">0.7% <i class="ri-arrow-down-line"></i></span> than last week</small> -->
-              <a
-                class="btn btn-primary mt-3"
-                href="{% url 'active_schemes' tenant_id=request.tenant.id member_id=user.member.staff_id %}"
-                >View your schemes</a
-              >
+            <div>
+              <h4 class="fw-bold mb-0">Welcome back, {{ user.first_name }}!</h4>
+              <p class="text-muted mb-0">Last login: {{ user.last_login|date:"F d, Y, h:i A" }}</p>
             </div>
-            <!-- card-body -->
           </div>
-          <!-- card -->
-        </div>
-        <!-- col -->
-        <div class="col-6 col-sm-6 col-lg-4">
-          <div class="card card-one">
-            <div class="card-body p-3">
-              <div class="d-block fs-40 lh-1 text-primary mb-1">
-                <i class="ri-calendar-todo-line"></i>
-              </div>
-              <h1 class="card-value mb-0 ls--1 fs-32">
-                {{ pending_schemes_count }}
-              </h1>
-              <label class="d-block mb-1 fw-medium text-dark"
-                >Pending Schemes</label
-              >
-              <!-- <small><span class="d-inline-flex text-danger">0.7% <i class="ri-arrow-down-line"></i></span> than last week</small> -->
-              <a
-                class="btn btn-primary mt-3"
-                href="{% url 'pending_schemes' tenant_id=request.tenant.id member_id=user.member.staff_id %}"
-                >View your schemes</a
-              >
-            </div>
-            <!-- card-body -->
+          <p class="mb-3">Here's an overview of your financial status and scheme participation.</p>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'application_view' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-primary">
+              <i class="ri-add-line me-1"></i> Apply to Schemes
+            </a>
+            <a href="{% url 'active_schemes' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-outline-primary">
+              <i class="ri-file-list-3-line me-1"></i> View My Schemes
+            </a>
           </div>
-          <!-- card -->
         </div>
-        <!-- col -->
-        <div class="col-6 col-sm-6 col-lg-4">
-          <div class="card card-one">
-            <div class="card-body p-3">
-              <div class="d-block fs-40 lh-1 text-ui-02 mb-1">
-                <i class="ri-calendar-check-line"></i>
-              </div>
-              <h1 class="card-value mb-0 fs-32 ls--1">
-                {{ days_since_joined }}
-              </h1>
-              <label class="d-block mb-1 fw-medium text-dark"
-                >Days since joined</label
-              >
-              <!-- <small><span class="d-inline-flex text-success">1.2% <i class="ri-arrow-up-line"></i></span> than last week</small> -->
-            </div>
-            <!-- card-body -->
+        <div class="col-lg-4 d-none d-lg-block">
+          <div class="dashboard-illustration text-end">
+            <i class="ri-funds-box-line text-primary" style="font-size: 8rem; opacity: 0.2;"></i>
           </div>
-          <!-- card -->
         </div>
-        <!-- col -->
-
-        <div class="col-6 col-sm-6 col-lg-4">
-          <div class="card card-one">
-            <div class="card-body p-3">
-              <div class="d-block fs-40 lh-1 text-primary mb-1">
-                <i class="ri-calendar-todo-line"></i>
-              </div>
-              <h1 class="card-value mb-0 ls--1 fs-32"></h1>
-              <label class="d-block mb-1 fw-medium text-dark"></label>
-              <!-- <small><span class="d-inline-flex text-danger">0.7% <i class="ri-arrow-down-line"></i></span> than last week</small> -->
-              <a
-                class="btn btn-primary mt-3"
-                href="{% url 'create_transaction' tenant_id=request.tenant.id staff_id=user.member.staff_id %}"
-                >Transactions</a
-              >
-            </div>
-            <!-- card-body -->
-          </div>
-          <!-- card -->
-        </div>
-        <!-- col -->
       </div>
-      <!-- row -->
     </div>
-    <!-- col -->
   </div>
-  <!-- row -->
 
-  <a
-    href="{% url 'transaction_history' tenant_id=request.tenant.id staff_id=user.member.staff_id %}"
-    >View Transaction History</a
-  >
-  <li class="nav-item">
-    <a
-      class="nav-link"
-      href="{% url 'withdraw' tenant_id=request.tenant.id staff_id=user.member.staff_id %}"
-    >
-      Withdraw Funds
-    </a>
-  </li>
+  <!-- Quick Stats Section -->
+  <div class="row g-3 mb-4">
+    <!-- Estimated Earnings Card -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="card-title mb-0 fw-bold">Estimated Earnings</h5>
+            <div class="icon-circle bg-primary-subtle text-primary">
+              <i class="ri-line-chart-line"></i>
+            </div>
+          </div>
+          <div class="d-flex align-items-baseline mb-2">
+            <h2 class="display-5 fw-bold mb-0 me-2">GH₵ {{ staff.estimated_profit|floatformat:2 }}</h2>
+            <span class="badge bg-success-subtle text-success rounded-pill">
+              <i class="ri-arrow-up-line me-1"></i> Projected
+            </span>
+          </div>
+          <p class="text-muted mb-0 small">
+            <i class="ri-information-line me-1"></i> This is an estimated value and may not be the actual value.
+          </p>
+          
+          <!-- Progress bar showing percentage of target -->
+          <div class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-1 small">
+              <span class="text-muted">Progress to target</span>
+              <span class="fw-medium">65%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-primary" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- Actual Earnings Card -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="card-title mb-0 fw-bold">Actual Earnings</h5>
+            <div class="icon-circle bg-success-subtle text-success">
+              <i class="ri-money-cedi-circle-line"></i>
+            </div>
+          </div>
+          <div class="d-flex align-items-baseline mb-2">
+            <h2 class="display-5 fw-bold mb-0 me-2">GH₵ {{ staff.actual_amount|floatformat:2 }}</h2>
+            <span class="badge bg-primary-subtle text-primary rounded-pill">
+              <i class="ri-wallet-3-line me-1"></i> Available
+            </span>
+          </div>
+          <p class="text-muted mb-0 small">
+            <i class="ri-checkbox-circle-line me-1"></i> This amount can be withdrawn anytime.
+          </p>
+          
+          <!-- Action buttons -->
+          <div class="mt-4 d-flex gap-2">
+            <a href="#" class="btn btn-sm btn-success">
+              <i class="ri-bank-card-line me-1"></i> Withdraw Funds
+            </a>
+            <a href="{% url 'transaction_history' tenant_id=request.tenant.id staff_id=user.member.staff_id %}" class="btn btn-sm btn-outline-primary">
+              <i class="ri-history-line me-1"></i> Transaction History
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schemes Overview Section -->
+  <div class="row g-3">
+    <!-- Active Schemes Card -->
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="card-title mb-0 fw-bold">Active Schemes</h5>
+            <div class="icon-circle bg-primary-subtle text-primary">
+              <i class="ri-calendar-check-line"></i>
+            </div>
+          </div>
+          <div class="text-center my-4">
+            <div class="scheme-counter position-relative d-inline-block">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#e6e7e8" stroke-width="12" />
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#0d6efd" stroke-width="12" 
+                  stroke-dasharray="339.3" stroke-dashoffset="{{ 339.3|add:'-339.3'|add:active_schemes_count|floatformat:0 }}" 
+                  transform="rotate(-90 60 60)" />
+              </svg>
+              <div class="scheme-counter-content position-absolute top-50 start-50 translate-middle">
+                <h2 class="fs-1 fw-bold mb-0">{{ active_schemes_count }}</h2>
+              </div>
+            </div>
+          </div>
+          <p class="text-center text-muted mb-3">
+            You're currently participating in {{ active_schemes_count }} active scheme{{ active_schemes_count|pluralize }}.
+          </p>
+          <div class="text-center">
+            <a href="{% url 'active_schemes' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-primary">
+              <i class="ri-eye-line me-1"></i> View Active Schemes
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Schemes Card -->
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="card-title mb-0 fw-bold">Pending Schemes</h5>
+            <div class="icon-circle bg-warning-subtle text-warning">
+              <i class="ri-time-line"></i>
+            </div>
+          </div>
+          <div class="text-center my-4">
+            <div class="scheme-counter position-relative d-inline-block">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#e6e7e8" stroke-width="12" />
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#ffc107" stroke-width="12" 
+                  stroke-dasharray="339.3" stroke-dashoffset="{{ 339.3|add:'-339.3'|add:pending_schemes_count|floatformat:0 }}" 
+                  transform="rotate(-90 60 60)" />
+              </svg>
+              <div class="scheme-counter-content position-absolute top-50 start-50 translate-middle">
+                <h2 class="fs-1 fw-bold mb-0">{{ pending_schemes_count }}</h2>
+              </div>
+            </div>
+          </div>
+          <p class="text-center text-muted mb-3">
+            You have {{ pending_schemes_count }} pending scheme application{{ pending_schemes_count|pluralize }}.
+          </p>
+          <div class="text-center">
+            <a href="{% url 'pending_schemes' tenant_id=request.tenant.id member_id=user.member.staff_id %}" class="btn btn-warning">
+              <i class="ri-eye-line me-1"></i> View Pending Schemes
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Membership Duration Card -->
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="card-title mb-0 fw-bold">Membership</h5>
+            <div class="icon-circle bg-info-subtle text-info">
+              <i class="ri-user-star-line"></i>
+            </div>
+          </div>
+          <div class="text-center my-4">
+            <div class="scheme-counter position-relative d-inline-block">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#e6e7e8" stroke-width="12" />
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#0dcaf0" stroke-width="12" 
+                  stroke-dasharray="339.3" stroke-dashoffset="{{ 339.3|add:'-339.3'|add:days_since_joined|floatformat:0 }}" 
+                  transform="rotate(-90 60 60)" />
+              </svg>
+              <div class="scheme-counter-content position-absolute top-50 start-50 translate-middle">
+                <h2 class="fs-1 fw-bold mb-0">{{ days_since_joined }}</h2>
+              </div>
+            </div>
+          </div>
+          <p class="text-center text-muted mb-3">
+            You've been a member for {{ days_since_joined }} day{{ days_since_joined|pluralize }}.
+          </p>
+          <div class="text-center">
+            <a href="#" class="btn btn-info">
+              <i class="ri-profile-line me-1"></i> View Profile
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions Section -->
+  <div class="card border-0 shadow-sm rounded-3 mt-4">
+    <div class="card-header bg-white p-4 border-bottom">
+      <h5 class="card-title mb-0 fw-bold">
+        <i class="ri-flashlight-line text-primary me-2"></i> Quick Actions
+      </h5>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-6 col-md-3">
+          <a href="#" class="quick-action-card text-decoration-none">
+            <div class="card border-0 bg-light-subtle text-center p-3 h-100">
+              <div class="icon-circle bg-primary-subtle text-primary mx-auto mb-3">
+                <i class="ri-bank-card-line"></i>
+              </div>
+              <h6 class="mb-0 fw-medium">Make Payment</h6>
+            </div>
+          </a>
+        </div>
+        <div class="col-6 col-md-3">
+          <a href="#" class="quick-action-card text-decoration-none">
+            <div class="card border-0 bg-light-subtle text-center p-3 h-100">
+              <div class="icon-circle bg-success-subtle text-success mx-auto mb-3">
+                <i class="ri-download-2-line"></i>
+              </div>
+              <h6 class="mb-0 fw-medium">Withdraw Funds</h6>
+            </div>
+          </a>
+        </div>
+        <div class="col-6 col-md-3">
+          <a href="#" class="quick-action-card text-decoration-none">
+            <div class="card border-0 bg-light-subtle text-center p-3 h-100">
+              <div class="icon-circle bg-warning-subtle text-warning mx-auto mb-3">
+                <i class="ri-file-chart-line"></i>
+              </div>
+              <h6 class="mb-0 fw-medium">View Reports</h6>
+            </div>
+          </a>
+        </div>
+        <div class="col-6 col-md-3">
+          <a href="#" class="quick-action-card text-decoration-none">
+            <div class="card border-0 bg-light-subtle text-center p-3 h-100">
+              <div class="icon-circle bg-info-subtle text-info mx-auto mb-3">
+                <i class="ri-customer-service-2-line"></i>
+              </div>
+              <h6 class="mb-0 fw-medium">Get Support</h6>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-{% endblock %}
 
+<style>
+  /* Custom styles for dashboard */
+  .bg-gradient {
+    background: linear-gradient(to right, #ffffff, #f8f9fa);
+  }
+  
+  .avatar-initial {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.5rem;
+  }
+  
+  .icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+  }
+  
+  .bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1);
+  }
+  
+  .bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1);
+  }
+  
+  .bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1);
+  }
+  
+  .bg-info-subtle {
+    background-color: rgba(13, 202, 240, 0.1);
+  }
+  
+  .bg-light-subtle {
+    background-color: rgba(248, 249, 250, 0.6);
+  }
+  
+  .scheme-counter {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .scheme-counter svg {
+    transform: rotate(-90deg);
+  }
+  
+  .scheme-counter circle {
+    transition: stroke-dashoffset 1s ease-in-out;
+  }
+  
+  .quick-action-card:hover .card {
+    transform: translateY(-5px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+  }
+  
+  .quick-action-card .card {
+    transition: all 0.3s ease;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 767.98px) {
+    .scheme-counter {
+      width: 100px;
+      height: 100px;
+    }
+    
+    .scheme-counter svg {
+      width: 100px;
+      height: 100px;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Animate the counter circles on page load
+    const circles = document.querySelectorAll('.scheme-counter circle:nth-child(2)');
+    
+    setTimeout(() => {
+      circles.forEach(circle => {
+        const value = circle.getAttribute('stroke-dashoffset');
+        circle.style.transition = 'stroke-dashoffset 1.5s ease-in-out';
+        circle.setAttribute('stroke-dashoffset', value);
+      });
+    }, 300);
+    
+    // Add hover effects to quick action cards
+    const quickActionCards = document.querySelectorAll('.quick-action-card');
+    quickActionCards.forEach(card => {
+      card.addEventListener('mouseenter', function() {
+        const icon = this.querySelector('.icon-circle i');
+        icon.classList.add('animate__animated', 'animate__heartBeat');
+      });
+      
+      card.addEventListener('mouseleave', function() {
+        const icon = this.querySelector('.icon-circle i');
+        icon.classList.remove('animate__animated', 'animate__heartBeat');
+      });
+    });
+  });
+</script>
+{% endblock %}

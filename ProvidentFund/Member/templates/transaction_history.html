@@ -2,142 +2,651 @@
 {% block content %}
 
 <div class="main main-app p-3 p-lg-4">
-    <h1 class="mb-4">Transaction History</h1>
+  <div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-1">Transaction History</h4>
+        <p class="text-muted mb-0">View and filter your transaction records</p>
+      </div>
+      <div class="d-flex mt-3 mt-md-0">
+        <a href="{% url 'create_transaction' tenant_id=request.tenant.id staff_id=request.user.member.staff_id %}" class="btn btn-primary">
+          <i class="ri-add-line me-1"></i> New Transaction
+        </a>
+      </div>
+    </div>
 
-    <div class="d-md-flex align-items-center justify-content-between mb-4">
-        <div>
-            <h2 class="h5 mb-2">Member: {{ request.user.first_name }} {{ request.user.last_name }}</h2>
-            <p>Staff ID: {{ request.user.staff_number }}</p>
+    <!-- Member Info Card -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center">
+          <div class="avatar me-3">
+            {% if request.user.member.image %}
+              <img src="{{ request.user.member.image.url }}" alt="Profile" class="rounded-circle" width="50" height="50">
+            {% else %}
+              <div class="avatar-initial bg-primary  rounded-circle">
+                {{ request.user.first_name|first }}{{ request.user.last_name|first }}
+              </div>
+            {% endif %}
+          </div>
+          <div>
+            <h5 class="mb-1">{{ request.user.first_name }} {{ request.user.last_name }}</h5>
+            <p class="mb-0 text-muted small">Staff ID: {{ request.user.staff_id }}</p>
+          </div>
         </div>
-        <a href="{% url 'create_transaction' tenant_id=request.tenant.id staff_id=request.user.member.staff_id %}" class="btn btn-primary">Create New Transaction</a>
+      </div>
     </div>
 
-    <div class="mb-4">
-        <h3 class="h5 mb-2">Filters</h3>
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <label for="scheme" class="form-label">Scheme</label>
-                <select name="scheme_id" id="scheme" class="form-select">
-                    <option value="">All Schemes</option>
-                    {% for scheme in schemes %}
-                    <option value="{{ scheme.id }}">{{ scheme.name }}</option>
-                    {% endfor %}
+    <!-- Filters Card -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+      <div class="card-header  p-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+          <i class="ri-filter-3-line text-primary me-2"></i> Filter Transactions
+        </h5>
+        <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+          <i class="ri-arrow-up-s-line"></i>
+        </button>
+      </div>
+      <div class="collapse show" id="filterCollapse">
+        <div class="card-body p-3">
+          <form method="get" id="filterForm" class="row g-3">
+            <!-- Date Range Filter -->
+            <div class="col-md-6 col-lg-3">
+              <label for="date_from" class="form-label small fw-medium">Date From</label>
+              <div class="input-group">
+                <span class="input-group-text  border-end-0">
+                  <i class="ri-calendar-line text-primary"></i>
+                </span>
+                <input type="date" class="form-control border-start-0 ps-0" id="date_from" name="date_from" value="{{ request.GET.date_from }}">
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <label for="date_to" class="form-label small fw-medium">Date To</label>
+              <div class="input-group">
+                <span class="input-group-text  border-end-0">
+                  <i class="ri-calendar-line text-primary"></i>
+                </span>
+                <input type="date" class="form-control border-start-0 ps-0" id="date_to" name="date_to" value="{{ request.GET.date_to }}">
+              </div>
+            </div>
+            
+            <!-- Scheme Filter -->
+            <div class="col-md-6 col-lg-3">
+              <label for="scheme" class="form-label small fw-medium">Scheme</label>
+              <div class="input-group">
+                <span class="input-group-text  border-end-0">
+                  <i class="ri-bank-line text-primary"></i>
+                </span>
+                <select name="scheme_id" id="scheme" class="form-select border-start-0 ps-0">
+                  <option value="">All Schemes</option>
+                  {% for scheme in schemes %}
+                  <option value="{{ scheme.id }}" {% if request.GET.scheme_id == scheme.id|stringformat:"s" %}selected{% endif %}>{{ scheme.name }}</option>
+                  {% endfor %}
                 </select>
+              </div>
             </div>
-            <div class="col-md-3">
-                <label for="status" class="form-label">Status</label>
-                <select name="status" id="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="failed">Failed</option>
+            
+            <!-- Status Filter -->
+            <div class="col-md-6 col-lg-3">
+              <label for="status" class="form-label small fw-medium">Status</label>
+              <div class="input-group">
+                <span class="input-group-text  border-end-0">
+                  <i class="ri-checkbox-circle-line text-primary"></i>
+                </span>
+                <select name="status" id="status" class="form-select border-start-0 ps-0">
+                  <option value="">All Statuses</option>
+                  <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                  <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                  <option value="failed" {% if request.GET.status == 'failed' %}selected{% endif %}>Failed</option>
                 </select>
+              </div>
             </div>
-            <div class="col-md-3">
-                <label for="transaction_type" class="form-label">Transaction Type</label>
-                <select name="transaction_type" id="transaction_type" class="form-select">
-                    <option value="">All Types</option>
-                    <option value="Deposit">Deposit</option>
-                    <option value="Withdrawal">Withdrawal</option>
-                    <option value="Scheduled Payout">Scheduled Payout</option>
-                    <option value="General Payout">General Payout</option>
+            
+            <!-- Transaction Type Filter -->
+            <div class="col-md-6 col-lg-3">
+              <label for="transaction_type" class="form-label small fw-medium">Transaction Type</label>
+              <div class="input-group">
+                <span class="input-group-text  border-end-0">
+                  <i class="ri-exchange-funds-line text-primary"></i>
+                </span>
+                <select name="transaction_type" id="transaction_type" class="form-select border-start-0 ps-0">
+                  <option value="">All Types</option>
+                  <option value="Deposit" {% if request.GET.transaction_type == 'Deposit' %}selected{% endif %}>Deposit</option>
+                  <option value="Withdrawal" {% if request.GET.transaction_type == 'Withdrawal' %}selected{% endif %}>Withdrawal</option>
+                  <option value="Scheduled Payout" {% if request.GET.transaction_type == 'Scheduled Payout' %}selected{% endif %}>Scheduled Payout</option>
+                  <option value="General Payout" {% if request.GET.transaction_type == 'General Payout' %}selected{% endif %}>General Payout</option>
                 </select>
+              </div>
             </div>
-            <div class="col-md-3">
-                <label for="sort" class="form-label">Sort By</label>
-                <select name="sort" id="sort" class="form-select">
-                    <option value="-transaction_date">Date (Newest First)</option>
-                    <option value="transaction_date">Date (Oldest First)</option>
-                    <option value="-amount">Amount (Highest First)</option>
-                    <option value="amount">Amount (Lowest First)</option>
-                </select>
+            
+            <!-- Search Filter -->
+            <div class="col-md-6 col-lg-3">
+              <label for="search" class="form-label small fw-medium">Search</label>
+              <div class="input-group">
+                <span class="input-group-text  border-end-0">
+                  <i class="ri-search-line text-primary"></i>
+                </span>
+                <input type="text" class="form-control border-start-0 ps-0" id="search" name="search" placeholder="Transaction ID, etc." value="{{ request.GET.search }}">
+              </div>
             </div>
-
-            <div class="col-md-12">
-                <button type="submit" class="btn btn-primary">Apply Filters</button>
+            
+            <!-- Filter Buttons -->
+            <div class="col-12 d-flex gap-2 mt-4">
+              <button type="submit" class="btn btn-primary">
+                <i class="ri-filter-3-line me-1"></i> Apply Filters
+              </button>
+              <button type="button" id="resetFilters" class="btn btn-outline-secondary">
+                <i class="ri-refresh-line me-1"></i> Reset
+              </button>
             </div>
-        </form>
+          </form>
+        </div>
+      </div>
     </div>
 
-    <div class="table-responsive">
-        {% if transactions %}
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Transaction ID</th>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Type</th>
-                    <th>Payment Method</th>
-                    <th>Status</th>
-                </tr>
+    <!-- Transactions Table Card -->
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header  p-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+          <i class="ri-exchange-funds-line text-primary me-2"></i> Transactions
+        </h5>
+        <div class="d-flex align-items-center">
+          <span class="badge bg-primary-subtle text-primary rounded-pill me-2">
+            {% if is_paginated %}
+            Total: {{ page_obj.paginator.count }}
+            {% else %}
+            Total: {{ transactions.count }}
+            {% endif %}
+
+          </span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          {% if transactions %}
+          <table class="table table-hover mb-0">
+            <thead class="table">
+              <tr>
+                <th class="ps-3">Transaction ID</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Type</th>
+                <th>Payment Method</th>
+                <th>Status</th>
+                {% comment %} <th class="pe-3 text-end">Actions</th> {% endcomment %}
+              </tr>
             </thead>
             <tbody>
-                {% for transaction in transactions %}
-                    <tr>
-                        <td>{{ transaction.id|default:"-" }}</td>
-                        <td>
-                            {% if transaction.transaction_date %}
-                                {{ transaction.transaction_date|date:"F d, Y, h:i A" }}
-                            {% else %}
-                                {{ transaction.request_date|date:"F d, Y, h:i A" }}
-                            {% endif %}
-                        </td>
-                        <td>{{ transaction.amount|floatformat:2 }}</td>
-                        <td>
-                            {% if transaction.transaction_type %}
-                                {{ transaction.transaction_type }}
-                            {% else %}
-                                Withdrawal
-                            {% endif %}
-                        </td>
-                        <td>{{ transaction.payment_method|default:"N/A" }}</td>
-                        <td>
-                            {% if transaction.status %}
-                                {{ transaction.status|title }}
-                            {% else %}
-                                {% if transaction.approved %}
-                                    Approved
-                                {% else %}
-                                    Pending Approval
-                                {% endif %}
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center">No transactions found.</td>
-                    </tr>
-                {% endfor %}
+              {% for transaction in transactions %}
+                <tr>
+                  <td class="ps-3">
+                    <span class="fw-medium">{{ transaction.id|default:"-" }}</span>
+                  </td>
+                  <td>
+                    {% if transaction.transaction_date %}
+                      <div>{{ transaction.transaction_date|date:"M d, Y" }}</div>
+                      <small class="text-muted">{{ transaction.transaction_date|date:"h:i A" }}</small>
+                    {% else %}
+                      <div>{{ transaction.request_date|date:"M d, Y" }}</div>
+                      <small class="text-muted">{{ transaction.request_date|date:"h:i A" }}</small>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="fw-medium {% if transaction.transaction_type == 'Deposit' %}text-success{% elif transaction.transaction_type == 'Withdrawal' %}text-danger{% else %}text-dark{% endif %}">
+                      {% if transaction.transaction_type == 'Withdrawal' %}-{% endif %}
+                      GHS {{ transaction.amount|floatformat:2 }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if transaction.transaction_type == 'Deposit' %}
+                      <span class="badge bg-success-subtle text-success">
+                        <i class="ri-arrow-up-circle-line me-1"></i> Deposit
+                      </span>
+                    {% elif transaction.transaction_type == 'Withdrawal' %}
+                      <span class="badge bg-danger-subtle text-danger">
+                        <i class="ri-arrow-down-circle-line me-1"></i> Withdrawal
+                      </span>
+                    {% elif transaction.transaction_type == 'Scheduled Payout' %}
+                      <span class="badge bg-info-subtle text-info">
+                        <i class="ri-calendar-check-line me-1"></i> Scheduled
+                      </span>
+                    {% elif transaction.transaction_type == 'General Payout' %}
+                      <span class="badge bg-warning-subtle text-warning">
+                        <i class="ri-funds-line me-1"></i> Payout
+                      </span>
+                    {% else %}
+                      <span class="badge bg-secondary-subtle text-secondary">
+                        <i class="ri-exchange-line me-1"></i> {{ transaction.transaction_type|default:"Withdrawal" }}
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if transaction.payment_method %}
+                      {{ transaction.payment_method }}
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if transaction.status == 'completed' or transaction.approved %}
+                      <span class="badge bg-success">Completed</span>
+                    {% elif transaction.status == 'failed' %}
+                      <span class="badge bg-danger">Failed</span>
+                    {% elif transaction.status == 'pending' or not transaction.approved %}
+                      <span class="badge bg-warning">Pending</span>
+                    {% else %}
+                      <span class="badge bg-secondary">{{ transaction.status|title|default:"Pending" }}</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-5">
+                    <div class="empty-state">
+                      <i class="ri-inbox-line text-muted" style="font-size: 3rem;"></i>
+                      <h6 class="mt-3">No transactions found</h6>
+                      <p class="text-muted small">Try adjusting your filters or create a new transaction</p>
+                      <a href="{% url 'create_transaction' tenant_id=request.tenant.id staff_id=request.user.member.staff_id %}" class="btn btn-sm btn-primary mt-2">
+                        <i class="ri-add-line me-1"></i> New Transaction
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
             </tbody>
-        </table>
-    </div>
-
-    {% if is_paginated %}
-        <nav aria-label="Transaction history pagination" class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% if transactions.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1{% if request.GET.scheme_id %}&scheme_id={{ request.GET.scheme_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" aria-label="First page">&laquo; First</a>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Enhanced Pagination -->
+      {% if is_paginated %}
+      <div class="card-footer bg-white p-3 border-top">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+          <div class="mb-3 mb-md-0">
+            <span class="text-muted small">
+              Showing {{ transactions.start_index }} to {{ transactions.end_index }} of {{ transactions.paginator.count }} entries
+            </span>
+          </div>
+          
+          <nav aria-label="Transaction history pagination">
+            <ul class="pagination pagination-sm mb-0">
+              <!-- First Page -->
+              <li class="page-item {% if not transactions.has_previous %}disabled{% endif %}">
+                <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First page">
+                  <i class="ri-arrow-left-double-line"></i>
+                </a>
+              </li>
+              
+              <!-- Previous Page -->
+              <li class="page-item {% if not transactions.has_previous %}disabled{% endif %}">
+                <a class="page-link" href="?page={% if transactions.has_previous %}{{ transactions.previous_page_number }}{% else %}1{% endif %}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous page">
+                  <i class="ri-arrow-left-s-line"></i>
+                </a>
+              </li>
+              
+              <!-- Page Numbers -->
+            {% if is_paginated %}
+              {% with ''|center:page_obj.paginator.num_pages as range %}
+                <!-- Your pagination logic here -->
+              {% endwith %}
+            {% endif %}
+            
+              {% for _ in range %}
+                {% with forloop.counter as page_num %}
+                  {% if page_num == transactions.number %}
+                    <li class="page-item active" aria-current="page">
+                      <span class="page-link">{{ page_num }}</span>
                     </li>
+                  {% elif page_num > transactions.number|add:"-3" and page_num < transactions.number|add:"3" %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ transactions.previous_page_number }}{% if request.GET.scheme_id %}&scheme_id={{ request.GET.scheme_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" aria-label="Previous page">Previous</a>
+                      <a class="page-link" href="?page={{ page_num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ page_num }}</a>
                     </li>
-                {% endif %}
-                <li class="page-item active" aria-current="page">
-                    <span class="page-link">Page {{ transactions.number }} of {{ transactions.paginator.num_pages }}</span>
-                </li>
-                {% if transactions.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ transactions.next_page_number }}{% if request.GET.scheme_id %}&scheme_id={{ request.GET.scheme_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" aria-label="Next page">Next</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ transactions.paginator.num_pages }}{% if request.GET.scheme_id %}&scheme_id={{ request.GET.scheme_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" aria-label="Last page">Last &raquo;</a>
-                    </li>
-                {% endif %}
+                  {% endif %}
+                {% endwith %}
+              {% endfor %}
+            
+            {% endif %}
+              
+              <!-- Next Page -->
+              <li class="page-item {% if not transactions.has_next %}disabled{% endif %}">
+                <a class="page-link" href="?page={% if transactions.has_next %}{{ transactions.next_page_number }}{% else %}{{ transactions.paginator.num_pages }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next page">
+                  <i class="ri-arrow-right-s-line"></i>
+                </a>
+              </li>
+              
+              <!-- Last Page -->
+              <li class="page-item {% if not transactions.has_next %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ transactions.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last page">
+                  <i class="ri-arrow-right-double-line"></i>
+                </a>
+              </li>
             </ul>
-        </nav>
-    {% endif %}
+          </nav>
+          
+          <!-- Page Size Selector -->
+          <div class="d-none d-md-block">
+            <form id="pageSizeForm" class="d-flex align-items-center">
+              <label for="pageSize" class="text-muted small me-2">Show:</label>
+              <select id="pageSize" name="page_size" class="form-select form-select-sm" style="width: 70px;">
+                <option value="10" {% if request.GET.page_size == '10' or not request.GET.page_size %}selected{% endif %}>10</option>
+                <option value="25" {% if request.GET.page_size == '25' %}selected{% endif %}>25</option>
+                <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+              </select>
+              {% for key, value in request.GET.items %}
+                {% if key != 'page_size' and key != 'page' %}
+                  <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+              {% endfor %}
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
-{% endif %}
+
+<!-- Transaction Details Modal -->
+<div class="modal fade" id="transactionDetailsModal" tabindex="-1" aria-labelledby="transactionDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title" id="transactionDetailsModalLabel">Transaction Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div id="transactionStatusIcon" class="icon-circle mx-auto mb-3">
+            <i class="ri-checkbox-circle-line fs-1"></i>
+          </div>
+          <h5 id="transactionAmount" class="mb-1">GHS 0.00</h5>
+          <p id="transactionType" class="text-muted mb-0">Transaction</p>
+        </div>
+        
+        <div class="transaction-details">
+          <div class="detail-item d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted">Transaction ID</span>
+            <span id="detailTransactionId" class="fw-medium">-</span>
+          </div>
+          <div class="detail-item d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted">Date & Time</span>
+            <span id="detailDateTime" class="fw-medium">-</span>
+          </div>
+          <div class="detail-item d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted">Scheme</span>
+            <span id="detailScheme" class="fw-medium">-</span>
+          </div>
+          <div class="detail-item d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted">Payment Method</span>
+            <span id="detailPaymentMethod" class="fw-medium">-</span>
+          </div>
+          <div class="detail-item d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted">Status</span>
+            <span id="detailStatus" class="fw-medium">-</span>
+          </div>
+          <div class="detail-item d-flex justify-content-between py-2">
+            <span class="text-muted">Reference</span>
+            <span id="detailReference" class="fw-medium">-</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="downloadReceipt">Download Receipt</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+      const filterForm = document.getElementById('filterForm');
+  
+      filterForm.addEventListener('change', function (event) {
+          event.preventDefault();
+  
+          const formData = new FormData(filterForm);
+          const params = new URLSearchParams(formData).toString();
+  
+          fetch(window.location.pathname + "?" + params, {
+              method: "GET",
+              headers: {
+                  "X-Requested-With": "XMLHttpRequest"
+              }
+          })
+          .then(response => response.json())
+          .then(data => {
+              updateTransactionTable(data.transactions);
+          })
+          .catch(error => console.error('Error fetching transactions:', error));
+      });
+  
+      function updateTransactionTable(transactions) {
+          const tbody = document.querySelector("table tbody");
+          tbody.innerHTML = "";
+  
+          if (transactions.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5">No transactions found</td></tr>`;
+              return;
+          }
+  
+          transactions.forEach(transaction => {
+              const row = `
+                  <tr>
+                      <td class="ps-3"><span class="fw-medium">${transaction.id}</span></td>
+                      <td><div>${transaction.date}</div></td>
+                      <td><span class="fw-medium text-dark">${transaction.amount}</span></td>
+                      <td><span class="badge bg-secondary">${transaction.type}</span></td>
+                      <td>${transaction.payment_method}</td>
+                      <td><span class="badge bg-${getStatusClass(transaction.status)}">${transaction.status}</span></td>
+                  </tr>`;
+              tbody.innerHTML += row;
+          }
+      }
+  
+      function getStatusClass(status) {
+          switch (status.toLowerCase()) {
+              case "completed": return "bg-success";
+              case "pending": return "bg-warning";
+              case "failed": return "bg-danger";
+              default: return "bg-secondary";
+          }
+      }
+  });
+</script>
+
+<style>
+  /* Custom styles for transaction history page */
+  .icon-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1);
+  }
+  
+  .bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1);
+  }
+  
+  .bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1);
+  }
+  
+  .bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1);
+  }
+  
+  .bg-info-subtle {
+    background-color: rgba(13, 202, 240, 0.1);
+  }
+  
+  .bg-secondary-subtle {
+    background-color: rgba(108, 117, 125, 0.1);
+  }
+  
+  .avatar-initial {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+  
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 767.98px) {
+    .pagination {
+      justify-content: center;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Reset filters button
+    document.getElementById('resetFilters').addEventListener('click', function() {
+      // Clear all form fields except csrf token
+      const form = document.getElementById('filterForm');
+      const inputs = form.querySelectorAll('input, select');
+      inputs.forEach(input => {
+        if (input.name !== 'csrfmiddlewaretoken') {
+          if (input.type === 'select-one') {
+            input.selectedIndex = 0;
+          } else {
+            input.value = '';
+          }
+        }
+      });
+      
+      // Submit the form
+      form.submit();
+    });
+    
+    // Page size selector
+    document.getElementById('pageSize').addEventListener('change', function() {
+      document.getElementById('pageSizeForm').submit();
+    });
+    
+    // Refresh table button
+    document.getElementById('refreshTable').addEventListener('click', function(e) {
+      e.preventDefault();
+      window.location.reload();
+    });
+    
+    // Print table button
+    document.getElementById('printTable').addEventListener('click', function(e) {
+      e.preventDefault();
+      window.print();
+    });
+    
+    // Export data button
+    document.getElementById('exportData').addEventListener('click', function(e) {
+      e.preventDefault();
+      alert('Export functionality would be implemented here');
+      // In a real implementation, this would trigger a download of CSV/Excel file
+    });
+    
+    // Transaction details modal
+    const viewButtons = document.querySelectorAll('.view-details');
+    viewButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const transactionId = this.getAttribute('data-transaction-id');
+        
+        // In a real implementation, you would fetch transaction details from the server
+        // For now, we'll just show the modal with placeholder data
+        const modal = new bootstrap.Modal(document.getElementById('transactionDetailsModal'));
+        
+        // Find the transaction row data
+        const row = this.closest('tr');
+        const amount = row.querySelector('td:nth-child(3)').textContent.trim();
+        const type = row.querySelector('td:nth-child(4) .badge').textContent.trim();
+        const status = row.querySelector('td:nth-child(6) .badge').textContent.trim();
+        const date = row.querySelector('td:nth-child(2) div').textContent.trim();
+        const time = row.querySelector('td:nth-child(2) small').textContent.trim();
+        const paymentMethod = row.querySelector('td:nth-child(5)').textContent.trim();
+        
+        // Update modal content
+        document.getElementById('transactionAmount').textContent = amount;
+        document.getElementById('transactionType').textContent = type;
+        document.getElementById('detailTransactionId').textContent = transactionId;
+        document.getElementById('detailDateTime').textContent = `${date} ${time}`;
+        document.getElementById('detailScheme').textContent = 'Scheme Name'; // This would come from server
+        document.getElementById('detailPaymentMethod').textContent = paymentMethod;
+        document.getElementById('detailStatus').textContent = status;
+        document.getElementById('detailReference').textContent = `REF-${transactionId}`; // This would come from server
+        
+        // Update status icon
+        const statusIcon = document.getElementById('transactionStatusIcon');
+        if (status.toLowerCase() === 'completed') {
+          statusIcon.className = 'icon-circle mx-auto mb-3 bg-success-subtle text-success';
+          statusIcon.innerHTML = '<i class="ri-checkbox-circle-line fs-1"></i>';
+        } else if (status.toLowerCase() === 'pending') {
+          statusIcon.className = 'icon-circle mx-auto mb-3 bg-warning-subtle text-warning';
+          statusIcon.innerHTML = '<i class="ri-time-line fs-1"></i>';
+        } else if (status.toLowerCase() === 'failed') {
+          statusIcon.className = 'icon-circle mx-auto mb-3 bg-danger-subtle text-danger';
+          statusIcon.innerHTML = '<i class="ri-close-circle-line fs-1"></i>';
+        } else {
+          statusIcon.className = 'icon-circle mx-auto mb-3 bg-secondary-subtle text-secondary';
+          statusIcon.innerHTML = '<i class="ri-question-line fs-1"></i>';
+        }
+        
+        modal.show();
+      });
+    });
+    
+    // Download receipt button
+    document.getElementById('downloadReceipt').addEventListener('click', function() {
+      alert('Receipt download functionality would be implemented here');
+      // In a real implementation, this would generate and download a PDF receipt
+    });
+    
+    // Date range validation
+    const dateFrom = document.getElementById('date_from');
+    const dateTo = document.getElementById('date_to');
+    
+    dateFrom.addEventListener('change', function() {
+      if (dateTo.value && this.value > dateTo.value) {
+        alert('Date From cannot be later than Date To');
+        this.value = '';
+      }
+    });
+    
+    dateTo.addEventListener('change', function() {
+      if (dateFrom.value && this.value < dateFrom.value) {
+        alert('Date To cannot be earlier than Date From');
+        this.value = '';
+      }
+    });
+  });
+</script>
+
 {% endblock %}
