@@ -87,7 +87,7 @@ class CreateScheme(CreateView):
 # Scheme Settings/Configuration
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Scheme Supervisor']), name='dispatch')
+@method_decorator(role_required(role=['Scheme Supervisor','Scheme Analyst']), name='dispatch')
 class SchemeSettingsView(UpdateView):
     model = SchemeSettings
     fields = ('contribution_day','grace_period_contribution','delayed_interest_rate','period_of_delayed_calculation') #include all fields from model

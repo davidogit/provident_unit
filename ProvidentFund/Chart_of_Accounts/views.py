@@ -7,7 +7,7 @@ from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount,
 from MultiScheme.models import InvestmentScheme
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
+from django.db.models import Sum,Q
 from django.contrib.auth.decorators import login_required
 from Member.decorators import tenant_required
 from Admin.decorators import role_required
@@ -841,3 +841,48 @@ class FetchBankDetail(TemplateView):
                 'status':'error',
                 'message':'Bank account not found.'
             })
+
+
+# SEARCH FOR SPECIFIC BANK ACCOUNT
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
+class BankAccountSearchView(View):
+    def get(self,request,*args,**kwargs):
+        tenant = self.request.tenant
+        search_term = self.request.GET.get('search_term','')
+
+
+        if not search_term:
+            return JsonResponse({
+                'status':'error',
+                'message':'Search term is required.'
+            },status=400)
+        
+        try:
+            banks = BankAccount.objects.filter(
+                Q(bank_name__icontains=search_term)|
+                Q(account_number__icontains=search_term),
+                tenant=tenant,
+            )
+            banks_list = [
+                {   'id':bank.id,
+                    'name':bank.bank_name,
+                    'branch':bank.branch,
+                    'account_number':bank.account_number,
+                    'account_holder_name':bank.account_holder_name,
+                    'account_type':bank.account_type,
+                    'parent_account':bank.parent_Account.name if bank.parent_Account else None,
+                    'currency':bank.currency
+                } for bank in banks
+            ]
+            
+            return JsonResponse({
+                'status':'success',
+                'banks':banks_list
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':'Bank Account not found.'
+            },status=400)

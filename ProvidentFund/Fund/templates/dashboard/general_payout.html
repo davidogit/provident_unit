@@ -3,65 +3,231 @@
 <title>Withdrawal Request Approval</title>
 {% endblock %}
 {% block header %}
-<h5 class="fw-bold"><i class="bi bi-journal-medical me-2"></i>Withdrawal Request Approval</h5>
+<h5 class="fw-bold"><i class="bi bi-cash-coin me-2"></i>Withdrawal Request Approval</h5>
 {% endblock %}
-
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
-        <div class="col-12">
-            <div class="container">
-                <div class="col-12 d-flex justify-content-between align-items-center mb-3">
-                    <div class="col-6 col-md-3 col-lg-8 d-flex flex-row justify-content-start align-items-center">
-                        <!-- Scheme Select -->
-                        <div class="form-floating me-2">
-                            <select class="form-select" name="scheme" id="scheme" aria-placeholder="">
-                                <option value="">--select--</option>
-                                {% for scheme in schemes %}
-                                <option value="{{ scheme.id }}">{{ scheme }}</option>
-                                {% endfor %}
-                            </select>
-                            <label for="scheme">Scheme</label>
-                        </div>
-
-                        
+    <div class="container-fluid">
+        <!-- Scheme Selection Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-6">
+                        <label for="scheme" class="form-label fw-medium mb-1">Select Scheme</label>
+                        <select class="form-select" name="scheme" id="scheme">
+                            <option value="">-- Select a scheme --</option>
+                            {% for scheme in schemes %}
+                            <option value="{{ scheme.id }}">{{ scheme }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="col-6 col-md-3 col-lg-4 d-flex justify-content-end align-items-center">
-                        <!-- Payout button -->
-                        <button type="button" class="btn btn-outline-secondary btn-lg" id="payout">Approve</button>
+                    <div class="col-md-3">
+                        <div id="requestCount" class="d-flex align-items-center h-100 mt-4">
+                            <span class="badge bg-primary rounded-pill requests-count">0 requests</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex justify-content-md-end align-items-center h-100 mt-4">
+                            <button type="button" class="btn btn-success" id="payout" disabled>
+                                <i class="bi bi-check-circle me-1"></i> Approve Selected
+                            </button>
+                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-
-                <!-- Table to hold list of members payments to be processed -->
-                <div class="table-responsive overflow-auto" style="height: 500px;">
-                    <table class="table table-bordered table-striped" id="members_table">
-                        <thead class="thead-light text-center">
-                            <th>
-                                <input type="checkbox" name="select_all" id="select_all">
-                            </th>
-                            <th>Staff Number</th>
-                            <th>Name</th>
-                            <th>Withdrawal Amount</th>
-                            <th>Request Date</th>
-                            <th>Reference Number</th>
-                            <th>Last Payment Date</th>
+        <!-- Withdrawal Requests Table Card -->
+        <div class="card shadow-sm">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Pending Withdrawal Requests</h6>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="select_all">
+                    <label class="form-check-label" for="select_all">Select All</label>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="members_table">
+                        <thead>
+                            <tr>
+                                <th width="5%">
+                                    <div class="form-check ms-2">
+                                        <span class="d-none">Select</span>
+                                    </div>
+                                </th>
+                                <th width="10%">Staff Number</th>
+                                <th width="20%">Name</th>
+                                <th width="15%">Amount</th>
+                                <th width="15%">Request Date</th>
+                                <th width="15%">Reference</th>
+                                <th width="20%">Last Payment</th>
+                            </tr>
                         </thead>
                         <tbody>
-                            <!-- Data Populated Dynamically -->
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="py-5">
+                                        <i class="bi bi-filter-circle fs-1 text-muted"></i>
+                                        <p class="mt-2">Please select a scheme to view withdrawal requests</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
+                </div>
+                
+                <!-- Loading State -->
+                <div id="loadingState" class="text-center py-5 d-none">
+                    <div class="py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3">Loading withdrawal requests...</p>
+                    </div>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="emptyState" class="text-center py-5 d-none">
+                    <div class="py-5">
+                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                        <h5 class="mt-3">No withdrawal requests found</h5>
+                        <p class="text-muted">There are no pending withdrawal requests for this scheme.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Table Footer -->
+            <div class="card-footer border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        <span id="selectedCount">0</span> of <span id="totalCount">0</span> requests selected
+                    </div>
+                    <button type="button" class="btn btn-success" id="mobileApproveBtn" disabled>
+                        <i class="bi bi-check-circle me-1"></i> Approve (<span id="mobileSelectedCount">0</span>)
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Script -->
- <script>
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Table Styles */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Requests count badge */
+    .requests-count {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Highlight selected rows */
+    tr.selected {
+        background-color: rgba(13, 110, 253, 0.05) !important;
+    }
+    
+    /* Mobile approve button - only show on small screens */
+    #mobileApproveBtn {
+        display: none;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+        #payout {
+            display: none;
+        }
+        
+        #mobileApproveBtn {
+            display: block;
+        }
+        
+        .table th, .table td {
+            padding: 0.5rem;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+
+<script>
     // Function to format and display a datetime string
-    function formatDateTime(dateString, elementId) {
+    function formatDateTime(dateString) {
         if (!dateString) {
             return 'N/A';
         }
@@ -75,42 +241,110 @@
 
         // Use toLocaleString() to format the date into a readable format
         const formattedDate = date.toLocaleString('en-US', { 
-            //weekday: 'long', 
             year: 'numeric', 
             month: 'long', 
             day: 'numeric', 
             hour: 'numeric', 
-            minute: 'numeric', 
-            //second: 'numeric',
-            //timeZoneName: 'short'
+            minute: 'numeric'
         });
 
         //return the formatted date
         return formattedDate;
     }
 
-
     $(document).ready(function(){
+        // Initialize toastr options
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-bottom-right",
+            timeOut: 5000,
+            extendedTimeOut: 1000,
+            preventDuplicates: true
+        };
         
+        // Function to update selected count
+        function updateSelectedCount() {
+            const selectedCount = $('input[name=staff_id]:checked').length;
+            const totalCount = $('input[name=staff_id]').length;
+            
+            $('#selectedCount, #mobileSelectedCount').text(selectedCount);
+            $('#totalCount').text(totalCount);
+            
+            // Enable/disable approve buttons based on selection
+            if (selectedCount > 0) {
+                $('#payout, #mobileApproveBtn').prop('disabled', false);
+            } else {
+                $('#payout, #mobileApproveBtn').prop('disabled', true);
+            }
+        }
 
         // Select all checkbox
         $('#select_all').click(function(){
-            if(this.checked){
-                $('input[name=staff_id]').each(function(){
-                    this.checked = true;
-                });
-            }else{
-                $('input[name=staff_id]').each(function(){
-                    this.checked = false;
-                });
+            const isChecked = this.checked;
+            
+            $('input[name=staff_id]').each(function(){
+                this.checked = isChecked;
+                
+                // Toggle selected class on parent row
+                if (isChecked) {
+                    $(this).closest('tr').addClass('selected');
+                } else {
+                    $(this).closest('tr').removeClass('selected');
+                }
+            });
+            
+            updateSelectedCount();
+        });
+        
+        // Handle individual checkbox clicks (delegated event)
+        $(document).on('change', 'input[name=staff_id]', function() {
+            // Toggle selected class on parent row
+            if (this.checked) {
+                $(this).closest('tr').addClass('selected');
+            } else {
+                $(this).closest('tr').removeClass('selected');
+                // Uncheck "select all" if any checkbox is unchecked
+                $('#select_all').prop('checked', false);
             }
+            
+            // Check if all checkboxes are checked
+            const allChecked = $('input[name=staff_id]').length === $('input[name=staff_id]:checked').length;
+            $('#select_all').prop('checked', allChecked);
+            
+            updateSelectedCount();
         });
 
-        //Fetch Members 
+        // Fetch Members 
         $('#scheme').on('change', function(e){
             e.preventDefault();
             var schemeId = $(this).val();
+            
+            if (!schemeId) {
+                // Reset table if no scheme selected
+                $('#members_table tbody').html(`
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="py-5">
+                                <i class="bi bi-filter-circle fs-1 text-muted"></i>
+                                <p class="mt-2">Please select a scheme to view withdrawal requests</p>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+                $('.requests-count').text('0 requests');
+                $('#selectedCount, #totalCount, #mobileSelectedCount').text('0');
+                $('#payout, #mobileApproveBtn').prop('disabled', true);
+                return;
+            }
+            
+            // Show loading state
+            $('#members_table tbody').empty();
+            $('#loadingState').removeClass('d-none');
+            $('#emptyState').addClass('d-none');
+            
             var tenantId = '{{ request.tenant.id }}';
+            
             $.ajax({
                 url:`/${tenantId}/fund/fetch-members/`,
                 type: 'GET',
@@ -118,106 +352,194 @@
                     'scheme_id': schemeId
                 },
                 success: function(response){
-                    console.log(response);
+                    // Hide loading state
+                    $('#loadingState').addClass('d-none');
+                    
                     if(response.status === 'success'){
-                        var members = response.members
+                        var members = response.members;
                         var table = $('#members_table tbody');
 
-                        //clear existing data
+                        // Clear existing data
                         table.empty();
 
-                        //If no records found
+                        // If no records found
                         if(members.length === 0){
-                            var row = `
-                                <tr>
-                                    <td colspan="7" class="text-center">No records found</td>
-                                </tr>
-                            `;
-                            table.append(row);
+                            $('#emptyState').removeClass('d-none');
+                            $('.requests-count').text('0 requests');
+                            $('#selectedCount, #totalCount, #mobileSelectedCount').text('0');
+                            $('#payout, #mobileApproveBtn').prop('disabled', true);
                             return;
                         }
 
-                        //Populate with new data
-                        members.forEach(member => {
+                        // Update requests count
+                        $('.requests-count').text(`${members.length} ${members.length === 1 ? 'request' : 'requests'}`);
+                        $('#totalCount').text(members.length);
+                        $('#selectedCount, #mobileSelectedCount').text('0');
+
+                        // Populate with new data
+                        members.forEach((member, index) => {
                             var row = `
-                                <tr class="text-center">
-                                <td>
-                                    <input type="checkbox" name="staff_id" id="staff_id" value="${ member.staff_id }">
-
-                                    <input type="checkbox" name="ref_number" id="ref_number" value="${ member.id }" hidden>
-                                </td>
-                                <td>${ member.staff_number }</td>
-                                <td>${ member.first_name } ${ member.last_name }</td>
-                                <td>${ member.amount }</td>
-                                <td>${ formatDateTime(member.request_date) }</td>
-                                <td>${ member.id }</td>
-                                <td>${ formatDateTime(member.last_withdrawal_date) }</td>
-                            </tr>
+                                <tr>
+                                    <td>
+                                        <div class="form-check ms-2">
+                                            <input class="form-check-input" type="checkbox" name="staff_id" id="staff_${member.staff_id}" value="${member.staff_id}">
+                                            <input type="hidden" name="ref_number" value="${member.id}">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium">${member.staff_number}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle text-primary me-2">
+                                                ${member.first_name.charAt(0)}
+                                            </div>
+                                            <div>${member.first_name} ${member.last_name}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium">${member.amount}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">${formatDateTime(member.request_date)}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary-soft text-primary">${member.id}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">${formatDateTime(member.last_withdrawal_date)}</span>
+                                    </td>
+                                </tr>
                             `;
-                            console.log(row);
-                            //Append row to table
+                            
+                            // Append row to table
                             table.append(row);
-
                         });
-
-                    }else{
-                        alert(response.message);
+                        
+                        // Reset select all checkbox
+                        $('#select_all').prop('checked', false);
+                        
+                        // Disable approve buttons initially
+                        $('#payout, #mobileApproveBtn').prop('disabled', true);
+                        
+                    } else {
+                        // Show empty state with error message
+                        $('#emptyState').removeClass('d-none').find('h5').text('Error Loading Data');
+                        $('#emptyState').find('p').text(response.message || 'Failed to load withdrawal requests');
+                        
+                        toastr.error(response.message || 'Failed to load withdrawal requests', 'Error');
                     }
                 },
                 error: function(error){
+                    // Hide loading state and show error
+                    $('#loadingState').addClass('d-none');
+                    $('#emptyState').removeClass('d-none').find('h5').text('Error Loading Data');
+                    $('#emptyState').find('p').text('Failed to load withdrawal requests. Please try again.');
+                    
+                    toastr.error('Failed to load withdrawal requests', 'Error');
                     console.log(error);
                 }
             }); 
         });
 
-
-        //Payout Function to post data to the server
-        $('#payout').on('click', function(e){
+        // Payout Function to post data to the server
+        $('#payout, #mobileApproveBtn').on('click', function(e){
             e.preventDefault();
+            
             var tenantId = '{{ request.tenant.id }}';
             var schemeId = $('#scheme').val();
             var staffIds = [];
             var ref_ids = [];
 
+            // Get all checked staff IDs and reference IDs
             $('input[name=staff_id]:checked').each(function(){
                 staffIds.push($(this).val());
-                // append corresponding ref number to the ref_ids array
-                ref_ids.push($(this).next().val());
+                // Get the corresponding ref number from the hidden input
+                ref_ids.push($(this).next('input[name=ref_number]').val());
             });
 
-            console.log(staffIds, ref_ids);
-            //Check if staff ids are empty
+            // Check if staff ids are empty
             if(staffIds.length === 0){
-                alert('Please select at least one member');
+                toastr.warning('Please select at least one member', 'No Selection');
                 return;
             }
-            //Post data to the server
-            $.ajax({
-                url:``,
-                type: 'POST',
-                //traditional:true, //This is to allow array to be sent to the server
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                data: {
-                    'scheme_id': schemeId,
-                    'staff_ids': staffIds,
-                    'ref_ids': ref_ids,
-                },
-                success: function(response){
-                    console.log(response);
-                    if(response.status === 'success'){
-                        alert(response.message);
-                        window.location.reload();
-                    }else{
-                        alert(response.message);
-                    }
-                },
-                error: function(error){
-                    console.log(error);
+            
+            // Confirm with SweetAlert
+            Swal.fire({
+                title: 'Approve Withdrawals',
+                text: `Are you sure you want to approve ${staffIds.length} withdrawal request(s)?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, approve them!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show processing state
+                    const button = $(this);
+                    button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+                    button.prop('disabled', true);
+                    $('#payout, #mobileApproveBtn').prop('disabled', true);
+                    
+                    // Post data to the server
+                    $.ajax({
+                        url: '',
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        data: {
+                            'scheme_id': schemeId,
+                            'staff_ids': staffIds,
+                            'ref_ids': ref_ids,
+                        },
+                        success: function(response){
+                            if(response.status === 'success'){
+                                // Show success message
+                                Swal.fire({
+                                    title: 'Success!',
+                                    text: response.message,
+                                    icon: 'success',
+                                    confirmButtonColor: '#198754'
+                                }).then(() => {
+                                    // Reload the page
+                                    window.location.reload();
+                                });
+                            } else {
+                                // Show error message
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: response.message,
+                                    icon: 'error',
+                                    confirmButtonColor: '#dc3545'
+                                });
+                                
+                                // Reset button state
+                                button.html('<i class="bi bi-check-circle me-1"></i> Approve Selected');
+                                button.prop('disabled', false);
+                                updateSelectedCount();
+                            }
+                        },
+                        error: function(error){
+                            // Show error message
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Failed to process withdrawal requests',
+                                icon: 'error',
+                                confirmButtonColor: '#dc3545'
+                            });
+                            
+                            // Reset button state
+                            button.html('<i class="bi bi-check-circle me-1"></i> Approve Selected');
+                            button.prop('disabled', false);
+                            updateSelectedCount();
+                            
+                            console.log(error);
+                        }
+                    });
                 }
             });
-        })
+        });
     });
- </script>
+</script>
 {% endblock %}

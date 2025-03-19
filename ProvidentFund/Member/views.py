@@ -137,7 +137,7 @@ def loginView(request, tenant_id):
 
         if user is not None:
             # Redirect anyone with admin priviledge
-            if user.groups.filter(name='Admin'):
+            if user.groups.filter(name='Admin').exists():
                 return redirect('invalid_login_details', tenant_id=tenant_id)
 
             if user is not None:

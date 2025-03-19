@@ -5,145 +5,446 @@
 {% endblock %}
 
 {% block header %}
-<h5 class="fw-bold"><i class="bi bi-journal-medical me-2"></i>Batch Withdrawal Payment</h5>
+<h5 class="fw-bold"><i class="bi bi-credit-card me-2"></i>Batch Withdrawal Payment</h5>
 {% endblock %}
 
 {% block content %}
-
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
-        <div class="col-12">
-            <div class="container">
-                <div class="col-12 d-flex justify-content-between align-items-center mb-3">
-                    <!-- Payment Mode Select -->
-                    <div class="col-3 form-floating  me-2">
-                        <select class="form-select" name="scheme" id="mode_of_payment" aria-placeholder="">
-                            <option value="">--select--</option>
+    <div class="container-fluid">
+        <!-- Payment Options Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <h6 class="fw-bold mb-2">Payment Details</h6>
+                        <p class="text-muted small mb-0">Select payment method and batch to process</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="mode_of_payment" class="form-label fw-medium mb-1">Payment Method</label>
+                        <select class="form-select" id="mode_of_payment">
+                            <option value="">-- Select payment method --</option>
                             {% for value, choice in mode_of_payment %}
                             <option value="{{ value }}">{{ choice }}</option>
                             {% endfor %}
                         </select>
-                        <label for="scheme">Mode of Payment</label>
                     </div>
-                    <!-- Bank Select -->
-                    <div class="col-3 d-none form-floating bank_select">
-                        <select class="form-select" name="scheme" id="bank" aria-placeholder="">
-                            <option value="">--select--</option>
+                    <div class="col-md-3 bank-select-container">
+                        <label for="bank" class="form-label fw-medium mb-1">Bank Account</label>
+                        <select class="form-select" id="bank" disabled>
+                            <option value="">-- Select bank --</option>
                             {% for bank in banks %}
                             <option value="{{ bank.id }}">{{ bank }}</option>
                             {% endfor %}
                         </select>
-                        <label for="scheme">Bank</label>
                     </div>
-                    <div class="col-6 col-md-3 col-lg-4 d-flex justify-content-end align-items-center">
-                        <!-- Payout button -->
-                        <button type="button" class="btn btn-outline-secondary btn-lg" id="approve">Pay</button>
+                    <div class="col-md-2">
+                        <div class="d-flex justify-content-md-end align-items-end h-100">
+                            <button type="button" class="btn btn-success" id="approve" disabled>
+                                <i class="bi bi-credit-card me-1"></i> Process Payment
+                            </button>
+                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-
-                <!-- Table to hold list of members payments to be processed -->
-                <div class="table-responsive overflow-auto">
-                    <table class="table table-bordered table-striped" id="members_table">
-                        <thead class="thead-light text-center">
-                            <th>
-                                <!-- <input type="checkbox" name="select_all" id="select_all"> -->
-                            </th>
-                            <th>Batch ID</th>
-                            <th>Scheme</th>
-                            <th>Total Amount</th>
-                            <th>Date Created</th>
-                            <th>Last Updated</th>
-                            <th>First Approval</th>
+        <!-- Batch Withdrawals Table Card -->
+        <div class="card shadow-sm">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Approved Batches Ready for Payment</h6>
+                <span class="badge bg-primary rounded-pill batch-count">
+                    {{ batch_withdrawals|length }} {{ batch_withdrawals|length|pluralize:"batch,batches" }}
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="members_table">
+                        <thead>
+                            <tr>
+                                <th width="5%">
+                                    <div class="form-check ms-2">
+                                        <span class="d-none">Select</span>
+                                    </div>
+                                </th>
+                                <th width="10%">Batch ID</th>
+                                <th width="20%">Scheme</th>
+                                <th width="15%">Total Amount</th>
+                                <th width="15%">Date Created</th>
+                                <th width="15%">Last Updated</th>
+                                <th width="20%">First Approval</th>
+                            </tr>
                         </thead>
-                        <tbody class="text-center">
+                        <tbody>
                             {% if batch_withdrawals %}
-                            {% for batch in batch_withdrawals %}
-                            <tr>
-                                <td>
-                                    <input type="checkbox" name="batch_id" value="{{ batch.id }}">
-                                </td>
-                                <td><a href="{% url 'batch_withdrawal_list' tenant_id=request.tenant.id batch_id=batch.id %}">{{ batch.id }}</a></td>
-                                <td>{{ batch.scheme }}</td>
-                                <td>{{ batch.total_amount }}</td>
-                                <td>{{ batch.date_created }}</td>
-                                <td>{{ batch.last_updated }}</td>
-                                <td>{{ batch.first_approval }}</td>
-                            </tr>
-                            {% endfor %}
-
+                                {% for batch in batch_withdrawals %}
+                                <tr>
+                                    <td>
+                                        <div class="form-check ms-2">
+                                            <input class="form-check-input" type="radio" name="batch_id" id="batch_{{ batch.id }}" value="{{ batch.id }}">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'batch_withdrawal_list' tenant_id=request.tenant.id batch_id=batch.id %}" class="fw-medium text-decoration-none batch-link">
+                                            <span class="badge bg-primary-soft text-primary">{{ batch.id }}</span>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle text-primary me-2">
+                                                {{ batch.scheme.name|slice:":1" }}
+                                            </div>
+                                            <div>{{ batch.scheme }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium">{{ batch.total_amount }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ batch.date_created|date:"M d, Y" }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ batch.last_updated|date:"M d, Y" }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <div class="avatar-circle bg-success-soft text-success me-2">
+                                                <i class="bi bi-check-lg"></i>
+                                            </div>
+                                            <span>{{ batch.first_approval_date|date:"M d, Y" }}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
                             {% else %}
-                            <tr>
-                                <td colspan="7" class="text-center">No batch withdrawal to pay</td>
-                            </tr>
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="py-5">
+                                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                                            <p class="mt-2">No approved batches available for payment</p>
+                                        </div>
+                                    </td>
+                                </tr>
                             {% endif %}
                         </tbody>
                     </table>
+                </div>
+            </div>
+            
+            <!-- Table Footer -->
+            <div class="card-footer border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        <span id="selectedBatchInfo">No batch selected</span>
+                    </div>
+                    <button type="button" class="btn btn-success" id="mobileApproveBtn" disabled>
+                        <i class="bi bi-credit-card me-1"></i> Process Payment
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Table Styles */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    /* Avatar Circle */
+    .avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    /* Batch count badge */
+    .batch-count {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Highlight selected rows */
+    tr.selected {
+        background-color: rgba(13, 110, 253, 0.05) !important;
+    }
+    
+    /* Batch link styling */
+    .batch-link:hover .badge {
+        background-color: rgba(13, 110, 253, 0.25) !important;
+    }
+    
+    /* Bank select animation */
+    .bank-select-container {
+        transition: opacity 0.3s ease-in-out;
+    }
+    
+    /* Mobile approve button - only show on small screens */
+    #mobileApproveBtn {
+        display: none;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+        #approve {
+            display: none;
+        }
+        
+        #mobileApproveBtn {
+            display: block;
+        }
+        
+        .table th, .table td {
+            padding: 0.5rem;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+
 <script>
     $(document).ready(function(){
-        //Disable bank select on page load
-        $('#bank').prop('disabled', true);
-        //hide bank select
-        //$('.bank_select').hide();
-
-        //Disable bank select
-        $('#mode_of_payment').on('change', function(e){
-            e.preventDefault();
-            var modeOfPayment = $(this).val();
-            if(modeOfPayment === 'Bank Transfer'){
-                $('.bank_select').removeClass('d-none');
-                $('#bank').prop('disabled', false);
-            }else{
-                $('#bank').prop('disabled', true);
-                $('.bank_select').addClass('d-none');
+        // Initialize toastr options
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-bottom-right",
+            timeOut: 5000,
+            extendedTimeOut: 1000,
+            preventDuplicates: true
+        };
+        
+        // Function to update selected batch info
+        function updateSelectedBatchInfo() {
+            const selectedBatch = $('input[name=batch_id]:checked');
+            
+            if (selectedBatch.length > 0) {
+                const batchId = selectedBatch.val();
+                const batchScheme = selectedBatch.closest('tr').find('td:nth-child(3)').text().trim();
+                const batchAmount = selectedBatch.closest('tr').find('td:nth-child(4)').text().trim();
+                
+                $('#selectedBatchInfo').html(`Selected: <strong>Batch #${batchId}</strong> - ${batchScheme} - ${batchAmount}`);
+                
+                // Check if payment method is selected
+                const paymentMethod = $('#mode_of_payment').val();
+                const bankSelected = $('#bank').val() || !$('#bank').prop('disabled');
+                
+                if (paymentMethod) {
+                    if (paymentMethod === 'Bank Transfer' && !bankSelected) {
+                        $('#approve, #mobileApproveBtn').prop('disabled', true);
+                    } else {
+                        $('#approve, #mobileApproveBtn').prop('disabled', false);
+                    }
+                } else {
+                    $('#approve, #mobileApproveBtn').prop('disabled', true);
+                }
+            } else {
+                $('#selectedBatchInfo').text('No batch selected');
+                $('#approve, #mobileApproveBtn').prop('disabled', true);
             }
+        }
+        
+        // Handle payment mode change
+        $('#mode_of_payment').on('change', function() {
+            const modeOfPayment = $(this).val();
+            
+            if (modeOfPayment === 'Bank Transfer') {
+                $('.bank-select-container').removeClass('opacity-50');
+                $('#bank').prop('disabled', false);
+            } else {
+                $('.bank-select-container').addClass('opacity-50');
+                $('#bank').prop('disabled', true);
+            }
+            
+            updateSelectedBatchInfo();
         });
+        
+        // Handle bank selection change
+        $('#bank').on('change', function() {
+            updateSelectedBatchInfo();
+        });
+        
+        // Handle batch selection
+        $('input[name=batch_id]').change(function() {
+            // Remove selected class from all rows
+            $('tr.selected').removeClass('selected');
+            
+            // Add selected class to the current row
+            $(this).closest('tr').addClass('selected');
+            
+            updateSelectedBatchInfo();
+        });
+        
+        // Initialize selected batch info
+        updateSelectedBatchInfo();
 
-
-        $('#approve').click(function(){
-            if (!confirm('Are you sure you want to pay this batch?')) {
+        // Process payment button click handler
+        $('#approve, #mobileApproveBtn').click(function(){
+            const paymentMode = $('#mode_of_payment').val();
+            const batchId = $('input[name=batch_id]:checked').val();
+            const bankId = $('#bank').val();
+            
+            // Validate selections
+            if (!batchId) {
+                toastr.warning('Please select a batch to process', 'No Selection');
                 return;
             }
-            const payment_mode = $('#mode_of_payment').val();
-            const batch_id = [];
-            const bank_id = $('#bank').val();
-            $('input[name=batch_id]:checked').each(function(){
-                batch_id.push($(this).val())
-            });
-            console.log(batch_id);
-
-            if(batch_id.length === 0){
-                alert('Please select at least one batch to approve');
-            }else{
-                $.ajax({
-                    url: '',
-                    method: 'POST',
-                    headers: {'X-CSRFToken': '{{ csrf_token }}'},
-                    data: {
-                        batch_id: batch_id,
-                        payment_mode: payment_mode,
-                        bank_id: bank_id
-                    },
-                    success: function(response){
-                        if (response.status === 'success'){
-                            alert(response.message);
-                            window.location.reload();
-                        }else{
-                            alert('An error occured:' +response.message);
-                        }
-                    },
-                    error: function(data){
-                        alert('An error occured');
-                    }
-                });
+            
+            if (!paymentMode) {
+                toastr.warning('Please select a payment method', 'Missing Information');
+                return;
             }
+            
+            if (paymentMode === 'Bank Transfer' && !bankId) {
+                toastr.warning('Please select a bank account for the transfer', 'Missing Information');
+                return;
+            }
+            
+            // Confirm with SweetAlert
+            Swal.fire({
+                title: 'Process Payment',
+                html: `Are you sure you want to process payment for the selected batch?<br><br>
+                       <strong>Payment Method:</strong> ${paymentMode}<br>
+                       ${paymentMode === 'Bank Transfer' ? `<strong>Bank:</strong> ${$('#bank option:selected').text()}<br>` : ''}
+                       <strong>Batch ID:</strong> ${batchId}`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, process payment!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show processing state
+                    const button = $(this);
+                    button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+                    button.prop('disabled', true);
+                    $('#approve, #mobileApproveBtn').prop('disabled', true);
+                    
+                    $.ajax({
+                        url: '',
+                        method: 'POST',
+                        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                        data: {
+                            batch_id: [batchId],
+                            payment_mode: paymentMode,
+                            bank_id: bankId
+                        },
+                        success: function(response){
+                            if (response.status === 'success'){
+                                // Show success message
+                                Swal.fire({
+                                    title: 'Payment Processed!',
+                                    text: response.message,
+                                    icon: 'success',
+                                    confirmButtonColor: '#198754'
+                                }).then(() => {
+                                    // Reload the page
+                                    window.location.reload();
+                                });
+                            } else {
+                                // Show error message
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: response.message || 'An error occurred',
+                                    icon: 'error',
+                                    confirmButtonColor: '#dc3545'
+                                });
+                                
+                                // Reset button state
+                                button.html('<i class="bi bi-credit-card me-1"></i> Process Payment');
+                                updateSelectedBatchInfo();
+                            }
+                        },
+                        error: function(error){
+                            // Show error message
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Failed to process payment',
+                                icon: 'error',
+                                confirmButtonColor: '#dc3545'
+                            });
+                            
+                            // Reset button state
+                            button.html('<i class="bi bi-credit-card me-1"></i> Process Payment');
+                            updateSelectedBatchInfo();
+                            
+                            console.log(error);
+                        }
+                    });
+                }
+            });
         });
-    })
+    });
 </script>
 {% endblock %}

@@ -258,7 +258,7 @@ class DelayedInterest(models.Model):
         max_digits=15,
         decimal_places=2,
         default=0.00
-        )
+    )
     period_of_interest_calculation = models.PositiveIntegerField() #period over which interest is to be calculated.
     approved = models.BooleanField(
         default=False

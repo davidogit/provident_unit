@@ -20,7 +20,10 @@
                             <span class="input-group-text border-end-0">
                                 <i class="bi bi-search"></i>
                             </span>
-                            <input type="text" id="orderSearch" class="form-control border-start-0 ps-0" placeholder="Search by supplier, description, order ID...">
+                            <input type="text" id="orderSearch" class="form-control border-start-0 ps-0" placeholder="Search by order ID, supplier, or description">
+                            <button class="btn btn-primary" id="searchButton" type="button">
+                                <i class="bi bi-search"></i>
+                            </button>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -205,9 +208,7 @@
                                 <span class="fw-medium tax-amount">-</span>
                             </div>
                             <div class="d-flex justify-content-between">
-                                <span class="fw-bold">Balance to Pay
-                                    
-                                    :</span>
+                                <span class="fw-bold">Balance to Pay:</span>
                                 <span class="fw-bold remaining-balance">-</span>
                             </div>
                         </div>
@@ -412,58 +413,183 @@
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
         
-        // Client-side search functionality
-        $('#orderSearch').on('keyup', function() {
-            var searchTerm = $(this).val().toLowerCase();
-            var statusFilter = $('#statusFilter').val();
-            filterOrders(searchTerm, statusFilter);
+        // Server-side search functionality
+        $('#searchButton').on('click', function() {
+            performServerSearch();
+        });
+        
+        // Also trigger search on Enter key
+        $('#orderSearch').on('keypress', function(e) {
+            if(e.which === 13) {
+                performServerSearch();
+                e.preventDefault();
+            }
         });
         
         // Status filter
         $('#statusFilter').on('change', function() {
-            var searchTerm = $('#orderSearch').val().toLowerCase();
             var statusFilter = $(this).val();
-            filterOrders(searchTerm, statusFilter);
+            filterByStatus(statusFilter);
         });
         
-        // Filter orders function
-        function filterOrders(searchTerm, statusFilter) {
+        // Function to perform server-side search
+        function performServerSearch() {
+            var search_term = $('#orderSearch').val().trim();
+            var tenantId = '{{ request.tenant.id }}';
+            
+            if (!search_term) {
+                // If search is empty, reload the page to show all orders
+                location.reload();
+                return;
+            }
+            
+            // Show loading state
+            $('#purchaseOrdersTable tbody').html(`
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Searching for orders...</p>
+                    </td>
+                </tr>
+            `);
+            
+            // Make AJAX request to get the orders
+            $.ajax({
+                url: `/${tenantId}/fund/search-order/`,
+                data: {
+                    'search_term': search_term
+                },
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success' && response.orders && response.orders.length > 0) {
+                        // Clear table body
+                        $('#purchaseOrdersTable tbody').empty();
+                        
+                        // Loop through all orders and create rows
+                        response.orders.forEach(function(order) {
+                            const row = `
+                                <tr class="order-row" data-order-id="${order.id}">
+                                    <td class="ps-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle text-primary me-2">
+                                                ${order.supplier.charAt(0)}
+                                            </div>
+                                            <div>${order.supplier}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 200px;" title="${order.description}">
+                                            ${order.description}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium">${order.total_amount}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">${formatDate(order.date_created)}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="order-id me-2">${order.id}</span>
+                                            <button class="btn btn-sm btn-icon copy-order-id" data-order-id="${order.id}" title="Copy Order ID">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        ${order.status ? 
+                                            '<span class="badge bg-success-soft text-success">Received</span>' : 
+                                            '<span class="badge bg-warning-soft text-warning">Pending</span>'}
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-primary view-items" data-order-id="${order.id}" data-bs-toggle="modal" data-bs-target="#itemModal">
+                                            <i class="bi bi-eye me-1"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                            
+                            // Add row to table
+                            $('#purchaseOrdersTable tbody').append(row);
+                        });
+                        
+                        // Update visible count
+                        const orderCount = response.orders.length;
+                        $('#visibleCount').text(orderCount);
+                        $('.orders-count').text(`${orderCount} ${orderCount === 1 ? 'order' : 'orders'} found`);
+                        
+                        // Hide empty state
+                        $('#emptyState').addClass('d-none');
+                        $('#purchaseOrdersTable').removeClass('d-none');
+                        
+                        // Re-attach event handlers for the new buttons
+                        attachOrderEventHandlers();
+                    } else {
+                        // Show empty state with message
+                        $('#purchaseOrdersTable tbody').empty();
+                        $('#emptyState').removeClass('d-none');
+                        $('#purchaseOrdersTable').addClass('d-none');
+                        showToast('Not Found', 'No orders found matching your search', 'warning');
+                    }
+                },
+                error: function(error) {
+                    // Show error message
+                    $('#purchaseOrdersTable tbody').html(`
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
+                                <p class="mt-2">Failed to search for orders. Please try again.</p>
+                            </td>
+                        </tr>
+                    `);
+                    showToast('Error', 'Failed to search for orders', 'danger');
+                }
+            });
+        }
+        
+        // Function to attach event handlers to dynamically created elements
+        function attachOrderEventHandlers() {
+            // Copy order ID to clipboard
+            $('.copy-order-id').off('click').on('click', function(e) {
+                e.preventDefault();
+                var orderId = $(this).data('order-id');
+                
+                // Copy to clipboard
+                navigator.clipboard.writeText(orderId)
+                .then(function() {
+                    showToast('Success', 'Order ID copied to clipboard', 'success');
+                })
+                .catch(function(err) {
+                    showToast('Error', 'Failed to copy order ID', 'danger');
+                });
+            });
+            
+            // View order items
+            $('.view-items').off('click').on('click', function() {
+                var orderId = $(this).data('order-id');
+                loadOrderItems(orderId);
+            });
+        }
+        
+        // Function to filter by status only (for when a search result is displayed)
+        function filterByStatus(statusFilter) {
             var visibleCount = 0;
-            var hasVisibleRows = false;
             
             $('#purchaseOrdersTable tbody tr').each(function() {
                 var row = $(this);
-                var supplier = row.find('td:nth-child(1)').text().toLowerCase();
-                var description = row.find('td:nth-child(2)').text().toLowerCase();
-                var orderId = row.find('td:nth-child(5)').text().toLowerCase();
                 var status = row.find('td:nth-child(6) .badge').text().toLowerCase();
-                
-                // Check if matches search term
-                var matchesSearch = supplier.includes(searchTerm) || 
-                                   description.includes(searchTerm) || 
-                                   orderId.includes(searchTerm);
                 
                 // Check if matches status filter
                 var matchesStatus = statusFilter === 'all' || 
                                    (statusFilter === 'received' && status.includes('received')) ||
                                    (statusFilter === 'not-received' && status.includes('pending'));
                 
-                // Show/hide row based on filters
-                if (matchesSearch && matchesStatus) {
+                // Show/hide row based on filter
+                if (matchesStatus) {
                     row.show();
                     visibleCount++;
-                    hasVisibleRows = true;
-                    
-                    // Highlight matching text if search term exists
-                    if (searchTerm) {
-                        highlightText(row, searchTerm);
-                    } else {
-                        // Remove highlights if search is cleared
-                        row.find('.highlight').each(function() {
-                            var parent = $(this).parent();
-                            parent.html(parent.text());
-                        });
-                    }
                 } else {
                     row.hide();
                 }
@@ -473,7 +599,7 @@
             $('#visibleCount').text(visibleCount);
             
             // Show/hide empty state
-            if (hasVisibleRows) {
+            if (visibleCount > 0) {
                 $('#emptyState').addClass('d-none');
                 $('#purchaseOrdersTable').removeClass('d-none');
             } else {
@@ -482,43 +608,17 @@
             }
             
             // Update orders count badge
-            updateOrdersCount();
+            $('.orders-count').text(visibleCount + ' orders');
         }
         
-        // Highlight matching text
-        function highlightText(row, term) {
-            // Remove existing highlights first
-            row.find('.highlight').each(function() {
-                var parent = $(this).parent();
-                parent.html(parent.text());
-            });
-            
-            // Add new highlights
-            var cells = row.find('td:nth-child(1), td:nth-child(2), td:nth-child(5)');
-            
-            cells.each(function() {
-                var cell = $(this);
-                var content = cell.text();
-                
-                // Skip cells with complex content (like those with buttons)
-                if (cell.find('button').length > 0) return;
-                
-                // Create a temporary div to hold text content
-                var tempDiv = $('<div></div>').text(content);
-                var html = tempDiv.html();
-                
-                // Replace matching text with highlighted version
-                var regex = new RegExp('(' + term + ')', 'gi');
-                var newHtml = html.replace(regex, '<span class="highlight">$1</span>');
-                
-                // Only update if there was a match
-                if (html !== newHtml) {
-                    cell.html(newHtml);
-                }
-            });
+        // Helper function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
         }
         
-        // Update orders count badge
+        // Update orders count
         function updateOrdersCount() {
             var totalOrders = $('#purchaseOrdersTable tbody tr').length;
             var visibleOrders = $('#purchaseOrdersTable tbody tr:visible').length;
@@ -546,8 +646,12 @@
         });
         
         // Fetch items for an order
-        $('.view-items').on('click', function(e) {
+        $(document).on('click', '.view-items', function(e) {
             var orderId = $(this).data('order-id');
+            loadOrderItems(orderId);
+        });
+        
+        function loadOrderItems(orderId) {
             var tableBody = $('.modal-item-body');
             var tenantId = '{{ request.tenant.id }}';
             
@@ -639,7 +743,7 @@
                     showToast('Error', 'Failed to load order items', 'danger');
                 }
             });
-        });
+        }
         
         // Match order items with received quantity
         $('.match-order-items').on('click', function(e) {

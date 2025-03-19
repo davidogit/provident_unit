@@ -977,7 +977,7 @@ class InvestmentQuery(ListView):
 class DelayedInterestListView(ListView):
     template_name = 'dashboard/delayed_interest_list.html'
     model = DelayedInterest
-    paginate_by = 10
+    paginate_by = 5
     context_object_name = 'delayed_interest'
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
@@ -1948,7 +1948,7 @@ class GeneralPayoutView(TemplateView):
             if not email:
                 return JsonResponse({
                     'status':'error',
-                    'message':'No event mapping found for this event: second level approval of withdrawal request.'
+                    'message':'No action mapping found for this event: second level approval of withdrawal request.'
                 })
         except TenantEventNotification.DoesNotExist:
             logger.error('Could not find TenantEventNotification model.')
@@ -2898,6 +2898,50 @@ class UpdateSupplierView(UpdateView):
         })
 
 
+# Supplier Search View
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
+class SupplierSearchView(View):
+    def get(self,request,*args,**kwargs):
+        tenant = self.request.tenant
+        search_term = self.request.GET.get('search_term')
+
+        if not search_term:
+            return JsonResponse({
+                'status':'error',
+                'message':'Search term required.'
+            },status=400)
+        
+        suppliers = Suppliers.objects.filter(
+            Q(name__icontains=search_term)|
+            Q(bank__icontains=search_term)|
+            Q(email__icontains=search_term)|
+            Q(phone__icontains=search_term),
+            tenant=tenant
+        )
+
+        suppliers_list = [
+            {
+                'id':supplier.id,
+                'name':supplier.name,
+                'bank':supplier.bank,
+                'address':supplier.address,
+                'phone':supplier.phone,
+                'email':supplier.email,
+                'branch':supplier.branch,
+                'account_number':supplier.account_number
+            }
+            for supplier in suppliers
+        ]
+        return JsonResponse({
+            'status':'success',
+            'suppliers':suppliers_list
+        })
+
+
+
+
 # RAISE REQUISITION VIEW
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
@@ -3151,8 +3195,6 @@ class DeleteRequisitionItemView(DeleteView):
     def get_queryset(self):
         tenant = self.request.tenant
         requisition_id = self.kwargs['req_id']
-        print(f'REQUISITION ID: {requisition_id}')
-        print(f'REQUEST{self.request.POST}')
         requisition = Requisition.objects.get(
             tenant=tenant,
             id=requisition_id
@@ -3373,7 +3415,7 @@ class PurchaseOrderView(ListView):
 
 
 
-# FETCH REQUISITION ITEMS
+# FETCH REQUISITION ITEMS FOR A SPECIFIC PO
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
@@ -3423,6 +3465,54 @@ class FetchPurchaseOrderView(View):
             })
 
 
+# PURCHASE SPECIFIC ORDER SEARCH
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
+class PurchaseOrderSearchView(View):
+
+    def get(self,request,*args,**kwargs):
+        search_term = self.request.GET.get('search_term')
+        tenant = self.request.tenant
+
+        if not search_term:
+            return JsonResponse({
+                'status':'error',
+                'message':'Search term required.'
+            })
+        
+        try:
+            orders = PurchaseOrder.objects.filter(
+                Q(id__icontains=search_term)|
+                Q(requisition__supplier__name__icontains=search_term)|
+                Q(requisition__description__icontains=search_term),
+                requisition__tenant=tenant
+            )
+               
+            order_list = [
+                {
+                    'id':order.id,
+                    'supplier':order.requisition.supplier.name,
+                    'total_amount':order.amount,
+                    'date_created':order.date_created,
+                    'status':order.received,
+                    'description':order.requisition.description
+                }
+                for order in orders
+            ]
+            
+            return JsonResponse({
+                'status':'success',
+                'orders':order_list
+            })
+        except Exception as e:
+            logger.error(f'{e}')
+            return JsonResponse({
+                'status':'error',
+                'message':'Order not found.'
+            }) 
+    
+    
 
 
 # CREATE INVOICE VIEW
@@ -3564,13 +3654,14 @@ class InvoiceApproval(ListView):
     model = PaymentInvoice
     template_name = 'suppliers_expenses/approve_invoice.html'
     context_object_name = 'invoice_list'
-    paginate_by = 10
+    paginate_by = 5
     def get_queryset(self):
         tenant = self.request.tenant
         return PaymentInvoice.objects.filter(
             purchase_order__requisition__tenant=tenant,
-            approved=False,
-        ).order_by('-created_date')
+            # approved=False,
+            paid=False
+        ).order_by('approved','-created_date')
 
     def post(self,*args,**kwargs):
         invoice_number = self.request.POST.get('invoice_number')
@@ -3604,7 +3695,65 @@ class InvoiceApproval(ListView):
             'status':'success',
             'message':f'Invoice with number: {invoice_number} approved successfully'
         })
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        queryset = self.get_queryset()
+        total_invoice_count = queryset.count()
+        pending_count = queryset.filter(approved=False).count()
+        approved_count = (total_invoice_count-pending_count)
+        context['total_count'] = total_invoice_count
+        context['approved_count'] = approved_count
+        context['pending_count'] = pending_count
+        return context
         
+
+
+# Search for Invoice: Invoice Payment Page
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Manager']), name='dispatch')
+class ApproveInvoiceSearchView(View):
+    def get(self,request,*args,**kwargs):
+        tenant = self.request.tenant
+        search_term = self.request.GET.get('search_term')
+
+        if not search_term:
+            return JsonResponse({
+                'status':'error',
+                'message':'Search term required'
+            },status=400)
+        
+        invoices = PaymentInvoice.objects.filter(
+            Q(invoice_number__icontains=search_term)|
+            Q(purchase_order__id__icontains=search_term)|
+            Q(supplier__name__icontains=search_term)|
+            Q(debit_account__name__icontains=search_term)|
+            Q(purchase_order__requisition__description__icontains=search_term),
+            purchase_order__requisition__tenant=tenant,
+            paid=False
+        )
+
+        invoice_list = [
+            {
+                'invoice_number':invoice.invoice_number,
+                'description':invoice.purchase_order.requisition.description,
+                'supplier':invoice.supplier.name,
+                'amount':invoice.amount,
+                'created_date':invoice.created_date,
+                'debit_account':invoice.debit_account.name if invoice.debit_account else None,
+                'paid':invoice.paid
+            }
+            for invoice in invoices
+        ]
+        return JsonResponse({
+            'status':'success',
+            'invoices':invoice_list
+        })
+
+
+
+
 
 
 @method_decorator(login_required, name='dispatch')
@@ -3613,16 +3762,16 @@ class InvoiceApproval(ListView):
 class PayoutInvoiceView(ListView):
     model = PaymentInvoice
     template_name = 'suppliers_expenses/payout_invoice.html'
-    paginate_by = 10
+    paginate_by = 5
     context_object_name = 'invoice_list'
 
     def get_queryset(self):
         tenant = self.request.tenant
-        return PaymentInvoice.objects.filter(
+        return super().get_queryset().filter(
             purchase_order__requisition__tenant = tenant,
             approved = True,
-            paid = False,
-        ).order_by('-created_date')
+            # paid = False,
+        ).order_by('paid','-created_date')
 
     def post(self,*args,**kwargs):
         tenant = self.request.tenant
@@ -3679,12 +3828,23 @@ class PayoutInvoiceView(ListView):
         net_amount = (invoice.amount - withholding_tax)
 
         # Perform debit and credit transactions
-        debit_account.record_transaction(
-            amount=Decimal(net_amount),transaction_type='DEBIT',created_by=self.request.user,description='Invoice Payment'
-        )
-        credit_account.record_transaction(
-            amount=Decimal(net_amount),transaction_type='CREDIT',created_by=self.request.user,description='Invoice Payment'
-        )
+        try:
+            debit_account.record_transaction(
+                amount=Decimal(net_amount),transaction_type='DEBIT',created_by=self.request.user,description='Invoice Payment'
+            )
+            credit_account.record_transaction(
+                amount=Decimal(net_amount),transaction_type='CREDIT',created_by=self.request.user,description='Invoice Payment'
+            )
+        except ValidationError as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'{e}'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'{str(e)}'
+            })
 
         """ 
         # Save changes
@@ -3705,7 +3865,57 @@ class PayoutInvoiceView(ListView):
             'status':'success',
             'message':f'Invoice paid. Net amount = {net_amount}'
         })
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
+        pending_invoices = self.get_queryset().filter(paid=False).count()
+        all_invoice = self.get_queryset().count
+        context['pending_invoices'] = pending_invoices
+        context['invoice_count'] = all_invoice
+        return context
+
+
+# Search for Invoice: Invoice Payment Page
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
+class PayoutInvoiceSearchView(View):
+    def get(self,request,*args,**kwargs):
+        tenant = self.request.tenant
+        search_term = self.request.GET.get('search_term')
+
+        if not search_term:
+            return JsonResponse({
+                'status':'error',
+                'message':'Search term required'
+            },status=400)
+        
+        invoices = PaymentInvoice.objects.filter(
+            Q(invoice_number__icontains=search_term)|
+            Q(purchase_order__id__icontains=search_term)|
+            Q(supplier__name__icontains=search_term)|
+            Q(debit_account__name__icontains=search_term),
+            purchase_order__requisition__tenant=tenant,
+            approved=True
+        )
+
+        invoice_list = [
+            {
+                'invoice_number':invoice.invoice_number,
+                'description':invoice.purchase_order.requisition.description,
+                'supplier':invoice.supplier.name,
+                'amount':invoice.amount,
+                'created_date':invoice.created_date,
+                'debit_account':invoice.debit_account.name if invoice.debit_account else None,
+                'paid':invoice.paid
+            }
+            for invoice in invoices
+        ]
+        return JsonResponse({
+            'status':'success',
+            'invoices':invoice_list
+        })
 
 
 
@@ -3786,10 +3996,12 @@ class PaymentHistoryView(ListView):
         transaction_id = self.request.GET.get('transaction_id')
 
         # Start with an empty queryset if no scheme is provided
-        queryset = Transaction.objects.filter(tenant=tenant,scheme__id=scheme_id).order_by('-transaction_date') if scheme_id else Transaction.objects.none()
+        queryset = Transaction.objects.filter(tenant=tenant).order_by('-transaction_date')
 
         # Apply additional filters if applicable
         filters = {}
+        if scheme_id:
+            filters['scheme__id'] = scheme_id
         if payment_type:
             filters['transaction_type'] = payment_type
         if payment_method:
@@ -3801,17 +4013,22 @@ class PaymentHistoryView(ListView):
 
         # Apply all filters to the queryset
         if filters:
+            # Unpack filters
             queryset = queryset.filter(**filters)
 
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        page = self.request.GET.get('page',1)
+        start_index = (int(page) - 1) * self.paginate_by + 1
         context.update({
             # 'transaction_queryset': queryset,
             'payment_methods': Transaction.payment_method_choices,
             'payment_status': Transaction.STATUS_CHOICES,
             'payment_type': Transaction.transaction_type_choices,
+            'start_index':start_index,
+            'results_count':self.get_queryset().count()
         })
         return context
 
@@ -3886,3 +4103,38 @@ class EventMapping(ListView):
         context['all_staffs'] = all_staffs
 
         return context
+
+
+# Delete Event Mapping
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Super User']), name='dispatch')
+class DeleteEventNotificationMapping(DeleteView):
+    model = TenantEventNotification
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        return super().get_queryset().filter(
+            tenant=tenant
+        )
+    
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.object:
+            return JsonResponse({
+                'status':'error',
+                'message':'Mapping not found.'
+            })
+        
+        try:
+            self.object.delete()
+            return JsonResponse({
+                'status':'success',
+                'message':'Mapping deleted.'
+            })
+        except Exception as e:
+            logger.error(f'{str(e)}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'Could not delete mapping.'
+            })

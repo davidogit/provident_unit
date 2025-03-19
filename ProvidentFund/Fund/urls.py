@@ -91,6 +91,8 @@ urlpatterns =[
     path('delete-supplier/<int:pk>/', views.DeleteSupplierView.as_view(), name='delete_supplier'),
     # Update supplier
     path('update-supplier/<int:pk>/', views.UpdateSupplierView.as_view(), name='update_supplier'),
+    # Search for supplier
+    path('search-suppliers/', views.SupplierSearchView.as_view(), name='search_supplier'),
 
     # REQUISITION URL
     path('create-requisition/', views.RaiseRequisitionView.as_view(), name='raise_requisition'),
@@ -112,8 +114,11 @@ urlpatterns =[
     path('purchase-orders/', views.PurchaseOrderView.as_view(), name='purchase_order'),
     # received order
     path('received-order/<slug:order_id>/', views.PurchaseOrderView.as_view(), name='receive-order'),
-    #fetch order items
+    #fetch order items for PO
     path('get-order-items/<slug:order_id>/', views.FetchPurchaseOrderView.as_view(), name='fetch_order_items'),
+    # Purchase Order search url
+    path('search-order/',views.PurchaseOrderSearchView.as_view(), name='search_order'),
+    
 
     # PAYOUT INVOICE URL
     path('create-invoice/', views.CreateInvoiceView.as_view(), name='create_invoice'),
@@ -123,7 +128,13 @@ urlpatterns =[
     path('approve-invoice/', views.InvoiceApproval.as_view(), name='approve_invoice'),
     # Pay invoice
     path('pay-invoice/', views.PayoutInvoiceView.as_view(), name='pay_invoice'),
+    # Search for invoice: Payout Invoices
+    path('search-invoice/', views.PayoutInvoiceSearchView.as_view(), name='search_invoice'),
+    # Search for invoice: Payout Invoices
+    path('search-invoice-to-approve/', views.ApproveInvoiceSearchView.as_view(), name='search_invoice_approval'),
     
     # EVENT MAPPING
-    path('event_mapping/', views.EventMapping.as_view(), name='event_mapping')
+    path('event_mapping/', views.EventMapping.as_view(), name='event_mapping'),
+    # Delete mapping
+    path('delete-mapping/<int:pk>/', views.DeleteEventNotificationMapping.as_view(), name='delete_notification_mapping'),
 ]

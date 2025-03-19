@@ -1,307 +1,393 @@
 {% extends 'dashboard/base.html' %}
 
 {% block title %}
-<title>Requisition</title>
+<title>Requisition Management</title>
 {% endblock %}
 
 {% block header %}
-<h5 class="fw-bold"><i class=""></i>Requisition</h5>
+<h5 class="fw-bold"><i class="bi bi-file-earmark-text me-2"></i>Requisition Management</h5>
 {% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5">
-        <div class="col-12">
-            <div class="container">
-                <div class="row g-4 d-flex flex-column justify-content-center align-items-center">
-                    
-                    <div class="col-12">
-                        {% if 'Finance Analyst' in user_groups %}
-                        <div class="requisition-form border p-3 rounded position-relative">
-                            <form action="" method="POST" id="requisition-form">
-                                {% csrf_token %}
-                                <div class="row g-3 d-flex justify-content-center align-items-center">
-                            
-                                    <div class="form-floating col-12 col-md-4">
-                                        <select name="supplier_id" id="supplier_id" class="form-select">
-                                            <option value="">-select-</option>
-                                            {% for supplier in suppliers %}
-                                            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <label for="supplier_id">Supplier</label>
-                                    </div>
-                                
-                                    <div class="form-floating col-12 col-md-4">
-                                        <textarea class="form-control" name="description" id="description" maxlength="100"></textarea>
-                                        <label for="description">Description</label>
-                                    </div>
-
-                                    <!-- submit button -->
-                                    <div class="col-12 col-md-4">
-                                        <button class="btn btn-outline-primary btn-lg save_mapping w-100" type="submit">Add</button>
-                                    </div>
-                                </div>
-
-                            </form>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+    <div class="container-fluid">
+        <!-- Create Requisition Card -->
+        {% if 'Finance Analyst' in user_groups %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header py-3">
+                <h6 class="mb-0 fw-bold">Create New Requisition</h6>
             </div>
+            <div class="card-body">
+                <form action="" method="POST" id="requisition-form">
+                    {% csrf_token %}
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="supplier_id" class="form-label">Supplier</label>
+                            <select name="supplier_id" id="supplier_id" class="form-select" required>
+                                <option value="">Select a supplier</option>
+                                {% for supplier in suppliers %}
+                                <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" name="description" id="description" maxlength="100" rows="1" required></textarea>
+                        </div>
 
-            <!-- Group payout dates by schemes teo on a row in each scheme and two schemes on a row -->
-            <div class="container mt-5">
-                <div class="row">
-                    <div class="requisition-card col-12">
-                        <div class="border rounded overflow-hidden d-flex flex-column" style="max-height: 400px;">
-                            <!-- Table for requisitions -->
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Supplier</th>
-                                        <th>Description</th>
-                                        <th>Net Amount</th>
-                                        <th>Tax</th>
-                                        <th>Date</th>
-                                        <th>Status<th>        
-                                        <!-- <th>Action</th> -->
-                                        {% if 'Finance Manager' in user_groups %}
-                                        <th></th>
-                                        {% endif %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for requisition in requisition_headers %}
-                                    <tr class="requisition-row">
-                                        <td class="text-start align-middle">{{ requisition.supplier.name }}</td>
-                                        <td class="text-start align-middle">{{ requisition.description }}</td>
-                                        <td class="text-start align-middle total_amount">{{ requisition.total_amount }}</td>
-                                        <td class="text-start align-middle tax_amount">{{ requisition.tax_amount }}</td>
-                                        <td class="text-start align-middle">{{ requisition.date_created }}</td>
-                                        <td class="text-start align-middle">
-                                            {% if requisition.approved %}
-                                                <span class="badge bg-success">Approved</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">Pending</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="d-flex flex-row justify-content-center">
-                                            <button class="btn btn-link p-0 view-items" data-requisition-id="{{ requisition.id }}" data-bs-toggle="modal" data-bs-target="#itemModal">
-                                                <i class="ri-eye-line fs-3"></i>
-                                            </button>
-                                            {% if 'Finance Analyst' in user_groups %}
-                                            <div class="col-2 text-start">
-                                                <button class="btn btn-link p-0 delete-requisition" data-requisition-id="{{ requisition.id }}">
-                                                    <i class="ri-delete-bin-2-line fs-3" style="color: red;"></i>
-                                                </button>
-                                            </div>
-                                            {% endif %}
-                                        </td>
+                        <div class="col-md-3">
+                            <button class="btn btn-primary w-100" type="submit">
+                                <i class="bi bi-plus-circle me-2"></i>Create Requisition
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
 
-                                        
-                                        <td class="text-center align-middle">
-                                            {% if 'Finance Manager' in user_groups %}
-                                            <button class="approve-requisition btn btn-outline-secondary btn" data-requisition-id="{{ requisition.id }}">
-                                                Approve
-                                            </button>
-                                            {% endif %}
-
-                                            {% if 'Finance Analyst' in user_groups %}
-                                            <button class="add-tax btn btn-outline-secondary btn" data-requisition-id="{{ requisition.id }}">
-                                                Add Tax
-                                            </button> 
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                            
-                            <!-- Table Section -->
-                            <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="itemModalLabel">Items</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <!-- Requisitions List Card -->
+        <div class="card shadow-sm">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Requisitions</h6>
+                <span class="badge bg-primary rounded-pill" id="requisition-count">{{ requisition_headers|length }} requisitions</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="requisitionsTable">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Supplier</th>
+                                <th>Description</th>
+                                <th>Net Amount</th>
+                                <th>Tax</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for requisition in requisition_headers %}
+                            <tr class="requisition-row" data-requisition-id="{{ requisition.id }}">
+                                <td class="ps-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle text-primary me-2">
+                                            {{ requisition.supplier.name|slice:":1" }}
                                         </div>
-                                        <div class="modal-body overflow-auto" style="max-height: 400px;">
-                                            <div class="table-responsive flex-grow-1 overflow-auto">
-                                                <table class="table table-striped table-hover item-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Item</th>
-                                                            <th>Quantity</th>
-                                                            <th>Amount</th>
-                                                            <th>Total</th>
-                                                            {% if 'Finance Analyst' in user_groups %}
-                                                            <th>Action</th>
-                                                            {% endif %}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="modal-item-body">
-                                                        <!-- Items will be added here -->
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer d-flex justify-content-between">
-                                            <!-- Footer Section -->
+                                        <div>{{ requisition.supplier.name }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 200px;" title="{{ requisition.description }}">
+                                        {{ requisition.description }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-medium total_amount">{{ requisition.total_amount }}</span>
+                                </td>
+                                <td>
+                                    <span class="fw-medium tax_amount">{{ requisition.tax_amount }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ requisition.date_created|date:"M d, Y" }}</span>
+                                </td>
+                                <td>
+                                    {% if requisition.approved %}
+                                        <span class="badge bg-success-soft text-success">Approved</span>
+                                    {% else %}
+                                        <span class="badge bg-warning-soft text-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <button class="btn btn-sm btn-primary view-items" data-requisition-id="{{ requisition.id }}" data-bs-toggle="modal" data-bs-target="#itemModal">
+                                            <i class="bi bi-eye me-1"></i> View
+                                        </button>
                                         
-                                            <div class="col-4 p-3 d-flex flex-column justify-content-between">
-                                                <div class="row">
-                                                    <div class="col-6">
-                                                        <h6><strong>Total</strong></h6>
-                                                    </div>
-                                                    <div class="col-6 text-end">
-                                                        <h6><strong class="total-amount"></strong></h6>
-                                                    </div>
-                                                </div>
-                                                <div class="row">
-                                                    <div class="col-6">
-                                                        <h6><strong>Tax Amount</strong></h6>
-                                                    </div>
-                                                    <div class="col-6 text-end">
-                                                        <h6><strong class="tax-amount"></strong></h6>
-                                                    </div>
-                                                </div>
-                                                <!-- <div class="row d-flex flex-row justify-content-between">
-                                                </div> -->
-                                            </div>
-
-                                            {% if 'Finance Analyst' in user_groups %}
-                                            <div>
-                                                <button type="button" class="btn btn-outline-secondary add-item">Add Item</button>
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            </div>
-                                            {% endif %}
+                                        {% if 'Finance Analyst' in user_groups %}
+                                            {% if not requisition.approved %}
+                                            <button class="btn btn-sm btn-outline-info add-tax" data-requisition-id="{{ requisition.id }}">
+                                                <i class="bi bi-percent me-1"></i> Tax
+                                            </button>
                                             
-                                        </div>
+                                            <button class="btn btn-sm btn-outline-danger delete-requisition" data-requisition-id="{{ requisition.id }}">
+                                                <i class="bi bi-trash me-1"></i> Delete
+                                            </button>
+                                            {% endif %}
+                                        {% endif %}
+                                        
+                                        {% if 'Finance Manager' in user_groups and not requisition.approved %}
+                                        <button class="btn btn-sm btn-success approve-requisition" data-requisition-id="{{ requisition.id }}">
+                                            <i class="bi bi-check-circle me-1"></i> Approve
+                                        </button>
+                                        {% endif %}
                                     </div>
-                                    
-                                </div>
-                            </div>
-                        </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                                    <p class="mt-2">No requisitions found</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Empty State (will be shown when table is empty via JS) -->
+                <div id="emptyState" class="text-center py-5 d-none">
+                    <div class="py-5">
+                        <i class="bi bi-file-earmark-x fs-1 text-muted"></i>
+                        <h5 class="mt-3">No requisitions found</h5>
+                        <p class="text-muted">Create a new requisition to get started.</p>
                     </div>
                 </div>
             </div>
-            
         </div>
     </div>
 </div>
 
+<!-- Item Details Modal -->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="itemModalLabel">
+                    <i class="bi bi-box me-2"></i>Requisition Items
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover item-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Item</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                                {% if 'Finance Analyst' in user_groups %}
+                                <th class="text-center">Action</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody class="modal-item-body">
+                            <!-- Items will be added here -->
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading items...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer p-0 border-0">
+                <div class="container-fluid">
+                    <div class="row">
+                        <!-- Order Summary -->
+                        <div class="col-md-7 p-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Subtotal:</span>
+                                <span class="fw-medium total-amount">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Tax:</span>
+                                <span class="fw-medium tax-amount">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">Total Amount:</span>
+                                <span class="fw-bold final-amount">-</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="col-md-5 p-3 d-flex flex-column justify-content-between">
+                            {% if 'Finance Analyst' in user_groups %}
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary add-item flex-grow-1">
+                                    <i class="bi bi-plus-circle me-1"></i> Add Item
+                                </button>
+                                <button type="button" class="btn btn-secondary flex-grow-1" data-bs-dismiss="modal">Close</button>
+                            </div>
+                            {% else %}
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="notificationToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto toast-title">Notification</strong>
+            <small class="text-muted toast-time">just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <!-- Toast message will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Table Styles */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    /* Avatar Circle */
+    .avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Modal Styles */
+    .modal-content {
+        border: none;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1rem 1.25rem;
+    }
+    
+    /* Highlight animation */
+    .highlight {
+        animation: highlight 1.5s ease-in-out;
+    }
+    
+    @keyframes highlight {
+        0% { background-color: rgba(255, 243, 205, 0); }
+        50% { background-color: rgba(255, 243, 205, 0.5); }
+        100% { background-color: rgba(255, 243, 205, 0); }
+    }
+</style>
+
 <script>
     $(document).ready(function(){
-        // Fetch items for a requisition
-        $('.view-items').on('click', function(e){
-            var req_id = $(this).data('requisition-id');
-            const tableBody = $(this).closest('.requisition-card').find('.modal-item-body');
-            var tenantId = '{{ request.tenant.id }}'
-
-            //Set requisition id on the approve button
-            tableBody.closest('.requisition-card').find('.approve-requisition').data('requisition-id', req_id);
-
-            $.ajax({
-                url: `/${tenantId}/fund/get-requisition-items/${req_id}/`,
-                type: 'GET',
-                success: function(response){
-                    if (response.status === 'success'){
-                        tableBody.html('');
-                        var items = response.items;
-                        
-                        if (items.length === 0){
-                            const row = `
-                                <tr>
-                                    <td colspan="5" class="text-center">No items added.</td>
-                                </tr>
-                            `
-                            tableBody.append(row);
-                        }else{
-                            items.forEach(item => {
-                                const row = `
-                                    <tr>
-                                        <td class="text-start align-middle">${ item.item_name }</td>
-                                        <td class="text-start
-                                        align-middle">${ item.quantity }</td>
-                                        <td class="text-start
-                                        align-middle">${ item.amount }</td>
-                                        <td class="text-start
-                                        align-middle">${ item.total_cost }</td>
-                                        {% if 'Finance Analyst' in user_groups %}
-                                        <td class="text-start
-                                        align-middle">
-                                            <button class="btn btn-link delete-requisition-item" data-item-id="${ item.id }" data-requisition-id="${ req_id }">
-                                                <i class="ri-close-circle-fill fs-5 text-danger"></i>
-                                            </button>
-                                        </td>
-                                        {% endif %}
-                                    </tr>
-                                `
-                                tableBody.append(row);
-                                //Update total amount
-                                tableBody.closest('.requisition-card').find('.total-amount').text(response.total_amount);
-                                tableBody.closest('.requisition-card').find('.tax-amount').text(response.tax_amount);
-                            });
-
-                            //Delete requisition item
-                            tableBody.on('click','.delete-requisition-item', function(e){
-                                e.preventDefault();
-                                var $this = $(this);
-                                var requisition_id = $(this).data('requisition-id');
-                                var tenantId = '{{ request.tenant.id }}'
-                                var item_id = $(this).data('item-id');
-
-                                if (!confirm('Are you sure you want to delete this item?')){
-                                    return;
-                                }
-
-                                $.ajax({
-                                    url: `/${tenantId}/fund/delete-requisition-item/${item_id}/${requisition_id}/`,
-                                    type: 'DELETE',
-                                    headers: {
-                                        'X-CSRFToken': '{{ csrf_token }}'
-                                    },
-
-                                    success:function(response){
-                                        if (response.status === 'success'){
-                                            $this.closest('.requisition-card').find('.total-amount').text(response.total_amount);
-                                            //alert(response.message);
-                                            $this.closest('tr').remove();
-                                            //console.log(response.total_amount);
-                                            
-                                        }else{
-                                            alert(response.message);
-                                        }
-                                    },
-                                    error: function(error){
-                                        console.log(error);
-                                        alert('An error occured');
-                                    }
-                                });
-                            });
-                        }
-                        
-                    }else{
-                        alert(response.message);
-                    }
-                },
-                error: function(error){
-                    console.log(error);
-                }
-
-            })
-        })
-
-
-
-
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Update requisition count
+        updateRequisitionCount();
+        
         // Save requisition
         $('#requisition-form').on('submit', function(e){
             e.preventDefault();
             var form = $(this);
             var url = form.attr('action');
             var data = form.serialize();
+            
+            // Validate form
+            if (!$('#supplier_id').val() || !$('#description').val().trim()) {
+                showToast('Error', 'Please fill in all required fields', 'danger');
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = form.find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...');
+            submitBtn.prop('disabled', true);
+            
             $.ajax({
                 url: url,
                 type: 'POST',
@@ -311,229 +397,579 @@
                 },
                 success: function(response){
                     if(response.status === 'success'){
-                        alert(response.message);
-                        window.location.reload();
-                    }else{
-                        alert(response.message);
+                        // Reset form
+                        form[0].reset();
+                        
+                        // Show success message
+                        showToast('Success', response.message, 'success');
+                        
+                        // Reload page after delay
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showToast('Error', response.message, 'danger');
+                        submitBtn.html(originalText);
+                        submitBtn.prop('disabled', false);
                     }
                 },
                 error: function(error){
                     console.log(error);
+                    showToast('Error', 'An error occurred while creating the requisition', 'danger');
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
                 }
             });
         });
-
-
-        //Delete requisition
+        
+        // Fetch items for a requisition
+        $('.view-items').on('click', function(e){
+            var requisitionId = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}';
+            var tableBody = $('.modal-item-body');
+            
+            // Reset modal content
+            tableBody.html(`
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading items...</p>
+                    </td>
+                </tr>
+            `);
+            
+            // Set requisition ID in modal title
+            $('#itemModalLabel').html(`<i class="bi bi-box me-2"></i>Requisition Items <span class="badge bg-primary-soft text-primary ms-2">#${requisitionId}</span>`);
+            
+            // Set requisition ID on buttons
+            $('.add-item').data('requisition-id', requisitionId);
+            
+            $.ajax({
+                url: `/${tenantId}/fund/get-requisition-items/${requisitionId}/`,
+                type: 'GET',
+                success: function(response){
+                    if (response.status === 'success'){
+                        tableBody.html('');
+                        var items = response.items;
+                        
+                        if (items.length === 0){
+                            const row = `
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                                        <p class="mt-2">No items added to this requisition.</p>
+                                    </td>
+                                </tr>
+                            `;
+                            tableBody.append(row);
+                        } else {
+                            items.forEach(item => {
+                                const row = `
+                                    <tr>
+                                        <td class="ps-3">${item.item_name}</td>
+                                        <td><span class="badge text-dark">${item.quantity}</span></td>
+                                        <td>${item.amount}</td>
+                                        <td class="fw-medium">${item.total_cost}</td>
+                                        {% if 'Finance Analyst' in user_groups %}
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-danger delete-requisition-item" data-item-id="${item.id}" data-requisition-id="${requisitionId}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                `;
+                                tableBody.append(row);
+                            });
+                        }
+                        
+                        // Update summary amounts
+                        $('.total-amount').text(response.total_amount);
+                        $('.tax-amount').text(response.tax_amount || '0.00');
+                        
+                        // Calculate final amount (total + tax)
+                        const totalAmount = parseFloat(response.total_amount) || 0;
+                        const taxAmount = parseFloat(response.tax_amount) || 0;
+                        $('.final-amount').text((totalAmount + taxAmount).toFixed(2));
+                    } else {
+                        showToast('Error', response.message, 'danger');
+                    }
+                },
+                error: function(error){
+                    console.log(error);
+                    showToast('Error', 'Failed to load requisition items', 'danger');
+                }
+            });
+        });
+        
+        // Delete requisition item
+        $(document).on('click', '.delete-requisition-item', function(e){
+            e.preventDefault();
+            var $this = $(this);
+            var itemId = $(this).data('item-id');
+            var requisitionId = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}';
+            
+            // Confirm deletion with SweetAlert
+            Swal.fire({
+                title: 'Delete Item?',
+                text: 'Are you sure you want to delete this item?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    $this.prop('disabled', true);
+                    
+                    $.ajax({
+                        url: `/${tenantId}/fund/delete-requisition-item/${itemId}/${requisitionId}/`,
+                        type: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        success: function(response){
+                            if (response.status === 'success'){
+                                // Remove row with animation
+                                $this.closest('tr').fadeOut(300, function(){
+                                    $(this).remove();
+                                    
+                                    // Check if table is empty
+                                    if ($('.modal-item-body tr').length === 0) {
+                                        $('.modal-item-body').html(`
+                                            <tr>
+                                                <td colspan="5" class="text-center py-4">
+                                                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                                                    <p class="mt-2">No items added to this requisition.</p>
+                                                </td>
+                                            </tr>
+                                        `);
+                                    }
+                                });
+                                
+                                // Update amounts
+                                $('.total-amount').text(response.total_amount);
+                                const totalAmount = parseFloat(response.total_amount) || 0;
+                                const taxAmount = parseFloat($('.tax-amount').text()) || 0;
+                                $('.final-amount').text((totalAmount + taxAmount).toFixed(2));
+                                
+                                // Update requisition row in main table
+                                $(`.requisition-row[data-requisition-id="${requisitionId}"] .total_amount`).text(response.total_amount);
+                                
+                                showToast('Success', 'Item deleted successfully', 'success');
+                            } else {
+                                showToast('Error', response.message, 'danger');
+                                $this.html('<i class="bi bi-trash"></i>');
+                                $this.prop('disabled', false);
+                            }
+                        },
+                        error: function(error){
+                            console.log(error);
+                            showToast('Error', 'Failed to delete item', 'danger');
+                            $this.html('<i class="bi bi-trash"></i>');
+                            $this.prop('disabled', false);
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Delete requisition
         $('.delete-requisition').on('click', function(e){
             e.preventDefault();
             var $this = $(this);
-            var requisition_id = $(this).data('requisition-id');
-            var tenantId = '{{ request.tenant.id }}'
-
-            if (!confirm('Are you sure you want to delete this requisition?')){
-                return;
-            }
-
-            $.ajax({
-                url: `/${tenantId}/fund/delete-requisition/${requisition_id}/`,
-                type: 'DELETE',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                success:function(response){
-                    if (response.status === 'success'){
-                        alert(response.message);
-                        $this.closest('.requisition-card').remove();
-                    }else{
-                        alert(response.message);
-                    }
-                },
-                error: function(error){
-                    console.log(error);
+            var requisitionId = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}';
+            
+            // Confirm deletion with SweetAlert
+            Swal.fire({
+                title: 'Delete Requisition?',
+                text: 'Are you sure you want to delete this requisition?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    $this.prop('disabled', true);
+                    
+                    $.ajax({
+                        url: `/${tenantId}/fund/delete-requisition/${requisitionId}/`,
+                        type: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        success: function(response){
+                            if (response.status === 'success'){
+                                // Remove row with animation
+                                $this.closest('tr').fadeOut(300, function(){
+                                    $(this).remove();
+                                    updateRequisitionCount();
+                                    
+                                    // Check if table is empty
+                                    if ($('#requisitionsTable tbody tr').length === 0) {
+                                        $('#requisitionsTable tbody').html(`
+                                            <tr>
+                                                <td colspan="7" class="text-center py-4">
+                                                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                                                    <p class="mt-2">No requisitions found</p>
+                                                </td>
+                                            </tr>
+                                        `);
+                                    }
+                                });
+                                
+                                showToast('Success', response.message, 'success');
+                            } else {
+                                showToast('Error', response.message, 'danger');
+                                $this.html('<i class="bi bi-trash me-1"></i> Delete');
+                                $this.prop('disabled', false);
+                            }
+                        },
+                        error: function(error){
+                            console.log(error);
+                            showToast('Error', 'Failed to delete requisition', 'danger');
+                            $this.html('<i class="bi bi-trash me-1"></i> Delete');
+                            $this.prop('disabled', false);
+                        }
+                    });
                 }
             });
         });
-
-
-
-
-        //Add requisition item
+        
+        // Add requisition item
         $('.add-item').on('click', function(e){
             e.preventDefault();
-            //var requisition_id = $(this).data('requisition-id');
-            var tenantId = '{{ request.tenant.id }}'
-
-            //Add new row to the table for user input
+            var requisitionId = $(this).data('requisition-id');
+            
+            // Add new row to the table for user input
             const newRow = `
-                <tr>
-                    <td class="text-start align-middle">
-                        <input type="text" name="item_name" class="form-control" placeholder="Name">
+                <tr class="new-item-row highlight">
+                    <td class="ps-3">
+                        <input type="text" name="item_name" class="form-control" placeholder="Item name" required>
                     </td>
-                    <td class="text-start align-middle">
-                        <input type="number" name="quantity" class="form-control" placeholder="Quantity">
+                    <td>
+                        <input type="number" name="quantity" class="form-control" placeholder="Qty" min="1" required>
                     </td>
-                    <td class="text-start align-middle">
-                        <input type="number" name="amount" class="form-control" placeholder="Amount">
+                    <td>
+                        <input type="number" name="amount" class="form-control" placeholder="Price" step="0.01" min="0.01" required>
                     </td>
-                    <td class="text-start align-middle d-flex">
-                        <a class="btn btn-sm save-item">
-                            <i class="ri-checkbox-circle-line fs-5" style="color:green;"></i>
-                        </a>
-                        <a class="btn btn-sm remove-row">
-                            <i class="ri-delete-bin-2-line fs-5" style="color:red;"></i>
-                        </a>
+                    <td class="fw-medium">
+                        <span class="calculated-total">0.00</span>
                     </td>
-                </tr>    
-            `
-
-            //Append nerRow to table
-            $(this).closest('.requisition-card').find('.modal-item-body').append(newRow);
-        });
-
-        //Remove table row
-        $('.item-table').on('click','.remove-row', function(e){
-            e.preventDefault();
-            $(this).closest('tr').remove();
-        });
-
-        //Save item
-        $('.item-table').on('click','.save-item', function(e){
-            e.preventDefault();
-            const row = $(this).closest('tr');
-            const tableBody = $(this).closest('.requisition-card').find('.modal-item-body');
-            var lastRow = tableBody.find('tr:last-child');
-            var item_name = row.find('input[name="item_name"]').val();
-            var quantity = row.find('input[name="quantity"]').val();
-            var amount = row.find('input[name="amount"]').val();
-            var requisition_id = $(this).closest('.requisition-card').find('.delete-requisition').data('requisition-id');
-
-
-            if (!item_name || !quantity || !amount){
-                alert('All fields are required');
+                    <td class="text-center">
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-success save-item" title="Save item">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary remove-row" title="Cancel">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            // Check if there's already a form row
+            if ($('.new-item-row').length > 0) {
+                showToast('Info', 'Please complete the current item first', 'info');
                 return;
             }
-
+            
+            // Check if table is empty (has the "No items" message)
+            if ($('.modal-item-body tr td').length === 1 && $('.modal-item-body tr td').text().includes('No items')) {
+                $('.modal-item-body').empty();
+            }
+            
+            // Append new row to table
+            $('.modal-item-body').append(newRow);
+            
+            // Focus on first input
+            $('.new-item-row input[name="item_name"]').focus();
+            
+            // Calculate total on input change
+            $('.new-item-row input[name="quantity"], .new-item-row input[name="amount"]').on('input', function(){
+                const quantity = parseFloat($('.new-item-row input[name="quantity"]').val()) || 0;
+                const amount = parseFloat($('.new-item-row input[name="amount"]').val()) || 0;
+                $('.calculated-total').text((quantity * amount).toFixed(2));
+            });
+        });
+        
+        // Remove table row
+        $(document).on('click', '.remove-row', function(e){
+            e.preventDefault();
+            $(this).closest('tr').remove();
+            
+            // Check if table is empty
+            if ($('.modal-item-body tr').length === 0) {
+                $('.modal-item-body').html(`
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                            <p class="mt-2">No items added to this requisition.</p>
+                        </td>
+                    </tr>
+                `);
+            }
+        });
+        
+        // Save item
+        $(document).on('click', '.save-item', function(e){
+            e.preventDefault();
+            var $this = $(this);
+            var row = $this.closest('tr');
+            var requisitionId = $('.add-item').data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}';
+            
+            // Get form values
+            var itemName = row.find('input[name="item_name"]').val();
+            var quantity = row.find('input[name="quantity"]').val();
+            var amount = row.find('input[name="amount"]').val();
+            
+            // Validate inputs
+            if (!itemName || !quantity || !amount) {
+                showToast('Error', 'All fields are required', 'danger');
+                return;
+            }
+            
+            if (quantity <= 0) {
+                showToast('Error', 'Quantity must be greater than zero', 'danger');
+                return;
+            }
+            
+            if (amount <= 0) {
+                showToast('Error', 'Amount must be greater than zero', 'danger');
+                return;
+            }
+            
+            // Show loading state
+            $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            $this.prop('disabled', true);
+            
             var data = {
-                item_name: item_name,
+                item_name: itemName,
                 quantity: quantity,
                 amount: amount,
-                requisition_id: requisition_id
-            }
-
-            var tenantId = '{{ request.tenant.id }}'
-
+                requisition_id: requisitionId
+            };
+            
             $.ajax({
-                url:`/${tenantId}/fund/add-requisition-item/`,
+                url: `/${tenantId}/fund/add-requisition-item/`,
                 type: 'POST',
                 data: data,
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                success:function(response){
+                success: function(response){
                     if (response.status === 'success'){
-                        var item = response.items;
-                        const row = 
-                        `
-                            <tr>
-                                <td class="text-start align-middle">${ item_name }</td>
-                                <td class="text-start
-                                align-middle">${ quantity }</td>
-                                <td class="text-start
-                                align-middle">${ amount }</td>
-                                <td class="text-start
-                                align-middle">${ amount*quantity }</td>
-                                <td class="text-start
-                                align-middle">
-                                    <!-- <button class="btn btn-link delete-requisition-item" data-item-id="" data-requisition-id="">
-                                        <i class="ri-close-circle-fill fs-5 text-danger"></i>
-                                    </button> -->
+                        // Replace input row with regular row
+                        const totalCost = (parseFloat(quantity) * parseFloat(amount)).toFixed(2);
+                        const newRow = `
+                            <tr class="highlight">
+                                <td class="ps-3">${itemName}</td>
+                                <td><span class="badge text-dark">${quantity}</span></td>
+                                <td>${amount}</td>
+                                <td class="fw-medium">${totalCost}</td>
+                                {% if 'Finance Analyst' in user_groups %}
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-danger delete-requisition-item" data-item-id="${response.item_id}" data-requisition-id="${requisitionId}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </td>
+                                {% endif %}
                             </tr>
-                        `
-                        //Insert row before the last row
-                        if (lastRow.length > 0) {
-                            $(row).insertBefore(lastRow);
-                        }else{
-                            tableBody.append(row);
-
-                        }
-
-                        //Update total amount
-                        tableBody.closest('.requisition-card').find('.total-amount').text(response.total_amount);
-                    }else{
-                        alert(response.message);
+                        `;
+                        
+                        row.replaceWith(newRow);
+                        
+                        // Update amounts
+                        $('.total-amount').text(response.total_amount);
+                        const totalAmount = parseFloat(response.total_amount) || 0;
+                        const taxAmount = parseFloat($('.tax-amount').text()) || 0;
+                        $('.final-amount').text((totalAmount + taxAmount).toFixed(2));
+                        
+                        // Update requisition row in main table
+                        $(`.requisition-row[data-requisition-id="${requisitionId}"] .total_amount`).text(response.total_amount);
+                        
+                        showToast('Success', 'Item added successfully', 'success');
+                    } else {
+                        showToast('Error', response.message, 'danger');
+                        $this.html('<i class="bi bi-check-lg"></i>');
+                        $this.prop('disabled', false);
                     }
                 },
                 error: function(error){
                     console.log(error);
+                    showToast('Error', 'Failed to add item', 'danger');
+                    $this.html('<i class="bi bi-check-lg"></i>');
+                    $this.prop('disabled', false);
                 }
             });
         });
-
-        //Approve requisition
-        $('.approve-requisition').on('click',function(e){
+        
+        // Approve requisition
+        $('.approve-requisition').on('click', function(e){
             e.preventDefault();
-            var requisition_id = $(this).data('requisition-id');
-            var tenantId = '{{ request.tenant.id }}'
-
-            if (!confirm('Are you sure you want to approve this requisition?')){
-                return;
-            }
-
-            $.ajax({
-                url: `/${tenantId}/fund/approve-requisition/${requisition_id}/`,
-                type: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                success:function(response){
-                    if (response.status === 'success'){
-                        alert(response.message);
-                        window.location.reload();
-                    }else{
-                        alert(response.message);
-                    }
-                },
+            var $this = $(this);
+            var requisitionId = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}';
+            
+            // Confirm approval with SweetAlert
+            Swal.fire({
+                title: 'Approve Requisition?',
+                text: 'Are you sure you want to approve this requisition?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, approve it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    $this.prop('disabled', true);
+                    
+                    $.ajax({
+                        url: `/${tenantId}/fund/approve-requisition/${requisitionId}/`,
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        success: function(response){
+                            if (response.status === 'success'){
+                                // Update status badge
+                                $(`.requisition-row[data-requisition-id="${requisitionId}"] td:nth-child(6)`).html(
+                                    '<span class="badge bg-success-soft text-success">Approved</span>'
+                                );
+                                
+                                // Remove action buttons
+                                $this.closest('div').html('<span class="text-muted">Approved</span>');
+                                
+                                showToast('Success', response.message, 'success');
+                            } else {
+                                showToast('Error', response.message, 'danger');
+                                $this.html('<i class="bi bi-check-circle me-1"></i> Approve');
+                                $this.prop('disabled', false);
+                            }
+                        },
+                        error: function(error){
+                            console.log(error);
+                            showToast('Error', 'Failed to approve requisition', 'danger');
+                            $this.html('<i class="bi bi-check-circle me-1"></i> Approve');
+                            $this.prop('disabled', false);
+                        }
+                    });
+                }
             });
         });
-
+        
+        // Add tax
         $('.add-tax').on('click', function(e){
             e.preventDefault();
-            var requisition_id = $(this).data('requisition-id');
-            var tenantId = '{{ request.tenant.id }}'
             var $this = $(this);
-            var tax = prompt('Enter tax amount');
-            // tax should be a decimal value
-            tax = parseFloat(tax);
-            if (!tax){
-                alert('Please enter a valid tax amount');
-                return;
-            }
-
-            $.ajax({
-                url: `/${tenantId}/fund/add-tax/${requisition_id}/`,
-                type: 'POST',
-                data: {tax: tax},
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
+            var requisitionId = $(this).data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}';
+            
+            // Prompt for tax amount with SweetAlert
+            Swal.fire({
+                title: 'Add Tax',
+                input: 'number',
+                inputLabel: 'Enter tax amount',
+                inputPlaceholder: '0.00',
+                inputAttributes: {
+                    step: '0.01',
+                    min: '0'
                 },
-                success:function(response){
-                    if (response.status === 'success'){
-                        alert(response.message);
-                        $this.closest('.requisition-row').find('.tax_amount').text(response.tax_amount);
-                        //window.location.reload();
-                    }else{
-                        alert(response.message);
+                showCancelButton: true,
+                confirmButtonText: 'Add Tax',
+                showLoaderOnConfirm: true,
+                preConfirm: (tax) => {
+                    tax = parseFloat(tax);
+                    if (isNaN(tax) || tax < 0) {
+                        Swal.showValidationMessage('Please enter a valid tax amount');
+                        return false;
                     }
+                    
+                    return $.ajax({
+                        url: `/${tenantId}/fund/add-tax/${requisitionId}/`,
+                        type: 'POST',
+                        data: { tax: tax },
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    })
+                    .then(response => {
+                        if (response.status === 'success') {
+                            return response;
+                        } else {
+                            throw new Error(response.message || 'Failed to add tax');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.showValidationMessage(`Request failed: ${error.message || 'Unknown error'}`);
+                    });
                 },
-                error:function(jqXHR){
-                    message = jqXHR.responseJSON.message || 'An error occured';
-                    console.log(message);
-                    alert(message);
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Update tax amount in table
+                    $(`.requisition-row[data-requisition-id="${requisitionId}"] .tax_amount`).text(result.value.tax_amount);
+                    
+                    showToast('Success', result.value.message, 'success');
                 }
-            })
+            });
         });
+        
+        // Function to update requisition count
+        function updateRequisitionCount() {
+            var count = $('#requisitionsTable tbody tr').length;
+            if (count === 1 && $('#requisitionsTable tbody tr td').length === 7 && $('#requisitionsTable tbody tr td:first').text().includes('No requisitions')) {
+                count = 0;
+            }
+            $('#requisition-count').text(count + (count === 1 ? ' requisition' : ' requisitions'));
+        }
+        
+        // Toast notification function
+        function showToast(title, message, type) {
+            var toast = $('#notificationToast');
+            
+            // Set toast content
+            toast.find('.toast-title').text(title);
+            toast.find('.toast-body').text(message);
+            toast.find('.toast-time').text('just now');
+            
+            // Set toast color based on type
+            toast.removeClass('bg-success bg-danger bg-warning bg-info');
+            
+            switch(type) {
+                case 'success':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-check-circle-fill text-success me-2');
+                    break;
+                case 'danger':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-circle-fill text-danger me-2');
+                    break;
+                case 'warning':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-triangle-fill text-warning me-2');
+                    break;
+                case 'info':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+                    break;
+                default:
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+            }
+            
+            // Show toast
+            var bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
     });
 </script>
 {% endblock %}

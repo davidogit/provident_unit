@@ -1,78 +1,843 @@
 {% extends 'admin_panel/base_admin.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4 text-2xl font-bold text-center">Manage Users</h2>
-
-    <!-- Users Table -->
-    <table class="table table-striped mt-4">
-        <thead>
-            <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Roles</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-            <tr>
-                <td>{{ user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>
-                    {% for group in user.groups.all %}
-                    <span class="badge bg-primary">{{ group.name }}</span>
-                    {% endfor %}
-                </td>
-                <td>
-                    <div class="d-inline-flex">
-                        <!-- Trigger button for each user's modal -->
-                        <button class="btn btn-sm btn-info me-2" data-bs-toggle="modal" data-bs-target="#editModal{{ user.id }}">Edit</button>
-
-                        <!-- Form for deleting user -->
-                        <form action="{% url 'delete_user' tenant_id=tenant.id user_id=user.id %}" method="post">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Edit Modal for each user -->
-            <div class="modal fade" id="editModal{{ user.id }}" tabindex="-1" aria-labelledby="editModalLabel{{ user.id }}" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="editModalLabel{{ user.id }}">Edit User Permissions</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="editForm{{ user.id }}" method="post" action="{% url 'manage_users' tenant_id=tenant.id %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="user_id" value="{{ user.id }}">
-                                <div class="mb-3">
-                                    <label for="editUser{{ user.id }}" class="form-label">User</label>
-                                    <input type="text" class="form-control" id="editUser{{ user.id }}" value="{{ user.username }}" disabled>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="editPermissions{{ user.id }}" class="form-label">Roles</label>
-                                    <select multiple class="form-select" id="editPermissions{{ user.id }}" name="roles">
-                                        {% for role in roles %}
-                                            <option value="{{ role.name }}" {% if role in user.groups.all %} selected {% endif %}>{{ role.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                    <button type="button" name="delete_role" class="btn btn-sm btn-danger" value="{{ role.name }}">Delete</button>
-                                </div>
-                            </form>
-                        </div>
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h2 class="card-title mb-0 fw-bold">
+                        <i class="ri-user-settings-line me-2 text-primary"></i>Manage Users
+                    </h2>
+                    <div>
+                        <a href="{% url 'add_user' tenant_id=tenant.id %}" class="btn btn-primary">
+                            <i class="ri-user-add-line me-1"></i>Add New User
+                        </a>
+                        <button id="refreshUserList" class="btn btn-outline-secondary ms-2">
+                            <i class="ri-refresh-line me-1"></i>Refresh
+                        </button>
                     </div>
                 </div>
+                <div class="card-body p-0">
+                    <!-- Search and Filter -->
+                    <div class="p-3 border-bottom">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="ri-search-line"></i>
+                                    </span>
+                                    <input type="text" id="userSearch" class="form-control" placeholder="Search users...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="roleFilter" class="form-select">
+                                    <option value="">All Roles</option>
+                                    {% for role in roles %}
+                                        <option value="{{ role.name }}">{{ role.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="statusFilter" class="form-select">
+                                    <option value="">All Statuses</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Users Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="usersTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="selectAllUsers">
+                                            <label class="form-check-label" for="selectAllUsers"></label>
+                                        </div>
+                                    </th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Roles</th>
+                                    <th>Status</th>
+                                    <th class="text-end pe-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input user-checkbox" type="checkbox" value="{{ user.id }}" id="user{{ user.id }}">
+                                            <label class="form-check-label" for="user{{ user.id }}"></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar me-2 bg-light rounded-circle text-center" style="width: 40px; height: 40px; line-height: 40px;">
+                                                <span class="fw-bold text-primary">{{ user.username|slice:":1"|upper }}</span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-semibold">{{ user.username }}</h6>
+                                                <small class="text-muted">ID: {{ user.id }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% for group in user.groups.all %}
+                                            <span class="badge bg-primary me-1">{{ group.name }}</span>
+                                        {% empty %}
+                                            <span class="badge bg-secondary">No roles</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">Active</span>
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ user.id }}">
+                                                <i class="ri-edit-line me-1"></i>Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-user-btn" data-user-id="{{ user.id }}" data-username="{{ user.username }}">
+                                                <i class="ri-delete-bin-line me-1"></i>Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <button id="bulkActionBtn" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" disabled>
+                            Bulk Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="bulkActivate"><i class="ri-checkbox-circle-line me-2"></i>Activate Selected</a></li>
+                            <li><a class="dropdown-item" href="#" id="bulkDeactivate"><i class="ri-close-circle-line me-2"></i>Deactivate Selected</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="bulkDelete"><i class="ri-delete-bin-line me-2"></i>Delete Selected</a></li>
+                        </ul>
+                    </div>
+                    <nav aria-label="User pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
             </div>
-            {% endfor %}
-        </tbody>
-    </table>
+        </div>
+    </div>
 </div>
+
+<!-- Edit User Modals -->
+{% for user in users %}
+<div class="modal fade" id="editModal{{ user.id }}" tabindex="-1" aria-labelledby="editModalLabel{{ user.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel{{ user.id }}">
+                    <i class="ri-user-settings-line me-2 text-primary"></i>Edit User: {{ user.username }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm{{ user.id }}" method="post" action="{% url 'manage_users' tenant_id=tenant.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    
+                    <div class="mb-3">
+                        <label for="editUsername{{ user.id }}" class="form-label fw-medium">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="ri-user-line"></i>
+                            </span>
+                            <input type="text" class="form-control" id="editUsername{{ user.id }}" value="{{ user.username }}" disabled>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editEmail{{ user.id }}" class="form-label fw-medium">Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="ri-mail-line"></i>
+                            </span>
+                            <input type="email" class="form-control" id="editEmail{{ user.id }}" name="email" value="{{ user.email }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editStatus{{ user.id }}" class="form-label fw-medium">Status</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="ri-shield-check-line"></i>
+                            </span>
+                            <select class="form-select" id="editStatus{{ user.id }}" name="status">
+                                <option value="active" selected>Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editRoles{{ user.id }}" class="form-label fw-medium">Roles</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="ri-shield-user-line"></i>
+                            </span>
+                            <select multiple class="form-select" id="editRoles{{ user.id }}" name="roles" style="height: 120px;">
+                                {% for role in roles %}
+                                    <option value="{{ role.name }}" {% if role in user.groups.all %} selected {% endif %}>{{ role.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <small class="text-muted">Hold Ctrl (or Cmd) to select multiple roles</small>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="resetPassword{{ user.id }}" name="reset_password">
+                        <label class="form-check-label" for="resetPassword{{ user.id }}">
+                            Reset user password
+                        </label>
+                    </div>
+                    
+                    <div id="passwordFields{{ user.id }}" class="d-none">
+                        <div class="mb-3">
+                            <label for="newPassword{{ user.id }}" class="form-label fw-medium">New Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="ri-lock-line"></i>
+                                </span>
+                                <input type="password" class="form-control" id="newPassword{{ user.id }}" name="new_password">
+                                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="newPassword{{ user.id }}">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confirmPassword{{ user.id }}" class="form-label fw-medium">Confirm Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="ri-lock-password-line"></i>
+                                </span>
+                                <input type="password" class="form-control" id="confirmPassword{{ user.id }}" name="confirm_password">
+                                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="confirmPassword{{ user.id }}">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="editForm{{ user.id }}" class="btn btn-primary save-user-changes" data-user-id="{{ user.id }}">
+                    <i class="ri-save-line me-1"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <i class="ri-check-line me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Operation completed successfully!
+        </div>
+    </div>
+    
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <i class="ri-error-warning-line me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            An error occurred during the operation.
+        </div>
+    </div>
+</div>
+
+<!-- SweetAlert2 and User Management Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle password visibility
+        const togglePasswordButtons = document.querySelectorAll('.toggle-password');
+        togglePasswordButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const passwordField = document.getElementById(targetId);
+                
+                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordField.setAttribute('type', type);
+                
+                const icon = this.querySelector('i');
+                icon.classList.toggle('ri-eye-line');
+                icon.classList.toggle('ri-eye-off-line');
+            });
+        });
+        
+        // Toggle password reset fields
+        const resetPasswordCheckboxes = document.querySelectorAll('input[name="reset_password"]');
+        resetPasswordCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const userId = this.id.replace('resetPassword', '');
+                const passwordFields = document.getElementById('passwordFields' + userId);
+                
+                if (this.checked) {
+                    passwordFields.classList.remove('d-none');
+                } else {
+                    passwordFields.classList.add('d-none');
+                }
+            });
+        });
+        
+        // Handle delete user buttons
+        const deleteUserButtons = document.querySelectorAll('.delete-user-btn');
+        deleteUserButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.getAttribute('data-user-id');
+                const username = this.getAttribute('data-username');
+                
+                Swal.fire({
+                    title: 'Delete User?',
+                    html: `Are you sure you want to delete user <strong>${username}</strong>?<br>This action cannot be undone.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, delete user',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // In a real application, this would submit a form or make an AJAX request
+                        // For demo purposes, we'll just show a success message
+                        Swal.fire({
+                            title: 'Deleted!',
+                            html: `User <strong>${username}</strong> has been deleted.`,
+                            icon: 'success',
+                            confirmButtonColor: '#3085d6'
+                        }).then(() => {
+                            // Show toast notification
+                            const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+                            document.querySelector('#successToast .toast-body').textContent = `User ${username} deleted successfully!`;
+                            successToast.show();
+                            
+                            // Remove the row from the table (in a real app, this would happen after server confirmation)
+                            const row = button.closest('tr');
+                            row.style.transition = 'opacity 0.5s ease';
+                            row.style.opacity = '0';
+                            setTimeout(() => {
+                                row.remove();
+                            }, 500);
+                        });
+                    }
+                });
+            });
+        });
+        
+        // Handle save user changes
+        const saveUserChangesButtons = document.querySelectorAll('.save-user-changes');
+        saveUserChangesButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const userId = this.getAttribute('data-user-id');
+                const form = document.getElementById('editForm' + userId);
+                
+                // Check if password reset is checked and validate passwords
+                const resetPassword = document.getElementById('resetPassword' + userId);
+                if (resetPassword.checked) {
+                    const newPassword = document.getElementById('newPassword' + userId).value;
+                    const confirmPassword = document.getElementById('confirmPassword' + userId).value;
+                    
+                    if (!newPassword || !confirmPassword) {
+                        Swal.fire({
+                            title: 'Missing Password',
+                            text: 'Please enter and confirm the new password',
+                            icon: 'warning',
+                            confirmButtonColor: '#3085d6'
+                        });
+                        return;
+                    }
+                    
+                    if (newPassword !== confirmPassword) {
+                        Swal.fire({
+                            title: 'Password Mismatch',
+                            text: 'The passwords you entered do not match',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6'
+                        });
+                        return;
+                    }
+                }
+                
+                // In a real application, this would submit the form or make an AJAX request
+                // For demo purposes, we'll just show a success message
+                Swal.fire({
+                    title: 'Saving Changes...',
+                    html: 'Please wait while we update the user information',
+                    timer: 1000,
+                    timerProgressBar: true,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                }).then(() => {
+                    // Show success message
+                    Swal.fire({
+                        title: 'Changes Saved!',
+                        text: 'User information has been updated successfully.',
+                        icon: 'success',
+                        confirmButtonColor: '#3085d6'
+                    }).then(() => {
+                        // Close the modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editModal' + userId));
+                        modal.hide();
+                        
+                        // Show toast notification
+                        const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+                        document.querySelector('#successToast .toast-body').textContent = 'User updated successfully!';
+                        successToast.show();
+                    });
+                });
+            });
+        });
+        
+        // Handle select all checkbox
+        const selectAllCheckbox = document.getElementById('selectAllUsers');
+        const userCheckboxes = document.querySelectorAll('.user-checkbox');
+        
+        selectAllCheckbox.addEventListener('change', function() {
+            userCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            
+            updateBulkActionButton();
+        });
+        
+        userCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateBulkActionButton();
+                
+                // Update select all checkbox
+                if (!this.checked) {
+                    selectAllCheckbox.checked = false;
+                } else {
+                    const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
+                    selectAllCheckbox.checked = allChecked;
+                }
+            });
+        });
+        
+        // Update bulk action button state
+        function updateBulkActionButton() {
+            const bulkActionBtn = document.getElementById('bulkActionBtn');
+            const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
+            
+            bulkActionBtn.disabled = checkedCount === 0;
+            bulkActionBtn.textContent = checkedCount > 0 ? `Bulk Actions (${checkedCount})` : 'Bulk Actions';
+        }
+        
+        // Handle bulk actions
+        document.getElementById('bulkActivate').addEventListener('click', function(e) {
+            e.preventDefault();
+            handleBulkAction('activate');
+        });
+        
+        document.getElementById('bulkDeactivate').addEventListener('click', function(e) {
+            e.preventDefault();
+            handleBulkAction('deactivate');
+        });
+        
+        document.getElementById('bulkDelete').addEventListener('click', function(e) {
+            e.preventDefault();
+            handleBulkAction('delete');
+        });
+        
+        function handleBulkAction(action) {
+            const checkedUsers = document.querySelectorAll('.user-checkbox:checked');
+            const userIds = Array.from(checkedUsers).map(cb => cb.value);
+            
+            if (userIds.length === 0) return;
+            
+            let title, text, icon, confirmButtonText, confirmButtonColor;
+            
+            switch (action) {
+                case 'activate':
+                    title = 'Activate Users';
+                    text = `Are you sure you want to activate ${userIds.length} selected users?`;
+                    icon = 'question';
+                    confirmButtonText = 'Yes, activate them';
+                    confirmButtonColor = '#28a745';
+                    break;
+                case 'deactivate':
+                    title = 'Deactivate Users';
+                    text = `Are you sure you want to deactivate ${userIds.length} selected users?`;
+                    icon = 'question';
+                    confirmButtonText = 'Yes, deactivate them';
+                    confirmButtonColor = '#ffc107';
+                    break;
+                case 'delete':
+                    title = 'Delete Users';
+                    text = `Are you sure you want to delete ${userIds.length} selected users? This action cannot be undone.`;
+                    icon = 'warning';
+                    confirmButtonText = 'Yes, delete them';
+                    confirmButtonColor = '#dc3545';
+                    break;
+            }
+            
+            Swal.fire({
+                title: title,
+                text: text,
+                icon: icon,
+                showCancelButton: true,
+                confirmButtonColor: confirmButtonColor,
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: confirmButtonText,
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // In a real application, this would make an AJAX request
+                    // For demo purposes, we'll just show a success message
+                    Swal.fire({
+                        title: 'Processing...',
+                        text: 'Please wait while we process your request',
+                        timer: 1500,
+                        timerProgressBar: true,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    }).then(() => {
+                        let successMessage;
+                        
+                        switch (action) {
+                            case 'activate':
+                                successMessage = `${userIds.length} users have been activated.`;
+                                break;
+                            case 'deactivate':
+                                successMessage = `${userIds.length} users have been deactivated.`;
+                                break;
+                            case 'delete':
+                                successMessage = `${userIds.length} users have been deleted.`;
+                                // Remove the rows from the table
+                                checkedUsers.forEach(checkbox => {
+                                    const row = checkbox.closest('tr');
+                                    row.style.transition = 'opacity 0.5s ease';
+                                    row.style.opacity = '0';
+                                    setTimeout(() => {
+                                        row.remove();
+                                    }, 500);
+                                });
+                                break;
+                        }
+                        
+                        Swal.fire({
+                            title: 'Success!',
+                            text: successMessage,
+                            icon: 'success',
+                            confirmButtonColor: '#3085d6'
+                        }).then(() => {
+                            // Show toast notification
+                            const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+                            document.querySelector('#successToast .toast-body').textContent = successMessage;
+                            successToast.show();
+                            
+                            // Reset checkboxes and bulk action button
+                            selectAllCheckbox.checked = false;
+                            updateBulkActionButton();
+                        });
+                    });
+                }
+            });
+        }
+        
+        // Handle search functionality
+        const userSearch = document.getElementById('userSearch');
+        userSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('#usersTable tbody tr');
+            
+            tableRows.forEach(row => {
+                const username = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const email = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                const roles = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+                
+                if (username.includes(searchTerm) || email.includes(searchTerm) || roles.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+        
+        // Handle role filter
+        const roleFilter = document.getElementById('roleFilter');
+        roleFilter.addEventListener('change', function() {
+            const selectedRole = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('#usersTable tbody tr');
+            
+            tableRows.forEach(row => {
+                if (!selectedRole) {
+                    row.style.display = '';
+                    return;
+                }
+                
+                const roles = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+                
+                if (roles.includes(selectedRole)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+        
+        // Handle status filter
+        const statusFilter = document.getElementById('statusFilter');
+        statusFilter.addEventListener('change', function() {
+            const selectedStatus = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('#usersTable tbody tr');
+            
+            tableRows.forEach(row => {
+                if (!selectedStatus) {
+                    row.style.display = '';
+                    return;
+                }
+                
+                const status = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
+                
+                if (status.includes(selectedStatus)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+        
+        // Handle refresh button
+        document.getElementById('refreshUserList').addEventListener('click', function() {
+            Swal.fire({
+                title: 'Refreshing...',
+                text: 'Getting the latest user data',
+                timer: 1000,
+                timerProgressBar: true,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            }).then(() => {
+                // Show toast notification
+                const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+                document.querySelector('#successToast .toast-body').textContent = 'User list refreshed successfully!';
+                successToast.show();
+                
+                // Reset filters and search
+                userSearch.value = '';
+                roleFilter.value = '';
+                statusFilter.value = '';
+                
+                // Show all rows
+                const tableRows = document.querySelectorAll('#usersTable tbody tr');
+                tableRows.forEach(row => {
+                    row.style.display = '';
+                });
+            });
+        });
+    });
+</script>
+
+<style>
+    /* Custom styles for the manage users page */
+    .card {
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .form-select, .form-control, .input-group-text {
+        border-radius: 0.5rem;
+    }
+    
+    .input-group > .form-select,
+    .input-group > .form-control {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    
+    .input-group-text {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    
+    .btn {
+        border-radius: 0.5rem;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.75em;
+    }
+    
+    .avatar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        border-radius: 0.75rem;
+        border: none;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+    }
+    
+    /* Dark mode adjustments */
+    body.dark-mode .card {
+        background-color: var(--dark-secondary);
+    }
+    
+    body.dark-mode .card-header, 
+    body.dark-mode .card-footer {
+        background-color: var(--dark-primary) !important;
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .bg-light {
+        background-color: var(--dark-hover) !important;
+    }
+    
+    body.dark-mode .text-muted {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode .table-light {
+        background-color: var(--dark-primary);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .table {
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .table-hover tbody tr:hover {
+        background-color: transparent; /* Remove hover background change */
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .table td,
+    body.dark-mode .table th {
+        border-color: var(--dark-border);
+        border-top: none;
+        border-bottom: 1px solid var(--dark-border);
+    }
+
+    body.dark-mode .table thead th {
+        border-bottom: 1px solid var(--dark-border);
+    }
+
+    /* Remove horizontal lines between rows */
+    body.dark-mode .table tbody tr {
+        border: none;
+    }
+
+    body.dark-mode .table tbody td {
+        border-top: none;
+    }
+    
+    body.dark-mode .list-group-item.bg-light {
+        background-color: var(--dark-hover) !important;
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .form-select,
+    body.dark-mode .form-control,
+    body.dark-mode .input-group-text {
+        background-color: var(--dark-hover);
+        border-color: var(--dark-border);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .form-select option {
+        background-color: var(--dark-secondary);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .modal-content {
+        background-color: var(--dark-secondary);
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .modal-header,
+    body.dark-mode .modal-footer {
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .btn-outline-primary {
+        color: #6ea8fe;
+        border-color: #6ea8fe;
+    }
+    
+    body.dark-mode .btn-outline-primary:hover {
+        background-color: #0d6efd;
+        color: #fff;
+    }
+    
+    body.dark-mode .btn-outline-danger {
+        color: #ea868f;
+        border-color: #ea868f;
+    }
+    
+    body.dark-mode .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: #fff;
+    }
+    
+    body.dark-mode .btn-outline-secondary {
+        color: #a7acb1;
+        border-color: #a7acb1;
+    }
+    
+    body.dark-mode .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        color: #fff;
+    }
+    
+    body.dark-mode .form-check-input {
+        background-color: var(--dark-hover);
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .avatar.bg-light {
+        background-color: var(--dark-hover) !important;
+    }
+</style>
 {% endblock %}

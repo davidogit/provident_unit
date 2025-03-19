@@ -9,119 +9,253 @@
 {% endblock %}
 
 {% block content %}
-
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
-        <div class="col-12">
-            <div class="container">
-                <!-- Table to hold list of members payments to be processed -->
-                <div class="table-responsive overflow-auto">
-                    <table class="table table-bordered table-striped" id="members_table">
-                        <thead class="thead-light text-center">
-                            <th>
-                                <!-- <input type="checkbox" name="select_all" id="select_all"> -->
-                            </th>
-                            <th>Staff ID</th>
-                            <th>Withdrawal ID</th>
-                            <th>Scheme</th>
-                            <th>Withdrawal Amount</th>
-                            <th>Date Requested</th>
-                            <th>First Approval</th>
-                        </thead>
-                        <tbody class="text-center">
-                            {% if withdrawals %}
-                            {% for withdrawal in withdrawals %}
-                            <tr>
-                                <td>
-                                    {{ forloop.counter }}
-                                </td>
-                                <td>{{ withdrawal.staff.Id }}</td>
-                                <td>{{ withdrawal.id }}</td>
-                                <td>{{ withdrawal.scheme }}</td>
-                                <td>{{ withdrawal.amount }}</td>
-                                <td>{{ withdrawal.request_date }}</td>
-                                <td>{{ withdrawal.first_approval }}</td>
-                                
-                            </tr>
-                            {% endfor %}
+    <div class="container-fluid">
+        <!-- Batch Summary Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-1">Batch Details</h6>
+                        <p class="text-muted small mb-0">Viewing individual withdrawal requests in this batch</p>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center h-100">
+                            <span class="badge bg-primary rounded-pill withdrawal-count">
+                                {{ withdrawals|length }} {{ withdrawals|length|pluralize:"request,requests" }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex justify-content-md-end align-items-center h-100">
+                            <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i> Back to Batches
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                            {% else %}
+        <!-- Withdrawal List Table Card -->
+        <div class="card shadow-sm">
+            <div class="card-header py-3">
+                <h6 class="mb-0 fw-bold">Withdrawal Requests in Batch</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="members_table">
+                        <thead>
                             <tr>
-                                <td colspan="7" class="text-center">No batch withdrawal list available</td>
+                                <th class="ps-3" width="5%">#</th>
+                                <th width="10%">Staff ID</th>
+                                <th width="15%">Withdrawal ID</th>
+                                <th width="20%">Scheme</th>
+                                <th width="15%">Amount</th>
+                                <th width="15%">Date Requested</th>
+                                <th width="20%">First Approval</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {% if withdrawals %}
+                                {% for withdrawal in withdrawals %}
+                                <tr>
+                                    <td class="ps-3">{{ forloop.counter }}</td>
+                                    <td>
+                                        <span class="fw-medium">{{ withdrawal.staff.Id }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary-soft text-primary">{{ withdrawal.id }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle text-primary me-2">
+                                                {{ withdrawal.scheme.name|slice:":1" }}
+                                            </div>
+                                            <div>{{ withdrawal.scheme }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium">{{ withdrawal.amount }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ withdrawal.request_date|date:"M d, Y" }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle bg-success-soft text-success me-2">
+                                                <i class="bi bi-check-lg"></i>
+                                            </div>
+                                            <span>{{ withdrawal.first_approval|date:"M d, Y" }}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="py-5">
+                                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                                            <p class="mt-2">No withdrawal requests found in this batch</p>
+                                        </div>
+                                    </td>
+                                </tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
-                <!-- Pagination --> 
-                <div class="pagination-container row position-sticky bottom-0">
-                    <div class="col-12 d-flex justify-content-center ">
-                        {% if is_paginated %}
-                        <nav aria-label="Page navigation example">
-                            <ul class="pagination justify-content-center">
-                                {% if page_obj.has_previous %}
-                                <li class="page-item">
-                                <a
-                                    class="page-link"
-                                    href="?page={{ page_obj.previous_page_number }}"
-                                    aria-label="Previous"
-                                >
+            </div>
+            
+            <!-- Pagination -->
+            <div class="card-footer border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        Showing <span id="visibleCount">{{ withdrawals|length }}</span> withdrawal requests
+                    </div>
+                    
+                    {% if is_paginated %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
                                     <span aria-hidden="true">&laquo;</span>
                                 </a>
-                                </li>
-                                {% endif %}
-                
-                                <li class="page-item">
-                                <a class="page-link" href="#">{{ page_obj.number }}</a>
-                                </li>
-                                {% if page_obj.has_next %}
-                                <li class="page-item">
-                                <a
-                                    class="page-link"
-                                    href="?page={{ page_obj.next_page_number }}"
-                                    aria-label="Next"
-                                >
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_obj.number }}</span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
                                     <span aria-hidden="true">&raquo;</span>
                                 </a>
-                                </li>
-
-                                <li class="page-link">
-                                    <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;&raquo;</a>
-                                </li>
-                                {% endif %}
-                            </ul>
-                        </nav>
-                        {% endif %}
-                    </div>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-    $(document).ready(function(){
-        $('#approve').click(function(){
-            const batch_id = $(this).data('batch-id');
-            
-            $.ajax({
-                url: '',
-                method: 'POST',
-                headers: {'X-CSRFToken': '{{ csrf_token }}'},
-                data: {batch_id: batch_id},
-                success: function(response){
-                    if (response.status === 'success'){
-                        alert(response.message);
-                        window.location.reload();
-                    }else{
-                        alert('An error occured:' +response.message);
-                    }
-                },
-                error: function(data){
-                    alert('An error occured');
-                }
-            });
-        });
-    })
-</script>
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Table Styles */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    /* Avatar Circle */
+    .avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    /* Withdrawal count badge */
+    .withdrawal-count {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Pagination */
+    .pagination {
+        margin-bottom: 0;
+    }
+    
+    .page-link {
+        border-radius: 0.375rem;
+        margin: 0 0.125rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+        .table th, .table td {
+            padding: 0.5rem;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
 {% endblock %}

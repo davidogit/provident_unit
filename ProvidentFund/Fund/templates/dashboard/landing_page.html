@@ -1,153 +1,313 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
-<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:16:10 GMT -->
-
 <head>
-
-  <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-  <!-- Meta -->
-  <meta name="description" content="">
+  <meta name="description" content="Provident Fund Management System">
   <meta name="author" content="Themepixels">
 
-  <!-- Favicon -->
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
 
   <title>Provident Fund</title>
 
-  <!-- Vendor CSS -->
-  <!-- <link rel="stylesheet" href="../lib/remixicon/fonts/remixicon.css">
-    <link rel="stylesheet" href="../lib/apexcharts/apexcharts.css"> -->
-
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
   <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
-
-  <!-- Template CSS -->
-  <!-- <link rel="stylesheet" href="../assets/css/style.min.css"> -->
-
   <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
-
-  <!-- Hiding Serch Results -->
+  
   <style>
+    :root {
+      --primary-color: #4361ee;
+      --secondary-color: #3a0ca3;
+      --accent-color-1: #4cc9f0;
+      --accent-color-2: #7209b7;
+      --light-color: #f8f9fa;
+      --dark-color: #212529;
+    }
+    
     body {
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        margin: 0;
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
     }
-    /*.sidebar-header{
-        border-bottom: 2px #D3D3D3 solid;
-    }*/
-    .content {
-        flex: 1;
+    
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--accent-color-1) 0%, var(--accent-color-1) 50%, var(--accent-color-2) 50%, var(--accent-color-2) 100%);
+      opacity: 0.1;
+      z-index: -1;
     }
-    .navbar {
-        background-color: #007bff;
+    
+    .header {
+      background-color: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+      padding: 1rem 0;
+      position: relative;
+      z-index: 100;
+      width: 100%;
     }
+    
+    .header-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 0 1.5rem;
+    }
+    
     .navbar-brand {
-        color: white !important;
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--primary-color);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      margin: 0;
+      padding: 0;
     }
+    
+    .navbar-brand:hover {
+      color: var(--secondary-color);
+    }
+    
+    .admin-btn {
+      background-color: var(--secondary-color);
+      border-color: var(--secondary-color);
+      border-radius: 50px;
+      padding: 0.5rem 1.5rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      margin: 0;
+    }
+    
+    .admin-btn:hover {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .hero-section {
+      padding: 5rem 0;
+      text-align: center;
+      position: relative;
+    }
+    
+    .hero-title {
+      font-weight: 700;
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      color: var(--dark-color);
+      position: relative;
+      display: inline-block;
+    }
+    
+    .hero-title::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 4px;
+      background: linear-gradient(to right, var(--accent-color-1), var(--accent-color-2));
+      border-radius: 2px;
+    }
+    
+    .login-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      border: none;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    
+    .login-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    }
+    
+    .card-header {
+      background: linear-gradient(to right, var(--accent-color-1), var(--accent-color-2));
+      color: white;
+      text-align: center;
+      padding: 1.5rem;
+      border: none;
+    }
+    
+    .card-header h3 {
+      margin: 0;
+      font-weight: 600;
+    }
+    
+    .card-body {
+      padding: 2rem;
+    }
+    
+    .login-btn {
+      background: linear-gradient(to right, var(--accent-color-1), var(--accent-color-2));
+      border: none;
+      border-radius: 50px;
+      padding: 0.75rem 2rem;
+      font-weight: 500;
+      color: white;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    
+    .login-btn:hover {
+      background: linear-gradient(to right, var(--accent-color-2), var(--accent-color-1));
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
     .footer {
-        background-color: none;
-        color: black;
-        position: absolute;
-        bottom: 0;
-        width: 100%;
-        height: 56px;
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 1.5rem 0;
+      margin-top: auto;
+      box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
     }
-    .card{
-        border: none;
-        background: none;
+    
+    .footer-text {
+      color: var(--dark-color);
+      font-size: 0.9rem;
     }
-    .card-title {
-        color: #007bff;
+    
+    .shape-divider {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      overflow: hidden;
+      line-height: 0;
     }
-    .btn-primary, .btn-secondary {
-        border-color: #007bff;
+    
+    .shape-divider svg {
+      position: relative;
+      display: block;
+      width: calc(100% + 1.3px);
+      height: 70px;
     }
-    .btn-primary {
-        background-color: #007bff;
+    
+    .shape-divider .shape-fill {
+      fill: rgba(255, 255, 255, 0.95);
     }
-    .btn-secondary {
-        background-color: #0056b3;
+    
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 2rem;
+      }
+      
+      .hero-section {
+        padding: 3rem 0;
+      }
+      
+      .login-card {
+        margin: 0 1rem;
+      }
     }
-</style>
-  <!-- Hiding Serch Results -->
-  <!-- JQuery for Serch implementation -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- JQuery for Serch implementation -->
-
+    
+    @media (max-width: 576px) {
+      .hero-title {
+        font-size: 1.75rem;
+      }
+      
+      .navbar-brand {
+        font-size: 1.25rem;
+      }
+      
+      .header-container {
+        padding: 0 1rem;
+      }
+      
+      .admin-btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
 </head>
 
 <body>
-
-    <div class="header px-3 px-lg-4 mt-2 d-flex justify-content-between">
-        <div class="sidebar-header">
-            <a href="{% url 'landing_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
-        </div><!-- sidebar-header -->
-        <div>
-            <a href="{% url 'admin_login' tenant_id=request.tenant.id %}" class="btn btn-secondary">Admin Login</a>
-        </div>
-    </div><!-- header-main -->
-
-
-
-  
-
-
-  <!--main-->
-    <div class="container text-center content">
-        <h1 class="mt-5">Welcome to the {{ request.tenant.name }} Fund Management System</h1>
-        <!-- <p class="lead">Please select your login type</p> -->
-        <div class="row mt-4 d-flex justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <!-- <h5 class="card-title">Login</h5> -->
-                        <p class="card-text">Access your account, view your contributions and more.</p>
-                        <a href="{% url 'member_login' tenant_id=request.tenant.id %}" class="btn btn-primary">Login</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <a class="navbar-brand" href="{% url 'landing_page' tenant_id=request.tenant.id %}">
+        {{ request.tenant.name }}
+      </a>
+      <a href="{% url 'admin_login' tenant_id=request.tenant.id %}" class="btn btn-secondary admin-btn">
+        <i class="bi bi-shield-lock me-1"></i> Admin Login
+      </a>
     </div>
+  </header>
 
-        <!-- <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Admin Login</h5>
-                    <p class="card-text">Manage members, view reports and more.</p>
-                    <a href="{% url 'admin_login' tenant_id=request.tenant.id %}" class="btn btn-secondary">Admin Login</a>
-                </div>
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container">
+      <h1 class="hero-title">Welcome to the {{ request.tenant.name }} Fund Management System</h1>
+      
+      <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+          <div class="login-card">
+            <div class="card-header">
+              <h3><i class="bi bi-person-circle me-2"></i>Member Access</h3>
             </div>
-        </div> -->
-
-    <!-- main -->
-
-
-    <footer class="footer">
-        <div class="container text-center">
-            <span>© 2024 Provident Fund. All rights reserved.</span>
+            <div class="card-body">
+              <p class="card-text mb-4">Access your account, view your contributions, and manage your provident fund details.</p>
+              <a href="{% url 'member_login' tenant_id=request.tenant.id %}" class="btn login-btn">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Login to Your Account
+              </a>
+            </div>
+          </div>
         </div>
-    </footer>
+      </div>
+    </div>
+    
+    <div class="shape-divider">
+      <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" class="shape-fill"></path>
+      </svg>
+    </div>
+  </section>
 
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container text-center">
+      <p class="footer-text mb-0">
+        <i class="bi bi-c-circle me-1"></i> 2024 {{ request.tenant.name }} Provident Fund. All rights reserved.
+      </p>
+    </div>
+  </footer>
 
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
-  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
   <script src="{% static 'lib/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
   <script src="{% static 'lib/apexcharts/apexcharts.min.js' %}"></script>
   <script src="{% static 'lib/jqvmap/jquery.vmap.min.js' %}"></script>
   <script src="{% static 'lib/jqvmap/maps/jquery.vmap.world.js' %}"></script>
-
   <script src="{% static 'assets/js/script.js' %}"></script>
   <script src="{% static 'assets/js/db.data.js' %}"></script>
   <script src="{% static 'assets/js/db.finance.js' %}"></script>
 </body>
-
-<!-- Mirrored from themepixels.me/demo/dashbyte/dashboard/finance.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:17:10 GMT -->
-
 </html>

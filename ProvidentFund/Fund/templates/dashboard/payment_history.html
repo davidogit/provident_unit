@@ -4,193 +4,363 @@
 {% endblock %}
 
 {% block header %}
-<h5 class="fw-bold"><i class=""></i>Transaction History</h5>
+<h5 class="fw-bold"><i class="bi bi-clock-history me-2"></i>Transaction History</h5>
 {% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5 justify-content-center">
-        <div class="col-12">
-            <div class="container">
-                <div class="col-12 d-flex justify-content-between align-items-center mb-3">
-                    <div class="col-12 col-md-12 col-lg-10">
-                        <form action="" method="GET" class="d-flex flex-wrap gap-2" id="search_form">
-                            <!-- Scheme Select -->
-                            <div class="form-floating flex-grow-1">
-                                <select class="form-select" name="scheme" id="scheme">
-                                    <option value="">--select--</option>
-                                    {% for scheme in schemes %}
-                                    <option value="{{ scheme.id }}">{{ scheme }}</option>
-                                    {% endfor %}
-                                </select>
-                                <label for="scheme">Scheme</label>
-                            </div>
-                
-                            <!-- Payment Type -->
-                            <div class="form-floating flex-grow-1">
-                                <select class="form-select" name="payment_type" id="payment_type">
-                                    <option value="">--select--</option>
-                                    {% for value, type in payment_type %}
-                                    <option value="{{ value }}">{{ type }}</option>
-                                    {% endfor %}
-                                </select>
-                                <label for="payment_type">Payment Type</label>
-                            </div>
-                
-                            <!-- Payment Method -->
-                            <div class="form-floating flex-grow-1">
-                                <select class="form-select" name="payment_method" id="payment_method">
-                                    <option value="">--select--</option>
-                                    {% for value, method in payment_methods %}
-                                    <option value="{{ value }}">{{ method }}</option>
-                                    {% endfor %}
-                                </select>
-                                <label for="payment_method">Payment Method</label>
-                            </div>
-                
-                            <!-- Status -->
-                            <div class="form-floating flex-grow-1">
-                                <select class="form-select" name="status" id="status">
-                                    <option value="">--select--</option>
-                                    {% for value, status in payment_status %}
-                                    <option value="{{ value }}">{{ status }}</option>
-                                    {% endfor %}
-                                </select>
-                                <label for="status">Status</label>
-                            </div>
-                
-                            <!-- Transaction ID -->
-                            <div class="form-floating flex-grow-1">
-                                <input type="text" class="form-control" name="transaction_id" id="transaction_id" placeholder="">
-                                <label for="transaction_id">Transaction ID</label>
-                            </div>
-                
-                            <!-- Search Button -->
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-outline-primary" id="search">Search</button>
-                            </div>
-                        </form>
+    <div class="container-fluid">
+        <!-- Search Filters Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row g-3 align-items-center mb-2">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-0">Search Transactions</h6>
+                        <p class="text-muted small mb-0">Filter transactions by multiple criteria</p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <span class="badge bg-primary rounded-pill transaction-count">
+                            {{ results_count }} Transaction(s) Found
+                        </span>
                     </div>
                 </div>
                 
+                <form action="" method="GET" id="search_form">
+                    <div class="row g-3">
+                        <!-- Scheme Select -->
+                        <div class="col-md-4 col-lg-2">
+                            <label for="scheme" class="form-label fw-medium mb-1">Scheme</label>
+                            <select class="form-select" name="scheme" id="scheme">
+                                <option value="">All Schemes</option>
+                                {% for scheme in schemes %}
+                                <option value="{{ scheme.id }}" {% if request.GET.scheme == scheme.id|stringformat:"s" %}selected{% endif %}>{{ scheme }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                
+                        <!-- Payment Type -->
+                        <div class="col-md-4 col-lg-2">
+                            <label for="payment_type" class="form-label fw-medium mb-1">Payment Type</label>
+                            <select class="form-select" name="payment_type" id="payment_type">
+                                <option value="">All Types</option>
+                                {% for value, type in payment_type %}
+                                <option value="{{ value }}" {% if request.GET.payment_type == value %}selected{% endif %}>{{ type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                
+                        <!-- Payment Method -->
+                        <div class="col-md-4 col-lg-2">
+                            <label for="payment_method" class="form-label fw-medium mb-1">Payment Method</label>
+                            <select class="form-select" name="payment_method" id="payment_method">
+                                <option value="">All Methods</option>
+                                {% for value, method in payment_methods %}
+                                <option value="{{ value }}" {% if request.GET.payment_method == value %}selected{% endif %}>{{ method }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                
+                        <!-- Status -->
+                        <div class="col-md-4 col-lg-2">
+                            <label for="status" class="form-label fw-medium mb-1">Status</label>
+                            <select class="form-select" name="status" id="status">
+                                <option value="">All Statuses</option>
+                                {% for value, status in payment_status %}
+                                <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ status }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                
+                        <!-- Transaction ID -->
+                        <div class="col-md-4 col-lg-2">
+                            <label for="transaction_id" class="form-label fw-medium mb-1">Transaction ID</label>
+                            <input type="text" class="form-control" name="transaction_id" id="transaction_id" placeholder="Enter ID" value="{{ request.GET.transaction_id|default:'' }}">
+                        </div>
+                
+                        <!-- Search Button -->
+                        <div class="col-md-4 col-lg-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100" id="search">
+                                <i class="bi bi-search me-1"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
 
-
-                <!-- Table to hold list of members payments to be processed -->
+        <!-- Transactions Table Card -->
+        <div class="card shadow-sm">
+            <div class="card-header py-3">
+                <h6 class="mb-0 fw-bold">Transaction Records</h6>
+            </div>
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-striped" id="members_table">
-                        <thead class="thead-light text-center">
-                            <th></th>
-                            <th>Transaction Id</th>
-                            <th>Transaction Type</th>
-                            <th>Transaction Amount</th>
-                            <th>Transaction Date</th>
-                            <th>Payment Method</th>
-                            <th>Status</th>
+                    <table class="table table-hover align-middle mb-0" id="members_table">
+                        <thead>
+                            <tr>
+                                <th width="5%" class="ps-3">#</th>
+                                <th width="15%">Transaction ID</th>
+                                <th width="15%">Type</th>
+                                <th width="15%">Amount</th>
+                                <th width="15%">Date</th>
+                                <th width="15%">Payment Method</th>
+                                <th width="10%">Status</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% if transaction_queryset %}
-                            {% for transaction in transaction_queryset %}
-                            <tr>
-                                <td>
-                                    {{ forloop.counter|default:0 }}
-                                </td>
-                                <td>
-                                    {{ transaction.id }}
-                                </td>
-                                <td>
-                                    {{ transaction.transaction_type }}
-                                </td>
-                                <td>
-                                    {{ transaction.amount }}
-                                </td>
-                                <td>
-                                    {{ transaction.transaction_date }}
-                                </td>
-                                <td>
-                                    {{ transaction.payment_method }}
-                                </td>
-                                <td class="text-center align-middle">
-                                    {% if transaction.status == 'pending' %}
-                                        <span class="badge bg-warning">{{ transaction.status }}</span>
-                                    {% elif transaction.status == 'completed' %}
-                                        <span class="badge bg-success">{{ transaction.status }}</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">{{ transaction.status }}</span>
-                                    {% endif %}
-                                    
-                                </td>
-                            </tr>
-                            {% endfor %}
+                                {% for transaction in transaction_queryset %}
+                                <tr>
+                                    <td class="ps-3">
+                                        {{ forloop.counter0|add:start_index|default:forloop.counter }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary-soft text-primary">{{ transaction.id }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle text-primary me-2">
+                                                {{ transaction.transaction_type|slice:":1" }}
+                                            </div>
+                                            <div>{{ transaction.transaction_type }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium">{{ transaction.amount }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ transaction.transaction_date|date:"M d, Y" }}</span>
+                                    </td>
+                                    <td>
+                                        {{ transaction.payment_method }}
+                                    </td>
+                                    <td>
+                                        {% if transaction.status == 'pending' %}
+                                            <span class="badge bg-warning-soft text-warning">Pending</span>
+                                        {% elif transaction.status == 'completed' %}
+                                            <span class="badge bg-success-soft text-success">Completed</span>
+                                        {% else %}
+                                            <span class="badge bg-danger-soft text-danger">Failed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
                             {% else %}
-                            <tr>
-                                <td colspan="7" class="text-center">No transaction found</td>
-                            </tr>
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="py-5">
+                                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                                            <p class="mt-2">No transactions found matching your criteria</p>
+                                            {% if request.GET %}
+                                                <a href="{% url 'payment_history' tenant_id=request.tenant.id %}" class="btn btn-outline-primary mt-2">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Clear Filters
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
                             {% endif %}
                         </tbody>
                     </table>
-
-                    <!-- Pagination -->
-                    <div class="pagination-container row position-sticky bottom-0">
-                        <div class="col-12 d-flex justify-content-center ">
-                            {% if is_paginated %}
-                            <nav aria-label="Page navigation">
-                                <ul class="pagination">
-                                    {% if page_obj.has_previous %}
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page=1{% if request.GET.scheme %}&scheme={{ request.GET.scheme }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
-                                        </li>
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.scheme %}&scheme={{ request.GET.scheme }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
-                                        </li>
-                                    {% endif %}
-
-                                    <li class="page-item disabled">
-                                        <span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
-                                    </li>
-
-                                    {% if page_obj.has_next %}
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.scheme %}&scheme={{ request.GET.scheme }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
-                                        </li>
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page={{ paginator.num_pages }}{% if request.GET.scheme %}&scheme={{ request.GET.scheme }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </nav>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="card-footer border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        {% if transaction_queryset %}
+                            Showing page {{ page_obj.number }} of {{ paginator.num_pages }}
+                        {% else %}
+                            No transactions found
                         {% endif %}
-
-                        </div>
                     </div>
+                    
+                    {% if is_paginated %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_obj.number }}</span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- <script>
-    $(document).ready(function(){
-        $('#search_form').submit(function(e){
-            e.preventDefault();
-            var form = $(this);
-            var scheme = $('#scheme').val();
-            if (scheme == ''){
-                alert('Please select a scheme');
-                return;
-            }
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Table Styles */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.15);
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    /* Avatar Circle */
+    .avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    /* Transaction count badge */
+    .transaction-count {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Pagination */
+    .pagination {
+        margin-bottom: 0;
+    }
+    
+    .page-link {
+        border-radius: 0.375rem;
+        margin: 0 0.125rem;
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-color: #dee2e6;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+        .table th, .table td {
+            padding: 0.5rem;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
 
-            $.ajax({
-                url:'',
-                type:'GET',
-                data:form.serialize(),
-                success:function(response){
-                    window.location.reload();
-                },
-                error:function(error){
-                    console.log(error);
-                }
-            })
+<script>
+    $(document).ready(function(){
+        // Initialize toastr options
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-bottom-right",
+            timeOut: 5000,
+            extendedTimeOut: 1000,
+            preventDuplicates: true
+        };
+        
+        // Add animation to search button
+        $('#search').on('click', function() {
+            if ($('#search_form')[0].checkValidity()) {
+                $(this).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Searching...');
+            }
         });
-    })
-</script> -->
+    });
+</script>
 {% endblock %}

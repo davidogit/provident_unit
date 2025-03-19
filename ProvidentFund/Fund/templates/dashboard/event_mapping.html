@@ -3,65 +3,75 @@
 {% block title %}
 <title>Action Notification Mapping</title>
 {% endblock %}
+
 {% block header %}
 <h5 class="fw-bold"><i class="bi bi-app-indicator me-2"></i>Action Notification Mapping</h5>
 {% endblock %}
+
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    <div class="row row-cols-auto g-4 g-xxl-5">
-        <div class="col-xl">
-            <div class="container">
-                <!--  -->
-                <div class="row g-4">
-                    
-                    <div class="col-xl">
-                        <div class="transaction-form border p-3 rounded position-relative">
-                            <form action="" method="POST" id="event_mapping">
-                                {% csrf_token %}
-                                <div class="form-floating mb-3 d-flex justify-content-center">
-                            
-                                    <div class="form-floating me-1">
-                                        <select name="event" id="event" class="form-select">
-                                            <option value="">-select-</option>
-                                            {% for event,act in events %}
-                                            <option value="{{ event }}">{{ act }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <label for="event">Action</label>
-                                    </div>
-                                
-                                    <div class="form-floating d-block mb-2">
-                                        <select name="staff_id" id="staffs" class="form-select">
-                                            <option value="">-select-</option>
-                                            {% for staff in all_staffs %}
-                                            <option value="{{ staff.id }}">{{ staff }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <label for="staff_id">Staff</label>
-                                    </div>
-                                </div>
-                                <!-- submit button -->
-                                <div class="d-grid gap
-                                -2">
-                                    <button class="btn btn-outline-primary btn-lg save_mapping" type="submit">Map</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Create New Mapping</h6>
                 </div>
+                <div class="card-body">
+                    <form action="" method="POST" id="event_mapping">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <div class="form-floating">
+                                    <select name="event" id="event" class="form-select" required>
+                                        <option value="">-select-</option>
+                                        {% for event,act in events %}
+                                        <option value="{{ event }}">{{ act }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label for="event">Action</label>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="form-floating">
+                                    <select name="staff_id" id="staffs" class="form-select" required>
+                                        <option value="">-select-</option>
+                                        {% for staff in all_staffs %}
+                                        <option value="{{ staff.id }}">{{ staff }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label for="staff_id">Staff</label>
+                                </div>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-center">
+                                <button class="btn btn-primary w-100" type="submit">
+                                    <i class="bi bi-link me-1"></i> Map
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
 
-                <div class="row g-4 mt-5">
-                    <!-- table for previous account mappings -->
-                    <h5 class="mt-2 text-center">Notification Mappings</h5>
-                    <div class="table-responsive overflow-auto" style="max-height: 400px;">
-                        <table class="table table-bordered table-striped">
-                            <thead class="thead-light">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">Notification Mappings</h6>
+                    <span class="badge bg-primary rounded-pill" id="mapping-count">
+                        {% if event_mapping %}{{ event_mapping|length }}{% else %}0{% endif %}
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="">
                                 <tr>
-                                    <th></th>
-                                    <th>Event</th>
-                                    <th>staff</th>
-                                    <th>Email</th>
-                                    <th>Date Assigned</th>
+                                    <th width="5%">#</th>
+                                    <th width="25%">Action</th>
+                                    <th width="25%">Staff</th>
+                                    <th width="25%">Email</th>
+                                    <th width="15%">Date Assigned</th>
+                                    <th width="5%">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="accounts_table">
@@ -72,113 +82,60 @@
                                     <td>{{ mapping.staff }}</td>
                                     <td>{{ mapping.staff.email }}</td>
                                     <td>{{ mapping.date_assigned }}</td>
-                                    <td class="text-center text-nowrap">
-                                        <!-- Delete button -->
-                                        <button class="btn btn-warning btn-sm delete-account">
-                                            <input id="mapping_id" type="text" value="{{ mapping.id }}" hidden>
-
-                                            <input id="scheme_id" type="text" value="{{ mapping.scheme.id }}" hidden>
-
-                                            <input id="mappingName" type="text" value="{{ mapping.name }}" hidden>
-                                            <i class="ri-delete-bin-2-line"></i>
-                                        </button>
-                                        <!-- Update button -->
-                                        <button class="btn btn-secondary btn-sm update-mapping" data-bs-toggle="modal" data-bs-target="#updateMappingModal" id="updateButton">
-                                            <!-- Hidden inputs for update form -->
-                                            <input id="mapping_id" type="text" value="{{ mapping.id }}" hidden>
-                                            <input id="scheme_id" type="text" value="{{ mapping.scheme.id }}" hidden>
-                                            <input id="mapping_name" type="text" value="{{ mapping.name }}" hidden>
-                                            <input id="debit_id" type="text" value="{{ mapping.debit_acc.id }}" hidden>
-                                            <input id="credit_id" type="text" value="{{ mapping.credit_acc.id }}" hidden>
-                                            
-                                            <i class="ri-edit-line"></i>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger delete-mapping" 
+                                                data-mapping-id="{{ mapping.id }}" 
+                                                data-mapping-name="{{ mapping.get_event_display }}">
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center">No accounts available.</td>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="bi bi-exclamation-circle text-muted" style="font-size: 2rem;"></i>
+                                            <p class="text-muted mt-2">No mappings available.</p>
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-
-
-                    <!-- Update Modal -->
-
-                    <div class="modal fade" id="updateMappingModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="modalTitle">Update Mapping</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-
-                                    <form action="" method="POST" id="updateMappingForm">
-                                        {%csrf_token%}            
-                                        <div class="form-floating mb-2">
-                                            <select name="name" id="update_event" class="form-select">
-                                                <option value="">-select-</option>
-                                                {% for action,act in actions %}
-                                                <option value="{{ act }}">{{ act }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <label for="update_event">Events</label>
-                                        </div>
-                                        <div class="form-floating mb-2">
-                                            <select name="scheme" id="update_scheme_id" class="form-select">
-                                                <option value="">-select-</option>
-                                                {% for scheme in schemes %}
-                                                <option value="{{ scheme.id }}">{{ scheme }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <label for="update_scheme_id">Scheme</label>
-                                        </div>
-
-                                        <div class="form-floating d-block mb-2">
-                                            <select name="debit_acc" id="update_debitAccount" class="form-select">
-                                                <option value="">-select-</option>
-                                                {% for acc in accounts %}
-                                                <option value="{{ acc.id }}">{{ acc }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <label for="update_debitAccount">Debit Account</label>
-                                                
-                                        </div>
-
-                                        <div class="form-floating d-block  mb-2">
-                                            <select name="credit_acc" id="update_creditAccount" class="form-select">
-                                                <option value="">-select-</option>
-                                                {% for acc in accounts %}
-                                                <option value="{{ acc.id }}">{{ acc }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <label for="update_creditAccount" class="form-label">Credit Account</label>
-                                        </div>
-
-                                        <!-- Hidden inputs -->
-                                        <input name="mapping_id" id="update_mapping_id" type="text" value="" hidden>
-                                        <!--  -->
-
-                                        <div class="d-grid gap-2">
-                                            <button type="submit" class="btn btn-primary">Update</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>                            
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+
 <script>
     $(document).ready(function(){
+        // Configure toastr
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-bottom-right",
+            "timeOut": "3000"
+        };
+
+        // Add mapping
         $('#event_mapping').on('submit', function(e){
             e.preventDefault();
+            
+            // Validate form
+            if (!$('#event').val() || !$('#staffs').val()) {
+                toastr.error('Please select both an action and a staff member');
+                return false;
+            }
+            
+            // Show loading state
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            submitBtn.html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Processing...');
+            submitBtn.prop('disabled', true);
+            
             $.ajax({
                 type: 'POST',
                 url: '',
@@ -186,13 +143,102 @@
                 data: $(this).serialize(),
                 success: function(response){
                     if (response.status === 'success'){
-                        window.location.reload();
-                    }else{
-                        alert(response.message);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: response.message,
+                            confirmButtonColor: '#0d6efd'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        toastr.error(response.message);
                     }
                 },
-                error: function(error){
-                    console.log(error);
+                error: function(xhr){
+                    let errorMessage = 'An error occurred';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    toastr.error(errorMessage);
+                },
+                complete: function() {
+                    // Restore button state
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+                }
+            });
+        });
+
+        // Delete Mapping
+        $('.delete-mapping').on('click', function(e){
+            e.preventDefault();
+            const $this = $(this);
+            const tenant_id = '{{ request.tenant.id }}';
+            const mapping_id = $this.data('mapping-id');
+            const mapping_name = $this.data('mapping-name');
+            
+            Swal.fire({
+                title: 'Are you sure?',
+                text: `You are about to delete the mapping: ${mapping_name}`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    $this.prop('disabled', true);
+                    
+                    $.ajax({
+                        type: 'DELETE',
+                        url: `/${tenant_id}/fund/delete-mapping/${mapping_id}/`,
+                        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                        success: function(response){
+                            if (response.status === 'success'){
+                                // Remove the row with animation
+                                $this.closest('tr').fadeOut(300, function() {
+                                    $(this).remove();
+                                    
+                                    // Update the count badge
+                                    const currentCount = parseInt($('#mapping-count').text());
+                                    $('#mapping-count').text(currentCount - 1);
+                                    
+                                    // Show empty state if no more mappings
+                                    if (currentCount - 1 === 0) {
+                                        $('#accounts_table').html(`
+                                            <tr>
+                                                <td colspan="6" class="text-center py-4">
+                                                    <div class="d-flex flex-column align-items-center">
+                                                        <i class="bi bi-exclamation-circle text-muted" style="font-size: 2rem;"></i>
+                                                        <p class="text-muted mt-2">No mappings available.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `);
+                                    }
+                                });
+                                
+                                toastr.success(`Successfully deleted mapping: ${mapping_name}`);
+                            } else {
+                                toastr.error(`Failed to delete mapping: ${mapping_name}`);
+                                $this.html('<i class="bi bi-trash"></i>');
+                                $this.prop('disabled', false);
+                            }
+                        },
+                        error: function(xhr){
+                            let errorMessage = 'An error occurred';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+                            toastr.error(errorMessage);
+                            $this.html('<i class="bi bi-trash"></i>');
+                            $this.prop('disabled', false);
+                        }
+                    });
                 }
             });
         });

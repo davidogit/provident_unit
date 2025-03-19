@@ -1,35 +1,565 @@
 {% extends 'admin_panel/base_admin.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4 text-2xl font-bold text-center">Add User</h2>
-    <form method="POST" class="bg-white p-6 rounded-lg shadow-md">
-        {% csrf_token %}
-        <div class="mb-4">
-            <label for="first_name" class="form-label">Username</label>
-            <input type="text" class="form-control" id="first_name" name="username" placeholder="Enter Username name">
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h2 class="card-title mb-0 text-center fw-bold">
+                        <i class="ri-user-add-line me-2 text-primary"></i>Add New User
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-7">
+                            <!-- Add User Form -->
+                            <div class="p-3 p-lg-4">
+                                <h4 class="mb-4 fw-semibold border-start border-4 border-primary ps-3">User Information</h4>
+                                <form id="addUserForm" method="POST">
+                                    {% csrf_token %}
+                                    <div class="mb-4">
+                                        <label for="username" class="form-label fw-medium">Username</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-user-line"></i>
+                                            </span>
+                                            <input type="text" class="form-control form-control-lg" id="username" name="username" placeholder="Enter username" required>
+                                        </div>
+                                        <small class="text-muted">Username must be unique and will be used for login</small>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <label for="email" class="form-label fw-medium">Email Address</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-mail-line"></i>
+                                            </span>
+                                            <input type="email" class="form-control form-control-lg" id="email" name="email" placeholder="Enter email address" required>
+                                        </div>
+                                        <small class="text-muted">A valid email address is required for account verification</small>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <label for="password" class="form-label fw-medium">Password</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-lock-line"></i>
+                                            </span>
+                                            <input type="password" class="form-control form-control-lg" id="password" name="password1" placeholder="Enter password" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                                <i class="ri-eye-line"></i>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">Password must be at least 8 characters long</small>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <label for="confirm_password" class="form-label fw-medium">Confirm Password</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-lock-password-line"></i>
+                                            </span>
+                                            <input type="password" class="form-control form-control-lg" id="confirm_password" name="password2" placeholder="Confirm password" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                                <i class="ri-eye-line"></i>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">Re-enter the password to confirm</small>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2 mt-4">
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="ri-user-add-line me-2"></i>Create User
+                                        </button>
+                                    </div>
+                                </form>
+                                
+                                {% if form.errors %}
+                                <div class="alert alert-danger mt-4">
+                                    <i class="ri-error-warning-line me-2"></i>
+                                    <strong>Error:</strong> {{ form.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-5">
+                            <!-- User Guidelines -->
+                            <div class="p-3 p-lg-4">
+                                <h4 class="mb-4 fw-semibold border-start border-4 border-primary ps-3">Guidelines</h4>
+                                <div class="bg-light p-4 rounded-3 mb-4">
+                                    <h5 class="fw-bold mb-3">
+                                        <i class="ri-information-line me-2 text-primary"></i>Important Information
+                                    </h5>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Username:</strong> Must be unique and easy to remember
+                                        </li>
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Email:</strong> Must be valid and accessible
+                                        </li>
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Password:</strong> Should be at least 8 characters with a mix of letters, numbers, and symbols
+                                        </li>
+                                    </ul>
+                                    
+                                    <div class="alert alert-info mt-4 mb-0">
+                                        <i class="ri-lightbulb-line me-2"></i>
+                                        <strong>Note:</strong> After creating a user, you'll need to assign appropriate roles from the Role Assignment page.
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-light p-4 rounded-3">
+                                    <h5 class="fw-bold mb-3">
+                                        <i class="ri-shield-check-line me-2 text-primary"></i>Next Steps
+                                    </h5>
+                                    <p>After creating a user, you can:</p>
+                                    <ol class="ps-3">
+                                        <li class="mb-2">Assign appropriate roles to the user</li>
+                                        <li class="mb-2">Configure user permissions</li>
+                                        <li class="mb-2">Send welcome email with login instructions</li>
+                                    </ol>
+                                    <a href="{% url 'assign_roles' tenant_id=request.tenant.id %}" class="btn btn-outline-primary mt-3">
+                                        <i class="ri-user-settings-line me-2"></i>Go to Role Assignment
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recently Added Users -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0 fw-semibold">
+                        <i class="ri-user-follow-line me-2 text-primary"></i>Recently Added Users
+                    </h4>
+                    <button class="btn btn-sm btn-outline-primary" id="refreshUsers">
+                        <i class="ri-refresh-line me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Username</th>
+                                    <th scope="col">Email</th>
+                                    <th scope="col">Created</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentUsersList">
+                                <!-- This would be populated from the backend in a real application -->
+                                <tr>
+                                    <td>johndoe</td>
+                                    <td>john.doe@example.com</td>
+                                    <td>Today, 10:30 AM</td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary">
+                                                <i class="ri-user-settings-line"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>janedoe</td>
+                                    <td>jane.doe@example.com</td>
+                                    <td>Yesterday, 3:45 PM</td>
+                                    <td><span class="badge bg-warning">Pending</span></td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary">
+                                                <i class="ri-user-settings-line"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <nav aria-label="User pagination">
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
         </div>
-        <div class="mb-4">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" name="email" placeholder="Email">
-        </div>
-        <div class="mb-4">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password1" placeholder="Enter password">
-        </div>
-        
-        <div class="mb-4">
-            <label for="confirm_password" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="confirm_password" name="password2" placeholder="Confirm password">
-        </div>
-       
-        <button type="submit" class="btn btn-primary w-full">Add User</button>
-    </form>
-</div>
-{% if form.errors %}
-    <div class="alert alert-danger">
-        {{ form.errors }}
     </div>
-{% endif %}
+</div>
 
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <i class="ri-check-line me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            User created successfully!
+        </div>
+    </div>
+    
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <i class="ri-error-warning-line me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            An error occurred while creating the user.
+        </div>
+    </div>
+</div>
+
+<!-- SweetAlert2 and Form Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle password visibility
+        const togglePassword = document.getElementById('togglePassword');
+        const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+        const passwordField = document.getElementById('password');
+        const confirmPasswordField = document.getElementById('confirm_password');
+        
+        togglePassword.addEventListener('click', function() {
+            const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordField.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('ri-eye-line');
+            this.querySelector('i').classList.toggle('ri-eye-off-line');
+        });
+        
+        toggleConfirmPassword.addEventListener('click', function() {
+            const type = confirmPasswordField.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmPasswordField.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('ri-eye-line');
+            this.querySelector('i').classList.toggle('ri-eye-off-line');
+        });
+        
+        // Form submission handler
+        const addUserForm = document.getElementById('addUserForm');
+        addUserForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            
+            // Basic validation
+            if (!username || !email || !password || !confirmPassword) {
+                Swal.fire({
+                    title: 'Missing Information',
+                    text: 'Please fill in all required fields',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                Swal.fire({
+                    title: 'Password Mismatch',
+                    text: 'The passwords you entered do not match',
+                    icon: 'error',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+            
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                Swal.fire({
+                    title: 'Invalid Email',
+                    text: 'Please enter a valid email address',
+                    icon: 'error',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+            
+            // Password strength validation
+            if (password.length < 8) {
+                Swal.fire({
+                    title: 'Weak Password',
+                    text: 'Password must be at least 8 characters long',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+            
+            // Confirm user creation
+            Swal.fire({
+                title: 'Confirm User Creation',
+                html: `Are you sure you want to create a new user with username <strong>${username}</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, create user!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Simulate form submission (in a real app, this would be an AJAX request or form submit)
+                    Swal.fire({
+                        title: 'Creating User...',
+                        html: 'Please wait while we create the user account',
+                        timer: 1500,
+                        timerProgressBar: true,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    }).then(() => {
+                        // Show success message
+                        Swal.fire({
+                            title: 'User Created!',
+                            html: `User <strong>${username}</strong> has been created successfully.`,
+                            icon: 'success',
+                            confirmButtonColor: '#3085d6',
+                            confirmButtonText: 'Assign Role',
+                            showCancelButton: true,
+                            cancelButtonText: 'Close'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Redirect to role assignment page
+                                window.location.href = "{% url 'assign_roles' tenant_id=request.tenant.id %}";
+                            } else {
+                                // Show toast notification
+                                const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+                                successToast.show();
+                                
+                                // Reset form
+                                addUserForm.reset();
+                                
+                                // Add to recent users (in a real app, this would come from the server)
+                                addNewUser(username, email);
+                            }
+                        });
+                    });
+                }
+            });
+        });
+        
+        // Refresh users button handler
+        document.getElementById('refreshUsers').addEventListener('click', function() {
+            // Show loading indicator
+            Swal.fire({
+                title: 'Refreshing...',
+                html: 'Getting the latest user data',
+                timer: 1000,
+                timerProgressBar: true,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            }).then(() => {
+                // Show toast notification
+                const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+                document.querySelector('#successToast .toast-body').textContent = 'User list refreshed successfully!';
+                successToast.show();
+            });
+        });
+        
+        // Function to add a new user to the list
+        function addNewUser(username, email) {
+            const usersList = document.getElementById('recentUsersList');
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${username}</td>
+                <td>${email}</td>
+                <td>Today, ${timeString}</td>
+                <td><span class="badge bg-success">Active</span></td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary">
+                            <i class="ri-user-settings-line"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            
+            // Add with animation
+            newRow.style.backgroundColor = '#f0f9ff';
+            usersList.insertBefore(newRow, usersList.firstChild);
+            
+            // Remove highlight after a delay
+            setTimeout(() => {
+                newRow.style.transition = 'background-color 1s ease';
+                newRow.style.backgroundColor = '';
+            }, 100);
+        }
+    });
+</script>
+
+<style>
+    /* Custom styles for the add user page */
+    .card {
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .form-select, .form-control, .input-group-text {
+        border-radius: 0.5rem;
+    }
+    
+    .input-group > .form-select,
+    .input-group > .form-control {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    
+    .input-group-text {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1.5rem;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.75em;
+    }
+    
+    /* Dark mode adjustments */
+    body.dark-mode .card {
+        background-color: var(--dark-secondary);
+    }
+    
+    body.dark-mode .card-header, 
+    body.dark-mode .card-footer {
+        background-color: var(--dark-primary) !important;
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .bg-light {
+        background-color: var(--dark-hover) !important;
+    }
+    
+    body.dark-mode .text-muted {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode .table-light {
+        background-color: var(--dark-primary);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .table {
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .table-hover tbody tr:hover {
+        background-color: transparent; /* Remove hover background change */
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .table td,
+    body.dark-mode .table th {
+        border-color: var(--dark-border);
+        border-top: none;
+        border-bottom: 1px solid var(--dark-border);
+    }
+
+    body.dark-mode .table thead th {
+        border-bottom: 1px solid var(--dark-border);
+    }
+
+    /* Remove horizontal lines between rows */
+    body.dark-mode .table tbody tr {
+        border: none;
+    }
+
+    body.dark-mode .table tbody td {
+        border-top: none;
+    }
+    
+    body.dark-mode .list-group-item.bg-light {
+        background-color: var(--dark-hover) !important;
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .form-select,
+    body.dark-mode .form-control,
+    body.dark-mode .input-group-text {
+        background-color: var(--dark-hover);
+        border-color: var(--dark-border);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .form-select option {
+        background-color: var(--dark-secondary);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .alert-info {
+        background-color: rgba(13, 202, 240, 0.15);
+        border-color: rgba(13, 202, 240, 0.4);
+        color: #8ed8e6;
+    }
+    
+    body.dark-mode .btn-outline-primary {
+        color: #6ea8fe;
+        border-color: #6ea8fe;
+    }
+    
+    body.dark-mode .btn-outline-primary:hover {
+        background-color: #0d6efd;
+        color: #fff;
+    }
+    
+    body.dark-mode .btn-outline-danger {
+        color: #ea868f;
+        border-color: #ea868f;
+    }
+    
+    body.dark-mode .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: #fff;
+    }
+</style>
 {% endblock %}
