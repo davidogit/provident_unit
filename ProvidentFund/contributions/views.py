@@ -18,8 +18,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
 from django.shortcuts import render, redirect
-
-
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.db.models import Q
 
 # Create your views here.
 
@@ -40,9 +40,81 @@ class StaffMemberListView(ListView):
         scheme_name = self.request.scheme_name
 
         if tenant and scheme_name:
-            return StaffAPI.objects.filter(exited_flag=False,tenant=tenant,investment_scheme__id=scheme_name)
+            return StaffAPI.objects.filter(exited_flag=False,tenant=tenant,investment_scheme__id=scheme_name).order_by('-first_name')
         else:
             return StaffAPI.objects.none()
+
+
+@method_decorator(tenant_login_required, name="dispatch")
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Contributions Manager','Contributions Supervisor','Contributions Analyst']),name='dispatch')
+class AjaxStaffSearchView(View):
+    model = StaffAPI
+    paginate_by = 10
+
+    def get_queryset(self, *args, **kwargs):
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            investment_scheme__id=scheme_id
+        ).order_by('-first_name')
+
+    def get(self, *args, **kwargs):
+        page = int(self.request.GET.get('page',1))
+        queryset = self.get_queryset()
+        search_term = self.request.GET.get('search','')
+        status = self.request.GET.get('status','')
+
+        if search_term:
+            queryset=queryset.filter(
+                Q(first_name__icontains=search_term)|
+                Q(last_name__icontains=search_term)|
+                Q(staff_number__icontains=search_term)
+            )
+        if status:
+            queryset = queryset.filter(
+                status=status
+            )
+        total_pages = 0
+        current_page = 0
+        if queryset.exists():
+            paginator = Paginator(queryset,self.paginate_by)
+            total_pages = paginator.num_pages
+
+            try:
+                paginated_queryset = paginator.page(page)
+                current_page = paginated_queryset.number
+
+            except PageNotAnInteger:
+                paginated_queryset = paginator.page(1)
+            except EmptyPage:
+                paginated_queryset = paginator.page(paginator.num_pages)
+
+            member_list = [
+                {
+                    'Id':member.Id,
+                    'first_name':member.first_name,
+                    'last_name':member.last_name,
+                    'date_joined':member.date_joined,
+                    'status':member.status,
+                    'fund_type':member.fund_type
+                }
+                for member in paginated_queryset
+            ]
+        else:
+            member_list = []
+        
+        return JsonResponse({
+            'status':'success',
+            'pagination':{
+                'total_pages':total_pages,
+                'current_page':current_page
+            },
+            'memberships':member_list
+        })
+
 
 
 @method_decorator(tenant_login_required, name='dispatch')

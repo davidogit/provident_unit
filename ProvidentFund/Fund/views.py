@@ -1,18 +1,15 @@
 from decimal import Decimal
-import json
-from django.db.models import Q,Count,ProtectedError
-from django.db.models.query import QuerySet
+from django.db.models import Q,Count
 from django.http import HttpRequest, JsonResponse
 from django.http.response import HttpResponse as HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 from ProvidentFund.settings import EMAIL_HOST_USER
-from Fund.models import InvestmentDetail,DelayedInterest,BankInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder,ReceivedItems
+from Fund.models import InvestmentDetail,DelayedInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder,ReceivedItems
 from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
 from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings,TenantEventNotification
-from MultiScheme.models import InvestmentScheme,Tenant
 from contributions.models import StaffAPI, Contribution
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -36,7 +33,6 @@ from Admin.models import User
 import openpyxl
 from django.db import transaction
 logger = logging.getLogger(__name__)
-
 # Importing custom decorators
 from Member.decorators import tenant_required,tenant_login_required
 
@@ -133,42 +129,43 @@ class InvestmentListView(ListView):
     template_name = 'dashboard/investment_list.html'
     paginate_by = 10
 
-
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
     def get_queryset(self):
-        # Get Tenant
         tenant = self.request.tenant
-        # Get scheme name
         scheme_id = self.request.scheme_name
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(
-                investment_scheme__tenant=tenant,
-                investment_scheme__id = scheme_id,
-            ).order_by('-created_date')
-        else:
-            return InvestmentDetail.objects.none()
+        return InvestmentDetail.objects.filter(
+            investment_scheme__tenant=tenant,
+            investment_scheme__id = scheme_id,
+        ).order_by('-created_date')
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         queryset = self.get_queryset()
 
-        # pass queryset to custom function for further filtering
-        # filtered_queryset = self.get_filtered_queryset(queryset)
+        filters = {}
+        selector = self.request.GET.get('inv_selector',None)
+        page = self.request.GET.get('page',1)
 
-        context['investment_count']= queryset.count()
-        context['T_bills_count'] = queryset.filter(investment_type='Treasury Bill').count() if queryset else 0
-        context['F_deposit_count'] = queryset.filter(investment_type='Fixed Deposit').count() if queryset else 0
+        if selector:
+            filters['investment_type'] = selector
+
+        if filters:
+            filtered_query = queryset.filter(**filters)
+        else:
+            filtered_query = queryset
+
+        investment_count = queryset.count()
+        T_bills_count = queryset.filter(investment_type='Treasury Bill').count() if queryset else 0
+        F_deposit_count = queryset.filter(investment_type='Fixed Deposit').count() if queryset else 0
 
 
-        # context['t_bill_page'] 
+        T_bills_percentage = (T_bills_count / investment_count) * 100 if investment_count > 0 else 0
+        F_deposit_percentage = (F_deposit_count / investment_count) * 100 if investment_count > 0 else 0
 
-        fixed_deposit =queryset.filter(investment_type='Fixed Deposit') if queryset else None
 
-        if fixed_deposit:
-            paginator = Paginator(fixed_deposit, self.paginate_by)
-            page = self.request.GET.get('f_deposit_page',1)
+        if filtered_query:
+            paginator = Paginator(filtered_query, self.paginate_by)
             try:
                 paginated_queryset = paginator.page(page)
 
@@ -177,35 +174,96 @@ class InvestmentListView(ListView):
             except EmptyPage:
                 paginated_queryset = paginator.page(paginator.num_pages)
 
-            context['f_deposit_page'] = paginated_queryset
-            context['paginator'] = paginator
-            context['fixed_is_paginated'] = paginator.num_pages > 1
-            print(f'Paginated F: {paginated_queryset} is paginated:{paginator.num_pages > 1} has next: {paginated_queryset.has_next()}')
-            # Add paginated results to context
-            
-
-        treasury_bills = queryset.filter(investment_type='Treasury Bill') if queryset else None
-        if treasury_bills:
-            # Apply pagination for Tresury bill or Fixed deposit
-
-            # print(f'Filtered T_bill = {filtered_queryset}')
-            paginator = Paginator(treasury_bills, self.paginate_by)
-            page = self.request.GET.get('t_bill_page')
-            try:
-                paginated_queryset = paginator.page(page)
-            except PageNotAnInteger:
-                paginated_queryset = paginator.page(1)
-            except EmptyPage:
-                paginated_queryset = paginator.page(paginator.num_pages)
-
-            # Add paginated results to context
-            context['t_bill_page'] = paginated_queryset
-            context['paginator'] = paginator
-            context['is_paginated'] = paginator.num_pages > 1
+            context.update(
+                {
+                    'investments':paginated_queryset,
+                    'paginator':paginator,
+                    'investment_count':investment_count,
+                    'T_bills_count':T_bills_count,
+                    'F_deposit_count':F_deposit_count,
+                    "T_bills_percentage": round(T_bills_percentage, 0),
+                    "F_deposit_percentage": round(F_deposit_percentage, 0),
+                }
+            )
 
         return context
     
 
+# AJAX request for searching investments based on types
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
+class AjaxInvestmentTypeView(View):
+    model = InvestmentDetail
+    paginate_by = 10
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+        scheme_id = self.request.scheme_name
+
+        return self.model.objects.filter(
+            investment_scheme__tenant=tenant,
+            investment_scheme__id=scheme_id
+        )
+
+    def get(self, request, *args, **kwargs):
+        inv_type = self.request.GET.get('type')
+        page = self.request.GET.get('page', 1)  # Default to page 1
+        queryset = self.get_queryset()
+
+        if inv_type:
+            queryset = queryset.filter(investment_type=inv_type)
+
+        if queryset.exists():  # Avoid pagination on empty queryset
+            paginator = Paginator(queryset, self.paginate_by)
+            total_pages = paginator.num_pages 
+            try:
+                paginated_queryset = paginator.page(page)
+                current_page = paginated_queryset.number
+                print(paginated_queryset)
+            except PageNotAnInteger:
+                paginated_queryset = paginator.page(1)
+            except EmptyPage:
+                paginated_queryset = paginator.page(paginator.num_pages)
+
+            investments_data = [
+                {
+                    'id':inv.id,
+                    'invoice_number':inv.invoice_number,
+                    'account_name':inv.account_name,
+                    'investment_type':inv.investment_type,
+                    'type_of_tbill':inv.type_of_tbill,
+                    'account_type':inv.account_type,
+                    'account_number':inv.account_number,
+                    'principal_amount':inv.principal_amount,
+                    'interest_percentage':inv.interest_percentage,
+                    'interest_amount':inv.interest_amount,
+                    'closing_amount':inv.closing_amount,
+                    'interest_start_date':inv.interest_start_date,
+                    'interest_end_date':inv.interest_end_date,
+                    'tenure':inv.tenure,
+                    'remaining_days':inv.remaining_days,
+                    'status':inv.status,
+                    'created_date':inv.created_date,
+                    'updated_date':inv.updated_date,
+                    'approved':inv.approved
+                }
+                for inv in paginated_queryset
+            ]
+        else:
+            investments_data = []
+
+        return JsonResponse({
+            'status': 'success',
+            'investments': investments_data,
+            'pagination':{
+                'total_pages': total_pages,
+                'current_page': current_page,
+                'type':inv_type
+            }
+        })
+    
+#  `/${tenant_id}/fund/${scheme_name}/investments/filter/`
 # Investment Detail View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
@@ -773,42 +831,6 @@ class InvestmentDeleteView(TemplateView):
             }, status=500)
 
 
-# Active Members List
-@method_decorator(login_required, name='dispatch')
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Scheme Manager','Scheme Analyst']), name='dispatch')
-class MemberListView(ListView):
-    model = StaffAPI
-    template_name = 'dashboard/member_list.html'
-
-    def get_queryset(self):  
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-
-        # Filtering Queryset by Tenant
-        if tenant:
-            return StaffAPI.objects.filter(tenant=tenant,investment_scheme__id=scheme_id)
-        else:
-            return StaffAPI.objects.none()
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        queryset = self.get_queryset().filter(exited_flag = False)
-
-        # Active members
-        context['member_list'] = queryset
-
-        # Count all active members
-        context['member_count'] = queryset.count()
-
-        # All member count
-        context['total_members'] = self.get_queryset().count()
-
-        return context
-    
-
-
-
 # Exited Members List
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
@@ -1100,6 +1122,48 @@ class DelayedInterestListView(ListView):
         context['total_amount'] = queryset.all().aggregate(total=Sum('principal'))['total'] or Decimal(0.0)
         context['start_index'] = start_index
         return context
+    
+
+# Search Delayed Interest View
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
+class DelayedInterestSearchView(View):
+    def get(self,request,*args,**kwargs):
+        tenant = self.request.tenant
+        search_term = self.request.GET.get('search_term','')
+        scheme_id = self.kwargs['scheme_name']
+        print(f'Scheme ID: {scheme_id}')
+        if not search_term:
+            return JsonResponse({
+                'status':'error',
+                'message':'Search term is required'
+            })
+        
+        results = DelayedInterest.objects.filter(
+            Q(remarks__icontains=search_term)|
+            Q(invoice_number__icontains=search_term),
+            investment_scheme__tenant=tenant,
+            investment_scheme__id=scheme_id
+        )
+        print(f'Results: {results}')
+        delayed_interest_list = [
+            {
+                'id':d.pk,
+                'invoice_number':d.invoice_number,
+                'principal':d.principal,
+                'created_date':d.created_date,
+                'remarks':d.remarks,
+                'status':d.status,
+                'rate':d.rate_d_int
+            }
+            for d in results
+        ]
+
+        return JsonResponse({
+            'status':'success',
+            'data':delayed_interest_list
+        })
 
 
 # Delayed Interest Query

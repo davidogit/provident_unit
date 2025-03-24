@@ -1,16 +1,12 @@
-from collections import defaultdict
 from datetime import datetime, timedelta
-from itertools import chain
 import json,uuid
 import smtplib
 from typing import Any
 from django.contrib.auth import authenticate, login, logout
-from django.forms import ValidationError
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse, JsonResponse
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.views import View
-import phonenumbers
 import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
 from .forms import UserForm, MemberForm
@@ -18,12 +14,12 @@ from .generate_otp import generate_unique_code
 from smtplib import SMTPConnectError
 from django.views.generic import TemplateView,UpdateView,CreateView,ListView
 from django.contrib.auth.models import Group
-from .models import Member,SchemeApproval, Transaction,ExitApproval
+from .models import Member,SchemeApproval, Transaction,ExitApproval,WithdrawalRequest
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_required,tenant_login_required
 from Admin.decorators import role_required
 from .forms import CombinedProfileForm
-from MultiScheme.models import Tenant,InvestmentScheme, TenantEventNotification
+from MultiScheme.models import InvestmentScheme, TenantEventNotification
 from contributions.models import Contribution, Membership, StaffAPI
 # Importing the user model 
 from django.contrib.auth import get_user_model
@@ -31,104 +27,170 @@ from django.contrib.auth import get_user_model
 from .decorators import unauthenticated_user
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
-# Import task to send otp via email
-from .tasks import  send_otp_code,gen_send_email
-from django.core.paginator import Paginator
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.views.decorators.http import require_GET
-from django.db import models
-from django.http import JsonResponse
-from django.views import View
 from django.db.models import Sum
-from contributions.models import StaffAPI
-from .models import InvestmentScheme
-import json
-from django.views import View
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
-from django.utils import timezone
-from .models import WithdrawalRequest
 from decimal import Decimal
 from django.db import transaction
-from django.views import View
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.core.mail import send_mail
-from django.utils import timezone
-from phonenumbers import parse as parse_phone, format_number, PhoneNumberFormat
-from twilio.rest import Client
 import logging
-from .models import WithdrawalRequest, InvestmentScheme, StaffAPI, Tenant, Transaction
 from django.db.models import F
-from django.db.models import Q
-from .models import InvestmentScheme
-from .models import WithdrawalRequest
-from contributions.models import StaffAPI 
-from MultiScheme.models import TenantEventNotification
-from .tasks import notify_user_email_sms,notify_withdrawal_approval
+from .tasks import notify_user_email_sms,notify_withdrawal_approval,send_otp_code,gen_send_email
 
+logger = logging.getLogger(__name__)
 
+# Registration View
+@method_decorator(unauthenticated_user, name='dispatch')
+class MemberRegistrationView(TemplateView):
+    template_name = 'register.html'
 
-@unauthenticated_user
-def registrationView(request,tenant_id):
-    if request.method == 'POST':
-        form1 = UserForm(request.POST)
-        form2 = MemberForm(request.POST)
+    def post(self, request, *args, **kwargs):
+        tenant = self.request.tenant
+        user_data = UserForm(request.POST)
+        member_data = MemberForm(request.POST)
 
-        if form1.is_valid() and form2.is_valid():
-            
-            # Making sure the person is a member of a tenant in our DB before registering them onto the system
+        if user_data.is_valid() and member_data.is_valid():
+            # Set tenant on user_form and member_form
+            user_data.instance.tenant = tenant
+            member_data.instance.tenant = tenant
+
+            # Check with endpoint if staff ID exists
+            url = tenant.api_endpoint_member
+
+            api_user_data = None
             try:
-                # Assign tenant to user upon registration
-                tenant = request.tenant
-                form1.instance.tenant = tenant
+                api_response = requests.get(url, timeout=10)
+                api_response.raise_for_status()
+                
+                data = api_response.json()
+                api_user_data = any(member['staff_number'] == member_data.cleaned_data['staff_id'] for member in data)
 
-                # Check from API to see if member is there
-                response = requests.get(tenant.api_endpoint_member)
-                response.raise_for_status() #if theres an error trying to get a response from endpoint
-                data = response.json()
+                if not api_user_data:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'No matching staff ID found in database.'
+                    })
+                            
+            except requests.ConnectionError:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Unable to reach external server, please try again.'
+                })
+            except requests.Timeout:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Request timed out.'
+                })
+            except requests.RequestException as req_exc:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Request error occurred: {str(req_exc)}'
+                })
 
-                # loops and stops when it gets a match of a user and returns None if theres no match
-                api_user = next((api_user for api_user in data if str(api_user.get('staff_number')) == str(request.POST.get('staff_id'))), None)
+            # Get group for user
+            try:
+                user_group = Group.objects.get(name='Member')
+            except Exception:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Could not get user assigned group.'
+                })
+            
+            with transaction.atomic():
+                # Process and Save user/member data
+                user = user_data.save(commit=False)
+                user.set_password(user_data.cleaned_data['password1'])  # Ensure correct field
+                user.save()
 
-                # Checks if the differece between joined_date and current date is greter than eligibility criteria
-                if api_user:
-                    user = form1.save(commit=False)
-                    cleaned_password = form1.cleaned_data['password']
-                    user.set_password(cleaned_password)
-                    user.save()
+                # Assign group
+                user.groups.add(user_group)
 
-                    # Assign group to user
-                    group_name = 'Member'
-                    group = Group.objects.get(name=group_name)
-                    user.groups.add(group)
+                # Set relationship between user and member
+                member = member_data.save(commit=False)
+                member.user = user
+                member.save()
 
-                    # Assign tenant to user upon registration
-                    form2.instance.tenant = tenant
-
-                    member = form2.save(commit=False)
-                    member.user = user
-
-                    member.save()
-
-                    # redirect to login page after successful registration
-                    return redirect('login', tenant_id = tenant_id)
-                else:
-                    return HttpResponse('Your details do not match any of our records')
-
-            # Handle cases where there is no Scheme or Bad request
-            except requests.RequestException as e:
-                return HttpResponse(f'Error contacting external server:{e}')
+                return JsonResponse({
+                    'status': 'success',
+                    'redirect_url': self.get_success_url()
+                })
         else:
-            errors = form1.errors.as_json() + form2.errors.as_json()
-            return HttpResponse(f'Some fields are invalid: {errors}')
-    else:
-        form1 = UserForm()
-        form2 = MemberForm()
+            # Capture and return specific form errors, including password validation issues
+            errors = {**user_data.errors, **member_data.errors}
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Form validation failed.',
+                'errors': errors  # Detailed error messages
+            })
 
-    return render(request, 'register.html', {'form1': form1, 'form2': form2})
+    def get_success_url(self):
+        tenant_id = self.request.tenant.id
+        return reverse('login', kwargs={'tenant_id': tenant_id})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form1'] = UserForm()
+        context['form2'] = MemberForm()
+        return context
+
+
+# @unauthenticated_user
+# def registrationView(request,tenant_id):
+#     if request.method == 'POST':
+#         form1 = UserForm(request.POST)
+#         form2 = MemberForm(request.POST)
+
+#         if form1.is_valid() and form2.is_valid():
+            
+#             # Making sure the person is a member of a tenant in our DB before registering them onto the system
+#             try:
+#                 # Assign tenant to user upon registration
+#                 tenant = request.tenant
+#                 form1.instance.tenant = tenant
+
+#                 # Check from API to see if member is there
+#                 response = requests.get(tenant.api_endpoint_member)
+#                 response.raise_for_status() #if theres an error trying to get a response from endpoint
+#                 data = response.json()
+
+#                 # loops and stops when it gets a match of a user and returns None if theres no match
+#                 api_user = next((api_user for api_user in data if str(api_user.get('staff_number')) == str(request.POST.get('staff_id'))), None)
+
+#                 # Checks if the differece between joined_date and current date is greter than eligibility criteria
+#                 if api_user:
+#                     user = form1.save(commit=False)
+#                     cleaned_password = form1.cleaned_data['password']
+#                     user.set_password(cleaned_password)
+#                     user.save()
+
+#                     # Assign group to user
+#                     group_name = 'Member'
+#                     group = Group.objects.get(name=group_name)
+#                     user.groups.add(group)
+
+#                     # Assign tenant to user upon registration
+#                     form2.instance.tenant = tenant
+
+#                     member = form2.save(commit=False)
+#                     member.user = user
+
+#                     member.save()
+
+#                     # redirect to login page after successful registration
+#                     return redirect('login', tenant_id = tenant_id)
+#                 else:
+#                     return HttpResponse('Your details do not match any of our records')
+
+#             # Handle cases where there is no Scheme or Bad request
+#             except requests.RequestException as e:
+#                 return HttpResponse(f'Error contacting external server:{e}')
+#         else:
+#             errors = form1.errors.as_json() + form2.errors.as_json()
+#             return HttpResponse(f'Some fields are invalid: {errors}')
+#     else:
+#         form1 = UserForm()
+#         form2 = MemberForm()
+
+#     return render(request, 'register.html', {'form1': form1, 'form2': form2})
 
 
 @unauthenticated_user
@@ -189,6 +251,66 @@ class InvalidLoginDetails(TemplateView):
     template_name = 'login_error.html'
 
 
+class VerifyLoginOTPView(TemplateView):
+    template_name = 'verify_otp.html'
+
+    def get_user(self,user_id,tenant):
+        return get_object_or_404(get_user_model(),id=user_id,tenant=tenant)
+
+    def post(self,request,*args,**kwargs):
+        tenant = self.request.tenant
+        user_id = self.args.user_id
+        user_email = self.args.user_email
+        generated_otp = self.args.otp
+
+        # Get OTP code
+        otp_1 = request.POST.get('otp-1', '')
+        otp_2 = request.POST.get('otp-2', '')
+        otp_3 = request.POST.get('otp-3', '')
+        otp_4 = request.POST.get('otp-4', '')
+
+        # convert to integer
+        otp = int(otp_1+otp_2+otp_3+otp_4)
+
+        user = self.get_user(user_id,tenant)
+
+        if user and otp==int(generated_otp):
+            # login user
+            login(request,user)
+
+            # Redirect user based on groups
+            # Member groups -->
+            if user.groups.filter(name='Member').exists():
+                return JsonResponse({
+                    'status':'success',
+                    'redirect_url':self.get_member_group_success_url(user)
+                })
+            # Redirect users without Member group
+            return JsonResponse({
+                'status':'success',
+                'redirect_url':self.get_success_url()
+            })
+    
+    def get_member_group_success_url(self,user):
+        tenant = self.request.tenant
+        member_id = user.member.staff_id
+        url = reverse('member_dashboard', kwargs={
+            'tenant_id':tenant.id,
+            'member_id':member_id
+        })
+        return url
+    
+    def get_success_url(self):
+        tenant = self.request.tenant
+        url = reverse('finance_page', kwargs={'tenant_id':tenant.id})
+        return url
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['email'] = self.args.user_email
+        return context
+    
+            
 
 def verifyOtpView(request, user_id, tenant_id):
     # Assign tenant_id to request for further use

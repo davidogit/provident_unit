@@ -22,6 +22,8 @@
 
   <!-- Sweetalert CSS -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 
   <!-- Toast CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
@@ -322,11 +324,6 @@
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-group-2-line fs-32 lh-1 me-3"></i> <span>Members & Member Contributions</span></a>
             <nav class="nav nav-sub">
-              {% if 'Treasury Manager' in user_groups or 'Treasury Supervisor' in user_groups or 'Treasury Analyst' in user_groups %}
-              <a href="{% url 'member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
-                class="nav-sub-link">Active Members</a>
-              {% endif %}
-
               {% if 'Contributions Manager' in user_groups or 'Contributions Supervisor' in user_groups or 'Contributions Analyst' in user_groups %}
               <a href="{% url 'staff_member_list' scheme_name=scheme.id tenant_id=request.tenant.id %}"
                 class="nav-sub-link">Active Members</a>

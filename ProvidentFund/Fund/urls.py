@@ -7,7 +7,8 @@ urlpatterns =[
     path('dashboard', views.Invest.as_view(), name='finance_page'),
     path('<int:scheme_name>/addInvestment/', views.AddInvestment.as_view(), name='add_investment'),
     path('<int:scheme_name>/investmentList/', views.InvestmentListView.as_view(), name='investment_list'),
-    path('<int:scheme_name>/memberList/', views.MemberListView.as_view(), name='member_list'),
+    # url to ajax investment type filter
+    path('<int:scheme_name>/investments/filter/', views.AjaxInvestmentTypeView.as_view(), name='filter_investments'),
     path('<int:scheme_name>/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('<int:scheme_name>/investmentDetail/<int:pk>/', views.InvestmentDetailView.as_view(), name='investment_detail'),
     path('<int:scheme_name>/ivestment_approval/', views.ApproveMaturedInvestment.as_view(), name='investment_approval'),
@@ -35,6 +36,9 @@ urlpatterns =[
     # path('<int:scheme_name>/add_delayed_interest/', views.DelayedInterestCreateView.as_view(), name='add_delayed_interest'),
     path('<int:scheme_name>/delayed_interest_list/', views.DelayedInterestListView.as_view(), name='delayed_interest_list'),
     path('<int:scheme_name>/delayed-interest-query/', views.DelayedInterestQuery.as_view(), name='delayed_interest_query'),
+    
+    # Delayed interest search
+    path('delayed-interest/search/<int:scheme_name>/',views.DelayedInterestSearchView.as_view(),name='search_delayed_interest'),
 
     # OTHERS
     path('access_denied/', views.AccessDenied.as_view(), name='access_denied'),

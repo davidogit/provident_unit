@@ -48,27 +48,19 @@
           </div>
         </div>
         
-        <!-- Search/Filter Form -->
+        <!-- Search Form -->
         <div class="row g-2 mt-2">
           <div class="col-md-6">
             <div class="input-group">
-              <span class="input-group-text">
-                <i class="bi bi-search text-muted"></i>
-              </span>
-              <input type="text" id="instrument-search" class="form-control" placeholder="Search by instrument number...">
+              <input type="text" id="search-term" class="form-control" placeholder="Search by instrument number or remarks...">
+              <button type="button" id="search-button" class="btn btn-primary">
+                <i class="bi bi-search"></i>
+              </button>
             </div>
           </div>
           
-          <div class="col-md-4">
-            <select id="status-filter" class="form-select">
-              <option value="">All Statuses</option>
-              <option value="Not Paid">Pending</option>
-              <option value="Paid">Paid</option>
-            </select>
-          </div>
-          
           <div class="col-md-2">
-            <button id="reset-filters" class="btn btn-outline-secondary w-100">
+            <button id="reset-search" class="btn btn-outline-secondary w-100">
               <i class="bi bi-x-circle me-1"></i> Reset
             </button>
           </div>
@@ -92,9 +84,9 @@
                 {% endif %}
               </tr>
             </thead>
-            <tbody>
+            <tbody id="interest-table-body">
               {% for int in delayed_interest %}
-                <tr data-instrument="{{ int.invoice_number }}" data-status="{{ int.status }}">
+                <tr>
                   <td class="ps-3">{{ forloop.counter0|add:start_index|default:forloop.counter }}</td>
                   <td>
                     <span class="fw-medium">{{ int.invoice_number }}</span>
@@ -124,15 +116,6 @@
                   {% endif %}
                 </tr>
               {% empty %}
-                <tr id="no-results-row" style="display: none;">
-                  <td colspan="{% if 'Treasury Supervisor' in user_groups %}8{% else %}7{% endif %}" class="text-center py-5">
-                    <div class="d-flex flex-column align-items-center">
-                      <i class="bi bi-search text-muted fs-1 mb-3"></i>
-                      <h5 class="mb-1">No Matching Results</h5>
-                      <p class="text-muted mb-0">Try adjusting your search or filter criteria.</p>
-                    </div>
-                  </td>
-                </tr>
                 <tr id="empty-table-row">
                   <td colspan="{% if 'Treasury Supervisor' in user_groups %}8{% else %}7{% endif %}" class="text-center py-5">
                     <div class="d-flex flex-column align-items-center">
@@ -227,136 +210,225 @@
       newestOnTop: true
     };
     
-    // Search and filter functionality
-    function applyFilters() {
-      const instrumentSearch = $('#instrument-search').val().toLowerCase();
-      const statusFilter = $('#status-filter').val();
-      let visibleCount = 0;
+    // Search functionality
+    function performSearch() {
+      const searchTerm = $('#search-term').val().trim();
       
-      // Loop through all table rows
-      $('#delayed-interest-table tbody tr').each(function() {
-        if ($(this).attr('id') === 'no-results-row' || $(this).attr('id') === 'empty-table-row') {
-          return; // Skip the "no results" and "empty table" rows
-        }
-        
-        const instrument = $(this).data('instrument').toString().toLowerCase();
-        const status = $(this).data('status');
-        
-        // Check if row matches both filters
-        const matchesInstrument = instrument.includes(instrumentSearch);
-        const matchesStatus = statusFilter === '' || status === statusFilter;
-        
-        // Show/hide row based on filter match
-        if (matchesInstrument && matchesStatus) {
-          $(this).show();
-          visibleCount++;
-        } else {
-          $(this).hide();
+      if (searchTerm === '') {
+        // If search term is empty, just reload the page
+        window.location.href = window.location.pathname;
+        return;
+      }
+      
+      // Show loading indicator
+      $('#interest-table-body').html(`
+        <tr>
+          <td colspan="{% if 'Treasury Supervisor' in user_groups %}8{% else %}7{% endif %}" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Searching...</p>
+          </td>
+        </tr>
+      `);
+      const tenant_id = '{{ request.tenant.id }}';
+      const scheme_id = '{{ request.scheme_name }}';
+      // Perform AJAX request
+      $.ajax({
+        url:`/${tenant_id}/fund/delayed-interest/search/${scheme_id}/`,
+        type: 'GET',
+        data: {
+          search_term: searchTerm
+        },
+        success: function(response) {
+          // Clear the table body
+          $('#interest-table-body').empty();
+          
+          if (response.data && response.data.length > 0) {
+            // Populate table with results
+            $.each(response.data, function(index, item) {
+              const statusClass = item.status === 'Paid' ? 'bg-success' : 'bg-warning';
+              const buttonDisabled = item.status === 'Paid' ? 'disabled' : '';
+              
+              const row = `
+                <tr>
+                  <td class="ps-3">${index + 1}</td>
+                  <td>
+                    <span class="fw-medium">${item.invoice_number}</span>
+                  </td>
+                  <td>${parseFloat(item.principal).toFixed(2)}</td>
+                  <td>${parseFloat(item.interest).toFixed(2)}%</td>
+                  <td>
+                    <span class="badge ${statusClass} rounded-pill">
+                      ${item.status}
+                    </span>
+                  </td>
+                  <td>${item.created_date}</td>
+                  <td>
+                    <span class="text-muted">${item.remarks || '--'}</span>
+                  </td>
+                  {% if 'Treasury Supervisor' in user_groups %}
+                  <td class="text-center">
+                    <button 
+                      class="btn btn-sm btn-outline-success approve-button" 
+                      data-int-id="${item.id}" 
+                      data-invoice="${item.invoice_number}"
+                      ${buttonDisabled}
+                    >
+                      <i class="bi bi-check-circle me-1"></i> ${item.status === 'Paid' ? 'Paid' : 'Mark as Paid'}
+                    </button>
+                  </td>
+                  {% endif %}
+                </tr>
+              `;
+              
+              $('#interest-table-body').append(row);
+            });
+            
+            // Reattach event handlers for approve buttons
+            attachApproveButtonHandlers();
+          } else {
+            // No results found
+            $('#interest-table-body').html(`
+              <tr>
+                <td colspan="{% if 'Treasury Supervisor' in user_groups %}8{% else %}7{% endif %}" class="text-center py-5">
+                  <div class="d-flex flex-column align-items-center">
+                    <i class="bi bi-search text-muted fs-1 mb-3"></i>
+                    <h5 class="mb-1">No Matching Results</h5>
+                    <p class="text-muted mb-0">Try adjusting your search criteria.</p>
+                  </div>
+                </td>
+              </tr>
+            `);
+          }
+        },
+        error: function() {
+          // Show error message
+          toastr.error('Failed to perform search. Please try again.');
+          
+          // Display error state
+          $('#interest-table-body').html(`
+            <tr>
+              <td colspan="{% if 'Treasury Supervisor' in user_groups %}8{% else %}7{% endif %}" class="text-center py-5">
+                <div class="d-flex flex-column align-items-center">
+                  <i class="bi bi-exclamation-circle text-danger fs-1 mb-3"></i>
+                  <h5 class="mb-1">Error Loading Data</h5>
+                  <p class="text-muted mb-0">Please try again or contact support.</p>
+                </div>
+              </td>
+            </tr>
+          `);
         }
       });
-      
-      // Show/hide "no results" message
-      if (visibleCount === 0 && $('#delayed-interest-table tbody tr').length > 0) {
-        $('#no-results-row').show();
-        $('#empty-table-row').hide();
-      } else {
-        $('#no-results-row').hide();
-        if ($('#delayed-interest-table tbody tr').length === 0) {
-          $('#empty-table-row').show();
-        }
-      }
     }
     
-    // Event listeners for search and filter inputs
-    $('#instrument-search').on('keyup', applyFilters);
-    $('#status-filter').on('change', applyFilters);
-    
-    // Reset filters button
-    $('#reset-filters').on('click', function() {
-      $('#instrument-search').val('');
-      $('#status-filter').val('');
-      applyFilters();
-      toastr.info('Filters have been reset');
-    });
-    
-    // Handle approve button click
-    $('.approve-button').on('click', function(e) {
-      e.preventDefault();
-      
-      const button = $(this);
-      const intId = button.data('int-id');
-      const invoiceNumber = button.data('invoice');
-      
-      // Show confirmation dialog with SweetAlert
-      Swal.fire({
-        title: 'Confirm Payment',
-        text: `Are you sure you want to mark payment for ${invoiceNumber} as paid?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Yes, confirm payment',
-        cancelButtonText: 'Cancel'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Show loading state
-          button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
-          button.prop('disabled', true);
-          
-          // Send AJAX request
-          $.ajax({
-            type: 'POST',
-            url: '',
-            data: {
-              'd_int_id': intId,
-              'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            success: function(response) {
-              if (response.status === 'success') {
-                // Show success toast
-                toastr.success('Payment confirmed successfully');
-                
-                // Update UI
-                const row = button.closest('tr');
-                row.find('td:nth-child(5) .badge')
-                  .removeClass('bg-warning')
-                  .addClass('bg-success')
-                  .text('Paid');
-                
-                // Update row data attribute for filtering
-                row.attr('data-status', 'Paid');
-                
-                // Disable button
-                button.prop('disabled', true);
-                button.html('<i class="bi bi-check-circle me-1"></i> Paid');
-                
-                // Update outstanding count in header
-                const countBadge = $('.card-header .badge.bg-warning');
-                let count = parseInt(countBadge.text());
-                if (!isNaN(count) && count > 0) {
-                  countBadge.text(count - 1);
+    // Attach event handlers for approve buttons
+    function attachApproveButtonHandlers() {
+      $('.approve-button').on('click', function(e) {
+        e.preventDefault();
+        
+        const button = $(this);
+        const intId = button.data('int-id');
+        const invoiceNumber = button.data('invoice');
+        
+        // Show confirmation dialog with SweetAlert
+        Swal.fire({
+          title: 'Confirm Payment',
+          text: `Are you sure you want to mark payment for ${invoiceNumber} as paid?`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#28a745',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: 'Yes, confirm payment',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Show loading state
+            button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            button.prop('disabled', true);
+            
+            // Send AJAX request
+            $.ajax({
+              type: 'POST',
+              url: '',
+              data: {
+                'd_int_id': intId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+              },
+              success: function(response) {
+                if (response.status === 'success') {
+                  // Show success toast
+                  toastr.success('Payment confirmed successfully');
+                  
+                  // Update UI
+                  const row = button.closest('tr');
+                  row.find('td:nth-child(5) .badge')
+                    .removeClass('bg-warning')
+                    .addClass('bg-success')
+                    .text('Paid');
+                  
+                  // Disable button
+                  button.prop('disabled', true);
+                  button.html('<i class="bi bi-check-circle me-1"></i> Paid');
+                  
+                  // Update outstanding count in header
+                  const countBadge = $('.card-header .badge.bg-warning');
+                  let count = parseInt(countBadge.text());
+                  if (!isNaN(count) && count > 0) {
+                    countBadge.text(count - 1);
+                  }
+                  
+                  // Update paid count in header
+                  const paidBadge = $('.card-header .badge.bg-success').first();
+                  let paidCount = parseInt(paidBadge.text());
+                  if (!isNaN(paidCount)) {
+                    paidBadge.text(paidCount + 1);
+                  }
+                } else {
+                  // Show error toast
+                  toastr.error(response.message || 'Payment confirmation failed');
+                  
+                  // Reset button
+                  button.html('<i class="bi bi-check-circle me-1"></i> Mark as Paid');
+                  button.prop('disabled', false);
                 }
-              } else {
+              },
+              error: function(response) {
                 // Show error toast
-                toastr.error(response.message || 'Payment confirmation failed');
+                toastr.error('Payment confirmation failed');
                 
                 // Reset button
                 button.html('<i class="bi bi-check-circle me-1"></i> Mark as Paid');
                 button.prop('disabled', false);
               }
-            },
-            error: function(response) {
-              // Show error toast
-              toastr.error('Payment confirmation failed');
-              
-              // Reset button
-              button.html('<i class="bi bi-check-circle me-1"></i> Mark as Paid');
-              button.prop('disabled', false);
-            }
-          });
-        }
+            });
+          }
+        });
       });
+    }
+    
+    // Handle search button click
+    $('#search-button').on('click', function() {
+      performSearch();
     });
+    
+    // Handle Enter key press in search input
+    $('#search-term').on('keypress', function(e) {
+      if (e.which === 13) { // Enter key
+        e.preventDefault();
+        performSearch();
+      }
+    });
+    
+    // Reset search button
+    $('#reset-search').on('click', function() {
+      $('#search-term').val('');
+      window.location.href = window.location.pathname;
+      toastr.info('Search has been reset');
+    });
+    
+    // Initial setup for approve buttons
+    attachApproveButtonHandlers();
   });
 </script>
 {% endblock %}

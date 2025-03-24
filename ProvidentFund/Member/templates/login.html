@@ -2,18 +2,14 @@
 {% load static %}
 <html lang="en">
 
-<!-- Mirrored from themepixels.me/demo/dashbyte/pages/verify-account.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 12 Nov 2023 18:21:29 GMT -->
-
 <head>
-
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
   <!-- Meta -->
-  <meta name="description" content="">
+  <meta name="description" content="Provident Fund Management System">
   <meta name="author" content="Themepixels">
-
   <meta name="csrf-token" content="{{ csrf_token }}">
 
   <!-- Favicon -->
@@ -23,99 +19,452 @@
 
   <!-- Vendor CSS -->
   <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
-
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  
+  <!-- Toastr CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  
   <!-- Template CSS -->
   <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
+  
+  <style>
+    :root {
+      --primary-color: #0d6efd;
+      --primary-hover: #0b5ed7;
+      --bs-body-bg: #f5f6fa;
+    }
+    
+    [data-skin="dark"] {
+      --bs-body-bg: #141c2b;
+      --card-bg: #1c2739;
+      --border-color: #2d3446;
+      --text-color: #e2e5ec;
+      --text-muted: #97a3b9;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: var(--bs-body-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 1rem;
+    }
+    
+    .page-sign {
+      background-image: linear-gradient(135deg, rgba(13, 110, 253, 0.05), rgba(13, 110, 253, 0.1));
+    }
+    
+    [data-skin="dark"] .page-sign {
+      background-image: linear-gradient(135deg, rgba(13, 110, 253, 0.05), rgba(13, 110, 253, 0.08));
+    }
+    
+    .card-sign {
+      max-width: 420px;
+      width: 100%;
+      border: none;
+      border-radius: 0.75rem;
+      box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      margin: 0 auto;
+    }
+    
+    [data-skin="dark"] .card-sign {
+      background-color: var(--card-bg);
+      box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
+    }
+    
+    .card-header {
+      background-color: transparent;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 1.5rem 1.5rem 1rem;
+    }
+    
+    [data-skin="dark"] .card-header {
+      border-bottom-color: var(--border-color);
+    }
+    
+    .card-title {
+      font-weight: 700;
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #212529;
+    }
+    
+    [data-skin="dark"] .card-title {
+      color: var(--text-color);
+    }
+    
+    .card-text {
+      color: #6c757d;
+      margin-bottom: 0;
+    }
+    
+    [data-skin="dark"] .card-text {
+      color: var(--text-muted);
+    }
+    
+    .card-body {
+      padding: 1.5rem;
+    }
+    
+    .form-label {
+      font-weight: 500;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      color: #495057;
+    }
+    
+    [data-skin="dark"] .form-label {
+      color: var(--text-color);
+    }
+    
+    .form-label a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 400;
+      font-size: 0.8125rem;
+      transition: color 0.15s ease-in-out;
+    }
+    
+    .form-label a:hover {
+      color: var(--primary-hover);
+      text-decoration: underline;
+    }
+    
+    .form-control {
+      border-radius: 0.5rem;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid #dee2e6;
+      transition: all 0.15s ease-in-out;
+    }
+    
+    [data-skin="dark"] .form-control {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-color);
+      color: var(--text-color);
+    }
+    
+    .form-control:focus {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    [data-skin="dark"] .form-control:focus {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      border-radius: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      font-weight: 500;
+      transition: all 0.15s ease-in-out;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+    
+    .btn-sign {
+      width: 100%;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 2.75rem;
+    }
+    
+    .btn-sign.loading {
+      opacity: 0.8;
+      cursor: not-allowed;
+    }
+    
+    /* Fixed divider styling */
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.5rem 0;
+      color: #6c757d;
+      font-size: 0.875rem;
+    }
+    
+    [data-skin="dark"] .divider {
+      color: var(--text-muted);
+    }
+    
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    [data-skin="dark"] .divider::before,
+    [data-skin="dark"] .divider::after {
+      border-color: var(--border-color);
+    }
+    
+    .divider::before {
+      margin-right: 1rem;
+    }
+    
+    .divider::after {
+      margin-left: 1rem;
+    }
+    
+    .theme-toggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: transparent;
+      border: none;
+      color: #6c757d;
+      font-size: 1.25rem;
+      cursor: pointer;
+      z-index: 10;
+      transition: color 0.15s ease-in-out;
+    }
+    
+    [data-skin="dark"] .theme-toggle {
+      color: var(--text-muted);
+    }
+    
+    .theme-toggle:hover {
+      color: var(--primary-color);
+    }
+    
+    .brand-logo {
+      display: block;
+      margin: 0 auto 1.5rem;
+      max-width: 120px;
+      height: auto;
+    }
+    
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+      margin-right: 0.5rem;
+    }
+    
+    /* Password field with toggle */
+    .password-field {
+      position: relative;
+    }
+    
+    .password-field .form-control {
+      padding-right: 2.5rem;
+    }
+    
+    .toggle-password {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #6c757d;
+      cursor: pointer;
+      padding: 0.25rem;
+      z-index: 5;
+    }
+    
+    [data-skin="dark"] .toggle-password {
+      color: var(--text-muted);
+    }
+    
+    .toggle-password:hover {
+      color: var(--primary-color);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+      .card-sign {
+        margin: 0 0.5rem;
+      }
+      
+      .card-header {
+        padding: 1.25rem 1.25rem 0.75rem;
+      }
+      
+      .card-body {
+        padding: 1.25rem;
+      }
+    }
+  </style>
 </head>
 
 <body class="page-sign">
+  <button type="button" class="theme-toggle" id="themeToggle">
+    <i class="bi bi-moon-fill" id="darkIcon"></i>
+    <i class="bi bi-sun-fill" id="lightIcon" style="display: none;"></i>
+  </button>
 
   <div class="card card-sign">
     <div class="card-header">
-      <!-- <a href="../index.html" class="header-logo mb-4">dashbyte</a> -->
-      <h3 class="card-title text-center">Log In</h3>
-      <p class="card-text text-center">Welcome back! Please login to continue.</p>
-      <p class="message-info text-danger text-center"></p>
-    </div><!-- card-header -->
+      <img src="{% static 'assets/img/default_profile_pic.png' %}" alt="Provident Fund Logo" class="brand-logo">
+      <h3 class="card-title text-center">Welcome Back</h3>
+      <p class="card-text text-center">Sign in to your account to continue</p>
+    </div>
 
     <form class="login-form" action="" method="POST">
       {% csrf_token %}
       <div class="card-body">
-        <div class="mb-4">
-          <label class="form-label">Username</label>
-          <input type="text" class="form-control" placeholder="Enter your username" name="username">
+        <div class="mb-3">
+          <label for="username" class="form-label">Username</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input type="text" class="form-control" id="username" placeholder="Enter your username" name="username" required>
+          </div>
         </div>
 
         <div class="mb-4">
-          <label class="form-label d-flex justify-content-between">Password <a href="{% url 'password_reset' %}">Forgot password?</a></label>
-          <input type="password" class="form-control" placeholder="Enter your password" name="password">
+          <label for="password" class="form-label d-flex justify-content-between">
+            Password 
+            <a href="{% url 'password_reset' %}" tabindex="-1">Forgot password?</a>
+          </label>
+          <div class="input-group password-field">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" class="form-control" id="password" placeholder="Enter your password" name="password" required>
+            <button type="button" class="toggle-password" tabindex="-1">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
         </div>
-        <!-- <button>OTP</button> -->
-        <input id="submit" type="submit" class="btn btn-primary btn-sign" value="Login">
 
-        <div class="divider">Dont have an account?</div>
+        <button type="submit" class="btn btn-primary btn-sign" id="submit">
+          <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+          Sign In
+        </button>
 
-        <div class="row gx-2">
-          <!-- <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div> -->
-          <div class="col text-center"><span><a href="{% url 'register' tenant_id=request.tenant.id %}">Sign up here</a></span></div>
-          <!-- <div class="col text-center"><span><a href="{% url 'password_reset' %}">Forgot password? click here to reset password</a></span></div> -->
-          
-          <!-- <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div> -->
-        </div><!- row
-      </div><!-- card-body -->
-      <!-- <div class="card-footer">
+        <div class="divider">Don't have an account?</div>
+
+        <div class="text-center">
+          <a href="{% url 'register' tenant_id=request.tenant.id %}" class="btn btn-outline-primary text-dark">Create Account</a>
+        </div>
       </div>
-      card-footer -->
     </form>
-  </div><!-- card -->
-  
+  </div>
 
   <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
   <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+  
   <script>
-    'use script'
-
-    var skinMode = localStorage.getItem('skin-mode');
-    if (skinMode) {
-      $('html').attr('data-skin', 'dark');
-    };
-
     $(document).ready(function(){
-      // Get CSRF token from the meta tag
-      var csrfToken = $('meta[name="csrf-token"]').attr('content');
-
+      // Initialize toastr options
+      toastr.options = {
+        closeButton: true,
+        progressBar: true,
+        positionClass: "toast-bottom-right",
+        timeOut: 5000,
+        extendedTimeOut: 1000,
+        preventDuplicates: true
+      };
+      
+      // Check and apply dark mode
+      var skinMode = localStorage.getItem('skin-mode');
+      if (skinMode === 'dark') {
+        $('html').attr('data-skin', 'dark');
+        $('#darkIcon').hide();
+        $('#lightIcon').show();
+      }
+      
+      // Theme toggle functionality
+      $('#themeToggle').on('click', function() {
+        if ($('html').attr('data-skin') === 'dark') {
+          $('html').removeAttr('data-skin');
+          localStorage.removeItem('skin-mode');
+          $('#darkIcon').show();
+          $('#lightIcon').hide();
+        } else {
+          $('html').attr('data-skin', 'dark');
+          localStorage.setItem('skin-mode', 'dark');
+          $('#darkIcon').hide();
+          $('#lightIcon').show();
+        }
+      });
+      
+      // Toggle password visibility
+      $('.toggle-password').on('click', function() {
+        const passwordInput = $('#password');
+        const icon = $(this).find('i');
+        
+        if (passwordInput.attr('type') === 'password') {
+          passwordInput.attr('type', 'text');
+          icon.removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+          passwordInput.attr('type', 'password');
+          icon.removeClass('bi-eye-slash').addClass('bi-eye');
+        }
+      });
+      
+      // Form submission
       $('.login-form').on('submit', function(event){
         event.preventDefault();
         var form = $(this);
-
+        var submitBtn = $('#submit');
+        var spinner = submitBtn.find('.spinner-border');
+        
+        // Show loading state
+        submitBtn.prop('disabled', true).addClass('loading');
+        spinner.removeClass('d-none');
+        submitBtn.text(' Signing in...');
+        spinner.prependTo(submitBtn);
+        
+        // Get CSRF token from the meta tag
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        
         // Serialize the form data, including the CSRF token
         var formData = form.serialize();
         
         // Add CSRF token manually to the form data
-        formData += '&csrfmiddlewaretoken=' + encodeURIComponent(csrfToken);
-
+        //formData += '&csrfmiddlewaretoken=' + encodeURIComponent(csrfToken);
+        
         $.ajax({
           type: 'POST',
           url: form.attr('action'),
-          data: formData,  // Send the serialized form data along with CSRF token
+          data: formData,
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
           success: function(response){
             if (response.status === 'error'){
-              $('.message-info').text(response.message); // Display error message
+              // Display error message with toastr
+              toastr.error(response.message, 'Login Failed');
+              
+              // Reset button state
+              submitBtn.prop('disabled', false).removeClass('loading');
+              spinner.addClass('d-none');
+              submitBtn.html('Sign In');
             } else {
-              window.location.href = response.redirect_url; // Redirect to the dashboard
+              // Show success message before redirect
+              toastr.success('Login successful. Redirecting...', 'Welcome');
+              
+              // Redirect to the dashboard after a short delay
+              setTimeout(function() {
+                window.location.href = response.redirect_url;
+              }, 1000);
             }
           },
           error: function(xhr, status, error){
             // Handle AJAX error
-            $('.message-info').text('An error occurred. Please try again.');
+            toastr.error('An error occurred. Please try again.', 'Connection Error');
+            
+            // Reset button state
+            submitBtn.prop('disabled', false).removeClass('loading');
+            spinner.addClass('d-none');
+            submitBtn.html('Sign In');
           }
         });
       });
     });
-
-
-
-
   </script>
 </body>
 </html>

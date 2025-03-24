@@ -1,99 +1,836 @@
-<!-- register.html -->
-
 <!DOCTYPE html>
 {% load static %}
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <!-- Meta -->
-    <meta name="description" content="">
-    <meta name="author" content="Themepixels">
+  <!-- Meta -->
+  <meta name="description" content="Provident Fund Management System">
+  <meta name="author" content="Themepixels">
+  <meta name="csrf-token" content="{{ csrf_token }}">
 
-    <!-- Favicon -->
-    <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicon.png' %}">
 
-    <title>Register</title>
+  <title>Provident Fund - Register</title>
 
-    <!-- Vendor CSS -->
-    <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
-
-    <!-- Template CSS -->
-    <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
+  <!-- Vendor CSS -->
+  <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  
+  <!-- Template CSS -->
+  <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
+  
+  <style>
+    :root {
+      --primary-color: #0d6efd;
+      --primary-hover: #0b5ed7;
+      --bs-body-bg: #f5f6fa;
+    }
+    
+    [data-skin="dark"] {
+      --bs-body-bg: #141c2b;
+      --card-bg: #1c2739;
+      --border-color: #2d3446;
+      --text-color: #e2e5ec;
+      --text-muted: #97a3b9;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: var(--bs-body-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 1rem;
+    }
+    
+    .page-sign {
+      background-image: linear-gradient(135deg, rgba(13, 110, 253, 0.05), rgba(13, 110, 253, 0.1));
+    }
+    
+    [data-skin="dark"] .page-sign {
+      background-image: linear-gradient(135deg, rgba(13, 110, 253, 0.05), rgba(13, 110, 253, 0.08));
+    }
+    
+    .card-sign {
+      max-width: 800px;
+      width: 100%;
+      border: none;
+      border-radius: 0.75rem;
+      box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      margin: 2rem auto;
+    }
+    
+    [data-skin="dark"] .card-sign {
+      background-color: var(--card-bg);
+      box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
+    }
+    
+    .card-header {
+      background-color: transparent;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 1.5rem 1.5rem 1rem;
+    }
+    
+    [data-skin="dark"] .card-header {
+      border-bottom-color: var(--border-color);
+    }
+    
+    .card-title {
+      font-weight: 700;
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #212529;
+    }
+    
+    [data-skin="dark"] .card-title {
+      color: var(--text-color);
+    }
+    
+    .card-text {
+      color: #6c757d;
+      margin-bottom: 0;
+    }
+    
+    [data-skin="dark"] .card-text {
+      color: var(--text-muted);
+    }
+    
+    .card-body {
+      padding: 1.5rem;
+    }
+    
+    .card-footer {
+      background-color: transparent;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 1rem 1.5rem;
+      text-align: center;
+      color: #6c757d;
+    }
+    
+    [data-skin="dark"] .card-footer {
+      border-top-color: var(--border-color);
+      color: var(--text-muted);
+    }
+    
+    .card-footer a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.15s ease-in-out;
+    }
+    
+    .card-footer a:hover {
+      color: var(--primary-hover);
+      text-decoration: underline;
+    }
+    
+    .form-label {
+      font-weight: 500;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      color: #495057;
+    }
+    
+    [data-skin="dark"] .form-label {
+      color: var(--text-color);
+    }
+    
+    .form-control {
+      border-radius: 0.5rem;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid #dee2e6;
+      transition: all 0.15s ease-in-out;
+    }
+    
+    [data-skin="dark"] .form-control {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-color);
+      color: var(--text-color);
+    }
+    
+    .form-control:focus {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    [data-skin="dark"] .form-control:focus {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .input-group-text {
+      border-radius: 0.5rem 0 0 0.5rem;
+      border-color: #dee2e6;
+      background-color: #f8f9fa;
+    }
+    
+    [data-skin="dark"] .input-group-text {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-color);
+      color: var(--text-muted);
+    }
+    
+    .input-group .form-control {
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      border-radius: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      font-weight: 500;
+      transition: all 0.15s ease-in-out;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+    
+    .btn-sign {
+      width: 100%;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 2.75rem;
+    }
+    
+    .theme-toggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: transparent;
+      border: none;
+      color: #6c757d;
+      font-size: 1.25rem;
+      cursor: pointer;
+      z-index: 10;
+      transition: color 0.15s ease-in-out;
+    }
+    
+    [data-skin="dark"] .theme-toggle {
+      color: var(--text-muted);
+    }
+    
+    .theme-toggle:hover {
+      color: var(--primary-color);
+    }
+    
+    .brand-logo {
+      display: block;
+      margin: 0 auto 1.5rem;
+      max-width: 120px;
+      height: auto;
+    }
+    
+    /* Password field with toggle */
+    .password-field {
+      position: relative;
+    }
+    
+    .password-field .form-control {
+      padding-right: 2.5rem;
+    }
+    
+    .toggle-password {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #6c757d;
+      cursor: pointer;
+      padding: 0.25rem;
+      z-index: 5;
+    }
+    
+    [data-skin="dark"] .toggle-password {
+      color: var(--text-muted);
+    }
+    
+    .toggle-password:hover {
+      color: var(--primary-color);
+    }
+    
+    /* Form check styling */
+    .form-check {
+      display: flex;
+      align-items: center;
+      padding-left: 0;
+    }
+    
+    .form-check-input {
+      margin-right: 0.5rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      cursor: pointer;
+    }
+    
+    [data-skin="dark"] .form-check-input {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-color);
+    }
+    
+    [data-skin="dark"] .form-check-input:checked {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    
+    .form-check-label {
+      margin-bottom: 0;
+      cursor: pointer;
+      color: #495057;
+    }
+    
+    [data-skin="dark"] .form-check-label {
+      color: var(--text-color);
+    }
+    
+    /* Error message */
+    .error-container {
+      background-color: rgba(220, 53, 69, 0.1);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-left: 4px solid #dc3545;
+      display: none;
+    }
+    
+    [data-skin="dark"] .error-container {
+      background-color: rgba(220, 53, 69, 0.15);
+    }
+    
+    .error-container.show {
+      display: block;
+    }
+    
+    .error-title {
+      color: #dc3545;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 0.9375rem;
+    }
+    
+    [data-skin="dark"] .error-title {
+      color: #f77;
+    }
+    
+    .error-list {
+      margin: 0;
+      padding-left: 1.25rem;
+      color: #dc3545;
+      font-size: 0.875rem;
+    }
+    
+    [data-skin="dark"] .error-list {
+      color: #f77;
+    }
+    
+    .field-error {
+      color: #dc3545;
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+    
+    [data-skin="dark"] .field-error {
+      color: #f77;
+    }
+    
+    .field-error.show {
+      display: block;
+    }
+    
+    .is-invalid {
+      border-color: #dc3545 !important;
+    }
+    
+    .is-invalid:focus {
+      box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+    }
+    
+    /* Success message */
+    .success-container {
+      background-color: rgba(25, 135, 84, 0.1);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-left: 4px solid #198754;
+      display: none;
+    }
+    
+    [data-skin="dark"] .success-container {
+      background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .success-container.show {
+      display: block;
+    }
+    
+    .success-title {
+      color: #198754;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 0.9375rem;
+    }
+    
+    [data-skin="dark"] .success-title {
+      color: #5f5;
+    }
+    
+    .success-message {
+      margin: 0;
+      color: #198754;
+      font-size: 0.875rem;
+    }
+    
+    [data-skin="dark"] .success-message {
+      color: #5f5;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+      .card-sign {
+        margin: 1rem 0.5rem;
+      }
+      
+      .card-header {
+        padding: 1.25rem 1.25rem 0.75rem;
+      }
+      
+      .card-body {
+        padding: 1.25rem;
+      }
+    }
+  </style>
 </head>
 
 <body class="page-sign">
+  <button type="button" class="theme-toggle" id="themeToggle">
+    <i class="bi bi-moon-fill" id="darkIcon"></i>
+    <i class="bi bi-sun-fill" id="lightIcon" style="display: none;"></i>
+  </button>
 
-<div class="card card-sign">
+  <div class="card card-sign">
     <div class="card-header">
-        <h3 class="card-title text-center">Register</h3>
-        <p class="card-text text-center">Please fill in your details to register.</p>
-    </div><!-- card-header -->
+      <!-- <img src="{% static 'assets/img/default_profile_pic.png' %}" alt="Provident Fund Logo" class="brand-logo"> -->
+      <h3 class="card-title text-center">Create Your Account</h3>
+      <p class="card-text text-center">Please fill in your details to register</p>
+      
+      <!-- Error Container -->
+      <div class="error-container" id="errorContainer">
+        <div class="error-title">Please fix the following errors:</div>
+        <ul class="error-list" id="errorList"></ul>
+      </div>
+      
+      <!-- Success Container -->
+      <div class="success-container" id="successContainer">
+        <div class="success-title">Registration Successful!</div>
+        <p class="success-message" id="successMessage">Your account has been created. Redirecting to login page...</p>
+      </div>
+    </div>
 
-    <form action="{% url 'register' tenant_id=request.tenant.id %}" method="POST">
-        {% csrf_token %}
-        <div class="card-body">
-            <div class="mb-4">
-                <label class="form-label">Username</label>
-                <input type="text" class="form-control" placeholder="Enter your username" name="username" required>
+    <form action="{% url 'register' tenant_id=request.tenant.id %}" method="POST" id="registrationForm">
+      {% csrf_token %}
+      <div class="card-body">
+        <div class="row g-3">
+          <!-- Left Column -->
+          <div class="col-md-6">
+            <!-- Username -->
+            <div class="mb-3">
+              <label for="username" class="form-label">Username</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                <input type="text" class="form-control" id="username" placeholder="Choose a username" name="username" required>
+              </div>
+              <div class="field-error" id="username-error"></div>
             </div>
-            <div class="mb-4">
-                <label class="form-label">First Name</label>
-                <input type="text" class="form-control" placeholder="Enter your first name" name="first_name" required>
+            
+            <!-- First Name -->
+            <div class="mb-3">
+              <label for="first_name" class="form-label">First Name</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                <input type="text" class="form-control" id="first_name" placeholder="Enter your first name" name="first_name" required>
+              </div>
+              <div class="field-error" id="first_name-error"></div>
             </div>
-            <div class="mb-4">
-                <label class="form-label">Last Name</label>
-                <input type="text" class="form-control" placeholder="Enter your last name" name="last_name" required>
+            
+            <!-- Last Name -->
+            <div class="mb-3">
+              <label for="last_name" class="form-label">Last Name</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                <input type="text" class="form-control" id="last_name" placeholder="Enter your last name" name="last_name" required>
+              </div>
+              <div class="field-error" id="last_name-error"></div>
             </div>
-            <div class="mb-4">
-                <label class="form-label">Staff ID</label>
-                <input type="number" class="form-control" placeholder="Enter your staff ID" name="staff_id" required>
+            
+            <!-- Staff ID -->
+            <div class="mb-3">
+              <label for="staff_id" class="form-label">Staff ID</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-credit-card"></i></span>
+                <input type="number" class="form-control" id="staff_id" placeholder="Enter your staff ID" name="staff_id" required>
+              </div>
+              <div class="field-error" id="staff_id-error"></div>
             </div>
-            <div class="mb-4">
-                <label class="form-label">Email Address</label>
-                <input type="email" class="form-control" placeholder="Enter your email address" name="email" required>
+          </div>
+          
+          <!-- Right Column -->
+          <div class="col-md-6">
+            <!-- Email Address -->
+            <div class="mb-3">
+              <label for="email" class="form-label">Email Address</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                <input type="email" class="form-control" id="email" placeholder="Enter your email address" name="email" required>
+              </div>
+              <div class="field-error" id="email-error"></div>
             </div>
-            <div class="mb-4">
-                <label class="form-label">Tel Number</label>
-                <input type="tel" class="form-control" placeholder="Enter your phone number" name="tel_number" required>
+            
+            <!-- Phone Number -->
+            <div class="mb-3">
+              <label for="tel_number" class="form-label">Phone Number</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                <input type="tel" class="form-control" id="tel_number" placeholder="Enter your phone number" name="tel_number" required>
+              </div>
+              <div class="field-error" id="tel_number-error"></div>
             </div>
-            <div class="mb-4">
-                <label class="form-label">Password</label>
-                <input type="password" class="form-control" placeholder="Enter your password" name="password" required>
+            
+            <!-- Password -->
+            <div class="mb-3">
+              <label for="password1" class="form-label">Password</label>
+              <div class="input-group password-field">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input type="password" class="form-control" id="password1" placeholder="Create a password" name="password1" required>
+                <button type="button" class="toggle-password" tabindex="-1" data-target="password1">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              <div class="password-strength mt-2" id="passwordStrength"></div>
+              <div class="field-error" id="password1-error"></div>
             </div>
-            <div class="mb-4 form-check">
-                <input type="checkbox" class="form-check-input" id="termsCheckbox" name="termsCheckbox" required>
-                <label class="form-check-label" for="termsCheckbox"></label>
+            
+            <!-- Confirm Password -->
+            <div class="mb-3">
+              <label for="password2" class="form-label">Confirm Password</label>
+              <div class="input-group password-field">
+                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                <input type="password" class="form-control" id="password2" placeholder="Confirm your password" name="password2" required>
+                <button type="button" class="toggle-password" tabindex="-1" data-target="password2">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              <div class="field-error" id="password2-error"></div>
+            </div>
+          </div>
+          
+          <!-- Terms and Conditions - Full Width -->
+          <div class="col-12 mb-3">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="termsCheckbox" name="termsCheckbox" required>
+              <label class="form-check-label" for="termsCheckbox">
                 I agree to the <a href="{% url 'terms_and_conditions' tenant_id=request.tenant.id %}" target="_blank">terms and conditions</a>
+              </label>
             </div>
-            <input type="submit" class="btn btn-primary btn-sign" value="Register">
-
-            <!-- <div class="divider"><span>or register with</span></div> -->
-
-            <!-- Uncomment the following section if you want to enable registration with Facebook and Google
-            <div class="row gx-2">
-                <div class="col"><button class="btn btn-facebook"><i class="ri-facebook-fill"></i> Facebook</button></div>
-                <div class="col"><button class="btn btn-google"><i class="ri-google-fill"></i> Google</button></div>
-            </div> row -->
-        </div><!-- card-body -->
+            <div class="field-error" id="termsCheckbox-error"></div>
+          </div>
+          
+          <!-- Submit Button - Full Width -->
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary btn-sign" id="submitBtn">
+              Create Account
+            </button>
+          </div>
+        </div>
+      </div>
     </form>
 
     <div class="card-footer">
-        Already have an account? <a href="{% url 'login' tenant_id=request.tenant.id %}">Sign In</a>
-    </div><!-- card-footer -->
+      Already have an account? <a href="{% url 'login' tenant_id=request.tenant.id %}">Sign In</a>
+    </div>
+  </div>
 
-    <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
-    <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <script>
-        'use script'
-
-        var skinMode = localStorage.getItem('skin-mode');
-        if (skinMode) {
-            $('html').attr('data-skin', 'dark');
+  <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
+  <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  
+  <script>
+    $(document).ready(function() {
+      // Check and apply dark mode
+      var skinMode = localStorage.getItem('skin-mode');
+      if (skinMode === 'dark') {
+        $('html').attr('data-skin', 'dark');
+        $('#darkIcon').hide();
+        $('#lightIcon').show();
+      }
+      
+      // Theme toggle functionality
+      $('#themeToggle').on('click', function() {
+        if ($('html').attr('data-skin') === 'dark') {
+          $('html').removeAttr('data-skin');
+          localStorage.removeItem('skin-mode');
+          $('#darkIcon').show();
+          $('#lightIcon').hide();
+        } else {
+          $('html').attr('data-skin', 'dark');
+          localStorage.setItem('skin-mode', 'dark');
+          $('#darkIcon').hide();
+          $('#lightIcon').show();
         }
-    </script>
+      });
+      
+      // Toggle password visibility
+      $('.toggle-password').on('click', function() {
+        const targetId = $(this).data('target');
+        const passwordInput = $('#' + targetId);
+        const icon = $(this).find('i');
+        
+        if (passwordInput.attr('type') === 'password') {
+          passwordInput.attr('type', 'text');
+          icon.removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+          passwordInput.attr('type', 'password');
+          icon.removeClass('bi-eye-slash').addClass('bi-eye');
+        }
+      });
+      
+      // Password strength indicator
+      $('#password1').on('input', function() {
+        const password = $(this).val();
+        const strengthDiv = $('#passwordStrength');
+        
+        if (password.length === 0) {
+          strengthDiv.html('');
+          return;
+        }
+        
+        // Check password strength
+        let strength = 0;
+        let feedback = '';
+        
+        // Length check
+        if (password.length >= 8) {
+          strength += 1;
+        } else {
+          feedback = 'Password should be at least 8 characters';
+        }
+        
+        // Contains uppercase
+        if (/[A-Z]/.test(password)) {
+          strength += 1;
+        }
+        
+        // Contains lowercase
+        if (/[a-z]/.test(password)) {
+          strength += 1;
+        }
+        
+        // Contains number
+        if (/[0-9]/.test(password)) {
+          strength += 1;
+        }
+        
+        // Contains special character
+        if (/[^A-Za-z0-9]/.test(password)) {
+          strength += 1;
+        }
+        
+        // Set color and message based on strength
+        let color = '';
+        let message = '';
+        
+        switch (strength) {
+          case 0:
+          case 1:
+            color = '#dc3545'; // Red
+            message = feedback || 'Weak password';
+            break;
+          case 2:
+          case 3:
+            color = '#ffc107'; // Yellow
+            message = 'Moderate password';
+            break;
+          case 4:
+          case 5:
+            color = '#198754'; // Green
+            message = 'Strong password';
+            break;
+        }
+        
+        strengthDiv.html(`<div class="progress" style="height: 5px;">
+          <div class="progress-bar" role="progressbar" style="width: ${strength * 20}%; background-color: ${color};" aria-valuenow="${strength * 20}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <small style="color: ${color};">${message}</small>`);
+      });
+      
+      // Reset field errors when input changes
+      $('input').on('input', function() {
+        const fieldId = $(this).attr('id');
+        $(`#${fieldId}-error`).removeClass('show').text('');
+        $(this).removeClass('is-invalid');
+      });
+      
+      // Form validation and AJAX submission
+      $('#registrationForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Reset all error messages
+        $('.field-error').removeClass('show').text('');
+        $('input').removeClass('is-invalid');
+        $('#errorContainer').removeClass('show');
+        $('#errorList').empty();
+        $('#successContainer').removeClass('show');
+        
+        // Basic client-side validation
+        let hasErrors = false;
+        let errorMessages = [];
+        
+        // Check if passwords match
+        if ($('#password1').val() !== $('#password2').val()) {
+          hasErrors = true;
+          errorMessages.push('Passwords do not match');
+          $('#password2-error').addClass('show').text('Passwords do not match');
+          $('#password2').addClass('is-invalid');
+        }
+        
+        // Check password length
+        if ($('#password1').val().length < 8) {
+          hasErrors = true;
+          errorMessages.push('Password must be at least 8 characters long');
+          $('#password1-error').addClass('show').text('Password must be at least 8 characters long');
+          $('#password1').addClass('is-invalid');
+        }
+        
+        // Check email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test($('#email').val())) {
+          hasErrors = true;
+          errorMessages.push('Please enter a valid email address');
+          $('#email-error').addClass('show').text('Please enter a valid email address');
+          $('#email').addClass('is-invalid');
+        }
+        
+        // Check terms checkbox
+        if (!$('#termsCheckbox').is(':checked')) {
+          hasErrors = true;
+          errorMessages.push('You must agree to the terms and conditions');
+          $('#termsCheckbox-error').addClass('show').text('You must agree to the terms and conditions');
+        }
+        
+        // Display client-side errors if any
+        if (hasErrors) {
+          $('#errorContainer').addClass('show');
+          errorMessages.forEach(function(message) {
+            $('#errorList').append(`<li>${message}</li>`);
+          });
+          return;
+        }
+        
+        // Show loading state
+        const submitBtn = $('#submitBtn');
+        submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating Account...');
+        
+        // Get form data
+        const form = $(this);
+        const formData = form.serialize();
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
+        
+        // Add CSRF token to the serialized data
+        const formDataWithCsrf = formData + '&csrfmiddlewaretoken=' + encodeURIComponent(csrfToken);
+        
+        // Submit form via AJAX
+        $.ajax({
+          type: 'POST',
+          url: form.attr('action'),
+          data: formDataWithCsrf,
+          success: function(response) {
+            if (response.status === 'success') {
+              // Show success message
+              $('#successContainer').addClass('show');
+              $('#successMessage').text(response.message || 'Your account has been created. Redirecting to login page...');
+              
+              // Scroll to top to show success message
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              
+              // Redirect to login page after a delay
+              setTimeout(function() {
+                window.location.href = response.redirect_url;
+              }, 2000);
+            } else {
+              // Handle error response
+              handleFormErrors(response);
+              
+              // Reset button state
+              submitBtn.prop('disabled', false).text('Create Account');
+            }
+          },
+          error: function(xhr) {
+            // Try to parse response as JSON
+            let response;
+            try {
+              response = JSON.parse(xhr.responseText);
+            } catch (e) {
+              response = {
+                status: 'error',
+                message: 'An unexpected error occurred. Please try again.',
+                errors: {}
+              };
+            }
+            
+            // Handle error response
+            handleFormErrors(response);
+            
+            // Reset button state
+            submitBtn.prop('disabled', false).text('Create Account');
+          }
+        });
+      });
+      
+      // Function to handle form errors from server response
+      function handleFormErrors(response) {
+        // Show error container
+        $('#errorContainer').addClass('show');
+        $('#errorList').empty();
+        
+        // Add general error message if provided
+        if (response.message) {
+          $('#errorList').append(`<li>${response.message}</li>`);
+        }
+        
+        // Handle field-specific errors
+        if (response.errors) {
+          Object.keys(response.errors).forEach(function(field) {
+            const errorMessage = response.errors[field];
+            const fieldId = field.replace(/_/g, '-'); // Convert snake_case to kebab-case if needed
+            
+            // Add error to the specific field
+            $(`#${field}-error`).addClass('show').text(errorMessage);
+            $(`#${field}`).addClass('is-invalid');
+            
+            // Add to general error list if not already there
+            if (!response.message || !response.message.includes(errorMessage)) {
+              $('#errorList').append(`<li>${errorMessage}</li>`);
+            }
+          });
+        }
+        
+        // Scroll to top to show error messages
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  </script>
 </body>
-
 </html>
