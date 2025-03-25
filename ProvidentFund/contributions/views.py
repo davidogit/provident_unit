@@ -20,6 +20,7 @@ from Admin.decorators import role_required
 from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q
+from decimal import Decimal
 
 # Create your views here.
 
@@ -99,7 +100,8 @@ class AjaxStaffSearchView(View):
                     'last_name':member.last_name,
                     'date_joined':member.date_joined,
                     'status':member.status,
-                    'fund_type':member.fund_type
+                    'fund_type':member.fund_type,
+                    'staff_number':member.staff_number
                 }
                 for member in paginated_queryset
             ]
@@ -169,7 +171,47 @@ class OptOutMemberView(View):
 class StaffMemberDetailView(DetailView):
     model = StaffAPI
     template_name = 'contributions/staffmember_detail.html'
-    context_object_name = 'membership'
+    context_object_name = 'staff'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        scheme_id = self.request.scheme_name
+        member = self.get_object() #get the staff/member
+        if member:
+            scheme_account_balance = Decimal(0)
+            scheme_estimated_earnings = Decimal(0)
+            contributions = Decimal(0)
+            date_joined = None
+            related_schemes = None
+
+            #exract the amount from selected scheme
+            membership = member.membership.filter(scheme__id=scheme_id).first()
+            if membership:
+                scheme_account_balance = membership.total_earnings
+                scheme_estimated_earnings = membership.estimated_profit
+                date_joined = membership.enrolled_at
+
+                # Get member contributions
+                scheme_contributions = membership.staff.contribution.filter(
+                    investment_scheme__id=scheme_id,
+                    approved_contribution=True
+                )
+                for c in scheme_contributions:
+                    contributions += c.total_contribution
+                
+                # Get related member schemes
+                related_schemes = member.investment_scheme.all().exclude(id=scheme_id).values_list('name',flat=True)
+
+            context.update(
+                {
+                    'scheme_account_balance':scheme_account_balance or Decimal(0),
+                    'scheme_estimated_earnings':scheme_estimated_earnings or Decimal(0),
+                    'scheme_contributions':contributions,
+                    'date_joined':date_joined,
+                    'related_schemes':related_schemes
+                }
+            )
+        return context
 
 
 @method_decorator(tenant_login_required, name="dispatch")

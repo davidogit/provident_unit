@@ -1,372 +1,710 @@
 {% extends 'dashboard/base.html' %}
 
 {% block title %}
-<title>Approved Investments</title>
+<title>Matured Investments</title>
 {% endblock %}
 
 {% block header %}
-<h5 class="fw-bold"><i class="bi bi-check-all me-2"></i>Approved Investments</h5>
-{% endblock %}
-
-{% block css %}
-<style>
-  .nav-tabs {
-      border-bottom: none !important; /* Remove the bottom border of the container */
-  }
-  .nav-tabs .nav-link {
-      position: relative;
-      border: none !important; /* Remove border for all tabs */
-      margin-bottom: -3px; /* Adjusts the margin to align the underline correctly */
-      transition: color 0.3s ease; /* Smooth color transition for text */
-  }
-  .nav-tabs .nav-link:hover {
-      border: none !important; /* Remove border on hover */
-  }
-  .nav-tabs .nav-link.active {
-      color: #000; /* Optionally change the active text color */
-  }
-  .nav-tabs .nav-link::after {
-      content: '';
-      display: block;
-      width: 0;
-      height: 3px;
-      background-color: blue;
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      transition: width 0.3s ease, left 0.3s ease;
-  }
-  .nav-tabs .nav-link.active::after {
-      width: 100%;
-  }
-
-  .nav-tabs .nav-link.active {
-    color: var(--tab-active-text-color, #000);
-    background-color: transparent; /* Remove background color for active tab */
-  }
-
-  /* Dark Mode Styles */
-  .dark-mode .nav-tabs {
-    background-color: var(--dark-mode-background-color, #333);
-  }
-
-  .dark-mode .nav-tabs .nav-link {
-    color: #fff; /* Set text color to white in dark mode */
-  }
-
-  .dark-mode .nav-tabs .nav-link:hover {
-    color: #fff;
-  }
-
-  .dark-mode .nav-tabs .nav-link.active {
-    color: var(--dark-mode-tab-active-text-color, #fff);
-    background-color: transparent; /* Remove background color for active tab in dark mode */
-  }
-
-  .dark-mode .nav-tabs .nav-link::after {
-    background-color: var(--dark-mode-tab-underline-color, #fff);
-  }
-</style>
+<h5 class="fw-bold"><i class="bi bi-check-all me-2"></i>Matured Investments</h5>
 {% endblock %}
 
 {% block content %}
+<!-- Add responsive styling -->
+<style>
+  .card-one {
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+  }
+  
+  .card-value {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: #343a40;
+  }
+  
+  .filter-card {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  
+  .custom-select {
+    height: 42px;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    padding: 0.375rem 0.75rem;
+    width: 100%;
+    font-size: 0.95rem;
+    background-color: #fff;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+  
+  .custom-select:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+  
+  .table-container {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  
+  .table-four {
+    white-space: nowrap;
+    font-size: 0.9rem;
+  }
+  
+  .table-four th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 10;
+    font-weight: 600;
+  }
+  
+  .status-badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 500;
+    border-radius: 30px;
+  }
+  
+  .loading-spinner {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+  }
+  
+  .instrument-link {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .instrument-link:hover {
+    text-decoration: underline;
+  }
+  
+  /* Pagination styling */
+  .pagination {
+    margin-top: 1.5rem;
+  }
+  
+  .pagination .page-link {
+    padding: 0.5rem 0.75rem;
+    color: #495057;
+  }
+  
+  .pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+  }
+  
+  .pagination .page-link:hover {
+    cursor: pointer;
+  }
+  
+  /* Investment summary cards */
+  .summary-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .summary-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Empty state message */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+  }
+  
+  .empty-state i {
+    font-size: 3rem;
+    color: #adb5bd;
+    margin-bottom: 1rem;
+  }
+  
+  .empty-state h5 {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .empty-state p {
+    color: #6c757d;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  
+  /* Hide ajax pagination initially */
+  #ajax-pagination {
+    display: none;
+  }
+  
+  /* Show standard pagination initially */
+  #standard-pagination {
+    display: block;
+  }
+</style>
+
 <div class="main main-app p-3 p-lg-4">
-    <div class="row g-3 justify-content-center">
-       
-        <div class="col-md-12 col-xl-10">
-          <div class="card card-one">
-            <div class="card-body">
-              <div class="row">
-                <div class="col-4">
-                  <h3 class="card-value">{{ investment_count }}</h3>
-                  <label class="card-title fw-medium text-dark mb-1">Total Investments</label>
-                </div><!-- col -->
-                <div class="col-4">
-                  <h3 class="card-value">{{ T_bills_count }}</h3>
-                  <label class="card-title fw-medium text-dark mb-1">Treasury Bills</label>
-                </div><!-- col -->
-                <div class="col-4">
-                  <h3 class="card-value">{{ F_deposit_count }}</h3>
-                  <label class="card-title fw-medium text-dark mb-1">Fixed Deposits</label>
-                </div><!-- col -->
-                <!-- <div class="col-3">
-                  <h3 class="card-value">{{ D_interest_count }}</h3>
-                  <label class="card-title fw-medium text-dark mb-1">Delayed Interests</label>
-                </div> -->
-                <!-- col -->
-                <!-- <div class="col-3">
-                  <div id="apexChart2"></div>
-                </div> -->
-                <!-- col -->
-              </div><!-- row -->
-            </div><!-- card-body -->
-          </div><!-- card-one -->
-    </div>
-    <!-- col -->
-
-
-
-
-
-<!---Tabs for investments-->
-
-
-<div class="container mt-5">
-  <!-- Nav tabs -->
-  <ul class="nav nav-tabs d-flex justify-content-between" role="tablist">
-      <li class="nav-item flex-fill text-center">
-          <a class="nav-link active" data-bs-toggle="tab" href="#treasury-bills">Treasury-bills</a>
-      </li>
-      <li class="nav-item flex-fill text-center">
-          <a class="nav-link" data-bs-toggle="tab" href="#fixed-deposits">Fixed-Deposits</a>
-      </li>
-      <!-- <li class="nav-item flex-fill text-center">
-          <a class="nav-link" data-bs-toggle="tab" href="#delayed-interest">Delayed Interest</a>
-      </li> -->
-  </ul>
-
-  <!-- Tab panes -->
-  <div class="tab-content">
-      <div id="treasury-bills" class="tab-pane active">
-
-          <!-- <h3>Treasury-bills</h3> -->
-          <!-- Tab content T-bills -->
-          <div class="card card-one mt-3">
-            <div class="card-body p-3">
-              <div class="table-responsive">
-                <table class="table table-four table-bordered">
-                  <thead>
-                    <!-- <tr>
-                      <th>&nbsp;</th>
-                      <th colspan="3">Acquisition</th>
-                      <th colspan="3">Behavior</th>
-                      <th colspan="3">Conversions</th>
-                    </tr> -->
-                    
-                    <tr>
-                      <th></th>
-                      <th>Investment Name</th>
-                      <th>Investment Type</th>
-                      <th>Account Type</th>
-                      <th>Account Number</th>
-                      <th>Principal Amount</th>
-                      <th>Percentage Interest (%)</th>
-                      <th>Accumulated Interest</th>
-                      <th>Investment start Date</th>
-                      <th>Maturity Date</th>
-                      <th>Tenure</th>
-                      <th>Status</th>
-                      <th>Approval Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for investment in investmentdetail_list %}
-                    {% if investment.investment_type == 'Treasury Bill' %}
-                    <tr>
-                      <td>{{ forloop.counter }}</td>
-                      <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
-                      <td>{{ investment.investment_type }}</td>
-                      <td>{{ investment.account_type }}</td>
-                      <td>{{ investment.account_number }}</td>
-                      <td>{{ investment.principal_amount }}</td>
-                      <td>{{ investment.interest_percentage }}</td>
-                      <td>{{ investment.interest_amount }}</td>
-                      <td>{{ investment.interest_start_date }}</td>
-                      <td>{{ investment.interest_end_date }}</td>
-                      <td>{{ investment.tenure }} days</td>
-                      <td>{{ investment.status }}</td>
-                      <td>{{ investment.approval_status }}</td>
-                    {% endif %}
-                    {% endfor %}
-                  </tbody>
-                </table>
+  <!-- Summary Cards -->
+  <div class="row g-3 justify-content-center mb-4">
+    <div class="col-md-12 col-xl-10">
+      <div class="card card-one summary-card">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4 mb-3 mb-md-0">
+              <h3 class="card-value">{{ investment_count }}</h3>
+              <label class="card-title fw-medium text-dark mb-1">Total Investments</label>
+              <div class="progress mt-2" style="height: 5px;">
+                <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
               </div>
-            </div><!-- card-body -->
-          </div><!-- card -->
-          <!-- Tab content T-bills -->
-          <!-- <p>Content for Treasury-bills.</p> -->
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+              <h3 class="card-value">{{ T_bills_count }}</h3>
+              <label class="card-title fw-medium text-dark mb-1">Treasury Bills</label>
+              <div class="progress mt-2" style="height: 5px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {{ T_bills_count }}%"></div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <h3 class="card-value">{{ F_deposit_count }}</h3>
+              <label class="card-title fw-medium text-dark mb-1">Fixed Deposits</label>
+              <div class="progress mt-2" style="height: 5px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ F_deposit_count }}%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Investment Filter -->
+  <div class="row justify-content-center mb-4">
+    <div class="col-12 col-md-10 col-lg-10">
+      <div class="card card-one filter-card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-3">
+              <label for="inv_selector" class="form-label fw-medium">Filter Investments</label>
+            </div>
+            <div class="col-md-6">
+              <select name="inv_selector" id="inv_selector" class="form-select custom-select">
+                <option value="all" selected>All Investments</option>
+                <option value="Treasury Bill">Treasury Bills</option>
+                <option value="Fixed Deposit">Fixed Deposits</option>
+              </select>
+            </div>
+            <div class="col-md-3 mt-3 mt-md-0">
+              <button id="reset-filter" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-arrow-repeat me-1"></i> Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-          <!-- PAGINATION -->
+  <!-- Investment Table -->
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-11">
+      <div class="card card-one">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+          <h6 class="card-title mb-0">
+            <i class="bi bi-table me-2"></i>
+            <span id="table-title">Matured Investments</span>
+          </h6>
+          <div>
+            <span class="badge bg-primary" id="record-count">{{ investmentdetail_list|length }}</span>
+            <span class="ms-1 text-muted">Records</span>
+          </div>
+        </div>
+        
+        <div class="card-body p-0">
+          <!-- Loading spinner -->
+          <div id="loading-spinner" class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading investments...</p>
+          </div>
           
+          <!-- Empty state -->
+          <div id="empty-state" class="empty-state" style="{% if investmentdetail_list|length > 0 %}display: none;{% endif %}">
+            <i class="bi bi-clipboard-x"></i>
+            <h5>No Investments Found</h5>
+            <p>There are no matured investments available at this time.</p>
+          </div>
+          
+          <!-- Investment Table -->
+          <div id="investment-table-container" class="table-container" style="{% if investmentdetail_list|length == 0 %}display: none;{% endif %}">
+            <table class="table table-four table-hover table-bordered mb-0" id="investment-table">
+              <thead>
+                <tr>
+                  <th class="text-center">#</th>
+                  <th class="text-center">Invoice No.</th>
+                  <th class="text-center">Investment Name</th>
+                  <th class="text-center">Investment Type</th>
+                  <th class="text-center">Account Type</th>
+                  <th class="text-center">Account Number</th>
+                  <th class="text-center">Principal Amount</th>
+                  <th class="text-center">Interest (%)</th>
+                  <th class="text-center">Accumulated Interest</th>
+                  <th class="text-center">Start Date</th>
+                  <th class="text-center">Maturity Date</th>
+                  <th class="text-center">Tenure</th>
+                  <th class="text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody id="investment-table-body">
+                {% for investment in investmentdetail_list %}
+                <tr data-type="{{ investment.investment_type }}">
+                  <td class="text-center">{{ forloop.counter }}</td>
+                  <td>
+                    <a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}" class="instrument-link">
+                      {{ investment.invoice_number }}
+                    </a>
+                  </td>
+                  <td>{{ investment.account_name }}</td>
+                  <td>{{ investment.investment_type }}</td>
+                  <td>{{ investment.account_type }}</td>
+                  <td>{{ investment.account_number }}</td>
+                  <td>{{ investment.principal_amount|floatformat:2 }}</td>
+                  <td>{{ investment.interest_percentage }}</td>
+                  <td>{{ investment.interest_amount|floatformat:2 }}</td>
+                  <td>{{ investment.interest_start_date }}</td>
+                  <td>{{ investment.interest_end_date }}</td>
+                  <td>{{ investment.tenure }} days</td>
+                  <td>
+                    {% if investment.status == 'Matured' %}
+                      <span class="badge bg-success status-badge">Matured</span>
+                    {% elif investment.status == 'Active' %}
+                      <span class="badge bg-primary status-badge">Active</span>
+                    {% else %}
+                      <span class="badge bg-secondary status-badge">{{ investment.status }}</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <!-- Empty state is handled separately -->
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Standard Pagination -->
+        <div class="card-footer" id="standard-pagination" style="{% if investmentdetail_list|length == 0 %}display: none;{% endif %}">
           <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-              {% if t_bill_page.has_previous %}
+            <ul class="pagination justify-content-center mb-0">
+              {% if page_obj.has_previous %}
               <li class="page-item">
-                <a class="page-link" href="?t_bill_page=1" aria-label="First">
+                <a class="page-link" href="?page=1" aria-label="First">
                   <span aria-hidden="true">&laquo;&laquo;</span>
                 </a>
               </li>
               <li class="page-item">
-                <a class="page-link" href="?t_bill_page={{ t_bill_page.previous_page_number }}" aria-label="Previous">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                  <span aria-hidden="true">&laquo;</span>
+                </a>
+              </li>
+              {% else %}
+              <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="First">
+                  <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+              </li>
+              <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Previous">
                   <span aria-hidden="true">&laquo;</span>
                 </a>
               </li>
               {% endif %}
-
-              {% for i in t_bill_page.paginator.page_range %}
-              {% if t_bill_page.number == i %}
-              <li class="page-item active"><a class="page-link" href="?t_bill_page={{ i }}">{{ i }}</a></li>
-              {% else %}
-              <li class="page-item"><a class="page-link" href="?t_bill_page={{ i }}">{{ i }}</a></li>
-              {% endif %}
-              {% endfor %}
-
-              {% if t_bill_page.has_next %}
+              
+              <li class="page-item active">
+                <span class="page-link">
+                  Page {{ page_obj.number|default:1 }} of {{ page_obj.paginator.num_pages|default:1 }}
+                </span>
+              </li>
+              
+              {% if page_obj.has_next %}
               <li class="page-item">
-                <a class="page-link" href="?t_bill_page={{ t_bill_page.next_page_number }}" aria-label="Next">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
                   <span aria-hidden="true">&raquo;</span>
                 </a>
               </li>
               <li class="page-item">
-                <a class="page-link" href="?t_bill_page={{ t_bill_page.paginator.num_pages }}" aria-label="Last">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                  <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+              </li>
+              {% else %}
+              <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Next">
+                  <span aria-hidden="true">&raquo;</span>
+                </a>
+              </li>
+              <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Last">
                   <span aria-hidden="true">&raquo;&raquo;</span>
                 </a>
               </li>
               {% endif %}
             </ul>
           </nav>
-      
-
-          <!-- PAGINATION -->
-      </div>
-      <div id="fixed-deposits" class="tab-pane fade">
-          <!-- <h3>Fixed-Deposits</h3> -->
-          <!-- Tab content Fixed-Deposits -->
-          <div class="card card-one mt-3">
-            <div class="card-body p-3">
-              <div class="table-responsive">
-                <table class="table table-four table-bordered">
-                  <thead>
-                    <!-- <tr>
-                      <th>&nbsp;</th>
-                      <th colspan="3">Acquisition</th>
-                      <th colspan="3">Behavior</th>
-                      <th colspan="3">Conversions</th>
-                    </tr> -->
-                    
-                    <tr>
-                        <th></th>
-                        <th>Investment Name</th>
-                        <th>Investment Type</th>
-                        <th>Account Type</th>
-                        <th>Account Number</th>
-                        <th>Principal Amount</th>
-                        <th>Percentage Interest (%)</th>
-                        <th>Accumulated Interest</th>
-                        <th>Investment start Date</th>
-                        <th>Maturity Date</th>
-                        <th>Tenure</th>
-                        <th>Status</th>
-                        <th>Approval Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for investment in investmentdetail_list %}
-                    {% if investment.investment_type == 'Fixed Deposit' %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td><a href="{% url 'investment_detail' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=investment.pk %}">{{ investment.account_name }}</a></td>
-                        <td>{{ investment.investment_type }}</td>
-                        <td>{{ investment.account_type }}</td>
-                        <td>{{ investment.account_number }}</td>
-                        <td>{{ investment.principal_amount }}</td>
-                        <td>{{ investment.interest_percentage }}</td>
-                        <td>{{ investment.interest_amount }}</td>
-                        <td>{{ investment.interest_start_date }}</td>
-                        <td>{{ investment.interest_end_date }}</td>
-                        <td>{{ investment.tenure }} days</td>
-                        <td>{{ investment.status }}</td>
-                        <td>{{ investment.approval_status }}</td>
-                    </tr>
-                    {% endif %}
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div><!-- card-body -->
-          </div><!-- card -->
-          <!-- Tab content Fixed-Deposits -->
-          <!-- <p>Content for Fixed-Deposits.</p> -->
-
-
-          <!-- PAGINATION  n-->
-          
+        </div>
+        
+        <!-- AJAX Pagination -->
+        <div class="card-footer" id="ajax-pagination" style="display: none;">
           <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-              {% if f_deposit_page.has_previous %}
-              <li class="page-item">
-                <a class="page-link" href="?f_deposit_page=1" aria-label="First">
-                  <span aria-hidden="true">&laquo;&laquo;</span>
-                </a>
-              </li>
-              <li class="page-item">
-                <a class="page-link" href="?f_deposit_page={{ f_deposit_page.previous_page_number }}" aria-label="Previous">
-                  <span aria-hidden="true">&laquo;</span>
-                </a>
-              </li>
-              {% endif %}
-
-              {% for i in f_deposit_page.paginator.page_range %}
-              {% if f_deposit_page.number == i %}
-              <li class="page-item active"><a class="page-link" href="?f_deposit_page={{ i }}">{{ i }}</a></li>
-              {% else %}
-              <li class="page-item"><a class="page-link" href="?f_deposit_page={{ i }}">{{ i }}</a></li>
-              {% endif %}
-              {% endfor %}
-
-              {% if f_deposit_page.has_next %}
-              <li class="page-item">
-                <a class="page-link" href="?f_deposit_page={{ f_deposit_page.next_page_number }}" aria-label="Next">
-                  <span aria-hidden="true">&raquo;</span>
-                </a>
-              </li>
-              <li class="page-item">
-                <a class="page-link" href="?f_deposit_page={{ f_deposit_page.paginator.num_pages }}" aria-label="Last">
-                  <span aria-hidden="true">&raquo;&raquo;</span>
-                </a>
-              </li>
-              {% endif %}
+            <ul class="pagination justify-content-center mb-0">
+              <!-- This will be populated by JavaScript -->
             </ul>
-          </nav>      
-          <!-- PAGINATION -->
+          </nav>
+        </div>
       </div>
+    </div>
   </div>
-  <!-- Tab panes -->
-<!--Tabs for investments-->
-<script></script>
+</div>
+
 <script>
-    function toggleApproveButton(investmentId) {
-        var checkbox = document.getElementById('approve-checkbox-' + investmentId);
-        var button = document.getElementById('approve-button-' + investmentId);
-        button.disabled = !checkbox.checked;
+  $(document).ready(function() {
+    // Get tenant_id and scheme_id from the URL path
+    const tenant_id = '{{ request.tenant.id }}';
+    const scheme_id = '{{ request.scheme_name }}';
+    
+    // Function to format numbers with commas
+    function formatNumber(number) {
+      return parseFloat(number).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
-
-
-    $(document).ready(function() {
-        $('.approval-form').on('submit', function(event) {
-            event.preventDefault();
-            var form = $(this);
-            $.ajax({
-                type: form.attr('method'),
-                url: form.attr('action'),
-                data: form.serialize(),
-                success: function(response) {
-                    if (response.status === 'success') {
-                        alert('Investment approved successfully.');
-                        //form.find('button').attr('disabled', true); // Disable the button after approval
-                        // Remove the investment from the list after approval
-                        form.closest('tr').remove();
-                        
-                    }
-                },
-                error: function() {
-                    alert('There was an error approving the investment.');
-                }
-            });
+    
+    // Function to build AJAX pagination
+    function buildAjaxPagination(currentPage, totalPages, type) {
+      const paginationContainer = $('#ajax-pagination ul');
+      paginationContainer.empty();
+      
+      if (totalPages <= 1) {
+        return;
+      }
+      
+      // First and Previous buttons
+      if (currentPage > 1) {
+        paginationContainer.append(`
+          <li class="page-item">
+            <a class="page-link" data-page="1" aria-label="First">
+              <span aria-hidden="true">&laquo;&laquo;</span>
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
+              <span aria-hidden="true">&laquo;</span>
+            </a>
+          </li>
+        `);
+      } else {
+        paginationContainer.append(`
+          <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="First">
+              <span aria-hidden="true">&laquo;&laquo;</span>
+            </a>
+          </li>
+          <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Previous">
+              <span aria-hidden="true">&laquo;</span>
+            </a>
+          </li>
+        `);
+      }
+      
+      // Current page indicator
+      paginationContainer.append(`
+        <li class="page-item active">
+          <span class="page-link">
+            Page ${currentPage} of ${totalPages}
+          </span>
+        </li>
+      `);
+      
+      // Next and Last buttons
+      if (currentPage < totalPages) {
+        paginationContainer.append(`
+          <li class="page-item">
+            <a class="page-link" data-page="${currentPage + 1}" aria-label="Next">
+              <span aria-hidden="true">&raquo;</span>
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" data-page="${totalPages}" aria-label="Last">
+              <span aria-hidden="true">&raquo;&raquo;</span>
+            </a>
+          </li>
+        `);
+      } else {
+        paginationContainer.append(`
+          <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Next">
+              <span aria-hidden="true">&raquo;</span>
+            </a>
+          </li>
+          <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Last">
+              <span aria-hidden="true">&raquo;&raquo;</span>
+            </a>
+          </li>
+        `);
+      }
+      
+      // Add click event to pagination links
+      $('#ajax-pagination .page-link').not('.disabled, .active').on('click', function() {
+        const page = $(this).data('page');
+        fetchInvestments(type, page);
+      });
+    }
+    
+    // Function to update the table with new data
+    function updateTable(data) {
+      const tableBody = $('#investment-table-body');
+      tableBody.empty();
+      
+      if (data.investments && data.investments.length > 0) {
+        // Hide empty state, show table
+        $('#empty-state').hide();
+        $('#investment-table-container').show();
+        $('#standard-pagination').hide(); // Hide standard pagination when using AJAX
+        
+        // Update record count
+        $('#record-count').text(data.investments.length);
+        
+        // Update the table title based on the selected type
+        const selectedType = $('#inv_selector').val();
+        if (selectedType === 'all') {
+          $('#table-title').text('Matured Investments');
+        } else if (selectedType === 'Treasury Bill') {
+          $('#table-title').text('Matured Treasury Bills');
+        } else if (selectedType === 'Fixed Deposit') {
+          $('#table-title').text('Matured Fixed Deposits');
+        }
+        
+        // Add rows to the table
+        $.each(data.investments, function(index, investment) {
+          // Determine status badge
+          let statusBadge = '';
+          if (investment.status === 'Matured') {
+            statusBadge = '<span class="badge bg-success status-badge">Matured</span>';
+          } else if (investment.status === 'Active') {
+            statusBadge = '<span class="badge bg-primary status-badge">Active</span>';
+          } else {
+            statusBadge = `<span class="badge bg-secondary status-badge">${investment.status}</span>`;
+          }
+          
+          // Create row HTML
+          const row = `
+            <tr data-type="${investment.investment_type}">
+              <td class="text-center">${index + 1}</td>
+              <td>
+                <a href="/${tenant_id}/fund/${scheme_id}/investmentDetail/${investment.id}/" class="instrument-link">
+                  ${investment.invoice_number}
+                </a>
+              </td>
+              <td>${investment.account_name}</td>
+              <td>${investment.investment_type}</td>
+              <td>${investment.account_type}</td>
+              <td>${investment.account_number}</td>
+              <td>${formatNumber(investment.principal_amount)}</td>
+              <td>${investment.interest_percentage}</td>
+              <td>${formatNumber(investment.interest_amount)}</td>
+              <td>${investment.interest_start_date}</td>
+              <td>${investment.interest_end_date}</td>
+              <td>${investment.tenure} days</td>
+              <td>${statusBadge}</td>
+            </tr>
+          `;
+          
+          tableBody.append(row);
         });
+        
+        // Build AJAX pagination with the data from response
+        if (data.pagination) {
+          // Show AJAX pagination
+          $('#ajax-pagination').show();
+          
+          buildAjaxPagination(
+            data.pagination.current_page,
+            data.pagination.total_pages,
+            data.pagination.type
+          );
+        }
+      } else {
+        // Show empty state, hide table and pagination
+        $('#investment-table-container').hide();
+        $('#standard-pagination').hide();
+        $('#ajax-pagination').hide();
+        $('#empty-state').show();
+        
+        // Update empty state message based on filter
+        const selectedType = $('#inv_selector').val();
+        if (selectedType === 'all') {
+          $('#empty-state h5').text('No Investments Found');
+          $('#empty-state p').text('There are no matured investments available at this time.');
+        } else if (selectedType === 'Treasury Bill') {
+          $('#empty-state h5').text('No Treasury Bills Found');
+          $('#empty-state p').text('There are no matured treasury bills available at this time.');
+        } else if (selectedType === 'Fixed Deposit') {
+          $('#empty-state h5').text('No Fixed Deposits Found');
+          $('#empty-state p').text('There are no matured fixed deposits available at this time.');
+        }
+        
+        // Update record count
+        $('#record-count').text('0');
+      }
+    }
+    
+    // Function to handle AJAX filtering
+    function fetchInvestments(type, page = 1) {
+      // Show loading spinner
+      $('#investment-table-container').hide();
+      $('#empty-state').hide();
+      $('#standard-pagination').hide();
+      $('#ajax-pagination').hide();
+      $('#loading-spinner').show();
+      
+      // Make AJAX request
+      $.ajax({
+        url: `/${tenant_id}/fund/${scheme_id}/investments/filter/`,
+        type: 'GET',
+        data: {
+          'type': type,
+          'page': page,
+          'expiry_status':'Expired'
+        },
+        success: function(response) {
+          // Hide loading spinner
+          $('#loading-spinner').hide();
+          
+          if (response.status === 'success') {
+            updateTable(response);
+          } else {
+            // Show error message in empty state
+            $('#investment-table-container').hide();
+            $('#standard-pagination').hide();
+            $('#ajax-pagination').hide();
+            $('#empty-state').show();
+            $('#empty-state h5').text('Error Loading Data');
+            $('#empty-state p').text('There was a problem loading the investment data. Please try again.');
+            $('#record-count').text('0');
+          }
+        },
+        error: function() {
+          // Hide loading spinner
+          $('#loading-spinner').hide();
+          
+          // Show error message in empty state
+          $('#investment-table-container').hide();
+          $('#standard-pagination').hide();
+          $('#ajax-pagination').hide();
+          $('#empty-state').show();
+          $('#empty-state h5').text('Error Loading Data');
+          $('#empty-state p').text('There was a problem loading the investment data. Please try again.');
+          $('#record-count').text('0');
+        }
+      });
+    }
+    
+    // Check if table is empty on page load
+    function checkEmptyTable() {
+      if ($('#investment-table-body tr').length === 0) {
+        $('#investment-table-container').hide();
+        $('#standard-pagination').hide();
+        $('#empty-state').show();
+      }
+    }
+    
+    // Run empty check on page load
+    checkEmptyTable();
+    
+    // Handle select change event
+    $('#inv_selector').change(function() {
+      const selectedValue = $(this).val();
+      
+      // If "all" is selected, refresh the page to show all investments
+      if (selectedValue === 'all') {
+        window.location.href = window.location.pathname;
+        return;
+      }
+      
+      // Otherwise fetch the filtered investments
+      fetchInvestments(selectedValue);
     });
+    
+    // Handle reset button click
+    $('#reset-filter').click(function() {
+      $('#inv_selector').val('all');
+      window.location.href = window.location.pathname;
+    });
+    
+    // Client-side filtering (fallback if AJAX is not working)
+    function filterTableRows() {
+      const selectedValue = $('#inv_selector').val();
+      
+      if (selectedValue === 'all') {
+        // Show all rows
+        $('#investment-table-body tr').show();
+        return;
+      }
+      
+      // Hide all rows first
+      $('#investment-table-body tr').hide();
+      
+      // Show only rows matching the selected type
+      $(`#investment-table-body tr[data-type="${selectedValue}"]`).show();
+      
+      // Update record count
+      const visibleRows = $(`#investment-table-body tr[data-type="${selectedValue}"]:visible`).length;
+      $('#record-count').text(visibleRows);
+      
+      // Show/hide message if no rows are visible
+      if (visibleRows === 0) {
+        $('#investment-table-container').hide();
+        $('#standard-pagination').hide();
+        $('#empty-state').show();
+        
+        if (selectedValue === 'Treasury Bill') {
+          $('#empty-state h5').text('No Treasury Bills Found');
+          $('#empty-state p').text('There are no matured treasury bills available at this time.');
+        } else if (selectedValue === 'Fixed Deposit') {
+          $('#empty-state h5').text('No Fixed Deposits Found');
+          $('#empty-state p').text('There are no matured fixed deposits available at this time.');
+        } else {
+          $('#empty-state h5').text('No Investments Found');
+          $('#empty-state p').text('There are no matured investments available at this time.');
+        }
+      } else {
+        $('#investment-table-container').show();
+        $('#standard-pagination').show();
+        $('#empty-state').hide();
+        
+        // Update the table title based on the selected type
+        if (selectedValue === 'Treasury Bill') {
+          $('#table-title').text('Matured Treasury Bills');
+        } else if (selectedValue === 'Fixed Deposit') {
+          $('#table-title').text('Matured Fixed Deposits');
+        } else {
+          $('#table-title').text('Matured Investments');
+        }
+      }
+    }
+  });
 </script>
-
-
 {% endblock %}
-<!-- main -->

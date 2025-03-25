@@ -1,22 +1,222 @@
-{% extends 'dashboard/base.html' %} {% block content %}
-<div class="main main-app p-3 p-lg-4">
-  <div class="container mt-5 p-4">
-    <div class="row justify-content-center mt-5">
-      <div class="col-md-8">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Name: {{ membership.first_name }}</h5>
-            <p class="card-text">
-              <strong>Status:</strong> {{ membership.status }}
-            </p>
-            <p class="card-text">
-              <strong>Fund Type:</strong> {{ membership.fund_type }}
-            </p>
+{% extends 'dashboard/base.html' %}
 
+{% block title %}
+<title>Member Details</title>
+{% endblock %}
+
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-person-badge me-2"></i>Member Details</h5>
+{% endblock %}
+
+{% block content %}
+<!-- Add responsive styling -->
+<style>
+  .card-one {
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+  }
+  
+  .card-header-custom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 0.75rem;
+  }
+  
+  .member-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .member-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #495057;
+    margin-right: 1.5rem;
+  }
+  
+  .member-name {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: #343a40;
+  }
+  
+  .member-number {
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+  
+  .status-badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 500;
+    border-radius: 30px;
+  }
+  
+  .info-section {
+    margin-bottom: 2rem;
+  }
+  
+  .info-section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+    color: #343a40;
+  }
+  
+  .info-item {
+    display: flex;
+    margin-bottom: 1rem;
+  }
+  
+  .info-label {
+    width: 40%;
+    font-weight: 500;
+    color: #6c757d;
+  }
+  
+  .info-value {
+    width: 60%;
+    font-weight: 500;
+    color: #343a40;
+  }
+  
+  .financial-card {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .financial-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .financial-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: #343a40;
+  }
+  
+  .financial-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+  
+  .scheme-card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e9ecef;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .scheme-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .scheme-name {
+    font-weight: 500;
+    color: #343a40;
+    margin-bottom: 0;
+  }
+  
+  .empty-schemes {
+    text-align: center;
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+  }
+  
+  .empty-schemes i {
+    font-size: 2.5rem;
+    color: #adb5bd;
+    margin-bottom: 1rem;
+  }
+  
+  .empty-schemes p {
+    color: #6c757d;
+    margin-bottom: 0;
+  }
+  
+  @media (max-width: 767.98px) {
+    .card-header-custom {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    
+    .action-buttons {
+      width: 100%;
+      flex-direction: column;
+    }
+    
+    .action-buttons .btn {
+      width: 100%;
+    }
+    
+    .member-header {
+      flex-direction: column;
+      text-align: center;
+    }
+    
+    .member-avatar {
+      margin-right: 0;
+      margin-bottom: 1rem;
+    }
+    
+    .info-item {
+      flex-direction: column;
+    }
+    
+    .info-label, .info-value {
+      width: 100%;
+    }
+    
+    .info-label {
+      margin-bottom: 0.25rem;
+    }
+  }
+</style>
+
+<div class="main main-app p-3 p-lg-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
+      <!-- Member Details Card -->
+      <div class="card card-one mb-4">
+        <!-- Card Header with Action Buttons -->
+        <div class="card-header-custom">
+          <h2 class="mb-0 fs-5 fw-bold"><i class="bi bi-person-vcard me-2"></i>Member Profile</h2>
+          
+          <!-- Action Buttons -->
+          <div class="action-buttons">
             <form
               method="post"
-              action="{% url 'opt_out_member' tenant_id=request.tenant.id scheme_name=request.scheme_name pk=membership.pk %}"
-              class="mb-3"
+              action="{% url 'opt_out_member' tenant_id=request.tenant.id scheme_name=request.scheme_name pk=staff.pk %}"
+              class="mb-0"
               id="opt-out-form"
             >
               {% csrf_token %}
@@ -24,14 +224,129 @@
                 type="submit"
                 class="btn btn-danger"
               >
-                Opt Out
+                <i class="bi bi-person-dash me-1"></i> Opt Out
               </button>
             </form>
             <a
-              href="{% url 'contribution-history' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=membership.pk %}"
+              href="{% url 'contribution-history' scheme_name=request.scheme_name tenant_id=request.tenant.id pk=staff.pk %}"
               class="btn btn-primary"
-              >View Contribution History</a
             >
+              <i class="bi bi-clock-history me-1"></i> View Contributions
+            </a>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <!-- Message Info Container -->
+          <div class="message-info mb-4"></div>
+          
+          <!-- Member Header -->
+          <div class="member-header">
+            <div class="member-avatar">
+              {{ staff.first_name|slice:":1" }}{{ staff.last_name|slice:":1" }}
+            </div>
+            <div>
+              <h1 class="member-name">{{ staff.last_name }} {{ staff.first_name }}</h1>
+              <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="member-number"><i class="bi bi-person-badge me-1"></i> {{ staff.staff_number }}</span>
+                <span class="mx-2 d-none d-sm-inline">•</span>
+                {% if staff.status == 'Active' %}
+                  <span class="badge bg-success status-badge">{{ staff.status }}</span>
+                {% elif staff.status == 'Inactive' %}
+                  <span class="badge bg-danger status-badge">{{ staff.status }}</span>
+                {% else %}
+                  <span class="badge bg-secondary status-badge">{{ staff.status }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Basic Information -->
+          <div class="info-section">
+            <h2 class="info-section-title"><i class="bi bi-info-circle me-2"></i>Basic Information</h2>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="info-item">
+                  <div class="info-label">Fund Type:</div>
+                  <div class="info-value">{{ staff.fund_type }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Date Enrolled:</div>
+                  <div class="info-value">{{ date_joined }}</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="info-item">
+                  <div class="info-label">Staff Number:</div>
+                  <div class="info-value">{{ staff.staff_number }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Status:</div>
+                  <div class="info-value">
+                    {% if staff.status == 'Active' %}
+                      <span class="text-success">{{ staff.status }}</span>
+                    {% elif staff.status == 'Inactive' %}
+                      <span class="text-danger">{{ staff.status }}</span>
+                    {% else %}
+                      <span class="text-secondary">{{ staff.status }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Financial Information -->
+          <div class="info-section">
+            <h2 class="info-section-title"><i class="bi bi-cash-coin me-2"></i>Financial Summary</h2>
+            <div class="row">
+              <div class="col-md-6 col-lg-3 mb-3">
+                <div class="financial-card">
+                  <div class="financial-value">{{ scheme_account_balance }}</div>
+                  <div class="financial-label">Current Balance</div>
+                </div>
+              </div>
+              <div class="col-md-6 col-lg-3 mb-3">
+                <div class="financial-card">
+                  <div class="financial-value">{{ scheme_estimated_earnings }}</div>
+                  <div class="financial-label">Estimated Earnings</div>
+                </div>
+              </div>
+              <div class="col-md-6 col-lg-3 mb-3">
+                <div class="financial-card">
+                  <div class="financial-value">{{ scheme_contributions }}</div>
+                  <div class="financial-label">Total Contributions</div>
+                </div>
+              </div>
+              <div class="col-md-6 col-lg-3 mb-3">
+                <div class="financial-card">
+                  <div class="financial-value">{{ date_joined }}</div>
+                  <div class="financial-label">Date Enrolled</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Related Schemes -->
+          <div class="info-section mb-0">
+            <h2 class="info-section-title"><i class="bi bi-diagram-3 me-2"></i>Related Schemes</h2>
+            {% if related_schemes %}
+              <div class="row">
+                {% for scheme in related_schemes %}
+                  <div class="col-md-6 mb-3">
+                    <div class="scheme-card">
+                      <h3 class="scheme-name"><i class="bi bi-folder me-2"></i>{{ scheme }}</h3>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-schemes">
+                <i class="bi bi-folder-x"></i>
+                <h3>No Related Schemes</h3>
+                <p>This member is not associated with any other schemes.</p>
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -41,9 +356,30 @@
 
 <script>
   $(document).ready(function () {
+    // Format financial values with commas if they're numbers
+    function formatFinancialValues() {
+      $('.financial-value').each(function() {
+        const value = $(this).text().trim();
+        if (!isNaN(parseFloat(value))) {
+          const formattedValue = parseFloat(value).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+          $(this).text(formattedValue);
+        }
+      });
+    }
+    
+    // Run formatting on page load
+    formatFinancialValues();
+    
+    // Handle opt-out form submission
     $("#opt-out-form").on('submit', function(event){
       event.preventDefault();
       var form = $(this);
+      
+      // Show loading state on button
+      const submitBtn = form.find('button[type="submit"]');
+      const originalBtnText = submitBtn.html();
+      submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...');
+      submitBtn.prop('disabled', true);
 
       $.ajax({
         type: form.attr('method'),
@@ -52,11 +388,29 @@
         success: function (response) {
           console.log(response);
           if (response.status == 'success') {
-            alert(response.message);
-            window.location.href = response.redirect_url;
+            // Show success message with SweetAlert if available, otherwise use alert
+            if (typeof Swal !== 'undefined') {
+              Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: response.message,
+                confirmButtonColor: '#0d6efd'
+              }).then(() => {
+                window.location.href = response.redirect_url;
+              });
+            } else {
+              alert(response.message);
+              window.location.href = response.redirect_url;
+            }
           } else {
+            // Reset button
+            submitBtn.html(originalBtnText);
+            submitBtn.prop('disabled', false);
+            
+            // Show error message
             $('.message-info').html(
               '<div class="alert alert-danger" role="alert">' +
+                '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
                 response.message +
                 '</div>'
             );
@@ -64,9 +418,16 @@
         },
         error: function (response) {
           console.log(response);
+          
+          // Reset button
+          submitBtn.html(originalBtnText);
+          submitBtn.prop('disabled', false);
+          
+          // Show error message
           $('.message-info').html(
             '<div class="alert alert-danger" role="alert">' +
-              response.message +
+              '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
+              'An error occurred. Please try again.' +
               '</div>'
           );
         },

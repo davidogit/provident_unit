@@ -188,10 +188,22 @@ class StaffAPI(models.Model):
 
 class Contribution(models.Model):
     # tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
-    investment_scheme = models.ForeignKey(InvestmentScheme, on_delete=models.CASCADE, null=True)
-    member = models.ForeignKey(StaffAPI,related_name='contribution' ,on_delete=models.CASCADE)
-    month = models.CharField(max_length=20)
-    year = models.CharField(max_length=4)
+    investment_scheme = models.ForeignKey(
+        InvestmentScheme,
+        on_delete=models.CASCADE,
+        null=True
+    )
+    member = models.ForeignKey(
+        StaffAPI,
+        related_name='contribution' ,
+        on_delete=models.CASCADE
+    )
+    month = models.CharField(
+        max_length=20
+    )
+    year = models.CharField(
+        max_length=4
+    )
     employee_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -220,7 +232,7 @@ class Contribution(models.Model):
         default=0.00,
         null=True,
         blank=True
-        )
+    )
 
     def __str__(self):
         return f"{self.member.last_name}'s - {self.month} {self.year}"
@@ -251,6 +263,14 @@ class Contribution(models.Model):
 
 
 # MEMBERSHIP MODEL FOR STAFF
+"""
+This model is to track how many schemes a member
+belongs to and it is unique by scheme and member hence 
+a member can belong to one scheme once.
+
+This allows to know how much a user has made from a
+particular scheme... both total and estimated earnings
+"""
 class Membership(models.Model):
     tenant = models.ForeignKey(
         Tenant,
@@ -284,7 +304,7 @@ class Membership(models.Model):
         null=True,
         blank=True
     )
-    enrolled_at = models.DateTimeField(
+    enrolled_at = models.DateField(
         auto_now_add=True,
         null=False,
         blank=False

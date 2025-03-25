@@ -386,105 +386,16 @@
 
 <script>
   $(document).ready(function() {
-    // Get tenant_id from URL path
+    // Get tenant_id and scheme_id from the template
     const tenant_id = '{{ request.tenant.id }}';
     const scheme_id = '{{ request.scheme_name }}';
     
-    // Function to highlight search term in text
-    function highlightText(text, searchTerm) {
-      if (!searchTerm) return text;
-      
-      const regex = new RegExp('(' + searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + ')', 'gi');
-      return text.replace(regex, '<span class="highlight">$1</span>');
-    }
-    
-    // Function to build AJAX pagination
-    function buildAjaxPagination(currentPage, totalPages, searchParams) {
-      const paginationContainer = $('#ajax-pagination ul');
-      paginationContainer.empty();
-      
-      if (totalPages <= 1) {
-        return;
-      }
-      
-      // First and Previous buttons
-      if (currentPage > 1) {
-        paginationContainer.append(`
-          <li class="page-item">
-            <a class="page-link" data-page="1" aria-label="First">
-              <span aria-hidden="true">&laquo;&laquo;</span>
-            </a>
-          </li>
-          <li class="page-item">
-            <a class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
-              <span aria-hidden="true">&laquo;</span>
-            </a>
-          </li>
-        `);
-      } else {
-        paginationContainer.append(`
-          <li class="page-item disabled">
-            <a class="page-link" href="#" aria-label="First">
-              <span aria-hidden="true">&laquo;&laquo;</span>
-            </a>
-          </li>
-          <li class="page-item disabled">
-            <a class="page-link" href="#" aria-label="Previous">
-              <span aria-hidden="true">&laquo;</span>
-            </a>
-          </li>
-        `);
-      }
-      
-      // Current page indicator
-      paginationContainer.append(`
-        <li class="page-item active">
-          <span class="page-link">
-            Page ${currentPage} of ${totalPages}
-          </span>
-        </li>
-      `);
-      
-      // Next and Last buttons
-      if (currentPage < totalPages) {
-        paginationContainer.append(`
-          <li class="page-item">
-            <a class="page-link" data-page="${currentPage + 1}" aria-label="Next">
-              <span aria-hidden="true">&raquo;</span>
-            </a>
-          </li>
-          <li class="page-item">
-            <a class="page-link" data-page="${totalPages}" aria-label="Last">
-              <span aria-hidden="true">&raquo;&raquo;</span>
-            </a>
-          </li>
-        `);
-      } else {
-        paginationContainer.append(`
-          <li class="page-item disabled">
-            <a class="page-link" href="#" aria-label="Next">
-              <span aria-hidden="true">&raquo;</span>
-            </a>
-          </li>
-          <li class="page-item disabled">
-            <a class="page-link" href="#" aria-label="Last">
-              <span aria-hidden="true">&raquo;&raquo;</span>
-            </a>
-          </li>
-        `);
-      }
-      
-      // Add click event to pagination links
-      $('#ajax-pagination .page-link').not('.disabled, .active').on('click', function() {
-        const page = $(this).data('page');
-        searchMembers(searchParams.search, searchParams.status, searchParams.fund, page);
-      });
-    }
-    
     // Function to update the table with search results
-    function updateTable(response, searchTerm) {
+    function updateTable(response) {
       const tableBody = $('#members-table-body');
       tableBody.empty();
+      
+      console.log("Response received:", response);
       
       if (response.memberships && response.memberships.length > 0) {
         // Hide no results message, show table
@@ -496,13 +407,7 @@
         
         // Add rows to the table
         $.each(response.memberships, function(index, member) {
-          console.log(index, member)
-          // Highlight search term in name and staff number
-          const highlightedName = highlightText(
-            member.last_name + (member.first_name ? ', ' + member.first_name : ''), 
-            searchTerm
-          );
-          const highlightedStaffNumber = highlightText(member.staff_number, searchTerm);
+          console.log("Processing member:", member);
           
           // Determine status badge
           let statusBadge = '';
@@ -516,31 +421,21 @@
             statusBadge = `<span class="badge status-badge">${member.status}</span>`;
           }
           
-          // Determine fund type badge
-          let fundTypeBadge = '';
-          if (member.fund_type === 'Provident') {
-            fundTypeBadge = '<span class="fund-type-badge provident">Provident Fund</span>';
-          } else if (member.fund_type === 'Pension') {
-            fundTypeBadge = '<span class="fund-type-badge pension">Pension Fund</span>';
-          } else {
-            fundTypeBadge = `<span class="fund-type-badge other">${member.fund_type}</span>`;
-          }
-          
           // Create row HTML
           const row = `
             <tr>
               <td class="ps-3">${index + 1}</td>
               <td>
-                <a href="/${tenant_id}/${scheme_id}/staff-member/${member.Id}/" class="member-link">
-                  ${highlightedName}
+                <a href="/${tenant_id}/contributions/${scheme_id}/staff/${member.Id}/" class="member-link">
+                  ${member.last_name}${member.first_name ? ', ' + member.first_name : ''}
                 </a>
               </td>
-              <td>${highlightedStaffNumber}</td>
+              <td>${member.staff_number}</td>
               <td>${member.date_joined}</td>
               <td>${statusBadge}</td>
-              <td>${fundTypeBadge}</td>
+              <td>${member.fund_type || '-'}</td>
               <td class="text-end pe-3">
-                <a href="/${tenant_id}/${scheme_id}/staff-member/${member.Id}/" class="btn btn-sm btn-outline-primary">
+                <a href="/${tenant_id}/contributions/${scheme_id}/staff/${member.Id}/" class="btn btn-sm btn-outline-primary">
                   <i class="bi bi-eye me-1"></i> View
                 </a>
               </td>
@@ -550,21 +445,13 @@
           tableBody.append(row);
         });
         
-        // Build AJAX pagination with the data from response
-        if (data.pagination) {
-          // Hide standard pagination, show AJAX pagination
+        // Simple pagination handling
+        if (response.pagination) {
           $('#standard-pagination').hide();
           $('#ajax-pagination').show();
-          
-          buildAjaxPagination(
-            data.pagination.current_page,
-            data.pagination.total_pages,
-            {
-              search: searchTerm,
-              status: $('#status-filter').val(),
-              fund: $('#fund-filter').val()
-            }
-          );
+        } else {
+          $('#standard-pagination').show();
+          $('#ajax-pagination').hide();
         }
       } else {
         // Show no results message, hide table
@@ -579,11 +466,16 @@
     }
     
     // Function to search members via AJAX
-    function searchMembers(searchTerm, status, page = 1) {
+    function searchMembers(searchTerm, status) {
       // Show loading spinner
       $('#members-table').hide();
       $('#no-results').hide();
       $('#loading-spinner').show();
+      
+      console.log("Searching with:", {
+        search: searchTerm,
+        status: status
+      });
       
       // Make AJAX request
       $.ajax({
@@ -591,54 +483,45 @@
         type: 'GET',
         data: {
           'search': searchTerm,
-          'status': status,
-          'page': page
+          'status': status
         },
         success: function(response) {
           // Hide loading spinner
           $('#loading-spinner').hide();
           
+          console.log("Search response:", response);
+          
           if (response.status === 'success') {
-            updateTable(response, searchTerm);
+            updateTable(response);
           } else {
             // Show error message
             $('#members-table').hide();
             $('#no-results').show();
             $('#no-results h5').text('Error Loading Data');
             $('#no-results p').text('There was a problem loading the member data. Please try again.');
-            
-            // Hide pagination
-            $('#standard-pagination').hide();
-            $('#ajax-pagination').hide();
           }
         },
-        error: function() {
+        error: function(xhr, status, error) {
           // Hide loading spinner
           $('#loading-spinner').hide();
+          
+          console.error("AJAX error:", xhr, status, error);
           
           // Show error message
           $('#members-table').hide();
           $('#no-results').show();
           $('#no-results h5').text('Error Loading Data');
           $('#no-results p').text('There was a problem loading the member data. Please try again.');
-          
-          // Hide pagination
-          $('#standard-pagination').hide();
-          $('#ajax-pagination').hide();
         }
       });
     }
     
-    // Debounce function to limit API calls while typing
+    // Simple debounce function
     function debounce(func, wait) {
       let timeout;
       return function() {
-        const context = this;
-        const args = arguments;
         clearTimeout(timeout);
-        timeout = setTimeout(function() {
-          func.apply(context, args);
-        }, wait);
+        timeout = setTimeout(func, wait);
       };
     }
     
@@ -646,25 +529,27 @@
     const debouncedSearch = debounce(function() {
       const searchTerm = $('#member-search').val().trim();
       const status = $('#status-filter').val();
-      const fundType = $('#fund-filter').val();
+      
+      console.log("Search triggered:", searchTerm, status);
       
       // If search term is empty and no filters are applied, show original content
-      if (searchTerm === '' && status === '' && fundType === '') {
+      if (searchTerm === '' && status === '') {
         $('#members-table').show();
         $('#no-results').hide();
         $('#standard-pagination').show();
         $('#ajax-pagination').hide();
+        $('#loading-spinner').hide();
         $('#member-count').text('{{ memberships|length }}');
         return;
       }
       
       // Otherwise, perform search
-      searchMembers(searchTerm, status, fundType);
-    }, 500); // 500ms debounce
+      searchMembers(searchTerm, status);
+    }, 500);
     
     // Attach event listeners
     $('#member-search').on('keyup', debouncedSearch);
-    $('#status-filter, #fund-filter').on('change', debouncedSearch);
+    $('#status-filter').on('change', debouncedSearch);
   });
 </script>
 {% endblock %}

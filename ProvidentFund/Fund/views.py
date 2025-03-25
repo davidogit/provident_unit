@@ -209,11 +209,16 @@ class AjaxInvestmentTypeView(View):
     def get(self, request, *args, **kwargs):
         inv_type = self.request.GET.get('type')
         page = self.request.GET.get('page', 1)  # Default to page 1
+        expiry_status = self.request.GET.get('expiry_status','')
         queryset = self.get_queryset()
 
         if inv_type:
             queryset = queryset.filter(investment_type=inv_type)
+        if expiry_status: #For requests made from Approve matured Invs page
+            queryset = queryset.filter(_status=expiry_status)
 
+        total_pages = 0
+        current_page = 0
         if queryset.exists():  # Avoid pagination on empty queryset
             paginator = Paginator(queryset, self.paginate_by)
             total_pages = paginator.num_pages 
