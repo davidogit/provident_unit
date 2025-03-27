@@ -81,21 +81,28 @@ def delete_inactive_users(self):
             logger.error('An error occured while deleting inactive users.')
 
     except Exception as e:
-        logger.error(f'Transaction aborted : {e}')
-        raise # the raise is used in this case to ensure that the error is masde known and all changes are rolled back
+        logger.error(f'Error deleting dormant users from database : {e}')
+        return
 
 
 # Task to send OTP to members upon login
 @shared_task(bind=True)
 def send_otp_code(self,email,host,otp):
     # Send OTP to user via email
-    send_mail(
-        subject='PF CODE',
-        message=f'Your OTP code is {otp}',
-        from_email=EMAIL_HOST_USER,
-        recipient_list=[email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject='PF CODE',
+            message=f'Your OTP code is {otp}',
+            from_email=EMAIL_HOST_USER,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+    except SMTPException as smtp:
+        logger.error(f'An error occured sending OTP: {smtp}')
+        return
+    except Exception as e:
+        logger.error(f'An error occured sending OTP: {e}')
+        return
 
 
 @shared_task(bind=True)

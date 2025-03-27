@@ -587,7 +587,8 @@
         data: {
           'type': type,
           'page': page,
-          'expiry_status':'Expired'
+          //'expiry_status':'Expired', //To indicate that the investment has expired
+          'recognized_inv':'True' //To indicate that the investment has been recognized
         },
         success: function(response) {
           // Hide loading spinner

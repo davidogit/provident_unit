@@ -1,10 +1,9 @@
 from decimal import Decimal
-from django.db.models import Q,Count
+from django.db.models import Q,Count,Sum,Prefetch
 from django.http import HttpRequest, JsonResponse
 from django.http.response import HttpResponse as HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
-from ProvidentFund.settings import EMAIL_HOST_USER
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder,ReceivedItems
 from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
 from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings,TenantEventNotification
@@ -18,7 +17,6 @@ from .forms import InvestmentUpdateForm,InvestmentApprovalForm,InvestmentCreatio
 from Fund.tasks import actual_member_interest,rollover_inv_creation,send_excel_sheet_to_bank_for_payment
 from Member.tasks import gen_send_email
 from django.core.exceptions import ValidationError
-from django.db.models import Sum,F,Prefetch
 import logging
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -65,42 +63,91 @@ class Invest(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Get Tenant
         tenant = Tenant.objects.prefetch_related('staff_api').get(id=self.request.tenant.id)
+
         # Fetch schemes and related investments using prefetch
         schemes = InvestmentScheme.objects.filter(
             tenant=tenant,
             approved=True
         ).prefetch_related('member')
 
-        interest_query = InvestmentDetail.objects.filter(
+        investments = InvestmentDetail.objects.filter(
             investment_scheme__tenant=tenant,
             investment_scheme__approved=True,
             approved=True
         )
-        if not interest_query:
-            interest_query = InvestmentDetail.objects.none()
-        # Total Interest - Estimated and Actual
 
-        estimated_amount = interest_query.filter(approval_status=False).aggregate(total=Sum('interest_amount'))['total'] or Decimal(0.0) if interest_query else 0.0
-            
-        context['total_interest'] = estimated_amount
+        estimated_amount = investments.filter(approval_status=False).aggregate(total=Sum('interest_amount'))['total'] if investments else Decimal(0)
+        actual_revenue = investments.filter(approval_status=True, _status='Expired').aggregate(total=Sum('interest_amount'))['total'] or Decimal(0)
 
-        actual_revenue = interest_query.filter(approval_status=True, _status='Expired').aggregate(total=Sum('interest_amount'))['total'] or Decimal(0.0)
+        """
+        Calculating Percentage increase to members,investments,Estimated and Actual revenue compared to previous months
+        """
+        now =timezone.now()
+        this_month = now.month
+        this_year = now.year
 
-        context['actual_revenue'] =  actual_revenue
+        # Handle case where current month is january (1)
+        if this_month == 1:
+            last_month = 12
+            last_month_year = this_year-1
+        else:
+            last_month = this_month-1
+            last_month_year = this_year
 
-        # Active Investments
-        context['active_inv'] = interest_query.count()
+        staff_members = tenant.staff_api.all()
+        # Members who joined current month v Previous month
+        current_month_members = staff_members.filter(
+            date_joined__month = this_month,
+            date_joined__year = this_year
+        )
+        previous_month_members = staff_members.filter(
+            date_joined__month = last_month,
+            date_joined__year = last_month_year
+        )
 
-        # Active Members
-        context['active_members'] = tenant.staff_api.count()
+        # Count Staff Members
+        current_month_members_count = current_month_members.count()
+        previous_month_members_count = previous_month_members.count()
+        
+        # Filter investments for current month and previous month
+        current_month_inv = investments.filter(
+            created_date__month = this_month,
+            created_date__year = this_year
+        )
+        previous_month_inv = investments.filter(
+            created_date__month=last_month,
+            created_date__year = last_month_year
+        )
 
-        # Bank Interest Rates
-        context['interest_rates'] = BankInterestRate.objects.all()
+        # Count investments
+        current_month_inv_count = current_month_inv.count()
+        previous_month_inv_count = previous_month_inv.count()
 
-        # Available Investment Schemes
-        context['investment_scheme'] = schemes
+        # Sum up estimated revenue for all investments both current and previous
+        current_month_estimated_revenue = sum(inv.calculate_inv_interest() for inv in current_month_inv)
+        previous_month_estimated_revenue = sum(inv.calculate_inv_interest() for inv in previous_month_inv)
+
+        # Sum up actual revenue for all investments both current and previous
+        current_month_actual_revenue = sum((inv.calculate_inv_interest()/inv.remaining_days) for inv in current_month_inv)
+        previous_month_actual_revenue = sum((inv.calculate_inv_interest()/inv.remaining_days) for inv in previous_month_inv)
+
+        # Percentage difference calculator
+        def calculate_percentage_diff(current,previous):
+            if previous == 0:
+                return 'N/A' 
+            percentage_change = ((current-previous)/previous) * 100
+            direction = 'up' if (current-previous) > 0 else 'down'
+            return {
+                'percentage':percentage_change,
+                'direction':direction
+            }
+
+        # calculate percentage increase
+        staff_growth = calculate_percentage_diff(current_month_members_count,previous_month_members_count)
+        investment_growth = calculate_percentage_diff(current_month_inv_count,previous_month_inv_count)
+        estimated_revenue_growth = calculate_percentage_diff(current_month_estimated_revenue,previous_month_estimated_revenue)
+        actual_revenue_growth = calculate_percentage_diff(current_month_actual_revenue,previous_month_actual_revenue)
 
         # Gender Enrollment in Each Scheme
         gender_counts_by_scheme = {}
@@ -115,7 +162,19 @@ class Invest(TemplateView):
                 'Other': next((item['count'] for item in gender_counts if item['gender'] == 'Other'), 0),
             }
 
-        context['gender_counts_by_scheme'] = gender_counts_by_scheme
+        context.update({
+            'total_interest':estimated_amount,
+            'actual_revenue':actual_revenue,
+            'active_inv':investments.count(),
+            'active_members':staff_members.count(),
+            'interest_rates':BankInterestRate.objects.all(),
+            'investment_scheme':schemes,
+            'gender_counts_by_scheme':gender_counts_by_scheme,
+            'investment_growth':investment_growth,
+            'estimated_revenue_growth':estimated_revenue_growth,
+            'actual_revenue_growth':actual_revenue_growth,
+            'staff_growth':staff_growth
+        })
         return context
 
 
@@ -204,18 +263,32 @@ class AjaxInvestmentTypeView(View):
         return self.model.objects.filter(
             investment_scheme__tenant=tenant,
             investment_scheme__id=scheme_id
-        )
+        ).order_by('approved','created_date')
 
     def get(self, request, *args, **kwargs):
         inv_type = self.request.GET.get('type')
         page = self.request.GET.get('page', 1)  # Default to page 1
-        expiry_status = self.request.GET.get('expiry_status','')
+        expiry_status = self.request.GET.get('expiry_status','') #for matured investments to be recognized
+        recognized_inv = self.request.GET.get('recognized_inv',None) # For recorgnized investments page
         queryset = self.get_queryset()
 
         if inv_type:
-            queryset = queryset.filter(investment_type=inv_type)
-        if expiry_status: #For requests made from Approve matured Invs page
-            queryset = queryset.filter(_status=expiry_status)
+            queryset = queryset.filter(
+                investment_type=inv_type
+            )
+        if expiry_status == 'Expired': #For requests made from Approve matured Invs page
+            # We filter by approved,approval_status and _status
+            queryset = queryset.filter(
+                _status=expiry_status,
+                approved=True,
+                approval_status=False,
+            )
+        if recognized_inv == 'True':
+            queryset = queryset.filter(
+                approval_status=True,
+                approved=True,
+                _status='Expired'
+            )
 
         total_pages = 0
         current_page = 0
@@ -225,7 +298,7 @@ class AjaxInvestmentTypeView(View):
             try:
                 paginated_queryset = paginator.page(page)
                 current_page = paginated_queryset.number
-                print(paginated_queryset)
+                # print(paginated_queryset)
             except PageNotAnInteger:
                 paginated_queryset = paginator.page(1)
             except EmptyPage:
@@ -403,11 +476,10 @@ class AddInvestment(CreateView):
         tenant = self.request.tenant
 
         if tenant:
-            context['account_type'] = InvestmentDetail.account
-            context['inv_type'] = InvestmentDetail.inv_type
-        else:
-            context['account_type'] = []
-            context['inv_type'] = []
+            context.update({
+                'account_type':InvestmentDetail.account,
+                'inv_type':InvestmentDetail.inv_type
+            })
 
         return context
     
@@ -1362,6 +1434,7 @@ class ApprovedInvestments(ListView):
                 investment_scheme__id=scheme_id,
                 approval_status=True,
                 approved=True,
+                _status='Expired'
             ).order_by('-created_date')
         else:
             return InvestmentDetail.objects.none()

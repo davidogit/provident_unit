@@ -7,26 +7,14 @@
   <meta name="description" content="Financial dashboard overview with key metrics and investment information">
 {% endblock %}
 
+{% block header %}
+<h5 class="fw-bold">Financial Overview</h5>
+{% endblock %}
+
 {% block content %}
 <main class="main main-app p-3 p-lg-4">
   <!-- Financial Overview Section -->
   <section class="mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1 class="h3 mb-0 text-dark">Financial Overview</h1>
-      <div class="dropdown">
-        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="timeRangeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="ri-calendar-line me-1"></i> This Month
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="timeRangeDropdown">
-          <li><a class="dropdown-item" href="#">Today</a></li>
-          <li><a class="dropdown-item" href="#">This Week</a></li>
-          <li><a class="dropdown-item active" href="#">This Month</a></li>
-          <li><a class="dropdown-item" href="#">This Quarter</a></li>
-          <li><a class="dropdown-item" href="#">This Year</a></li>
-        </ul>
-      </div>
-    </div>
-
     <div class="row g-4">
       <!-- Key Metrics Cards -->
       <div class="col-xl-3 col-md-6">
@@ -44,8 +32,19 @@
             </div>
             <h2 class="mb-2 fw-bold">GH₵ {{ total_interest|abbreviate_number }}</h2>
             <div class="d-flex align-items-center">
-              <span class="badge bg-success-subtle text-success me-2">
-                <i class="ri-arrow-up-line me-1"></i>8.3%
+              <span class="badge {% if estimated_revenue_growth.direction == 'up' %}bg-success-subtle text-success {% elif estimated_revenue_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2">
+                {% if estimated_revenue_growth.direction == 'up' %}
+                <i class="ri-arrow-up-line me-1"></i>
+                {% elif estimated_revenue_growth.direction == 'down' %}
+                <i class="ri-arrow-down-line me-1"></i>
+                {% else %}
+                <i class="ri-arrow-right-line me-1"></i>
+                {% endif %}
+                {% if estimated_revenue_growth == 'N/A' %}
+                  N/A 
+                {% else %}
+                {{ estimated_revenue_growth.percentage|floatformat:2 }}%
+                {% endif %}
               </span>
               <span class="text-muted fs-sm">vs last month</span>
             </div>
@@ -68,8 +67,19 @@
             </div>
             <h2 class="mb-2 fw-bold">GH₵ {{ actual_revenue|abbreviate_number }}</h2>
             <div class="d-flex align-items-center">
-              <span class="badge bg-success-subtle text-success me-2">
-                <i class="ri-arrow-up-line me-1"></i>5.2%
+              <span class="badge {% if actual_revenue_growth.direction == 'up' %}bg-success-subtle text-success {% elif actual_revenue_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2">
+                {% if actual_revenue_growth.direction == 'up' %}
+                <i class="ri-arrow-up-line me-1"></i>
+                {% elif actual_revenue_growth.direction == 'down' %}
+                <i class="ri-arrow-down-line me-1"></i>
+                {% else %}
+                <i class="ri-arrow-right-line me-1"></i>
+                {% endif %}
+                {% if actual_revenue_growth == 'N/A' %}
+                  N/A 
+                {% else %}
+                {{ actual_revenue_growth.percentage|floatformat:2 }}%
+                {% endif %}
               </span>
               <span class="text-muted fs-sm">vs last month</span>
             </div>
@@ -92,8 +102,19 @@
             </div>
             <h2 class="mb-2 fw-bold">{{ active_members|abbreviate_number }}</h2>
             <div class="d-flex align-items-center">
-              <span class="badge bg-success-subtle text-success me-2">
-                <i class="ri-arrow-up-line me-1"></i>12.7%
+              <span class="badge {% if staff_growth.direction == 'up' %}bg-success-subtle text-success {% elif staff_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2">
+                {% if staff_growth.direction == 'up' %}
+                <i class="ri-arrow-up-line me-1"></i>
+                {% elif staff_growth.direction == 'down' %}
+                <i class="ri-arrow-down-line me-1"></i>
+                {% else %}
+                <i class="ri-arrow-right-line me-1"></i>
+                {% endif %}
+                {% if staff_growth == 'N/A' %}
+                  N/A 
+                {% else %}
+                {{ staff_growth.percentage|floatformat:2 }}%
+                {% endif %}
               </span>
               <span class="text-muted fs-sm">vs last month</span>
             </div>
@@ -116,8 +137,19 @@
             </div>
             <h2 class="mb-2 fw-bold">{{ active_inv|abbreviate_number }}</h2>
             <div class="d-flex align-items-center">
-              <span class="badge bg-success-subtle text-success me-2">
-                <i class="ri-arrow-up-line me-1"></i>3.5%
+              <span class="badge {% if investment_growth.direction == 'up' %}bg-success-subtle text-success {% elif investment_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2">
+                {% if investment_growth.direction == 'up' %}
+                <i class="ri-arrow-up-line me-1"></i>
+                {% elif investment_growth.direction == 'down' %}
+                <i class="ri-arrow-down-line me-1"></i>
+                {% else %}
+                <i class="ri-arrow-right-line me-1"></i>
+                {% endif %}
+                {% if investment_growth == 'N/A' %}
+                  N/A 
+                {% else %}
+                {{ investment_growth.percentage|floatformat:2 }}%
+                {% endif %}
               </span>
               <span class="text-muted fs-sm">vs last month</span>
             </div>

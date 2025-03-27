@@ -6,12 +6,12 @@ from .views import GetBalanceView
 urlpatterns=[
     # path('', views.LoginTemplateView.as_view(), name='loginView'),
     path('register/', views.MemberRegistrationView.as_view(), name='register'),
-    path('member_login/', views.loginView, name='member_login'),
+    path('member_login/', views.MemberLoginView.as_view(), name='member_login'),
     # path('verify_otp/', views.verifyOtpView, name='verify_otp'),
     # path('logout/',views.logoutView, name='logout'),
-    path('verify_otp/<int:user_id>', views.verifyOtpView, name='verify_otp'),
+    path('verify_otp/<int:user_id>/', views.VerifyLoginOTPView.as_view(), name='verify_otp'),
     path('logout/',views.logoutView, name='logout'),
-    path('terms/', views.terms_and_conditions_view, name='terms_and_conditions'),
+    path('terms/', views.TermsAndConditions.as_view(), name='terms_and_conditions'),
 
     path('invalid-login-details/', views.InvalidLoginDetails.as_view(), name='invalid_login_details'),
     path('profile/<int:member_id>/', views.MemberPortal.as_view(), name='member_profile'),

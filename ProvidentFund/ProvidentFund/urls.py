@@ -28,7 +28,7 @@ from debug_toolbar.toolbar import debug_toolbar_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('<str:tenant_id>/login/', views.loginView, name='login'),
+    path('<str:tenant_id>/login/', views.MemberLoginView.as_view(), name='login'),
     # path('<str:tenant_id>/', v.Invest.as_view(),),
     path('<str:tenant_id>/fund/', include('Fund.urls')),
     path('<str:tenant_id>/contributions/', include('contributions.urls')),
