@@ -133,15 +133,16 @@ class AddChartOfAccounts(TemplateView):
         account_types = ChartOfAccounts.ACCOUNT_TYPES
         account_status = ChartOfAccounts.ACCOUNT_STATUS
         available_accounts = ChartOfAccounts.objects.filter(tenant=tenant)
-        account_code_lenght = AccountParameters.objects.filter(
-            tenant=tenant
-        ).first().account_code_length
+        
+        # Get account parameters with proper error handling
+        account_params = AccountParameters.objects.filter(tenant=tenant).first()
+        account_code_length = account_params.account_code_length if account_params else 10  # Default to 10 if not set
 
         context['chart_of_accounts'] = available_accounts
         context['parent_accounts'] = available_accounts
         context['account_types'] = account_types
         context['account_status'] = account_status
-        context['code_length'] = account_code_lenght
+        context['code_length'] = account_code_length
         return context
 
 

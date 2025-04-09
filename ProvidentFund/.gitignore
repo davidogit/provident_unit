@@ -22,3 +22,11 @@ backup.json
 backup.sql
 
 **/tests/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# API Data Fetcher
+contributions/data_fetcher.py

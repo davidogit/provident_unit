@@ -1618,11 +1618,11 @@ class ApproveContributions(TemplateView):
         except Exception:
             return JsonResponse({
                 'status':'error',
-                'message':'No account mapping for "contributioin" found. Please create a mapping for this event and try again.'
+                'message':'No account mapping for "contribution" found. Please create a mapping for this event and try again.'
             })
         
         try:
-            # Mappingh for Delayed Interest
+            # Mapping for Delayed Interest
             delayed_int_mapping = scheme.account_mapping.get(name='Delayed Interest')
         except Exception:
             return JsonResponse({
@@ -1636,17 +1636,22 @@ class ApproveContributions(TemplateView):
                 'message':'Month and Year are required'
             })
         
-        # collect settings related to the scheme
-        settings = SchemeSettings.objects.get(
-            investment_scheme=scheme,
-            investment_scheme__tenant=tenant
+        # Get or create settings for the scheme
+        try:
+            settings = SchemeSettings.objects.get(
+                investment_scheme=scheme,
+                investment_scheme__tenant=tenant
             )
-
-        if not settings:
-            return JsonResponse({
-                'status':'error',
-                'message':'Ensure scheme settings is configured and try again'
-            })
+        except SchemeSettings.DoesNotExist:
+            # Create default settings if they don't exist
+            settings = SchemeSettings.objects.create(
+                investment_scheme=scheme,
+                contribution_day=15,  # Default to 15th of the month
+                grace_period_contribution=7,  # Default 7 days grace period
+                delayed_interest_rate=Decimal('5.00'),  # Default 5% delayed interest rate
+                period_of_delayed_calculation=30  # Default 30 days calculation period
+            )
+            message_1 = 'Default scheme settings were created. Please review and update them as needed.'
        
         # Collect investments within the provided month
         contributions = Contribution.objects.filter(
@@ -1659,7 +1664,7 @@ class ApproveContributions(TemplateView):
         if not contributions.exists():
             return JsonResponse({'status': 'error', 'message': 'No contributions found for the given month.'})
         
-        # Aggregtae total_contributions
+        # Aggregate total_contributions
         total_contribution = contributions.aggregate(
                 total=Sum('total_contribution')
                 )['total'] or 0
@@ -1669,7 +1674,7 @@ class ApproveContributions(TemplateView):
                 'message':'Total contributions is zero.'
             })
         
-        # Approve contributions and peform debit and credit operations
+        # Approve contributions and perform debit and credit operations
         with transaction.atomic():
             # Fetch debit and credit accounts from mapping obj
             debit_account = mapping.debit_acc
@@ -1681,22 +1686,41 @@ class ApproveContributions(TemplateView):
                     'message':'Debit or Credit accounts not properly configured'
                 })
             
-            # update contributions
-            contributions.update(approved_contribution=True)
+            # Check if debit account has sufficient balance
+            if debit_account.current_balance < total_contribution:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Insufficient balance in debit account. Required: {total_contribution}, Available: {debit_account.current_balance}'
+                })
             
-            # perform debit anf credit operations
-            debit_account.record_transaction(
-                amount=total_contribution,transaction_type='DEBIT',created_by=self.request.user,description='Contributions'
-            ) 
-            credit_account.record_transaction(
-                amount=total_contribution,transaction_type='CREDIT',created_by=self.request.user,description='Contributions'
-            ) 
+            try:
+                # update contributions
+                contributions.update(approved_contribution=True)
+                
+                # perform debit and credit operations
+                debit_account.record_transaction(
+                    amount=total_contribution,
+                    transaction_type='DEBIT',
+                    created_by=self.request.user,
+                    description=f'Contributions for {month}/{year}'
+                ) 
+                credit_account.record_transaction(
+                    amount=total_contribution,
+                    transaction_type='CREDIT',
+                    created_by=self.request.user,
+                    description=f'Contributions for {month}/{year}'
+                ) 
 
-            """
-            # save account balances
-            debit_account.save()
-            credit_account.save()
-            """
+            except ValidationError as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':str(e)
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Error processing transaction: {str(e)}'
+                })
 
         # update staff contributions using task
         calculate_staff_contribution.delay(
@@ -1715,7 +1739,6 @@ class ApproveContributions(TemplateView):
         # First day of month
         first_day_of_month = now.replace(day=1,month=int(month),year=int(year))
 
-        print(first_day_of_month)
         # expected payment date
         due_date = first_day_of_month + timedelta(contribution_day)
         # due date after grace period
@@ -1724,7 +1747,7 @@ class ApproveContributions(TemplateView):
         # check if payment is delayed past grace period
         if now > grace_period_end: #if payment date is over grace period
             
-            # Calculate delayed interest principal = acrued interest on contributions until approval date after grace period
+            # Calculate delayed interest principal = accrued interest on contributions until approval date after grace period
 
             # monthly contribution total
             month_contribution = Contribution.objects.filter(
@@ -1748,7 +1771,7 @@ class ApproveContributions(TemplateView):
             n = 365
             p = month_contribution
             r = daily_delayed_rate
-            c = p*(1+(r/n))**(n*t) #compound interest asuming t=1 year
+            c = p*(1+(r/n))**(n*t) #compound interest assuming t=1 year
             delayed_principal = c-p
 
             # create delayed interest object

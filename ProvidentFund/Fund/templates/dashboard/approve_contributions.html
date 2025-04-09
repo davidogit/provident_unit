@@ -1,17 +1,19 @@
-{% extends 'dashboard/base.html' %}
-
-{% block title %}
+{% extends 'dashboard/base.html' %} {% block title %}
 <title>Contribution Validation</title>
-{% endblock %}
-
-{% block header %}
-<h5 class="fw-bold"><i class="bi bi-cash-coin me-2"></i>Contribution Validation</h5>
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block header %}
+<h5 class="fw-bold">
+  <i class="bi bi-cash-coin me-2"></i>Contribution Validation
+</h5>
+{% endblock %} {% block content %}
 <!-- Include Bootstrap Icons and SweetAlert2 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+/>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css"
+/>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 
 <div class="main main-app p-3 p-lg-4">
@@ -22,21 +24,34 @@
         <i class="bi bi-calendar-check text-primary me-2 fs-4"></i>
         <h5 class="card-title mb-0">Monthly Contribution Validation</h5>
       </div>
-      
+
       <div class="card-body p-4">
         <!-- Period Selection Form -->
         <div class="row mb-4">
           <div class="col-lg-8 mx-auto">
             <div class="card border-0">
               <div class="card-body p-4">
-                <form action="" method="POST" id="approval-form" class="needs-validation" novalidate>
+                <form
+                  action=""
+                  method="POST"
+                  id="approval-form"
+                  class="needs-validation"
+                  novalidate
+                >
                   {% csrf_token %}
-                  
+
                   <div class="row g-3">
                     <div class="col-md-6">
                       <div class="form-floating">
-                        <select id="month" name="month" class="form-select" required>
-                          <option value="" selected disabled>Select month</option>
+                        <select
+                          id="month"
+                          name="month"
+                          class="form-select"
+                          required
+                        >
+                          <option value="" selected disabled>
+                            Select month
+                          </option>
                           <option value="1">January</option>
                           <option value="2">February</option>
                           <option value="3">March</option>
@@ -51,37 +66,50 @@
                           <option value="12">December</option>
                         </select>
                         <label for="month">Month</label>
-                        <div class="invalid-feedback">Please select a month</div>
+                        <div class="invalid-feedback">
+                          Please select a month
+                        </div>
                       </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                       <div class="form-floating">
-                        <input 
-                          type="number" 
-                          class="form-control" 
-                          id="year" 
-                          name="year" 
-                          placeholder="YYYY" 
-                          min="2000" 
-                          max="2100" 
+                        <input
+                          type="number"
+                          class="form-control"
+                          id="year"
+                          name="year"
+                          placeholder="YYYY"
+                          min="2000"
+                          max="2100"
                           required
-                        >
+                        />
                         <label for="year">Year</label>
-                        <div class="invalid-feedback">Please enter a valid year (YYYY)</div>
+                        <div class="invalid-feedback">
+                          Please enter a valid year (YYYY)
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="d-flex justify-content-center mt-4">
-                    <button type="button" id="fetch-btn" class="btn btn-primary px-4">
+                    <button
+                      type="button"
+                      id="fetch-btn"
+                      class="btn btn-primary px-4"
+                    >
                       <i class="bi bi-search me-2"></i>Fetch Contributions
                     </button>
-                    
+
                     {% if 'Contributions Analyst' in user_groups %}
-                      <button type="submit" id="validate-btn" class="btn btn-success ms-3 px-4" disabled>
-                        <i class="bi bi-check-circle me-2"></i>Validate
-                      </button>
+                    <button
+                      type="submit"
+                      id="validate-btn"
+                      class="btn btn-success ms-3 px-4"
+                      disabled
+                    >
+                      <i class="bi bi-check-circle me-2"></i>Validate
+                    </button>
                     {% endif %}
                   </div>
                 </form>
@@ -89,29 +117,46 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Contribution Info Display -->
-        <div id="contribution-info-container" class="mt-4" style="display: none;">
+        <div
+          id="contribution-info-container"
+          class="mt-4"
+          style="display: none"
+        >
           <div class="row">
             <div class="col-lg-10 mx-auto">
               <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                <div
+                  class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3"
+                >
                   <h5 class="mb-0" id="period-title">Contribution Details</h5>
-                  <span class="badge text-primary rounded-pill" id="status-badge">Status</span>
+                  <span
+                    class="badge text-primary rounded-pill"
+                    id="status-badge"
+                    >Status</span
+                  >
                 </div>
-                
+
                 <div class="card-body p-4">
-                  <div id="loading-spinner" class="text-center py-5" style="display: none;">
+                  <div
+                    id="loading-spinner"
+                    class="text-center py-5"
+                    style="display: none"
+                  >
                     <div class="spinner-border text-primary" role="status">
                       <span class="visually-hidden">Loading...</span>
                     </div>
                     <p class="mt-3 text-muted">Fetching contribution data...</p>
                   </div>
-                  
+
                   <div id="contribution-info" class="row g-4">
                     <div class="col-12 text-center py-4">
                       <i class="bi bi-arrow-up-circle text-muted fs-1 mb-3"></i>
-                      <p class="text-muted mb-0">Select a month and year above to view contribution details</p>
+                      <p class="text-muted mb-0">
+                        Select a month and year above to view contribution
+                        details
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -125,79 +170,85 @@
 </div>
 
 <script>
-  $(document).ready(function() {
+  $(document).ready(function () {
     // Form validation
-    (function() {
-      'use strict';
-      
-      var forms = document.querySelectorAll('.needs-validation');
-      
-      Array.prototype.slice.call(forms).forEach(function(form) {
-        form.addEventListener('submit', function(event) {
-          if (!form.checkValidity()) {
-            event.preventDefault();
-            event.stopPropagation();
-          }
-          form.classList.add('was-validated');
-        }, false);
+    (function () {
+      "use strict";
+
+      var forms = document.querySelectorAll(".needs-validation");
+
+      Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener(
+          "submit",
+          function (event) {
+            if (!form.checkValidity()) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            form.classList.add("was-validated");
+          },
+          false
+        );
       });
     })();
-    
+
     // Year input validation
-    const yearInput = document.getElementById('year');
-    
-    yearInput.addEventListener('input', function() {
+    const yearInput = document.getElementById("year");
+
+    yearInput.addEventListener("input", function () {
       // Ensure the input doesn't exceed 4 digits
       if (this.value.length > 4) {
         this.value = this.value.slice(0, 4);
       }
-      
+
       // Set current year as default if empty
-      if (this.value === '') {
+      if (this.value === "") {
         this.value = new Date().getFullYear();
       }
     });
-    
+
     // Set current year as default
     yearInput.value = new Date().getFullYear();
-    
+
     // Fetch button click handler
-    $('#fetch-btn').on('click', function() {
+    $("#fetch-btn").on("click", function () {
       fetchContributionInfo();
     });
-    
+
     // Handle form submission for validation
-    $('#approval-form').on('submit', function(event) {
+    $("#approval-form").on("submit", function (event) {
       event.preventDefault();
-      
+
       if (!this.checkValidity()) {
         return;
       }
-      
+
       var form = $(this);
-      var validateBtn = $('#validate-btn');
+      var validateBtn = $("#validate-btn");
       var originalBtnText = validateBtn.html();
-      
+
       // Show loading state
-      validateBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Validating...');
-      validateBtn.prop('disabled', true);
-      
+      validateBtn.html(
+        '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Validating...'
+      );
+      validateBtn.prop("disabled", true);
+
       $.ajax({
-        type: form.attr('method'),
-        url: form.attr('action'),
+        type: form.attr("method"),
+        url: form.attr("action"),
         data: form.serialize(),
-        success: function(response) {
+        success: function (response) {
           // Reset button state
           validateBtn.html(originalBtnText);
-          validateBtn.prop('disabled', false);
-          
-          if (response.status === 'success') {
+          validateBtn.prop("disabled", false);
+
+          if (response.status === "success") {
             // Show success message with SweetAlert
             Swal.fire({
-              icon: 'success',
-              title: 'Validation Successful',
+              icon: "success",
+              title: "Validation Successful",
               text: response.message,
-              confirmButtonColor: '#28a745'
+              confirmButtonColor: "#28a745",
             }).then(() => {
               // Refresh contribution data
               fetchContributionInfo();
@@ -205,101 +256,129 @@
           } else {
             // Show error message with SweetAlert
             Swal.fire({
-              icon: 'error',
-              title: 'Validation Failed',
+              icon: "error",
+              title: "Validation Failed",
               text: response.message,
-              confirmButtonColor: '#dc3545'
+              confirmButtonColor: "#dc3545",
             });
           }
         },
-        error: function(jqXHR) {
+        error: function (jqXHR) {
           // Reset button state
           validateBtn.html(originalBtnText);
-          validateBtn.prop('disabled', false);
-          
+          validateBtn.prop("disabled", false);
+
           var response = jqXHR.responseJSON;
-          var message = response?.message || 'An error occurred during validation';
-          var errorDetails = '';
-          
+          var message =
+            response?.message || "An error occurred during validation";
+          var errorDetails = "";
+
           if (response?.errors) {
-            errorDetails = Object.values(response.errors).join('\n');
+            errorDetails = Object.values(response.errors).join("\n");
           }
-          
+
           // Show error message with SweetAlert
           Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
+            icon: "error",
+            title: "Validation Error",
             text: message,
-            footer: errorDetails ? `<small class="text-danger">${errorDetails}</small>` : '',
-            confirmButtonColor: '#dc3545'
+            footer: errorDetails
+              ? `<small class="text-danger">${errorDetails}</small>`
+              : "",
+            confirmButtonColor: "#dc3545",
           });
-        }
+        },
       });
     });
-    
+
     // Function to fetch and display contribution info
     async function fetchContributionInfo() {
-      const month = $('#month').val();
-      const year = $('#year').val();
-      
+      const month = $("#month").val();
+      const year = $("#year").val();
+
       // Validate inputs
       if (!month || !year || year.length !== 4) {
         Swal.fire({
-          icon: 'warning',
-          title: 'Invalid Selection',
-          text: 'Please select both month and year',
-          confirmButtonColor: '#ffc107'
+          icon: "warning",
+          title: "Invalid Selection",
+          text: "Please select both month and year",
+          confirmButtonColor: "#ffc107",
         });
         return;
       }
-      
+
       // Show loading spinner
-      $('#contribution-info-container').show();
-      $('#contribution-info').hide();
-      $('#loading-spinner').show();
-      
+      $("#contribution-info-container").show();
+      $("#contribution-info").hide();
+      $("#loading-spinner").show();
+
       // Disable the validate button while loading
-      $('#validate-btn').prop('disabled', true);
-      
+      $("#validate-btn").prop("disabled", true);
+
       var scheme_id = "{{ scheme_name }}";
       var tenant_id = "{{ request.tenant.id }}";
-      
+
       try {
-        var response = await fetch(`/${tenant_id}/fund/${scheme_id}/fetch_contributions/?month=${month}&year=${year}`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
+        var response = await fetch(
+          `/${tenant_id}/fund/${scheme_id}/fetch_contributions/?month=${month}&year=${year}`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
         var data = await response.json();
-        
+
         // Hide loading spinner
-        $('#loading-spinner').hide();
-        $('#contribution-info').show();
-        
+        $("#loading-spinner").hide();
+        $("#contribution-info").show();
+
         // Update period title
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        $('#period-title').text(`Contributions for ${monthNames[month-1]} ${year}`);
-        
+        const monthNames = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+        $("#period-title").text(
+          `Contributions for ${monthNames[month - 1]} ${year}`
+        );
+
         // Display fetched data
         if (data && data.number_of_contributions !== undefined) {
           // Update status badge
-          const statusBadge = $('#status-badge');
-          statusBadge.text(data.contribution_status || 'N/A');
-          
+          const statusBadge = $("#status-badge");
+          statusBadge.text(data.contribution_status || "N/A");
+
           // Set badge color based on status
-          if (data.contribution_status === 'Validated') {
-            statusBadge.removeClass().addClass('badge bg-success rounded-pill');
-          } else if (data.contribution_status === 'Pending') {
-            statusBadge.removeClass().addClass('badge bg-warning text-dark rounded-pill');
+          if (data.contribution_status === "Validated") {
+            statusBadge.removeClass().addClass("badge bg-success rounded-pill");
+          } else if (data.contribution_status === "Pending") {
+            statusBadge
+              .removeClass()
+              .addClass("badge bg-warning text-dark rounded-pill");
           } else {
-            statusBadge.removeClass().addClass('badge bg-secondary rounded-pill');
+            statusBadge
+              .removeClass()
+              .addClass("badge bg-secondary rounded-pill");
           }
-          
+
           // Enable validate button if status is not already validated
-          $('#validate-btn').prop('disabled', data.contribution_status === 'Validated');
-          
+          $("#validate-btn").prop(
+            "disabled",
+            data.contribution_status === "Validated"
+          );
+
           // Display contribution data
-          $('#contribution-info').html(`
+          $("#contribution-info").html(`
             <div class="col-md-6 col-lg-3">
               <div class="card h-100 border-0">
                 <div class="card-body text-center">
@@ -315,7 +394,12 @@
                 <div class="card-body text-center">
                   <i class="bi bi-cash-stack fs-1 text-primary mb-3"></i>
                   <h6 class="text-muted mb-2">Total Amount</h6>
-                  <h3 class="mb-0">${data.total_amount}</h3>
+                  <h3 class="mb-0">${parseFloat(
+                    data.total_amount
+                  ).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}</h3>
                 </div>
               </div>
             </div>
@@ -325,7 +409,7 @@
                 <div class="card-body text-center">
                   <i class="bi bi-calendar-date fs-1 text-primary mb-3"></i>
                   <h6 class="text-muted mb-2">Contribution Date</h6>
-                  <h3 class="mb-0">${data.date_of_contribution || 'N/A'}</h3>
+                  <h3 class="mb-0">${data.date_of_contribution || "N/A"}</h3>
                 </div>
               </div>
             </div>
@@ -335,53 +419,58 @@
                 <div class="card-body text-center">
                   <i class="bi bi-check-circle fs-1 text-primary mb-3"></i>
                   <h6 class="text-muted mb-2">Status</h6>
-                  <h3 class="mb-0">${data.contribution_status || 'N/A'}</h3>
+                  <h3 class="mb-0">${data.contribution_status || "N/A"}</h3>
                 </div>
               </div>
             </div>
           `);
         } else {
           // No data available
-          $('#status-badge').removeClass().addClass('badge bg-secondary rounded-pill').text('No Data');
-          $('#validate-btn').prop('disabled', true);
-          
-          $('#contribution-info').html(`
+          $("#status-badge")
+            .removeClass()
+            .addClass("badge bg-secondary rounded-pill")
+            .text("No Data");
+          $("#validate-btn").prop("disabled", true);
+
+          $("#contribution-info").html(`
             <div class="col-12 text-center py-4">
               <i class="bi bi-exclamation-circle text-warning fs-1 mb-3"></i>
               <h5>No Contribution Data Available</h5>
-              <p class="text-muted mb-0">There are no contributions recorded for ${monthNames[month-1]} ${year}</p>
+              <p class="text-muted mb-0">There are no contributions recorded for ${
+                monthNames[month - 1]
+              } ${year}</p>
             </div>
           `);
         }
       } catch (error) {
-        console.error('Fetch Error', error);
-        
+        console.error("Fetch Error", error);
+
         // Hide loading spinner
-        $('#loading-spinner').hide();
-        $('#contribution-info').show();
-        
+        $("#loading-spinner").hide();
+        $("#contribution-info").show();
+
         // Show error message
-        $('#contribution-info').html(`
+        $("#contribution-info").html(`
           <div class="col-12 text-center py-4">
             <i class="bi bi-exclamation-triangle text-danger fs-1 mb-3"></i>
             <h5>Error Fetching Data</h5>
             <p class="text-muted mb-0">An error occurred while fetching contribution data. Please try again.</p>
           </div>
         `);
-        
+
         // Disable validate button
-        $('#validate-btn').prop('disabled', true);
+        $("#validate-btn").prop("disabled", true);
       }
     }
-    
+
     // Add event listeners to month and year input fields for auto-fetch
-    $('#month, #year').on('change', function() {
-      const month = $('#month').val();
-      const year = $('#year').val();
-      
+    $("#month, #year").on("change", function () {
+      const month = $("#month").val();
+      const year = $("#year").val();
+
       // Only fetch if both fields are filled
       if (month && year && year.length === 4) {
-        $('#contribution-info-container').show();
+        $("#contribution-info-container").show();
       }
     });
   });
