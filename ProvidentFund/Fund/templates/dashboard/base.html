@@ -71,6 +71,7 @@
   <div class="sidebar">
     <div class="sidebar-header">
       <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
+      <a href="{% url 'loan_application' tenant_id=request.tenant.id %}">Loans</a>
     </div><!-- sidebar-header -->
     <div id="sidebarMenu" class="sidebar-body">
 
