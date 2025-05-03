@@ -707,7 +707,7 @@ class PendingSchemes(ListView):
         tenant = self.request.tenant
         scheme_id = self.request.POST.get('scheme_id')
         member = self.request.user.member
-        
+            
         if scheme_id and tenant and member:
             SchemeApproval.objects.get(tenant=tenant,member=member,scheme__id=scheme_id).delete()
             return JsonResponse({

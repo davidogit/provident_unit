@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,12 +32,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR,'media')
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4ot94r857then5539+kd-*lkxt0bi++92-ysmifbd0th+irnqv'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 
 # Application definition
@@ -52,6 +56,7 @@ INSTALLED_APPS = [
     'Admin',
     'MultiScheme',
     'Chart_of_Accounts',
+    
 
     'django_celery_beat',
     'django_celery_results',
@@ -121,21 +126,21 @@ WSGI_APPLICATION = 'ProvidentFund.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'OPTIONS': {
-            'init_command': 'SET default_storage_engine=INNODB',
-        },
-        'NAME': 'provident_fund',
-        'USER': 'root',
-        'PASSWORD': 'collinsxzibit1?',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'OPTIONS': {
+    #         'init_command': 'SET default_storage_engine=INNODB',
+    #     },
+    #     'NAME': 'provident_fund',
+    #     'USER': 'root',
+    #     'PASSWORD': 'collinsxzibit1?',
+    #     'HOST': 'localhost',
+    #     'PORT': '3306',
+    # }
 }
 
 
@@ -190,13 +195,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 
 # SITE URL
-SITE_URL = 'http://127.0.0.1:8000'
+SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 
 
 # CELERY SETTINGS
 
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379'
-CELERY_RESULT_BACKEND = 'django-db'
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'django-db')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER ='json'
@@ -216,12 +221,12 @@ CELERY_BEAT_SHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # EMAIL Related
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST_USER = 'huvisoncollins@gmail.com'  # TODO: Your email
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_HOST_PASSWORD = 'xkagqobjiyykrlej'  # TODO: Give APP Password here
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 465))
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True') == 'True'
 
 
 
@@ -236,7 +241,7 @@ INTERNAL_IPS = [
 ]
 
 
-PAYSTACK_SECRET_KEY = 'sk_test_7bc2565b498e1a4677bc639dc60ed02fe3d62dd4'
+PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
 # EXPRESSPAY_MERCHANT_KEY = 'your_merchant_key'
 # EXPRESSPAY_ENVIRONMENT = 'sandbox'  # Change to 'production' for live transactions
 
@@ -267,6 +272,5 @@ PAYSTACK_SECRET_KEY = 'sk_test_7bc2565b498e1a4677bc639dc60ed02fe3d62dd4'
 #     },
 # }
 
-PAYSTACK_SECRET_KEY = 'sk_test_7bc2565b498e1a4677bc639dc60ed02fe3d62dd4'
-PAYSTACK_PUBLIC_KEY = 'pk_test_d07e3b0e3a2c21e754a416c9b79ad62350794394'
+PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY')
 
