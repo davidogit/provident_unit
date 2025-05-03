@@ -2,6 +2,7 @@ from django.db import models
 from Member.models import Member
 from django.conf import settings
 from MultiScheme.models import Tenant
+from decimal import Decimal
 # Create your models here.
 
 # Model for Loan tracking
@@ -37,6 +38,9 @@ class LoanApplication(models.Model):
         default='PENDING',
         max_length=10
     )
+    application_date = models.DateTimeField(
+        auto_now_add=True
+    )
     approval_date = models.DateTimeField(
         null=True,
         blank=True
@@ -47,7 +51,7 @@ class LoanApplication(models.Model):
         related_name='appproved_loans',
         null=True
     )
-    disbursment_date = models.DateTimeField(
+    disbursement_date = models.DateTimeField(
         null=True,
         blank=True,
         help_text='Date loan was paid to Member.'
@@ -58,7 +62,8 @@ class LoanApplication(models.Model):
     )
     interest_rate = models.DecimalField(
         decimal_places=2,
-        max_digits=5
+        max_digits=5,
+        null=True
     )
     tenure_months = models.PositiveIntegerField(
         help_text='Duration over which loan is to be paid'
@@ -75,23 +80,31 @@ class LoanApplication(models.Model):
     
     def total_interest_flat(self):
         p = self.amount_requested
-        r = 6.5 #To be changed
+        r = self.interest_rate
         t_months = self.tenure_months
         t_years = t_months/12 #convert months to years
 
         return round((p*r*t_years)/100, 2)
+    
+    def loan_processing_fee_flat(self):
+        # 1.5% of loan amount
+        processing_fee = Decimal(self.amount_requested*(1.5/100))
+        return processing_fee
+    
+    def disbursement_amount(self):
+
+        return self.amount_requested - self.loan_processing_fee_flat()
 
     def total_payable_amount_flat(self):
         return round(self.amount_requested + self.total_interest_flat(), 2)
 
     def calculate_monthly_installments_flat(self):
         p = self.amount_requested
-        r = 6.5 #To be changed
+        r = self.interest_rate
         t_months = self.tenure_months
-        t_years = t_months/12 #convert months to years
+        t_years = Decimal(t_months/12) #convert months to years
 
         # Monthly installments using Equated Monthly Installments EMI
-
         total_interest = (p*r*t_years)/100
 
         total_amount_payable = total_interest+p

@@ -7,5 +7,6 @@ class LoanForm(forms.ModelForm):
         fields = (
             'amount_requested',
             'purpose',
-            'tenure_months'
+            'tenure_months',
+            'interest_rate'
         )

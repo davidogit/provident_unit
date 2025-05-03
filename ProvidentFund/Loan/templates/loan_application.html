@@ -1,4 +1,4 @@
-{% extends 'dashboard/base.html' %}
+{% extends 'member_base.html' %}
 
 {% block title %}
 <title>Loan Application</title>
@@ -11,120 +11,137 @@
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
     <div class="container-fluid">
-        <!-- Loan Application Form Card -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header py-3">
-                <h6 class="mb-0 fw-bold">Apply for a Loan</h6>
-            </div>
-            <div class="card-body">
-                <form action="" method="POST" id="loan-form">
-                    {% csrf_token %}
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="amount_requested" class="form-label">Loan Amount</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" class="form-control" id="amount_requested" name="amount_requested" placeholder="Enter amount" min="100" required>
+        <div class="row">
+            <!-- Loan Details Card (Left Side) -->
+            <div class="col-lg-7 mb-4 mb-lg-0">
+                <div class="card shadow-sm h-100" id="loan-details-card" style="display: none;">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">Loan Details</h6>
+                        <span class="badge bg-primary-soft text-primary rounded-pill" id="calculation-status">Preview</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="loading-details" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Calculating loan details...</p>
+                        </div>
+                        
+                        <div id="loan-details-content" style="display: none;">
+                            <div class="row g-4">
+                                <!-- Repayment Summary -->
+                                <div class="col-md-12">
+                                    <div class="card border mb-0">
+                                        <div class="card-body">
+                                            <h5 class="fw-bold mb-3">Repayment Summary</h5>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Loan Amount:</span>
+                                                        <span class="fw-medium" id="summary-amount">₵0.00</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Interest Rate:</span>
+                                                        <span class="fw-medium" id="summary-rate">0%</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Tenure:</span>
+                                                        <span class="fw-medium" id="summary-tenure">0 Months</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Processing Fee:</span>
+                                                        <span class="fw-medium" id="summary-fee">$0.00</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Disbursement:</span>
+                                                        <span class="fw-medium" id="disbursement-amount">₵0.00</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="fw-bold">Total Repayment:</span>
+                                                        <span class="fw-bold" id="summary-total">$0.00</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Monthly Installment -->
+                                <div class="col-md-6">
+                                    <div class="card border bg-success-soft h-100">
+                                        <div class="card-body text-center">
+                                            <h5 class="fw-bold mb-3 text-success">Monthly Installment</h5>
+                                            <div class="display-5 fw-bold text-success mb-2" id="monthly-installment">₵0.00</div>
+                                            <p class="text-success" id="installment-period">per month for 0 months</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Information Alert -->
+                                <div class="col-md-6">
+                                    <div class="alert alert-info h-100 d-flex align-items-center mb-0">
+                                        <i class="bi bi-info-circle me-2 fs-5"></i>
+                                        <div>Your loan application will be reviewed within 24-48 hours.</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Submit Button -->
+                                <div class="col-12">
+                                    <button class="btn btn-primary w-100" type="button" id="submit-btn" style="display: none;">
+                                        <i class="bi bi-send me-2"></i>Submit Loan Application
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label for="tenure_months" class="form-label">Loan Tenure</label>
-                            <select class="form-select" id="tenure_months" name="tenure_months" required>
-                                <option value="">Select tenure period</option>
-                                <option value="1">1 Month</option>
-                                <option value="3">3 Months</option>
-                                <option value="6">6 Months</option>
-                                <option value="12">12 Months</option>
-                                <option value="24">24 Months</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-12">
-                            <label for="purpose" class="form-label">Loan Purpose</label>
-                            <textarea class="form-control" id="purpose" name="purpose" rows="3" placeholder="Briefly describe why you need this loan" required></textarea>
-                        </div>
-                        
-                        <div class="col-12 mt-4">
-                            <button class="btn btn-primary" type="submit" id="submit-btn">
-                                <i class="bi bi-send me-2"></i>Submit Loan Application
-                            </button>
-                        </div>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Loan Details Card -->
-        <div class="card shadow-sm" id="loan-details-card" style="display: none;">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold">Loan Details</h6>
-                <span class="badge bg-primary-soft text-primary rounded-pill" id="calculation-status">Preview</span>
-            </div>
-            <div class="card-body">
-                <div id="loading-details" class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Calculating loan details...</p>
                 </div>
-                
-                <div id="loan-details-content" style="display: none;">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card border mb-3">
-                                <div class="card-body">
-                                    <h5 class="fw-bold mb-3">Repayment Summary</h5>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Loan Amount:</span>
-                                        <span class="fw-medium" id="summary-amount">$0.00</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Interest Rate:</span>
-                                        <span class="fw-medium" id="summary-rate">0%</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Tenure:</span>
-                                        <span class="fw-medium" id="summary-tenure">0 Months</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Processing Fee:</span>
-                                        <span class="fw-medium" id="summary-fee">$0.00</span>
-                                    </div>
-                                    <hr class="my-2">
-                                    <div class="d-flex justify-content-between">
-                                        <span class="fw-bold">Total Repayment:</span>
-                                        <span class="fw-bold" id="summary-total">$0.00</span>
+            </div>
+            
+            <!-- Loan Application Form Card (Right Side) -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header py-3">
+                        <h6 class="mb-0 fw-bold">Apply for a Loan</h6>
+                    </div>
+                    <div class="card-body">
+                        <form action="" method="POST" id="loan-form">
+                            <!-- {% csrf_token %} -->
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="amount_requested" class="form-label">Loan Amount</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₵</span>
+                                        <input type="number" class="form-control" id="amount_requested" name="amount_requested" placeholder="Enter amount" min="100" required>
                                     </div>
                                 </div>
+                                
+                                <div class="col-12">
+                                    <label for="tenure_months" class="form-label">Loan Tenure</label>
+                                    <select class="form-select" id="tenure_months" name="tenure_months" required>
+                                        <option value="">Select tenure period</option>
+                                        <option value="1">1 Month</option>
+                                        <option value="3">3 Months</option>
+                                        <option value="6">6 Months</option>
+                                        <option value="12">12 Months</option>
+                                        <option value="24">24 Months</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <label for="purpose" class="form-label">Loan Purpose</label>
+                                    <textarea class="form-control" id="purpose" name="purpose" rows="5" placeholder="Briefly describe why you need this loan" required></textarea>
+                                </div>
+                                
+                                <!-- Hidden field for interest rate -->
+                                <input type="hidden" id="interest_rate" name="interest_rate" value="">
                             </div>
                             
-                            <div class="alert alert-info d-flex align-items-center">
-                                <i class="bi bi-info-circle me-2 fs-5"></i>
-                                <div>Your loan application will be reviewed within 24-48 hours.</div>
+                            <div class="mt-4 text-center d-lg-none">
+                                <p class="text-muted small">Fill in the details above to see loan calculation</p>
                             </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="card border bg-success-soft mb-3">
-                                <div class="card-body text-center">
-                                    <h5 class="fw-bold mb-3 text-success">Monthly Installment</h5>
-                                    <div class="display-5 fw-bold text-success mb-2" id="monthly-installment">$0.00</div>
-                                    <p class="text-success" id="installment-period">per month for 0 months</p>
-                                </div>
-                            </div>
-                            
-                            <div class="card border">
-                                <div class="card-body">
-                                    <h5 class="fw-bold mb-3">Disbursement Amount</h5>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-muted">You will receive:</span>
-                                        <span class="fs-4 fw-bold" id="disbursement-amount">$0.00</span>
-                                    </div>
-                                    <p class="text-muted small mt-2">(Loan amount minus processing fee)</p>
-                                </div>
-                            </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -207,6 +224,13 @@
         50% { background-color: rgba(255, 243, 205, 0.5); }
         100% { background-color: rgba(255, 243, 205, 0); }
     }
+    
+    /* Responsive adjustments */
+    @media (max-width: 991.98px) {
+        #loan-details-card {
+            margin-top: 1.5rem;
+        }
+    }
 </style>
 
 <script>
@@ -231,10 +255,12 @@
                 $('#loading-details').show();
                 $('#loan-details-content').hide();
                 $('#calculation-status').text('Calculating...');
+                $('#submit-btn').hide(); // Hide submit button when recalculating
                 
                 typingTimer = setTimeout(fetchLoanDetails, doneTypingInterval);
             } else {
                 $('#loan-details-card').hide();
+                $('#submit-btn').hide(); // Hide submit button when inputs are cleared
             }
         });
         
@@ -247,6 +273,7 @@
             if (isNaN(amount) || isNaN(tenure) || amount <= 0 || tenure <= 0) {
                 showToast('Error', 'Please enter valid loan amount and tenure', 'danger');
                 $('#loan-details-card').hide();
+                $('#submit-btn').hide(); // Hide submit button on error
                 return;
             }
             
@@ -265,15 +292,23 @@
                     if (response.status === 'success') {
                         // Update UI with data from backend
                         updateLoanDetailsUI(response.data, tenure);
+                        
+                        // Update hidden interest rate field
+                        $('#interest_rate').val(response.data.interest_rate);
+                        
+                        // Show the submit button after successful calculation
+                        $('#submit-btn').fadeIn();
                     } else {
                         showToast('Error', response.message || 'Failed to calculate loan details', 'danger');
                         $('#loan-details-card').hide();
+                        $('#submit-btn').hide(); // Hide submit button on error
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error fetching loan details:', error);
                     showToast('Error', 'Failed to fetch loan details. Please try again.', 'danger');
                     $('#loan-details-card').hide();
+                    $('#submit-btn').hide(); // Hide submit button on error
                 }
             });
         }
@@ -285,12 +320,12 @@
             $('#summary-rate').text(data.interest_rate + '%');
             $('#summary-tenure').text(tenure + (tenure === 1 ? ' Month' : ' Months'));
             $('#summary-fee').text(data.formatted_processing_fee);
-            $('#summary-total').text(data.formatted_total_repayment);
+            $('#summary-total').text('₵ ' + data.formatted_total_repayment);
             
-            $('#monthly-installment').text(data.formatted_monthly_installment);
+            $('#monthly-installment').text('₵ ' + data.formatted_monthly_installment);
             $('#installment-period').text('per month for ' + tenure + (tenure === 1 ? ' month' : ' months'));
             
-            $('#disbursement-amount').text(data.formatted_disbursement_amount);
+            $('#disbursement-amount').text('₵ ' + data.formatted_disbursement_amount);
             
             // Show the content and hide loading
             $('#loading-details').hide();
@@ -304,14 +339,8 @@
             }, 1500);
         }
         
-        // Submit loan application
-        $('#loan-form').on('submit', function(e){
-            e.preventDefault();
-            var form = $(this);
-            var url = form.attr('action');
-            var data = form.serialize();
-            var tenantId = '{{ request.tenant.id }}';
-            
+        // Submit loan application when the button is clicked
+        $('#submit-btn').on('click', function() {
             // Validate form
             if (!$('#amount_requested').val() || !$('#tenure_months').val() || !$('#purpose').val().trim()) {
                 showToast('Error', 'Please fill in all required fields', 'danger');
@@ -319,16 +348,22 @@
             }
             
             // Show loading state
-            const submitBtn = form.find('button[type="submit"]');
+            const submitBtn = $(this);
             const originalText = submitBtn.html();
             submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
             submitBtn.prop('disabled', true);
             
+            var tenantId = '{{ request.tenant.id }}';
+            var staff_id = '{{ request.user.member.staff_id }}';
+            
+            // Get form data (includes the interest_rate from hidden field)
+            var formData = $('#loan-form').serialize();
+            
             // AJAX request to submit loan application
             $.ajax({
-                url: url || `/${tenantId}/loans/apply/`,
+                url: `/${tenantId}/loans/apply/${staff_id}/`,
                 type: 'POST',
-                data: data,
+                data: formData,
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
@@ -337,8 +372,9 @@
                         showToast('Success', response.message || 'Your loan application has been submitted successfully!', 'success');
                         
                         // Reset form
-                        form[0].reset();
+                        $('#loan-form')[0].reset();
                         $('#loan-details-card').hide();
+                        $('#submit-btn').hide();
                         
                         // Redirect if needed
                         if (response.redirect_url) {
@@ -347,6 +383,7 @@
                             }, 1500);
                         }
                     } else {
+                        console.log(response.message)
                         showToast('Error', response.message || 'Failed to submit loan application', 'danger');
                     }
                     
@@ -355,7 +392,7 @@
                     submitBtn.prop('disabled', false);
                 },
                 error: function(xhr, status, error){
-                    console.error('Error submitting loan application:', error);
+                    console.log('Error submitting loan application:', error);
                     showToast('Error', 'An error occurred while submitting your application. Please try again.', 'danger');
                     submitBtn.html(originalText);
                     submitBtn.prop('disabled', false);
