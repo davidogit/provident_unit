@@ -13,7 +13,7 @@ from Member.decorators import unauthenticated_user,tenant_required,tenant_login_
 from .forms import UserForm
 import logging
 from django.shortcuts import redirect
-
+from django.http import JsonResponse
 from MultiScheme.models import Tenant
 
 
@@ -76,35 +76,74 @@ def assign_roles(request, tenant_id):
     })
 
 # View to add a new user
+# @tenant_login_required
+# @tenant_required
+# @role_required(role=['Admin'])
+# def add_user(request, tenant_id):
+#     tenant = request.tenant  # Explicitly fetch tenant
+    
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         email = request.POST.get('email')
+#         password = request.POST.get('password1')
+
+#         # Debug: Print received data
+#         print(f"Creating user: {username}, {email}, Tenant: {tenant_id}")
+
+#         # Validate data
+#         if not (username and email and password):
+#             messages.error(request, 'All fields are required!')
+#             return render(request, 'admin_panel/add_user.html')
+
+#         # Check if user exists
+#         if User.objects.filter(username=username).exists():
+#             messages.error(request, 'Username already taken!')
+#             return render(request, 'admin_panel/add_user.html')
+
+#         # if User.objects.filter(email=email).exists():
+#         #     messages.error(request, 'Email already in use!')
+#         #     return render(request, 'admin_panel/add_user.html')
+
+#         try:
+#             # Create and save the user
+#             user = User.objects.create_user(
+#                 username=username,
+#                 email=email,
+#                 password=password,
+#                 tenant=tenant  # Ensure tenant is assigned
+#             )
+            
+#             # Debug: Verify user was saved
+#             print(f"User created: {user.username}, ID: {user.id}, Tenant: {user.tenant_id}")
+            
+#             messages.success(request, f'User {username} created successfully!')
+#             return redirect('assign_roles', tenant_id=tenant_id)
+        
+#         except Exception as e:
+#             # Debug: Print any errors
+#             print(f"Error creating user: {str(e)}")
+#             messages.error(request, f'Error: {str(e)}')
+    
+#     return render(request, 'admin_panel/add_user.html')
+
 @tenant_login_required
 @tenant_required
 @role_required(role=['Admin'])
 def add_user(request, tenant_id):
-    # Retrieve the tenant associated with the request
     tenant = request.tenant
 
-    # Check if the request method is POST (indicating form submission)
-    if request.method == 'POST':
-        # Instantiate the UserForm with the POST data
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         form = UserForm(request.POST)
-        # Set the tenant for the form instance
-        form.instance.tenant = tenant
-
-        # Check if the form data is valid
         if form.is_valid():
-            # Save the new user to the database
-            form.save()
-            # Print form errors for debugging (typically, this should be removed in production)
-            print(form.errors)
-            # Redirect to the 'admin_roles' view with the tenant_id as a parameter
-            return redirect('assign_roles', tenant_id=tenant_id)
-    else:
-        # Instantiate an empty UserForm for GET requests (form display)
-        form = UserForm()
+            user = form.save(commit=False)
+            user.tenant = tenant
+            user.save()
+            return JsonResponse({'success': True, 'message': 'User created successfully!'})
+        else:
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
-    # Render the 'add_user' template with the form context
-    return render(request, 'admin_panel/add_user.html', {'form': form})
-
+    form = UserForm()
+    return render(request, 'admin_panel/add_user.html', {'form': form, 'tenant_id': tenant_id})
 
 # View to manage users
 @tenant_login_required

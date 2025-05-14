@@ -1,0 +1,317 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Members List</title>
+{% endblock %}
+
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-people-fill me-2"></i>Members List</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+  <div class="card shadow-sm border-0 mb-4">
+    <!-- Card Header with improved layout -->
+    <div class="card-header py-3 bg-white">
+      <div class="row align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-table text-primary me-2"></i>
+            <h6 class="card-title mb-0 fw-bold">All Members</h6>
+            <span class="badge bg-primary rounded-pill ms-2">{{ members|length }}</span>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0">
+              <i class="bi bi-search text-muted"></i>
+            </span>
+            <input
+              type="text"
+              id="searchInput"
+              class="form-control border-start-0 ps-0"
+              placeholder="Search by name, email, department..."
+              aria-label="Search members"
+            />
+            <button
+              class="btn btn-primary"
+              type="button"
+              id="searchButton"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sync button moved outside the table for better UX -->
+    <div class="card-body border-bottom pb-0">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <form method="post" action="{% url 'run_member_api' tenant_id=request.tenant.id %}" id="syncForm">
+            {% csrf_token %}
+            <button class="btn btn-outline-primary d-flex align-items-center" type="submit" id="syncButton">
+              <i class="bi bi-arrow-repeat me-2"></i>
+              <span>Sync Members</span>
+            </button>
+          </form>
+        </div>
+        <div class="d-flex align-items-center">
+          <div class="d-flex align-items-center me-3">
+            <span class="badge bg-success me-1"></span>
+            <small class="text-muted">Approved</small>
+          </div>
+          <div class="d-flex align-items-center me-3">
+            <span class="badge bg-warning me-1"></span>
+            <small class="text-muted">Pending</small>
+          </div>
+          <div class="d-flex align-items-center">
+            <span class="badge bg-secondary me-1"></span>
+            <small class="text-muted">Other</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Table with improved styling -->
+    <div class="card-body pt-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle" id="membersTable">
+          <thead class="table-light">
+            <tr>
+              <th class="border-0">Staff ID</th>
+              <th class="border-0">Full Name</th>
+              <th class="border-0">Email</th>
+              <th class="border-0">Department</th>
+              <th class="border-0">Job Title</th>
+              <th class="border-0">Employment Date</th>
+              <th class="border-0">Status</th>
+              <th class="border-0">Investment Scheme</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for member in members %}
+            <tr>
+              <td><span class="fw-medium">{{ member.staff_number }}</span></td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="avatar-circle bg-light text-primary me-2">
+                    {{ member.first_name|slice:":1" }}{{ member.last_name|slice:":1" }}
+                  </div>
+                  <div>{{ member.first_name }} {{ member.last_name }}</div>
+                </div>
+              </td>
+              <td>
+                {% if member.email %}
+                <a href="mailto:{{ member.email }}" class="text-decoration-none">{{ member.email }}</a>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>{{ member.department|default:"—" }}</td>
+              <td>{{ member.job_title|default:"—" }}</td>
+              <td>{{ member.employment_date|date:"M d, Y"|default:"—" }}</td>
+              <td>
+                {% if member.status == "Approved" %}
+                <span class="badge bg-success-subtle text-success px-2 py-1">Approved</span>
+                {% elif member.status == "Pending" %}
+                <span class="badge bg-warning-subtle text-warning px-2 py-1">Pending</span>
+                {% else %}
+                <span class="badge bg-secondary-subtle text-secondary px-2 py-1">{{ member.status|default:"Unknown" }}</span>
+                {% endif %}
+              </td>
+              <td>{{ member.fund_type|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center py-5">
+                <div class="d-flex flex-column align-items-center">
+                  <i class="bi bi-people text-muted fs-1 mb-3"></i>
+                  <h5 class="mb-1">No Members Found</h5>
+                  <p class="text-muted mb-3">There are no members in the system yet.</p>
+                  <form method="post" action="{% url 'run_member_api' tenant_id=request.tenant.id %}">
+                    {% csrf_token %}
+                    <button class="btn btn-primary" type="submit">
+                      <i class="bi bi-arrow-repeat me-2"></i>Sync Members from API
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>          
+        </table>
+      </div>
+      
+      <!-- Pagination (optional) -->
+      {% if members|length > 0 %}
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted small">
+          Showing <span class="fw-medium">{{ members|length }}</span> members
+        </div>
+        <nav aria-label="Page navigation">
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item disabled">
+              <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+            </li>
+            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+            <li class="page-item"><a class="page-link" href="#">2</a></li>
+            <li class="page-item"><a class="page-link" href="#">3</a></li>
+            <li class="page-item">
+              <a class="page-link" href="#">Next</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Custom styles for this page */
+  .avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    font-size: 0.8rem;
+  }
+  
+  /* Improved badge styling */
+  .badge {
+    font-weight: 500;
+  }
+  
+  /* Status badge colors */
+  .bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1);
+  }
+  
+  .bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1);
+  }
+  
+  .bg-secondary-subtle {
+    background-color: rgba(108, 117, 125, 0.1);
+  }
+  
+  /* Legend badges */
+  .d-flex .badge {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border-radius: 50%;
+  }
+</style>
+
+{% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("searchInput");
+    const searchButton = document.getElementById("searchButton");
+    const table = document.getElementById("membersTable");
+    const rows = table
+      .getElementsByTagName("tbody")[0]
+      .getElementsByTagName("tr");
+    const syncButton = document.getElementById("syncButton");
+    const syncForm = document.getElementById("syncForm");
+
+    // Search functionality
+    function filterTable() {
+      const searchText = searchInput.value.toLowerCase();
+      let matchCount = 0;
+
+      for (let row of rows) {
+        if (row.cells.length === 1 && row.cells[0].getAttribute("colspan")) {
+          // Skip the "No members found" row
+          continue;
+        }
+        
+        const cells = row.getElementsByTagName("td");
+        let found = false;
+
+        for (let cell of cells) {
+          if (cell.textContent.toLowerCase().includes(searchText)) {
+            found = true;
+            break;
+          }
+        }
+
+        if (found) {
+          row.style.display = "";
+          matchCount++;
+        } else {
+          row.style.display = "none";
+        }
+      }
+      
+      // Show "no results" message if no matches
+      if (matchCount === 0 && rows.length > 0 && searchText !== "") {
+        // Check if we already have a no results row
+        let noResultsRow = document.getElementById("noResultsRow");
+        
+        if (!noResultsRow) {
+          // Create a "no results" row
+          noResultsRow = document.createElement("tr");
+          noResultsRow.id = "noResultsRow";
+          noResultsRow.innerHTML = `
+            <td colspan="8" class="text-center py-4">
+              <div class="d-flex flex-column align-items-center">
+                <i class="bi bi-search text-muted fs-1 mb-3"></i>
+                <h5 class="mb-1">No Results Found</h5>
+                <p class="text-muted">No members match your search criteria.</p>
+              </div>
+            </td>
+          `;
+          table.getElementsByTagName("tbody")[0].appendChild(noResultsRow);
+        } else {
+          noResultsRow.style.display = "";
+        }
+      } else {
+        // Hide the "no results" row if it exists
+        const noResultsRow = document.getElementById("noResultsRow");
+        if (noResultsRow) {
+          noResultsRow.style.display = "none";
+        }
+      }
+    }
+
+    // Add loading state to sync button
+    if (syncForm) {
+      syncForm.addEventListener("submit", function() {
+        syncButton.disabled = true;
+        syncButton.innerHTML = `
+          <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <span>Syncing...</span>
+        `;
+      });
+    }
+
+    // Event listeners
+    searchButton.addEventListener("click", filterTable);
+    searchInput.addEventListener("keyup", function(event) {
+      filterTable();
+      if (event.key === "Enter") {
+        event.preventDefault();
+      }
+    });
+    
+    // Initialize search if URL has search parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    if (searchParam) {
+      searchInput.value = searchParam;
+      filterTable();
+    }
+  });
+</script>
+{% endblock %} 
+
+{% endblock %}

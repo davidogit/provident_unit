@@ -13,4 +13,6 @@ urlpatterns =[
 
     # Member Ajax search URL
     path('<str:scheme_name>/members/search/', views.AjaxStaffSearchView.as_view(), name='member_search'),
+    path('run-member-api/', views.run_member_api, name='run_member_api'),
+
 ]

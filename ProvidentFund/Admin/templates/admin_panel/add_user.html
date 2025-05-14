@@ -16,8 +16,21 @@
                             <!-- Add User Form -->
                             <div class="p-3 p-lg-4">
                                 <h4 class="mb-4 fw-semibold border-start border-4 border-primary ps-3">User Information</h4>
-                                <form id="addUserForm" method="POST">
+                                <form id="addUserForm" method="POST" data-redirect-url="{% url 'assign_roles' tenant_id=tenant_id %}">
                                     {% csrf_token %}
+
+                                    <!-- Display Django messages -->
+                                    {% if messages %}
+                                    <div class="mt-3">
+                                        {% for message in messages %}
+                                        <div class="alert alert-{{ message.tags }}">
+                                            <i class="ri-error-warning-line me-2"></i>
+                                            <strong>{{ message.tags|title }}:</strong> {{ message }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
                                     <div class="mb-4">
                                         <label for="username" class="form-label fw-medium">Username</label>
                                         <div class="input-group">
@@ -28,6 +41,384 @@
                                         </div>
                                         <small class="text-muted">Username must be unique and will be used for login</small>
                                     </div>
+
+                                    <div class="mb-4">
+                                        <label for="email" class="form-label fw-medium">Email Address</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-mail-line"></i>
+                                            </span>
+                                            <input type="email" class="form-control form-control-lg" id="email" name="email" placeholder="Enter email address" required>
+                                        </div>
+                                        <small class="text-muted">A valid email address is required for account verification</small>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label for="password" class="form-label fw-medium">Password</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-lock-line"></i>
+                                            </span>
+                                            <input type="password" class="form-control form-control-lg" id="password" name="password1" placeholder="Enter password" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                                <i class="ri-eye-line"></i>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">Password must be at least 8 characters long</small>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label for="confirm_password" class="form-label fw-medium">Confirm Password</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-lock-password-line"></i>
+                                            </span>
+                                            <input type="password" class="form-control form-control-lg" id="confirm_password" name="password2" placeholder="Confirm password" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                                <i class="ri-eye-line"></i>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">Re-enter the password to confirm</small>
+                                    </div>
+
+                                    <div class="d-grid gap-2 mt-4">
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="ri-user-add-line me-2"></i>Create User
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div id="formErrors" class="alert alert-danger mt-4 d-none">
+                                    <i class="ri-error-warning-line me-2"></i>
+                                    <strong>Error:</strong> <span id="errorContent"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <!-- User Guidelines -->
+                            <div class="p-3 p-lg-4">
+                                <h4 class="mb-4 fw-semibold border-start border-4 border-primary ps-3">Guidelines</h4>
+                                <div class="bg-light p-4 rounded-3 mb-4">
+                                    <h5 class="fw-bold mb-3">
+                                        <i class="ri-information-line me-2 text-primary"></i>Important Information
+                                    </h5>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Username:</strong> Must be unique and easy to remember
+                                        </li>
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Email:</strong> Must be valid and accessible
+                                        </li>
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Password:</strong> Should be at least 8 characters with a mix of letters, numbers, and symbols
+                                        </li>
+                                    </ul>
+                                    
+                                    <div class="alert alert-info mt-4 mb-0">
+                                        <i class="ri-lightbulb-line me-2"></i>
+                                        <strong>Note:</strong> After creating a user, you'll need to assign appropriate roles from the Role Assignment page.
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-light p-4 rounded-3">
+                                    <h5 class="fw-bold mb-3">
+                                        <i class="ri-shield-check-line me-2 text-primary"></i>Next Steps
+                                    </h5>
+                                    <p>After creating a user, you can:</p>
+                                    <ol class="ps-3">
+                                        <li class="mb-2">Assign appropriate roles to the user</li>
+                                        <li class="mb-2">Configure user permissions</li>
+                                        <li class="mb-2">Send welcome email with login instructions</li>
+                                    </ol>
+                                    <a href="{% url 'assign_roles' tenant_id=request.tenant.id %}" class="btn btn-outline-primary mt-3">
+                                        <i class="ri-user-settings-line me-2"></i>Go to Role Assignment
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Recently Added Users -->
+            <!-- Unchanged content -->
+        </div>
+    </div>
+</div>
+
+<!-- Toasts and Scripts -->
+ <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <i class="ri-check-line me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            User created successfully!
+        </div>
+    </div>
+    
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <i class="ri-error-warning-line me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            An error occurred while creating the user.
+        </div>
+    </div>
+</div>
+<!-- Unchanged content up to script -->
+ <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    
+    document.addEventListener('DOMContentLoaded', function () {
+        // Password visibility toggles (unchanged)
+
+        const form = document.getElementById('addUserForm');
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+
+            const response = await fetch("", {
+                method: "POST",
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                Swal.fire({
+                    title: 'User Created!',
+                    html: `User <strong>${formData.get('username')}</strong> has been created successfully.`,
+                    icon: 'success',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'Assign Role',
+                    showCancelButton: true,
+                    cancelButtonText: 'Close'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const tenantId = form.dataset.tenantId;
+                        window.location.href = form.dataset.redirectUrl;
+                    } else {
+                        const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+                        successToast.show();
+                        form.reset();
+                    }
+                });
+            } else {
+                const errorData = await response.json();
+                let errorHtml = '';
+                for (const field in errorData.errors) {
+                    errorHtml += `${field}: ${errorData.errors[field].join(', ')}<br>`;
+                }
+                const errorBox = document.getElementById('formErrors');
+                document.getElementById('errorContent').innerHTML = errorHtml;
+                errorBox.classList.remove('d-none');
+            }
+        });
+    });
+</script>
+<style>
+    /* Custom styles for the add user page */
+    .card {
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .form-select, .form-control, .input-group-text {
+        border-radius: 0.5rem;
+    }
+    
+    .input-group > .form-select,
+    .input-group > .form-control {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    
+    .input-group-text {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1.5rem;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.75em;
+    }
+    
+    /* Dark mode adjustments */
+    body.dark-mode .card {
+        background-color: var(--dark-secondary);
+    }
+    
+    body.dark-mode .card-header, 
+    body.dark-mode .card-footer {
+        background-color: var(--dark-primary) !important;
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .bg-light {
+        background-color: var(--dark-hover) !important;
+    }
+    
+    body.dark-mode .text-muted {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode .table-light {
+        background-color: var(--dark-primary);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .table {
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .table-hover tbody tr:hover {
+        background-color: transparent; /* Remove hover background change */
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .table td,
+    body.dark-mode .table th {
+        border-color: var(--dark-border);
+        border-top: none;
+        border-bottom: 1px solid var(--dark-border);
+    }
+
+    body.dark-mode .table thead th {
+        border-bottom: 1px solid var(--dark-border);
+    }
+
+    /* Remove horizontal lines between rows */
+    body.dark-mode .table tbody tr {
+        border: none;
+    }
+
+    body.dark-mode .table tbody td {
+        border-top: none;
+    }
+    
+    body.dark-mode .list-group-item.bg-light {
+        background-color: var(--dark-hover) !important;
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .form-select,
+    body.dark-mode .form-control,
+    body.dark-mode .input-group-text {
+        background-color: var(--dark-hover);
+        border-color: var(--dark-border);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .form-select option {
+        background-color: var(--dark-secondary);
+        color: var(--dark-text);
+    }
+    
+    body.dark-mode .alert-info {
+        background-color: rgba(13, 202, 240, 0.15);
+        border-color: rgba(13, 202, 240, 0.4);
+        color: #8ed8e6;
+    }
+    
+    body.dark-mode .btn-outline-primary {
+        color: #6ea8fe;
+        border-color: #6ea8fe;
+    }
+    
+    body.dark-mode .btn-outline-primary:hover {
+        background-color: #0d6efd;
+        color: #fff;
+    }
+    
+    body.dark-mode .btn-outline-danger {
+        color: #ea868f;
+        border-color: #ea868f;
+    }
+    
+    body.dark-mode .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: #fff;
+    }
+</style>
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+{% comment %} {% extends 'admin_panel/base_admin.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h2 class="card-title mb-0 text-center fw-bold">
+                        <i class="ri-user-add-line me-2 text-primary"></i>Add New User
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-7">
+                            <!-- Add User Form -->
+                            <div class="p-3 p-lg-4">
+                                <h4 class="mb-4 fw-semibold border-start border-4 border-primary ps-3">User Information</h4>
+                                <form id='addUserForm' method="POST">
+                                    {% csrf_token %}
+                                    
+                                    <!-- Display Django messages -->
+                                    {% if messages %}
+                                    <div class="alert alert-{{ message.tags }} mt-4">
+                                        {% for message in messages %}
+                                        <i class="ri-error-warning-line me-2"></i>
+                                        <strong>{{ message.tags|title }}:</strong> {{ message }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                
+                                    <!-- Rest of your form fields (unchanged) -->
+                                    <div class="mb-4">
+                                        <label for="username" class="form-label fw-medium">Username</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-user-line"></i>
+                                            </span>
+                                            <input type="text" class="form-control form-control-lg" id="username" name="username" placeholder="Enter username" required>
+                                        </div>
+                                        <small class="text-muted">Username must be unique and will be used for login</small>
+                                    </div>
+                                    <!-- ... (other fields remain the same) ... -->
+                                
                                     
                                     <div class="mb-4">
                                         <label for="email" class="form-label fw-medium">Email Address</label>
@@ -562,4 +953,4 @@
         color: #fff;
     }
 </style>
-{% endblock %}
+{% endblock %} {% endcomment %}

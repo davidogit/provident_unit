@@ -29,6 +29,7 @@ from Fund.tasks import calculate_staff_contribution
 from Fund.generate_invoice import generate_short_alpha_numeric_id,generate_purchase_invoice_number
 from Admin.models import User
 import openpyxl
+from openpyxl import load_workbook
 from django.db import transaction
 logger = logging.getLogger(__name__)
 # Importing custom decorators
@@ -1926,138 +1927,243 @@ class ApproveExitedMembers(TemplateView):
         return context
 
 
-# Create an Exception to be called when theres Missing IDs in member scheme ID list when uploading members
-class MissingSchemeIdError(Exception):
-    def __init__(self, missing_ids, message = 'Scheme with ID(s) ', *args):
-        self.missing_ids = missing_ids
-        self.message = f'{message}: {missing_ids}'
+
+class MissingSchemeCodeError(Exception):
+    def __init__(self, missing_codes):
+        self.message = f"Invalid scheme code(s): {', '.join(map(str, missing_codes))}"
         super().__init__(self.message)
 
-# MASS MEMBER UPLOAD
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Super User']), name='dispatch')
-class MassMemberUpload(CreateView ):
-    model= StaffAPI
-    fields =('__all__')
+class MassMemberUpload(CreateView):
+    model = StaffAPI
+    fields = '__all__'
     template_name = 'dashboard/mass_enroll.html'
-    
+
     def post(self, request, *args, **kwargs):
-        print('There was a post request to this view')
-        if request.FILES["excel_sheet"]:
-            tenant = request.tenant
-            excel_file = request.FILES["excel_sheet"]
-            # Try creating users
+        if not request.FILES.get("excel_sheet"):
+            return JsonResponse({'status': 'error', 'message': 'No file uploaded'})
+
+        tenant = request.tenant
+        excel_file = request.FILES["excel_sheet"]
+
+        try:
+            wb = load_workbook(excel_file, read_only=True, data_only=True)
+            sheet = wb.active
+        except Exception:
+            return JsonResponse({'status': 'error', 'message': 'Unsupported file format'})
+
+        all_members = []
+        member_scheme_codes = []
+        error_message = ''
+
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            if all(cell in (None, '') for cell in row):
+                continue
+
             try:
-                # Secutity check on file before processing
-                try:
-                    wb = openpyxl.load_workbook(excel_file,read_only=True,data_only=True) #load file
-                    sheet = wb.active #read file
-                except Exception:
-                    return JsonResponse({
-                        'status':'error',
-                        'message':'Unsuported File Format'
-                    })
+                staff_number, first_name, last_name, scheme_code, contributions, actual_amount, subscription_date = row
 
-                # scheme list
-                member_scheme_ids = []
-                # Members list
-                all_members=[]
-                # Accumulate error messages when assigning schemes
-                error_message = ''
+                # Convert scheme codes to list of strings
+                if isinstance(scheme_code, str):
+                    scheme_codes = [s.strip() for s in scheme_code.split(',')]
+                else:
+                    scheme_codes = [str(scheme_code).strip()]
 
-                for row in sheet.iter_rows(min_row=2,values_only=True):
-                    if all(cell in (None,'') for cell in row):
-                        continue #skip empty rows
-                    else:   
-                        try:
-                            # Get data from rows --> fields
-                            staff_number,first_name,last_name,scheme_id,contributions,actual_amount,subscription_date = row
-                            # Convert scheme ids to a list
-                            if isinstance(scheme_id,str):
-                                scheme_id = scheme_id.split(',')
-                            elif isinstance(scheme_id,int):
-                                scheme_id = [scheme_id]
-                            else:
-                                return JsonResponse({
-                                    'status':'error',
-                                    'message':f'Invalid data type for scheme id for staff: {staff_number}'
-                                })
+                member_instance = StaffAPI(
+                    tenant=tenant,
+                    staff_number=staff_number,
+                    first_name=first_name,
+                    last_name=last_name,
+                    contributions=contributions,
+                    actual_amount=actual_amount,
+                    subscription_date=subscription_date
+                )
 
-                            # create member instance
-                            member_instance = StaffAPI(
-                                tenant=tenant,
-                                staff_number=staff_number,
-                                first_name= first_name,
-                                last_name=last_name,
-                                contributions=contributions,
-                                actual_amount=actual_amount,
-                                subscription_date=subscription_date
-                            )
-                            # Add member to list
-                            all_members.append(member_instance)
-                            # Get all scheme id's
-                            member_scheme_ids.append(scheme_id if scheme_id else []) #split scheme ids
+                all_members.append(member_instance)
+                member_scheme_codes.append(scheme_codes)
 
-                        except Exception as e:
-                            return JsonResponse({
-                                'status':'error',
-                                'message':f'Error processing rows{row}: {str(e)}\n'
-                            })
-                try:
-                    with transaction.atomic():
-                        # Save members without schemes
-                        created_members = StaffAPI.objects.bulk_create(all_members)
-
-                        # Refresh created_members after bulk create to assign pks to them
-                        created_members = StaffAPI.objects.filter(staff_number__in=[member.staff_number for member in all_members])
-
-                        # Now set schemes on all members
-                        for member,scheme_id in zip(created_members,member_scheme_ids):
-                            # Fetch related schemes
-                            try:
-                                # Fetch related schemes
-                                schemes = InvestmentScheme.objects.filter(
-                                    tenant=tenant, id__in=scheme_id,
-                                    approved=True
-                                )
-
-                                # Assign scheme to member
-                                member.investment_scheme.add(*schemes) #use list upacking to pass objects one by one
-
-                                # Catch missing schemes in scheme_id provided
-                                if len(scheme_id) != len(schemes):
-                                    missing_ids = set(scheme_id)- set(schemes.values_list('id', flat=True))
-                                    print(missing_ids)
-                                    raise MissingSchemeIdError(missing_ids) #raise custom error
-                            except MissingSchemeIdError as e:
-                                error_message += f'{e.message} not found for: {member.last_name} {member.first_name} || \n'
-                                continue
-                            except Exception as e:
-                                print(e)
-                                error_message += f'{e} for: {member.last_name} {member.first_name} || \n'
-                except Exception as e:
-                    return JsonResponse({
-                        'status':'error',
-                        'message':f'An error occured: {e}'
-                    })
-                
-                return JsonResponse({
-                    'status':'success',
-                    'message': f'Members uploaded successfully\n {"" if error_message=="Invalid scheme ID for: " else error_message}'
-                })
-            
             except Exception as e:
-                return JsonResponse({
-                    'status':'error',
-                    'message':f'An error occured: {str(e)}'
-                })
+                error_message += f"Error processing row {row}: {str(e)}\n"
+
+        try:
+            with transaction.atomic():
+                created_members = StaffAPI.objects.bulk_create(all_members)
+                created_members = StaffAPI.objects.filter(
+                    staff_number__in=[member.staff_number for member in all_members]
+                )
+
+                for member, scheme_codes in zip(created_members, member_scheme_codes):
+                    try:
+                        schemes = InvestmentScheme.objects.filter(
+                            tenant=tenant,
+                            code__in=scheme_codes,
+                            approved=True
+                        )
+
+                        member.investment_scheme.add(*schemes)
+
+                        # Check if all codes matched
+                        found_codes = set(schemes.values_list('code', flat=True))
+                        missing = set(scheme_codes) - found_codes
+                        if missing:
+                            raise MissingSchemeCodeError(missing)
+
+                    except MissingSchemeCodeError as e:
+                        error_message += f"{e.message} for {member.first_name} {member.last_name}\n"
+                        continue
+                    except Exception as e:
+                        error_message += f"Unexpected error for {member.first_name} {member.last_name}: {e}\n"
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'An error occurred: {e}'})
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'{len(all_members)} member(s) created, 0 updated. Issues: {error_message or "None"}'
+        })
+
+                
+                # Check if staff already exists
+
+
+
+
+
+
+# Create an Exception to be called when theres Missing IDs in member scheme ID list when uploading members
+# class MissingSchemeIdError(Exception):
+#     def __init__(self, missing_ids, message = 'Scheme with ID(s) ', *args):
+#         self.missing_ids = missing_ids
+#         self.message = f'{message}: {missing_ids}'
+#         super().__init__(self.message)
+
+# # MASS MEMBER UPLOAD
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['Super User']), name='dispatch')
+# class MassMemberUpload(CreateView ):
+#     model= StaffAPI
+#     fields =('__all__')
+#     template_name = 'dashboard/mass_enroll.html'
+    
+#     def post(self, request, *args, **kwargs):
+#         print('There was a post request to this view')
+#         if request.FILES["excel_sheet"]:
+#             tenant = request.tenant
+#             excel_file = request.FILES["excel_sheet"]
+#             # Try creating users
+#             try:
+#                 # Secutity check on file before processing
+#                 try:
+#                     wb = openpyxl.load_workbook(excel_file,read_only=True,data_only=True) #load file
+#                     sheet = wb.active #read file
+#                 except Exception:
+#                     return JsonResponse({
+#                         'status':'error',
+#                         'message':'Unsuported File Format'
+#                     })
+
+#                 # scheme list
+#                 member_scheme_ids = []
+#                 # Members list
+#                 all_members=[]
+#                 # Accumulate error messages when assigning schemes
+#                 error_message = ''
+
+#                 for row in sheet.iter_rows(min_row=2,values_only=True):
+#                     if all(cell in (None,'') for cell in row):
+#                         continue #skip empty rows
+#                     else:   
+#                         try:
+#                             # Get data from rows --> fields
+#                             staff_number,first_name,last_name,scheme_id,contributions,actual_amount,subscription_date = row
+#                             # Convert scheme ids to a list
+#                             if isinstance(scheme_id,str):
+#                                 scheme_id = scheme_id.split(',')
+#                             elif isinstance(scheme_id,int):
+#                                 scheme_id = [scheme_id]
+#                             else:
+#                                 return JsonResponse({
+#                                     'status':'error',
+#                                     'message':f'Invalid data type for scheme id for staff: {staff_number}'
+#                                 })
+
+#                             # create member instance
+#                             member_instance = StaffAPI(
+#                                 tenant=tenant,
+#                                 staff_number=staff_number,
+#                                 first_name= first_name,
+#                                 last_name=last_name,
+#                                 contributions=contributions,
+#                                 actual_amount=actual_amount,
+#                                 subscription_date=subscription_date
+#                             )
+#                             # Add member to list
+#                             all_members.append(member_instance)
+#                             # Get all scheme id's
+#                             member_scheme_ids.append(scheme_id if scheme_id else []) #split scheme ids
+
+#                         except Exception as e:
+#                             return JsonResponse({
+#                                 'status':'error',
+#                                 'message':f'Error processing rows{row}: {str(e)}\n'
+#                             })
+#                 try:
+#                     with transaction.atomic():
+#                         # Save members without schemes
+#                         created_members = StaffAPI.objects.bulk_create(all_members)
+
+#                         # Refresh created_members after bulk create to assign pks to them
+#                         created_members = StaffAPI.objects.filter(staff_number__in=[member.staff_number for member in all_members])
+
+#                         # Now set schemes on all members
+#                         for member,scheme_id in zip(created_members,member_scheme_ids):
+#                             # Fetch related schemes
+#                             try:
+#                                 # Fetch related schemes
+#                                 schemes = InvestmentScheme.objects.filter(
+#                                     tenant=tenant, id__in=scheme_id,
+#                                     approved=True
+#                                 )
+
+#                                 # Assign scheme to member
+#                                 member.investment_scheme.add(*schemes) #use list upacking to pass objects one by one
+
+#                                 # Catch missing schemes in scheme_id provided
+#                                 if len(scheme_id) != len(schemes):
+#                                     missing_ids = set(scheme_id)- set(schemes.values_list('id', flat=True))
+#                                     print(missing_ids)
+#                                     raise MissingSchemeIdError(missing_ids) #raise custom error
+#                             except MissingSchemeIdError as e:
+#                                 error_message += f'{e.message} not found for: {member.last_name} {member.first_name} || \n'
+#                                 continue
+#                             except Exception as e:
+#                                 print(e)
+#                                 error_message += f'{e} for: {member.last_name} {member.first_name} || \n'
+#                 except Exception as e:
+#                     return JsonResponse({
+#                         'status':'error',
+#                         'message':f'An error occured: {e}'
+#                     })
+                
+#                 return JsonResponse({
+#                     'status':'success',
+#                     'message': f'Members uploaded successfully\n {"" if error_message=="Invalid scheme ID for: " else error_message}'
+#                 })
             
-        else:
-            return JsonResponse({
-                'status':'error',
-                'message':'Couldnt Find File'
-            })
+#             except Exception as e:
+#                 return JsonResponse({
+#                     'status':'error',
+#                     'message':f'An error occured: {str(e)}'
+#                 })
+            
+#         else:
+#             return JsonResponse({
+#                 'status':'error',
+#                 'message':'Couldnt Find File'
+#             })
 
 
 # General Payout View
