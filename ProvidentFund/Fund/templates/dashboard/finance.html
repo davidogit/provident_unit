@@ -1,13 +1,10 @@
-{% extends 'dashboard/base.html' %}
-
-{% load number_filter %}
-
-{% block title %}
-  <title>Dashboard | Financial Overview</title>
-  <meta name="description" content="Financial dashboard overview with key metrics and investment information">
-{% endblock %}
-
-{% block header %}
+{% extends 'dashboard/base.html' %} {% load number_filter %} {% block title %}
+<title>Dashboard | Financial Overview</title>
+<meta
+  name="description"
+  content="Financial dashboard overview with key metrics and investment information"
+/>
+{% endblock %} {% block header %}
 <h5 class="fw-bold">Financial Overview</h5>
 {% endblock %}
 
@@ -22,28 +19,33 @@
           <div class="card-body p-4">
             <div class="d-flex align-items-center mb-3">
               <div class="flex-shrink-0">
-                <div class="stats-icon bg-primary bg-opacity-10 text-primary rounded-3 p-3">
+                <div
+                  class="stats-icon bg-primary bg-opacity-10 text-primary rounded-3 p-3"
+                >
                   <i class="ri-line-chart-line fs-4"></i>
                 </div>
               </div>
               <div class="flex-grow-1 ms-3">
-                <h6 class="card-title mb-0 text-muted fs-sm fw-normal">Estimated Revenue</h6>
+                <h6 class="card-title mb-0 text-muted fs-sm fw-normal">
+                  Estimated Revenue
+                </h6>
               </div>
             </div>
-            <h2 class="mb-2 fw-bold">GH₵ {{ total_interest|abbreviate_number }}</h2>
+            <h2 class="mb-2 fw-bold">
+              GH₵ {{ total_interest|abbreviate_number }}
+            </h2>
             <div class="d-flex align-items-center">
-              <span class="badge {% if estimated_revenue_growth.direction == 'up' %}bg-success-subtle text-success {% elif estimated_revenue_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2">
+              <span
+                class="badge {% if estimated_revenue_growth.direction == 'up' %}bg-success-subtle text-success {% elif estimated_revenue_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2"
+              >
                 {% if estimated_revenue_growth.direction == 'up' %}
                 <i class="ri-arrow-up-line me-1"></i>
                 {% elif estimated_revenue_growth.direction == 'down' %}
                 <i class="ri-arrow-down-line me-1"></i>
                 {% else %}
                 <i class="ri-arrow-right-line me-1"></i>
-                {% endif %}
-                {% if estimated_revenue_growth == 'N/A' %}
-                  N/A 
-                {% else %}
-                {{ estimated_revenue_growth.percentage|floatformat:2 }}%
+                {% endif %} {% if estimated_revenue_growth == 'N/A' %} N/A {%
+                else %} {{ estimated_revenue_growth.percentage|floatformat:2 }}%
                 {% endif %}
               </span>
               <span class="text-muted fs-sm">vs last month</span>
@@ -57,28 +59,33 @@
           <div class="card-body p-4">
             <div class="d-flex align-items-center mb-3">
               <div class="flex-shrink-0">
-                <div class="stats-icon bg-success bg-opacity-10 text-success rounded-3 p-3">
+                <div
+                  class="stats-icon bg-success bg-opacity-10 text-success rounded-3 p-3"
+                >
                   <i class="ri-money-dollar-circle-line fs-4"></i>
                 </div>
               </div>
               <div class="flex-grow-1 ms-3">
-                <h6 class="card-title mb-0 text-muted fs-sm fw-normal">Actual Revenue</h6>
+                <h6 class="card-title mb-0 text-muted fs-sm fw-normal">
+                  Actual Revenue
+                </h6>
               </div>
             </div>
-            <h2 class="mb-2 fw-bold">GH₵ {{ actual_revenue|abbreviate_number }}</h2>
+            <h2 class="mb-2 fw-bold">
+              GH₵ {{ actual_revenue|abbreviate_number }}
+            </h2>
             <div class="d-flex align-items-center">
-              <span class="badge {% if actual_revenue_growth.direction == 'up' %}bg-success-subtle text-success {% elif actual_revenue_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2">
+              <span
+                class="badge {% if actual_revenue_growth.direction == 'up' %}bg-success-subtle text-success {% elif actual_revenue_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2"
+              >
                 {% if actual_revenue_growth.direction == 'up' %}
                 <i class="ri-arrow-up-line me-1"></i>
                 {% elif actual_revenue_growth.direction == 'down' %}
                 <i class="ri-arrow-down-line me-1"></i>
                 {% else %}
                 <i class="ri-arrow-right-line me-1"></i>
-                {% endif %}
-                {% if actual_revenue_growth == 'N/A' %}
-                  N/A 
-                {% else %}
-                {{ actual_revenue_growth.percentage|floatformat:2 }}%
+                {% endif %} 
+                {% if actual_revenue_growth == 'N/A' %} N/A {% else %} {{ actual_revenue_growth.percentage|floatformat:2 }}% 
                 {% endif %}
               </span>
               <span class="text-muted fs-sm">vs last month</span>
@@ -92,29 +99,31 @@
           <div class="card-body p-4">
             <div class="d-flex align-items-center mb-3">
               <div class="flex-shrink-0">
-                <div class="stats-icon bg-info bg-opacity-10 text-info rounded-3 p-3">
+                <div
+                  class="stats-icon bg-info bg-opacity-10 text-info rounded-3 p-3"
+                >
                   <i class="ri-user-line fs-4"></i>
                 </div>
               </div>
               <div class="flex-grow-1 ms-3">
-                <h6 class="card-title mb-0 text-muted fs-sm fw-normal">Total Members</h6>
+                <h6 class="card-title mb-0 text-muted fs-sm fw-normal">
+                  Total Members
+                </h6>
               </div>
             </div>
             <h2 class="mb-2 fw-bold">{{ active_members|abbreviate_number }}</h2>
             <div class="d-flex align-items-center">
-              <span class="badge {% if staff_growth.direction == 'up' %}bg-success-subtle text-success {% elif staff_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2">
+              <span
+                class="badge {% if staff_growth.direction == 'up' %}bg-success-subtle text-success {% elif staff_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2"
+              >
                 {% if staff_growth.direction == 'up' %}
                 <i class="ri-arrow-up-line me-1"></i>
                 {% elif staff_growth.direction == 'down' %}
                 <i class="ri-arrow-down-line me-1"></i>
                 {% else %}
                 <i class="ri-arrow-right-line me-1"></i>
-                {% endif %}
-                {% if staff_growth == 'N/A' %}
-                  N/A 
-                {% else %}
-                {{ staff_growth.percentage|floatformat:2 }}%
-                {% endif %}
+                {% endif %} {% if staff_growth == 'N/A' %} N/A {% else %} 
+                {{ staff_growth.percentage|floatformat:2 }}% {% endif %}
               </span>
               <span class="text-muted fs-sm">vs last month</span>
             </div>
@@ -127,29 +136,31 @@
           <div class="card-body p-4">
             <div class="d-flex align-items-center mb-3">
               <div class="flex-shrink-0">
-                <div class="stats-icon bg-warning bg-opacity-10 text-warning rounded-3 p-3">
+                <div
+                  class="stats-icon bg-warning bg-opacity-10 text-warning rounded-3 p-3"
+                >
                   <i class="ri-funds-line fs-4"></i>
                 </div>
               </div>
               <div class="flex-grow-1 ms-3">
-                <h6 class="card-title mb-0 text-muted fs-sm fw-normal">Total Investments</h6>
+                <h6 class="card-title mb-0 text-muted fs-sm fw-normal">
+                  Total Investments
+                </h6>
               </div>
             </div>
             <h2 class="mb-2 fw-bold">{{ active_inv|abbreviate_number }}</h2>
             <div class="d-flex align-items-center">
-              <span class="badge {% if investment_growth.direction == 'up' %}bg-success-subtle text-success {% elif investment_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2">
+              <span
+                class="badge {% if investment_growth.direction == 'up' %}bg-success-subtle text-success {% elif investment_growth.direction == 'down' %} bg-danger-subtle text-danger {% else %}bg-warning-subtle text-warning {% endif %} me-2"
+              >
                 {% if investment_growth.direction == 'up' %}
                 <i class="ri-arrow-up-line me-1"></i>
                 {% elif investment_growth.direction == 'down' %}
                 <i class="ri-arrow-down-line me-1"></i>
                 {% else %}
                 <i class="ri-arrow-right-line me-1"></i>
-                {% endif %}
-                {% if investment_growth == 'N/A' %}
-                  N/A 
-                {% else %}
-                {{ investment_growth.percentage|floatformat:2 }}%
-                {% endif %}
+                {% endif %} {% if investment_growth == 'N/A' %} N/A {% else %}
+                {{ investment_growth.percentage|floatformat:2 }}% {% endif %}
               </span>
               <span class="text-muted fs-sm">vs last month</span>
             </div>
@@ -166,57 +177,85 @@
         <h2 class="h5 mb-4">Financial Indicators</h2>
         <div class="row g-4">
           <div class="col-sm-6 col-xl-3">
-            <div class="d-flex align-items-center p-3 rounded-3 bg-light bg-opacity-50">
+            <div
+              class="d-flex align-items-center p-3 rounded-3 bg-light bg-opacity-50"
+            >
               <div class="flex-shrink-0">
-                <div class="indicator-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3">
+                <div
+                  class="indicator-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3"
+                >
                   <i class="ri-wallet-2-line fs-4"></i>
                 </div>
               </div>
               <div class="flex-grow-1 ms-3">
                 <h6 class="fw-semibold text-dark mb-1">Accounts Receivable</h6>
-                <p class="fs-sm text-secondary mb-0">The proceeds or payment which the company will receive from its customers.</p>
+                <p class="fs-sm text-secondary mb-0">
+                  The proceeds or payment which the company will receive from
+                  its customers.
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div class="col-sm-6 col-xl-3">
-            <div class="d-flex align-items-center p-3 rounded-3 bg-light bg-opacity-50">
+            <div
+              class="d-flex align-items-center p-3 rounded-3 bg-light bg-opacity-50"
+            >
               <div class="flex-shrink-0">
-                <div class="indicator-icon bg-danger bg-opacity-10 text-danger rounded-circle p-3">
+                <div
+                  class="indicator-icon bg-danger bg-opacity-10 text-danger rounded-circle p-3"
+                >
                   <i class="ri-refund-2-line fs-4"></i>
                 </div>
               </div>
               <div class="flex-grow-1 ms-3">
                 <h6 class="fw-semibold text-dark mb-1">Accounts Payable</h6>
-                <p class="fs-sm text-secondary mb-0">Money owed by a business to its suppliers shown as a liability.</p>
+                <p class="fs-sm text-secondary mb-0">
+                  Money owed by a business to its suppliers shown as a
+                  liability.
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div class="col-sm-6 col-xl-3">
-            <div class="d-flex align-items-center p-3 rounded-3 bg-light bg-opacity-50">
+            <div
+              class="d-flex align-items-center p-3 rounded-3 bg-light bg-opacity-50"
+            >
               <div class="flex-shrink-0">
-                <div class="indicator-icon bg-success bg-opacity-10 text-success rounded-circle p-3">
+                <div
+                  class="indicator-icon bg-success bg-opacity-10 text-success rounded-circle p-3"
+                >
                   <i class="ri-exchange-line fs-4"></i>
                 </div>
               </div>
               <div class="flex-grow-1 ms-3">
                 <h6 class="fw-semibold text-dark mb-1">Quick Ratio</h6>
-                <p class="fs-sm text-secondary mb-0">Measures the ability of a company to use its near cash or quick assets.</p>
+                <p class="fs-sm text-secondary mb-0">
+                  Measures the ability of a company to use its near cash or
+                  quick assets.
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div class="col-sm-6 col-xl-3">
-            <div class="d-flex align-items-center p-3 rounded-3 bg-light bg-opacity-50">
+            <div
+              class="d-flex align-items-center p-3 rounded-3 bg-light bg-opacity-50"
+            >
               <div class="flex-shrink-0">
-                <div class="indicator-icon bg-info bg-opacity-10 text-info rounded-circle p-3">
+                <div
+                  class="indicator-icon bg-info bg-opacity-10 text-info rounded-circle p-3"
+                >
                   <i class="ri-exchange-dollar-line fs-4"></i>
                 </div>
               </div>
               <div class="flex-grow-1 ms-3">
                 <h6 class="fw-semibold text-dark mb-1">Current Ratio</h6>
-                <p class="fs-sm text-secondary mb-0">Measures whether a firm has enough resources to meet its short-term obligations.</p>
+                <p class="fs-sm text-secondary mb-0">
+                  Measures whether a firm has enough resources to meet its
+                  short-term obligations.
+                </p>
               </div>
             </div>
           </div>
@@ -235,26 +274,40 @@
           <div class="card-header bg-transparent border-0 pt-4 pb-0">
             <div class="d-flex justify-content-between align-items-center">
               <h2 class="h5 mb-0">Current Bank Interest Rates</h2>
-              <button class="btn btn-sm btn-icon btn-outline-secondary rounded-circle" type="button" data-bs-toggle="tooltip" title="Refresh data">
+              <button
+                class="btn btn-sm btn-icon btn-outline-secondary rounded-circle"
+                type="button"
+                data-bs-toggle="tooltip"
+                title="Refresh data"
+              >
                 <i class="ri-refresh-line"></i>
               </button>
             </div>
           </div>
-          <div class="card-body overflow-auto p-0 mt-3" style="max-height: 400px;">
+          <div
+            class="card-body overflow-auto p-0 mt-3"
+            style="max-height: 400px"
+          >
             <div class="list-group list-group-flush">
               {% for rate in interest_rates %}
-                <div class="list-group-item border-0 py-3 px-4">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h6 class="mb-1 fw-semibold">{{ rate.bank_name }}</h6>
-                      <div class="d-flex align-items-center">
-                        <div class="badge bg-primary-subtle text-primary me-2">{{ rate.interest_rate }}%</div>
-                        <small class="text-muted">Annual rate</small>
+              <div class="list-group-item border-0 py-3 px-4">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-1 fw-semibold">{{ rate.bank_name }}</h6>
+                    <div class="d-flex align-items-center">
+                      <div class="badge bg-primary-subtle text-primary me-2">
+                        {{ rate.interest_rate }}%
                       </div>
+                      <small class="text-muted">Annual rate</small>
                     </div>
-                    <a href="#" class="btn btn-sm btn-outline-primary rounded-pill">Details</a>
                   </div>
+                  <a
+                    href="#"
+                    class="btn btn-sm btn-outline-primary rounded-pill"
+                    >Details</a
+                  >
                 </div>
+              </div>
               {% endfor %}
             </div>
           </div>
@@ -270,38 +323,72 @@
             <div class="d-flex justify-content-between align-items-center">
               <h2 class="h5 mb-0">Investment Schemes</h2>
               <div class="dropdown">
-                <button class="btn btn-sm btn-icon btn-outline-secondary rounded-circle" type="button" id="schemeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button
+                  class="btn btn-sm btn-icon btn-outline-secondary rounded-circle"
+                  type="button"
+                  id="schemeDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
                   <i class="ri-more-2-fill"></i>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="schemeDropdown">
-                  <li><a class="dropdown-item" href="#"><i class="ri-add-line me-2"></i>Add New Scheme</a></li>
-                  <li><a class="dropdown-item" href="#"><i class="ri-file-list-line me-2"></i>View All Schemes</a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="#"><i class="ri-download-line me-2"></i>Export Data</a></li>
+                <ul
+                  class="dropdown-menu dropdown-menu-end shadow-sm"
+                  aria-labelledby="schemeDropdown"
+                >
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      ><i class="ri-add-line me-2"></i>Add New Scheme</a
+                    >
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      ><i class="ri-file-list-line me-2"></i>View All Schemes</a
+                    >
+                  </li>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      ><i class="ri-download-line me-2"></i>Export Data</a
+                    >
+                  </li>
                 </ul>
               </div>
             </div>
           </div>
-          <div class="card-body overflow-auto p-0 mt-3" style="max-height: 400px;">
+          <div
+            class="card-body overflow-auto p-0 mt-3"
+            style="max-height: 400px"
+          >
             <div class="list-group list-group-flush">
               {% for scheme in schemes %}
-                <div class="list-group-item border-0 py-3 px-4">
-                  <h6 class="mb-2 fw-semibold">{{ scheme.name }}</h6>
-                  <div class="d-flex align-items-center text-muted mb-2 fs-sm">
-                    <i class="ri-calendar-line me-1"></i>
-                    <span>Created: {{ scheme.created_date }}</span>
+              <div class="list-group-item border-0 py-3 px-4">
+                <h6 class="mb-2 fw-semibold">{{ scheme.name }}</h6>
+                <div class="d-flex align-items-center text-muted mb-2 fs-sm">
+                  <i class="ri-calendar-line me-1"></i>
+                  <span>Created: {{ scheme.created_date }}</span>
+                </div>
+                <p class="text-secondary mb-0 fs-sm">
+                  {{ scheme.description }}
+                </p>
+                <div class="mt-2">
+                  <div
+                    class="progress"
+                    style="height: 6px"
+                    role="progressbar"
+                    aria-label="Scheme progress"
+                  >
+                    <div
+                      class="progress-bar bg-success"
+                      style="width: 75%"
+                    ></div>
                   </div>
-                  <p class="text-secondary mb-0 fs-sm">{{ scheme.description }}</p>
-                  <div class="mt-2">
-                    <div class="progress" style="height: 6px;" role="progressbar" aria-label="Scheme progress">
-                      <div class="progress-bar bg-success" style="width: 75%"></div>
-                    </div>
-                    <div class="d-flex justify-content-between mt-1 fs-sm">
-                      <span class="text-muted">75% Target</span>
-                      <span class="text-success fw-medium">Active</span>
-                    </div>
+                  <div class="d-flex justify-content-between mt-1 fs-sm">
+                    <span class="text-muted">75% Target</span>
+                    <span class="text-success fw-medium">Active</span>
                   </div>
                 </div>
+              </div>
               {% endfor %}
             </div>
           </div>
@@ -316,12 +403,18 @@
           <div class="card-header bg-transparent border-0 pt-4 pb-0">
             <div class="d-flex justify-content-between align-items-center">
               <h2 class="h5 mb-0">Human Resource</h2>
-              <button class="btn btn-sm btn-outline-primary rounded-pill" type="button">
+              <button
+                class="btn btn-sm btn-outline-primary rounded-pill"
+                type="button"
+              >
                 <i class="ri-download-line me-1"></i> Export
               </button>
             </div>
           </div>
-          <div class="card-body overflow-auto p-0 mt-3" style="max-height: 400px;">
+          <div
+            class="card-body overflow-auto p-0 mt-3"
+            style="max-height: 400px"
+          >
             <div class="table-responsive">
               <table class="table table-hover align-middle mb-0">
                 <thead class="">
@@ -337,26 +430,34 @@
                   <tr>
                     <td class="ps-4">
                       <div class="d-flex align-items-center">
-                        <div class="scheme-icon bg-primary bg-opacity-10 text-primary rounded p-2 me-2">
+                        <div
+                          class="scheme-icon bg-primary bg-opacity-10 text-primary rounded p-2 me-2"
+                        >
                           <i class="ri-funds-box-line"></i>
                         </div>
                         <h6 class="mb-0 fw-medium">{{ scheme_name }}</h6>
                       </div>
                     </td>
                     <td class="text-center">
-                      <div class="d-flex align-items-center justify-content-center">
+                      <div
+                        class="d-flex align-items-center justify-content-center"
+                      >
                         <i class="ri-men-line text-primary me-1"></i>
                         <span>{{ gender_counts.Male }}</span>
                       </div>
                     </td>
                     <td class="text-center">
-                      <div class="d-flex align-items-center justify-content-center">
+                      <div
+                        class="d-flex align-items-center justify-content-center"
+                      >
                         <i class="ri-women-line text-danger me-1"></i>
                         <span>{{ gender_counts.Female }}</span>
                       </div>
                     </td>
                     <td class="text-center pe-4">
-                      <span class="badge bg-secondary-subtle text-secondary rounded-pill">
+                      <span
+                        class="badge bg-secondary-subtle text-secondary rounded-pill"
+                      >
                         {{ gender_counts.Male|add:gender_counts.Female }}
                       </span>
                     </td>
@@ -371,6 +472,14 @@
       {% endif %}
     </div>
   </section>
+
+  <!-- Add this inside your  where you want the chart to appear -->
+  {% comment %} <div class="card border-0 shadow-sm h-100">
+    <div class="card-body">
+      <h2 class="h5 mb-4">Investment Performance</h2>
+      <canvas id="investmentChart" width="400" height="200"></canvas>
+    </div>
+  </div> {% endcomment %}
 </main>
 
 <!-- Add custom styles -->
@@ -383,16 +492,17 @@
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
   }
-  
+
   /* Custom icon styling */
-  .stats-icon, .indicator-icon {
+  .stats-icon,
+  .indicator-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 48px;
     height: 48px;
   }
-  
+
   /* Scheme icon */
   .scheme-icon {
     display: flex;
@@ -401,7 +511,7 @@
     width: 32px;
     height: 32px;
   }
-  
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
@@ -422,12 +532,56 @@
 
 <!-- Initialize tooltips -->
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener("DOMContentLoaded", function () {
     // Initialize all tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipTriggerList = [].slice.call(
+      document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    );
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
+      return new bootstrap.Tooltip(tooltipTriggerEl);
     });
   });
+
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    var ctx = document.getElementById('investmentChart').getContext('2d');
+    var investmentChart = new Chart(ctx, {
+      type: 'line', // or 'bar', 'pie', etc.
+      data: {
+        labels: {{ labels|safe }}, // e.g., ['January', 'February', 'March']
+        datasets: [{
+          label: 'Total Contributions',
+          data: {{ total_contributions|safe }}, // e.g., [100, 200, 300]
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          fill: false
+        }, {
+          label: 'Returns',
+          data: {{ returns|safe }}, // e.g., [50, 150, 250]
+          borderColor: 'rgba(153, 102, 255, 1)',
+          backgroundColor: 'rgba(153, 102, 255, 0.2)',
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            beginAtZero: true
+          },
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  });
+  
 </script>
+
+<!-- Add this in the <head> section or before the closing </body> tag -->
+
+
+<!-- Add this script to render the chart -->
+
 {% endblock %}

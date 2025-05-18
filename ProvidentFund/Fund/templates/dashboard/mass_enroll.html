@@ -129,10 +129,35 @@
     margin-bottom: 0;
   }
   
+  /* Modified: Improved sticky header styling */
   .preview-table th {
     position: sticky;
     top: 0;
+    background-color: rgba(248, 249, 250, 0.95); /* Semi-transparent background */
+    backdrop-filter: blur(4px); /* Slight blur effect for better readability */
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 500;
+    color: #495057;
     z-index: 1;
+    padding: 0.5rem 0.75rem; /* Slightly reduced padding */
+    font-size: 0.9rem; /* Slightly smaller font */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Subtle shadow for separation */
+  }
+  
+  /* Added: Ensure table takes full width */
+  .preview-table {
+    width: 100%;
+  }
+  
+  /* Added: Style for table cells to ensure proper spacing */
+  .preview-table td {
+    padding: 0.6rem 0.75rem;
+    vertical-align: middle;
+  }
+  
+  /* Added: Hover effect for rows to improve readability */
+  .preview-table tbody tr:hover {
+    background-color: rgba(0,0,0,0.02);
   }
   
   .upload-btn-container {
@@ -403,6 +428,12 @@
       
       // Show toast notification
       toastr.success('File preview generated successfully');
+      
+      // Add a small delay before scrolling to ensure the table is fully rendered
+      setTimeout(function() {
+        // Scroll to the top of the preview to ensure headers are visible
+        $('.preview-body').scrollTop(0);
+      }, 100);
     }
     
     // Submit file to server

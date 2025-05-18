@@ -21,6 +21,9 @@ from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q
 from decimal import Decimal
+from django.shortcuts import redirect
+from django.contrib import messages
+from .tasks import fetch_memberships
 
 # Create your views here.
 
@@ -283,3 +286,10 @@ class Contributed(ListView):
         context['monthly_contributions'] = dict(monthly_contributions)
 
         return context
+    
+
+def run_member_api(request, tenant_id):
+    tenant = request.tenant
+    fetch_memberships.delay()
+    messages.success(request, "Member sync started. Please refresh after a while.")
+    return redirect('list_members', tenant_id=tenant_id)

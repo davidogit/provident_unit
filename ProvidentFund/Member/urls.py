@@ -1,12 +1,13 @@
 from django.urls import path
 from Member import views
 from . import views
-from .views import GetBalanceView
+from .views import GetBalanceView, ListMembersView
 
 urlpatterns=[
     # path('', views.LoginTemplateView.as_view(), name='loginView'),
     path('register/', views.MemberRegistrationView.as_view(), name='register'),
     path('member_login/', views.MemberLoginView.as_view(), name='member_login'),
+    path('list-members/', ListMembersView.as_view(), name='list_members'),
     # path('verify_otp/', views.verifyOtpView, name='verify_otp'),
     # path('logout/',views.logoutView, name='logout'),
     path('verify_otp/<int:user_id>/', views.VerifyLoginOTPView.as_view(), name='verify_otp'),

@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views import View
+from django.contrib.auth.mixins import LoginRequiredMixin
 import requests
 from ProvidentFund.settings import EMAIL_HOST_USER
 from .forms import UserForm, MemberForm
@@ -1106,4 +1107,15 @@ class GetBalanceView(View):
         })
 
 
-    
+class ListMembersView(View):
+    template_name = 'list_members.html'
+
+    def get(self, request, tenant_id):
+        tenant = request.tenant
+        members = StaffAPI.objects.filter(tenant=tenant)
+        context = {
+            'members': members,
+            'tenant': tenant
+        }
+        return render(request, self.template_name, context)
+

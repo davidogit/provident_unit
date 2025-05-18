@@ -30,6 +30,605 @@
             <form action="{% url 'map_account' tenant_id=request.tenant.id %}" method="POST" id="account_mapping">
               {% csrf_token %}
               
+              <!-- Scheme selection first -->
+              <div class="mb-3">
+                <label for="scheme_id" class="form-label">Scheme</label>
+                <select name="scheme_id" id="scheme_id" class="form-select form-select-lg">
+                  <option value="">Select Scheme</option>
+                  {% for scheme in schemes %}
+                  <option value="{{ scheme.id }}">{{ scheme }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              
+              <div class="mb-3">
+                <label for="event" class="form-label">Event</label>
+                <select name="event" id="event" class="form-select form-select-lg" disabled>
+                  <option value="">Select Event</option>
+                  {% for action,act in actions %}
+                  <option value="{{ act }}">{{ act }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              
+              <div class="mb-3">
+                <label for="debitAccount" class="form-label">Debit Account</label>
+                <select name="debit_id" id="debitAccount" class="form-select form-select-lg" disabled>
+                  <option value="">Select Debit Account</option>
+                  {% for acc in accounts %}
+                  <option value="{{ acc.account_code }}">{{ acc }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              
+              <div class="mb-3">
+                <label for="creditAccount" class="form-label">Credit Account</label>
+                <select name="credit_id" id="creditAccount" class="form-select form-select-lg" disabled>
+                  <option value="">Select Credit Account</option>
+                  {% for acc in accounts %}
+                  <option value="{{ acc.account_code }}">{{ acc }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              
+              <div class="d-grid gap-2 mt-4">
+                <button class="btn btn-primary btn-lg save_mapping" type="submit">
+                  <i class="bi bi-save me-2"></i>Save Mapping
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Account Mappings Table Card -->
+      <div class="col-lg-7">
+        <div class="card shadow-sm border-0">
+          <div class="card-header py-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+              <h5 class="card-title mb-0">
+                <i class="bi bi-list-ul text-primary me-2"></i>Existing Account Mappings
+              </h5>
+              
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary rounded-pill me-2">{{ mappings|length }}</span>
+                <span class="text-muted d-none d-sm-inline">Total</span>
+              </div>
+            </div>
+            
+            <!-- Filter Controls -->
+            <div class="row g-2 mt-2">
+              <div class="col-md-6">
+                <select id="scheme-filter" class="form-select">
+                  <option value="">All Schemes</option>
+                  {% for scheme in schemes %}
+                  <option value="{{ scheme }}">{{ scheme }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-search text-muted"></i>
+                  </span>
+                  <input type="text" id="event-filter" class="form-control" placeholder="Filter by event...">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              {% if mappings %}
+                <!-- Group mappings by scheme -->
+                {% regroup mappings by scheme as scheme_list %}
+                
+                <div class="accordion" id="mappingsAccordion">
+                  {% for scheme_group in scheme_list %}
+                    <div class="accordion-item border-0">
+                      <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                        <button class="accordion-button {% if forloop.first %}{% else %}collapsed{% endif %}" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" 
+                                aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
+                                aria-controls="collapse{{ forloop.counter }}">
+                          <div class="d-flex align-items-center w-100">
+                            <i class="bi bi-diagram-3 text-primary me-2"></i>
+                            <span class="fw-bold">{{ scheme_group.grouper }}</span>
+                            <span class="badge bg-primary rounded-pill ms-2">{{ scheme_group.list|length }}</span>
+                          </div>
+                        </button>
+                      </h2>
+                      <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+                           aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#mappingsAccordion">
+                        <div class="accordion-body p-0">
+                          <table class="table table-hover mb-0 scheme-table">
+                            <thead class="table-light">
+                              <tr>
+                                <th class="ps-3">Event Name</th>
+                                <th>Debit Account</th>
+                                <th>Credit Account</th>
+                                <th class="text-center">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for mapping in scheme_group.list %}
+                                <tr data-event="{{ mapping.name }}" data-scheme="{{ mapping.scheme }}">
+                                  <td class="ps-3">{{ mapping.name }}</td>
+                                  <td>{{ mapping.debit_acc }}</td>
+                                  <td>{{ mapping.credit_acc }}</td>
+                                  <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                      <!-- Update button -->
+                                      <button class="btn btn-sm btn-outline-primary update-mapping" data-bs-toggle="modal" data-bs-target="#updateMappingModal">
+                                        <i class="bi bi-pencil-square"></i>
+                                        <input id="mapping_id" type="text" value="{{ mapping.id }}" hidden>
+                                        <input id="scheme_id" type="text" value="{{ mapping.scheme.id }}" hidden>
+                                        <input id="mapping_name" type="text" value="{{ mapping.name }}" hidden>
+                                        <input id="debit_id" type="text" value="{{ mapping.debit_acc.id }}" hidden>
+                                        <input id="credit_id" type="text" value="{{ mapping.credit_acc.id }}" hidden>
+                                      </button>
+                                      
+                                      <!-- Delete button -->
+                                      <button class="btn btn-sm btn-outline-danger delete-account">
+                                        <i class="bi bi-trash"></i>
+                                        <input id="mapping_id" type="text" value="{{ mapping.id }}" hidden>
+                                        <input id="scheme_id" type="text" value="{{ mapping.scheme.id }}" hidden>
+                                        <input id="mappingName" type="text" value="{{ mapping.name }}" hidden>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-center py-5">
+                  <div class="d-flex flex-column align-items-center">
+                    <i class="bi bi-diagram-3 text-muted fs-1 mb-3"></i>
+                    <h5 class="mb-1">No Account Mappings</h5>
+                    <p class="text-muted mb-0">Create your first account mapping using the form.</p>
+                  </div>
+                </div>
+              {% endif %}
+              
+              <div id="no-results-row" style="display: none;" class="text-center py-5">
+                <div class="d-flex flex-column align-items-center">
+                  <i class="bi bi-search text-muted fs-1 mb-3"></i>
+                  <h5 class="mb-1">No Matching Results</h5>
+                  <p class="text-muted mb-0">Try adjusting your filter criteria.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Update Modal -->
+<div class="modal fade" id="updateMappingModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">
+          <i class="bi bi-pencil-square text-primary me-2"></i>Update Account Mapping
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form action="" method="POST" id="updateMappingForm">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="update_scheme_id" class="form-label">Scheme</label>
+            <select name="scheme" id="update_scheme_id" class="form-select">
+              <option value="">Select Scheme</option>
+              {% for scheme in schemes %}
+              <option value="{{ scheme.id }}">{{ scheme }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="update_event" class="form-label">Event</label>
+            <select name="name" id="update_event" class="form-select">
+              <option value="">Select Event</option>
+              {% for action,act in actions %}
+              <option value="{{ act }}">{{ act }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="update_debitAccount" class="form-label">Debit Account</label>
+            <select name="debit_acc" id="update_debitAccount" class="form-select">
+              <option value="">Select Debit Account</option>
+              {% for acc in accounts %}
+              <option value="{{ acc.id }}">{{ acc }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="update_creditAccount" class="form-label">Credit Account</label>
+            <select name="credit_acc" id="update_creditAccount" class="form-select">
+              <option value="">Select Credit Account</option>
+              {% for acc in accounts %}
+              <option value="{{ acc.id }}">{{ acc }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <!-- Hidden input -->
+          <input name="mapping_id" id="update_mapping_id" type="text" value="" hidden>
+          
+          <div class="d-grid gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-2"></i>Update Mapping
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(document).ready(function(){
+    // Configure Toastr
+    toastr.options = {
+      closeButton: true,
+      progressBar: true,
+      positionClass: "toast-bottom-right",
+      timeOut: 3000,
+      extendedTimeOut: 1000,
+      preventDuplicates: true,
+      newestOnTop: true
+    };
+    
+    // Enable/disable form fields based on scheme selection
+    $('#scheme_id').on('change', function() {
+      const schemeSelected = $(this).val() !== '';
+      
+      // Enable/disable the event dropdown based on scheme selection
+      $('#event').prop('disabled', !schemeSelected);
+      
+      if (!schemeSelected) {
+        // If scheme is deselected, disable and reset all other fields
+        $('#event').val('').prop('disabled', true);
+        $('#debitAccount').val('').prop('disabled', true);
+        $('#creditAccount').val('').prop('disabled', true);
+      } else {
+        // If scheme is selected, only enable the event dropdown
+        $('#event').prop('disabled', false);
+      }
+    });
+    
+    // Enable debit account dropdown when event is selected
+    $('#event').on('change', function() {
+      const eventSelected = $(this).val() !== '';
+      $('#debitAccount').prop('disabled', !eventSelected);
+      
+      if (!eventSelected) {
+        // If event is deselected, disable and reset subsequent fields
+        $('#debitAccount').val('').prop('disabled', true);
+        $('#creditAccount').val('').prop('disabled', true);
+      }
+    });
+    
+    // Enable credit account dropdown when debit account is selected
+    $('#debitAccount').on('change', function() {
+      const debitSelected = $(this).val() !== '';
+      $('#creditAccount').prop('disabled', !debitSelected);
+      
+      if (!debitSelected) {
+        // If debit account is deselected, disable and reset credit account
+        $('#creditAccount').val('').prop('disabled', true);
+      }
+    });
+    
+    // Similar logic for update modal
+    $('#update_scheme_id').on('change', function() {
+      const schemeSelected = $(this).val() !== '';
+      if (!schemeSelected) {
+        $('#update_event, #update_debitAccount, #update_creditAccount').val('');
+      }
+    });
+    
+    // Save account mapping
+    $('#account_mapping').on('submit', function(e) {
+      e.preventDefault();
+      var form = $(this);
+      
+      // Validate form
+      var scheme = $('#scheme_id').val();
+      var event = $('#event').val();
+      var debitAccount = $('#debitAccount').val();
+      var creditAccount = $('#creditAccount').val();
+      
+      if (!scheme) {
+        toastr.error('Please select a scheme first');
+        return;
+      }
+      
+      if (!event || !debitAccount || !creditAccount) {
+        toastr.error('Please fill in all fields');
+        return;
+      }
+      
+      // Show loading state
+      $('.save_mapping').prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+      
+      $.ajax({
+        url: form.attr('action'),
+        type: form.attr('method'),
+        data: form.serialize(),
+        success: function(response) {
+          if (response.status === 'success'){
+            toastr.success('Account mapping saved successfully');
+            setTimeout(function() {
+              window.location.reload();
+            }, 1000);
+          } else {
+            toastr.error(response.message || 'Failed to save account mapping');
+            $('.save_mapping').prop('disabled', false).html('<i class="bi bi-save me-2"></i>Save Mapping');
+          }
+        },
+        error: function(error) {
+          toastr.error('An error occurred. Please try again later.');
+          $('.save_mapping').prop('disabled', false).html('<i class="bi bi-save me-2"></i>Save Mapping');
+        }
+      });
+    });
+    
+    // Delete account mapping
+    $('.delete-account').on('click', function(){
+      var button = $(this);
+      var mapping_id = button.find('#mapping_id').val();
+      var scheme_id = button.find('#scheme_id').val();
+      var mapping_name = button.find('#mappingName').val();
+      var tenant = '{{ request.tenant.id }}';
+      
+      // Show confirmation dialog with SweetAlert
+      Swal.fire({
+        title: 'Delete Mapping',
+        text: `Are you sure you want to delete ${mapping_name} mapping?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Show loading state
+          button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+          
+          $.ajax({
+            url: `/${tenant}/accounts/delete-mapping/${mapping_id}/`,
+            type: 'POST',
+            data: {
+              'mapping_id': mapping_id,
+              'scheme_id': scheme_id,
+              'mapping_name': mapping_name,
+              'tenant': tenant,
+              'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response){
+              toastr.success('Account mapping deleted successfully');
+              setTimeout(function() {
+                window.location.reload();
+              }, 1000);
+            },
+            error: function(error){
+              toastr.error('An error occurred. Please try again later.');
+              button.prop('disabled', false).html('<i class="bi bi-trash"></i>');
+            }
+          });
+        }
+      });
+    });
+    
+    // Preload update modal with data
+    $('.update-mapping').on('click', function(){
+      var row = $(this);
+      var eventName = row.find('#mapping_name').val();
+      var schemeId = row.find('#scheme_id').val();
+      var debitId = row.find('#debit_id').val();
+      var creditId = row.find('#credit_id').val();
+      var mappingId = row.find('#mapping_id').val();
+      
+      // Set the values to the modal
+      $('#update_scheme_id').val(schemeId);
+      $('#update_event').val(eventName);
+      $('#update_debitAccount').val(debitId);
+      $('#update_creditAccount').val(creditId);
+      $('#update_mapping_id').val(mappingId);
+    });
+    
+    // Update account mapping
+    $('#updateMappingForm').on('submit', function(e){
+      e.preventDefault();
+      var form = $(this);
+      var mapping_id = $('#update_mapping_id').val();
+      var tenantId = '{{ request.tenant.id }}';
+      
+      // Validate form
+      var scheme = $('#update_scheme_id').val();
+      var event = $('#update_event').val();
+      var debitAccount = $('#update_debitAccount').val();
+      var creditAccount = $('#update_creditAccount').val();
+      
+      if (!scheme) {
+        toastr.error('Please select a scheme first');
+        return;
+      }
+      
+      if (!event || !debitAccount || !creditAccount) {
+        toastr.error('Please fill in all fields');
+        return;
+      }
+      
+      // Show loading state
+      var submitBtn = $(this).find('button[type="submit"]');
+      submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
+      
+      $.ajax({
+        url: `/${tenantId}/accounts/update-mapping/${mapping_id}/`,
+        type: form.attr('method'),
+        headers:{
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        data: form.serialize(),
+        success: function(response){
+          if (response.status === 'success'){
+            toastr.success('Account mapping updated successfully');
+            setTimeout(function() {
+              window.location.reload();
+            }, 1000);
+          } else {
+            toastr.error(response.message || 'Failed to update account mapping');
+            submitBtn.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Update Mapping');
+          }
+        },
+        error: function(error){
+          toastr.error('An error occurred. Please try again later.');
+          submitBtn.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Update Mapping');
+        }
+      });
+    });
+    
+    // Client-side filtering
+    function applyFilters() {
+      const eventFilter = $('#event-filter').val().toLowerCase();
+      const schemeFilter = $('#scheme-filter').val();
+      let visibleCount = 0;
+      let visibleGroups = 0;
+      
+      // First hide the no results message
+      $('#no-results-row').hide();
+      
+      // Loop through each scheme group
+      $('.accordion-item').each(function() {
+        const schemeHeader = $(this).find('.accordion-button');
+        const schemeName = schemeHeader.find('span.fw-bold').text();
+        const schemeContent = $(this).find('.accordion-collapse');
+        let schemeRowsVisible = 0;
+        
+        // If scheme filter is set and doesn't match, hide the entire group
+        if (schemeFilter !== '' && schemeName !== schemeFilter) {
+          $(this).hide();
+          return;
+        } else {
+          $(this).show();
+        }
+        
+        // If event filter is set, check each row in the scheme
+        if (eventFilter !== '') {
+          $(this).find('tbody tr').each(function() {
+            const event = $(this).data('event').toString().toLowerCase();
+            
+            if (event.includes(eventFilter)) {
+              $(this).show();
+              schemeRowsVisible++;
+              visibleCount++;
+            } else {
+              $(this).hide();
+            }
+          });
+          
+          // If no rows visible in this scheme group, collapse it
+          if (schemeRowsVisible === 0) {
+            schemeContent.removeClass('show');
+            schemeHeader.addClass('collapsed');
+            schemeHeader.attr('aria-expanded', 'false');
+          } else {
+            visibleGroups++;
+            // If this is the only visible group, expand it
+            if (visibleGroups === 1) {
+              schemeContent.addClass('show');
+              schemeHeader.removeClass('collapsed');
+              schemeHeader.attr('aria-expanded', 'true');
+            }
+          }
+        } else {
+          // If no event filter, show all rows in this scheme
+          $(this).find('tbody tr').show();
+          visibleCount += $(this).find('tbody tr').length;
+          visibleGroups++;
+        }
+      });
+      
+      // Show no results message if needed
+      if (visibleCount === 0) {
+        $('#no-results-row').show();
+      }
+    }
+    
+    // Event listeners for filters
+    $('#event-filter').on('keyup', applyFilters);
+    $('#scheme-filter').on('change', applyFilters);
+  });
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{% comment %} {% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Account Mapping</title>
+{% endblock %}
+
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-diagram-2 me-2"></i>Account Mapping</h5>
+{% endblock %}
+
+{% block content %}
+<!-- SweetAlert2 and Toastr CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<div class="main main-app p-3 p-lg-4">
+  <div class="container-fluid">
+    <div class="row g-4">
+      <!-- Account Mapping Form Card -->
+      <div class="col-lg-5">
+        <div class="card shadow-sm border-0">
+          <div class="card-header py-3">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-link-45deg text-primary me-2"></i>Create Account Mapping
+            </h5>
+          </div>
+          <div class="card-body">
+            <form action="{% url 'map_account' tenant_id=request.tenant.id %}" method="POST" id="account_mapping">
+              {% csrf_token %}
+              
               <div class="mb-3">
                 <label for="event" class="form-label">Event</label>
                 <select name="event" id="event" class="form-select form-select-lg">
@@ -463,4 +1062,4 @@
     $('#scheme-filter').on('change', applyFilters);
   });
 </script>
-{% endblock %}
+{% endblock %} {% endcomment %}
