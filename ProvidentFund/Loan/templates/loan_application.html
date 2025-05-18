@@ -1,0 +1,438 @@
+{% extends 'member_base.html' %}
+
+{% block title %}
+<title>Loan Application</title>
+{% endblock %}
+
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-cash-coin me-2"></i>Loan Application</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Loan Details Card (Left Side) -->
+            <div class="col-lg-7 mb-4 mb-lg-0">
+                <div class="card shadow-sm h-100" id="loan-details-card" style="display: none;">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">Loan Details</h6>
+                        <span class="badge bg-primary-soft text-primary rounded-pill" id="calculation-status">Preview</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="loading-details" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Calculating loan details...</p>
+                        </div>
+                        
+                        <div id="loan-details-content" style="display: none;">
+                            <div class="row g-4">
+                                <!-- Repayment Summary -->
+                                <div class="col-md-12">
+                                    <div class="card border mb-0">
+                                        <div class="card-body">
+                                            <h5 class="fw-bold mb-3">Repayment Summary</h5>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Loan Amount:</span>
+                                                        <span class="fw-medium" id="summary-amount">₵0.00</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Interest Rate:</span>
+                                                        <span class="fw-medium" id="summary-rate">0%</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Tenure:</span>
+                                                        <span class="fw-medium" id="summary-tenure">0 Months</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Processing Fee:</span>
+                                                        <span class="fw-medium" id="summary-fee">$0.00</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">Disbursement:</span>
+                                                        <span class="fw-medium" id="disbursement-amount">₵0.00</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="fw-bold">Total Repayment:</span>
+                                                        <span class="fw-bold" id="summary-total">$0.00</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Monthly Installment -->
+                                <div class="col-md-6">
+                                    <div class="card border bg-success-soft h-100">
+                                        <div class="card-body text-center">
+                                            <h5 class="fw-bold mb-3 text-success">Monthly Installment</h5>
+                                            <div class="display-5 fw-bold text-success mb-2" id="monthly-installment">₵0.00</div>
+                                            <p class="text-success" id="installment-period">per month for 0 months</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Information Alert -->
+                                <div class="col-md-6">
+                                    <div class="alert alert-info h-100 d-flex align-items-center mb-0">
+                                        <i class="bi bi-info-circle me-2 fs-5"></i>
+                                        <div>Your loan application will be reviewed within 24-48 hours.</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Submit Button -->
+                                <div class="col-12">
+                                    <button class="btn btn-primary w-100" type="button" id="submit-btn" style="display: none;">
+                                        <i class="bi bi-send me-2"></i>Submit Loan Application
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Loan Application Form Card (Right Side) -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header py-3">
+                        <h6 class="mb-0 fw-bold">Apply for a Loan</h6>
+                    </div>
+                    <div class="card-body">
+                        <form action="" method="POST" id="loan-form">
+                            <!-- {% csrf_token %} -->
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="amount_requested" class="form-label">Loan Amount</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₵</span>
+                                        <input type="number" class="form-control" id="amount_requested" name="amount_requested" placeholder="Enter amount" min="100" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <label for="tenure_months" class="form-label">Loan Tenure</label>
+                                    <select class="form-select" id="tenure_months" name="tenure_months" required>
+                                        <option value="">Select tenure period</option>
+                                        <option value="1">1 Month</option>
+                                        <option value="3">3 Months</option>
+                                        <option value="6">6 Months</option>
+                                        <option value="12">12 Months</option>
+                                        <option value="24">24 Months</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <label for="purpose" class="form-label">Loan Purpose</label>
+                                    <textarea class="form-control" id="purpose" name="purpose" rows="5" placeholder="Briefly describe why you need this loan" required></textarea>
+                                </div>
+                                
+                                <!-- Hidden field for interest rate -->
+                                <input type="hidden" id="interest_rate" name="interest_rate" value="">
+                            </div>
+                            
+                            <div class="mt-4 text-center d-lg-none">
+                                <p class="text-muted small">Fill in the details above to see loan calculation</p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="notificationToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto toast-title">Notification</strong>
+            <small class="text-muted toast-time">just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <!-- Toast message will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .card.border {
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    /* Highlight animation */
+    .highlight {
+        animation: highlight 1.5s ease-in-out;
+    }
+    
+    @keyframes highlight {
+        0% { background-color: rgba(255, 243, 205, 0); }
+        50% { background-color: rgba(255, 243, 205, 0.5); }
+        100% { background-color: rgba(255, 243, 205, 0); }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 991.98px) {
+        #loan-details-card {
+            margin-top: 1.5rem;
+        }
+    }
+</style>
+
+<script>
+    $(document).ready(function(){
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Variables to track input changes
+        var typingTimer;
+        var doneTypingInterval = 500; // wait time in ms
+        
+        // On input change, start the countdown
+        $('#amount_requested, #tenure_months').on('input change', function() {
+            clearTimeout(typingTimer);
+            
+            // Only proceed if both fields have values
+            if ($('#amount_requested').val() && $('#tenure_months').val()) {
+                $('#loan-details-card').show();
+                $('#loading-details').show();
+                $('#loan-details-content').hide();
+                $('#calculation-status').text('Calculating...');
+                $('#submit-btn').hide(); // Hide submit button when recalculating
+                
+                typingTimer = setTimeout(fetchLoanDetails, doneTypingInterval);
+            } else {
+                $('#loan-details-card').hide();
+                $('#submit-btn').hide(); // Hide submit button when inputs are cleared
+            }
+        });
+        
+        // Fetch loan details from backend
+        function fetchLoanDetails() {
+            var amount = parseFloat($('#amount_requested').val());
+            var tenure = parseInt($('#tenure_months').val());
+            var tenantId = '{{ request.tenant.id }}';
+            
+            if (isNaN(amount) || isNaN(tenure) || amount <= 0 || tenure <= 0) {
+                showToast('Error', 'Please enter valid loan amount and tenure', 'danger');
+                $('#loan-details-card').hide();
+                $('#submit-btn').hide(); // Hide submit button on error
+                return;
+            }
+            
+            // AJAX request to fetch loan details from backend
+            $.ajax({
+                url: `/${tenantId}/loans/calculate-details/`,
+                type: 'GET',
+                data: {
+                    amount: amount,
+                    tenure: tenure
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Update UI with data from backend
+                        updateLoanDetailsUI(response.data, tenure);
+                        
+                        // Update hidden interest rate field
+                        $('#interest_rate').val(response.data.interest_rate);
+                        
+                        // Show the submit button after successful calculation
+                        $('#submit-btn').fadeIn();
+                    } else {
+                        showToast('Error', response.message || 'Failed to calculate loan details', 'danger');
+                        $('#loan-details-card').hide();
+                        $('#submit-btn').hide(); // Hide submit button on error
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching loan details:', error);
+                    showToast('Error', 'Failed to fetch loan details. Please try again.', 'danger');
+                    $('#loan-details-card').hide();
+                    $('#submit-btn').hide(); // Hide submit button on error
+                }
+            });
+        }
+        
+        // Update UI with loan details from backend
+        function updateLoanDetailsUI(data, tenure) {
+            // Update the UI with values from backend
+            $('#summary-amount').text(data.formatted_amount);
+            $('#summary-rate').text(data.interest_rate + '%');
+            $('#summary-tenure').text(tenure + (tenure === 1 ? ' Month' : ' Months'));
+            $('#summary-fee').text(data.formatted_processing_fee);
+            $('#summary-total').text('₵ ' + data.formatted_total_repayment);
+            
+            $('#monthly-installment').text('₵ ' + data.formatted_monthly_installment);
+            $('#installment-period').text('per month for ' + tenure + (tenure === 1 ? ' month' : ' months'));
+            
+            $('#disbursement-amount').text('₵ ' + data.formatted_disbursement_amount);
+            
+            // Show the content and hide loading
+            $('#loading-details').hide();
+            $('#loan-details-content').show();
+            $('#calculation-status').text('Preview');
+            
+            // Highlight the monthly installment to draw attention
+            $('#monthly-installment').parent().addClass('highlight');
+            setTimeout(function() {
+                $('#monthly-installment').parent().removeClass('highlight');
+            }, 1500);
+        }
+        
+        // Submit loan application when the button is clicked
+        $('#submit-btn').on('click', function() {
+            // Validate form
+            if (!$('#amount_requested').val() || !$('#tenure_months').val() || !$('#purpose').val().trim()) {
+                showToast('Error', 'Please fill in all required fields', 'danger');
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = $(this);
+            const originalText = submitBtn.html();
+            submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+            submitBtn.prop('disabled', true);
+            
+            var tenantId = '{{ request.tenant.id }}';
+            var staff_id = '{{ request.user.member.staff_id }}';
+            
+            // Get form data (includes the interest_rate from hidden field)
+            var formData = $('#loan-form').serialize();
+            
+            // AJAX request to submit loan application
+            $.ajax({
+                url: `/${tenantId}/loans/apply/${staff_id}/`,
+                type: 'POST',
+                data: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    if (response.status === 'success') {
+                        showToast('Success', response.message || 'Your loan application has been submitted successfully!', 'success');
+                        
+                        // Reset form
+                        $('#loan-form')[0].reset();
+                        $('#loan-details-card').hide();
+                        $('#submit-btn').hide();
+                        
+                        // Redirect if needed
+                        if (response.redirect_url) {
+                            setTimeout(function() {
+                                window.location.href = response.redirect_url;
+                            }, 1500);
+                        }
+                    } else {
+                        console.log(response.message)
+                        showToast('Error', response.message || 'Failed to submit loan application', 'danger');
+                    }
+                    
+                    // Reset button
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+                },
+                error: function(xhr, status, error){
+                    console.log('Error submitting loan application:', error);
+                    showToast('Error', 'An error occurred while submitting your application. Please try again.', 'danger');
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+                }
+            });
+        });
+        
+        // Toast notification function
+        function showToast(title, message, type) {
+            var toast = $('#notificationToast');
+            
+            // Set toast content
+            toast.find('.toast-title').text(title);
+            toast.find('.toast-body').text(message);
+            toast.find('.toast-time').text('just now');
+            
+            // Set toast color based on type
+            toast.removeClass('bg-success bg-danger bg-warning bg-info');
+            
+            switch(type) {
+                case 'success':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-check-circle-fill text-success me-2');
+                    break;
+                case 'danger':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-circle-fill text-danger me-2');
+                    break;
+                case 'warning':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-triangle-fill text-warning me-2');
+                    break;
+                case 'info':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+                    break;
+                default:
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+            }
+            
+            // Show toast
+            var bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+    });
+</script>
+{% endblock %}

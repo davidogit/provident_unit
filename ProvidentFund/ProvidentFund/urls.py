@@ -36,6 +36,7 @@ urlpatterns = [
     path('<str:tenant_id>/pfund_admin/', include('Admin.urls')),
     path('<str:tenant_id>/schemes/', include('MultiScheme.urls')),
     path('<str:tenant_id>/accounts/', include('Chart_of_Accounts.urls')),
+    path('<str:tenant_id>/loans/', include('Loan.urls')),
     
 
     path('password_reset/', auth_views.PasswordResetView.as_view(template_name='reset_password.html'), name='password_reset'),
