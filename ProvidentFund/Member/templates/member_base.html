@@ -61,7 +61,8 @@
               </li>
             </ul>
           </div>
-          <a href="{% url 'loan_application' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">Loans</a>
+          <a href="{% url 'loan_application' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">Apply for Loans</a>
+          <a href="{% url 'my_loans' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">My Loans</a>
           
         </div>
       </div>

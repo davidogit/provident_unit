@@ -2,14 +2,14 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.http import JsonResponse
 from django.views.generic import ListView,CreateView,View,TemplateView
-from .models import LoanApplication
+from .models import LoanApplication,LoanRepayment
 from .forms import LoanForm
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_login_required,tenant_required
 from Admin.decorators import role_required
 from decimal import Decimal,ROUND_HALF_UP
 import json
-from django.views.decorators.csrf import csrf_exempt
+
 
 # Create your views here.
 
@@ -84,8 +84,14 @@ class LoanDetails:
 
         return monthly_emi.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
+
+
+"""
+This View is to use user entered amount to calculate loan
+before user proceeds to apply
+"""
 # Fetch Loan details to display upon application
-class FetchLoanDetails(View):
+class CalculatePotentialLoan(View):
     def get(self, *args, **kwargs):
         tenant = self.request.tenant
         potential_loan_amount_str = self.request.GET.get('amount')
@@ -129,3 +135,284 @@ class FetchLoanDetails(View):
         })
 
 
+# Page for member to view and track loan detailsfrom decimal 
+class MemberLoanPage(TemplateView):
+    template_name = 'member_loan_page.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        tenant = getattr(self.request, 'tenant', None)
+        member = getattr(self.request.user, 'member', None)
+
+        loan = LoanApplication.objects.prefetch_related('loan_repayments').filter(
+            tenant=tenant,
+            user=member
+        ).first() if tenant and member else None
+
+        loan_repayments = loan.loan_repayments.all() if loan else []
+
+        percentage_paid = self.calculate_percentage_paid(loan, loan_repayments) if loan else Decimal(0)
+
+        amount_paid = sum(i.amount_paid for i in loan_repayments) if loan_repayments else Decimal(0.0)
+
+        context.update({
+            'loan': loan,
+            'repayments': loan_repayments,
+            'percentage_paid': percentage_paid,
+            'amount_paid':amount_paid,
+            'remaining_amount': loan.amount_requested - amount_paid,
+            'count_of_repayments':loan_repayments.count(),
+            'remaining_payments':loan.tenure_months - loan_repayments.count()
+        })
+        return context
+    
+    def calculate_percentage_paid(self, loan, payments):
+        loan_amount = loan.amount_requested
+        if loan_amount == 0:
+            return Decimal(0)
+
+        amount_paid = sum(i.amount_paid for i in payments) if payments else Decimal(0)
+
+        percent = (amount_paid / loan_amount) * 100
+        return percent.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
+
+
+class LoanApprovalView(ListView):
+    model = LoanApplication
+    template_name = 'loan_approval_base.html'
+    paginate_by = 20
+    context_object_name = 'loan_applications'
+
+    def get_queryset(self):
+        tenant = self.request.tenant
+
+        if tenant:
+            return self.model.objects.filter(
+                tenant=tenant,
+                approved=False,
+                status = "PENDING"
+            ).order_by("-application_date")
+        return LoanApplication.objects.none()
+    
+    def post(self,request,*args,**kwargs):
+        loan_id = self.request.POST.get("loan_id")
+        tenant = self.request.tenant
+        user = self.request.user
+
+        if not tenant:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid request'
+            })
+        
+        if not loan_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Please select a loan to approve.'
+            })
+        
+        # get loan and approve
+        loan = self.get_queryset().filter(
+            id=loan_id
+        ).first()
+
+        if loan:
+            try:
+                loan.approve_loan(user)
+                return JsonResponse({
+                    'status':'success',
+                    'message':'Loan approved successfully.'
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Failed to approve loan: {e}'
+                })
+        return JsonResponse({
+            'status':'error',
+            'message':'Couldn\'t find loan to approve.'
+        })
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = getattr(self.request, 'tenant',None)
+
+        context.update(loan_count_metrics(tenant,status='pending'))
+        return context
+
+
+"""
+APPROVED LOANS AND DISBURSEMENT FUNCTIONALITIES
+"""
+class DisburseApprovedLoans(ListView):
+    model = LoanApplication
+    template_name = 'approved_loan.html'
+    context_object_name = 'approved_loans'
+
+    def get_queryset(self):
+        tenant = getattr(self.request,'tenant',None)
+        if tenant:
+            # Get loan approved loan applications to be disbursed
+            return self.model.objects.filter(
+                tenant=tenant,
+                approved=True,
+                status='APPROVED',
+                disbursed=False
+            ).order_by(
+                '-approval_date'
+            )
+
+        return self.model.objects.none()
+    
+    """
+    HANDLE DISBURSEMENT OPERATION
+    """
+    # TODO: HANDLE DISBURSEMENT LOGIC
+    def post(self,*args,**kwargs):
+        return
+
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = getattr(self.request, 'tenant',None)
+        
+        context.update(loan_count_metrics(tenant,status='approved'))
+        return context
+    
+
+"""
+REJECTED LOAN APPLICATIONS LIST VIEW
+"""
+class RejectedLoanApplications(ListView):
+    model = LoanApplication
+    template_name = 'rejected_applications.html'
+    context_object_name = 'rejected_loans'
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return self.model.objects.filter(
+                tenant=tenant,
+                status='REJECTED',
+            ).order_by('-application_date')
+        return self.model.objects.none()
+    
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = getattr(self.request, 'tenant', None)
+
+        context.update(loan_count_metrics(tenant,status='rejected'))
+        return context
+
+
+
+"""
+Function to return count metrics of loan applications
+"""
+def loan_count_metrics(tenant,status):
+    model = LoanApplication
+
+    queryset = model.objects.filter(
+        tenant=tenant
+    )
+
+    if queryset:
+        pending_applications_count = queryset.filter(
+            status = "PENDING",
+            approved = False
+        ).count()
+
+        approved_applications_count = queryset.filter(
+            status = "APPROVED",
+            approved = True
+        ).count()
+
+        disbursed_applications_count = queryset.filter(
+            status = "DISBURSED",
+            approved = True,
+            disbursed = True
+        ).count()
+
+        rejected_applications_count = queryset.filter(
+            status = "REJECTED",
+            approved = False,
+            disbursed = False
+        ).count()
+    
+    return {
+        'pending_count':pending_applications_count,
+        'approved_count':approved_applications_count,
+        'disbursed_count':disbursed_applications_count,
+        'rejected_count':rejected_applications_count,
+        'active_tab':status
+    }
+
+
+"""
+VIEW To fetch a specific loan details and return a JSON object
+"""
+class FetchLoanDetails(View):
+    model = LoanApplication
+    
+    def get(self,request,*args,**kwargs):
+        tenant = getattr(request,'tenant',None)
+        loan_id = kwargs.get('approved_loan_id')
+
+        if not tenant:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid Request.'
+            })
+        
+        if not loan_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Loan ID missing.'
+            })
+        
+        # Fetch Loan
+        loan = self.model.objects.filter(
+            tenant=tenant,
+            id=loan_id,
+            approved=True,
+            disbursed=False,
+            status='APPROVED'
+        ).first()
+
+        if not loan:
+            return JsonResponse({
+                'status':'error',
+                'message':'Loan not found.'
+            })
+        
+        return JsonResponse({
+            'status':'success',
+            'data':{
+                'user':{
+                    'id':loan.user.staff_id,
+                    'username':loan.user.user.username,
+                    'staff_id':loan.user.staff_id,
+                    'position':loan.user.job_title,
+                    'employment_date':loan.user.employment_date,
+                    'contact':loan.user.tel_number,
+                    'email':loan.user.user.email,
+                    'department':loan.user.department
+                },
+                'loan':{
+                    'id':loan.id,
+                    'amount_requested':loan.amount_requested,
+                    'tenure_months':loan.tenure_months,
+                    'application_date':loan.application_date,
+                    'approval_date':loan.approval_date,
+                    'approved_by':loan.approved_by.__str__(),
+                    'interest_rate':loan.interest_rate,
+                    'monthly_installment':loan.monthly_installments,
+                    'total_repayment':Decimal(0), #At this point there is no repayment
+                    'purpose':loan.purpose
+                }
+            }
+        })
