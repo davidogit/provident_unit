@@ -84,6 +84,9 @@
           <li class="nav-item">
             <a href="{% url 'approve_loans' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-file-list-3-line fs-32 lh-1 me-3"></i> <span>Loan Applications</span></a>
           </li>
+          <li class="nav-item">
+            <a href="{% url 'loan_types' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-file-list-3-line fs-32 lh-1 me-3"></i> <span>Loan Types</span></a>
+          </li>
           {% if 'Finance Manager' in user_groups or 'Supervisor' in user_groups or 'Analyst' in user_groups %}
           <li class="nav-item">
             <a href="{% url 'disburse_approved_loans' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-money-dollar-circle-line fs-32 lh-1 me-3"></i> <span>Repayment Approval</span></a>
