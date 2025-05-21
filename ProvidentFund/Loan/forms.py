@@ -1,5 +1,5 @@
 from django import forms
-from .models import LoanApplication
+from .models import LoanApplication,LoanType
 
 class LoanForm(forms.ModelForm):
     class Meta:
@@ -10,3 +10,9 @@ class LoanForm(forms.ModelForm):
             'tenure_months',
             'interest_rate'
         )
+
+
+class LoanTypeForm(forms.ModelForm):
+    class Meta:
+        model = LoanType
+        exclude = ['tenant','created_at']

@@ -9,5 +9,11 @@ urlpatterns = [
     path('approve-loans/',views.LoanApprovalView.as_view(), name='approve_loans'),
     path('disburse_approved_loans/', views.DisburseApprovedLoans.as_view(), name='disburse_approved_loans'),
     path('approved-loan-details/<int:approved_loan_id>/',views.FetchLoanDetails.as_view()),
-    path('rejected-applications/', views.RejectedLoanApplications.as_view(), name='rejected_loans')
+    path('rejected-applications/', views.RejectedLoanApplications.as_view(), name='rejected_loans'),
+    path('loan-types/', views.LoanTypeView.as_view(), name='loan_types'),
+    path('add-loan-type/', views.CreateLoanType.as_view(),name='add_loan_type'),
+    path('loan-type-details/<int:pk>/', views.LoanTypeDetail.as_view()),
+    path('update-loan-type/<int:pk>/', views.LoanTypeUpdate.as_view()),
+    path('delete-loan-type/<int:pk>/', views.LoanTypeDelete.as_view())
+
 ]

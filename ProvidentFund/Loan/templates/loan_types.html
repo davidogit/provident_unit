@@ -1,0 +1,823 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Loan Types</title>
+{% endblock %}
+
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-list-ul me-2"></i>Loan Types</h5>
+{% endblock %}
+
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="container-fluid">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">Manage Loan Types</h6>
+                        <button class="btn btn-primary" id="add-loan-type-btn">
+                            <i class="bi bi-plus-circle me-1"></i>Add Loan Type
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Loan Type</th>
+                                        <th>Interest Rate</th>
+                                        <th>Amount Range</th>
+                                        <th>Requirements</th>
+                                        <th width="120">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for loan_type in loan_types %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-medium">{{ loan_type.name }}</div>
+                                            <small class="text-muted text-truncate d-block" style="max-width: 200px;">{{ loan_type.description|truncatechars:50|default:"No description" }}</small>
+                                        </td>
+                                        <td>
+                                            <div>{{ loan_type.loan_interest_rate }}%</div>
+                                            <small class="text-muted">{{ loan_type.get_interest_calculation_type_display }}</small>
+                                        </td>
+                                        <td>
+                                            <div>₵{{ loan_type.min_amount|floatformat:2 }} - ₵{{ loan_type.max_amount|floatformat:2 }}</div>
+                                        </td>
+                                        <td>
+                                            <div>{{ loan_type.minimum_year }} year(s) min</div>
+                                            <small class="text-muted">
+                                                {% if loan_type.requires_membership %}
+                                                Enrolled members only
+                                                {% else %}
+                                                All members eligible
+                                                {% endif %}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-info view-loan-type" data-id="{{ loan_type.id }}" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-primary edit-loan-type" data-id="{{ loan_type.id }}" title="Edit Loan Type">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-loan-type" data-id="{{ loan_type.id }}" title="Delete Loan Type">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5">
+                                            <i class="bi bi-list-ul fs-1 text-muted"></i>
+                                            <p class="mt-3 mb-0">No loan types found</p>
+                                            <p class="text-muted">Click the "Add Loan Type" button to create your first loan type.</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Server-side Pagination -->
+                        {% if loan_types.has_other_pages %}
+                        <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                            <div class="text-muted small">
+                                Showing {{ loan_types.start_index }} to {{ loan_types.end_index }} of {{ loan_types.paginator.count }} loan types
+                            </div>
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination pagination-sm mb-0">
+                                    {% if loan_types.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ loan_types.previous_page_number }}" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    
+                                    {% for i in loan_types.paginator.page_range %}
+                                        {% if loan_types.number == i %}
+                                        <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                                        {% elif i > loan_types.number|add:'-3' and i < loan_types.number|add:'3' %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if loan_types.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ loan_types.next_page_number }}" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Loan Type Modal -->
+<div class="modal fade" id="viewLoanTypeModal" tabindex="-1" aria-labelledby="viewLoanTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="viewLoanTypeModalLabel">Loan Type Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="view-modal-loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading loan type details...</p>
+                </div>
+                
+                <div id="view-modal-content" class="row g-4" style="display: none;">
+                    <!-- Basic Information -->
+                    <div class="col-12">
+                        <div class="card border">
+                            <div class="card-header bg-light py-3">
+                                <h6 class="mb-0 fw-bold">Basic Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <h4 id="view-name" class="fw-bold mb-2">--</h4>
+                                        <p id="view-description" class="text-muted mb-0">--</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Eligibility Requirements -->
+                    <div class="col-md-6">
+                        <div class="card border h-100">
+                            <div class="card-header bg-light py-3">
+                                <h6 class="mb-0 fw-bold">Eligibility Requirements</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="text-muted small">Minimum Years</div>
+                                        <div class="fw-medium" id="view-minimum-year">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Minimum Contribution</div>
+                                        <div class="fw-medium" id="view-minimum-contribution">--</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="text-muted small">Membership Requirement</div>
+                                        <div class="fw-medium" id="view-requires-membership">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Loan Amount & Interest -->
+                    <div class="col-md-6">
+                        <div class="card border h-100">
+                            <div class="card-header bg-light py-3">
+                                <h6 class="mb-0 fw-bold">Loan Amount & Interest</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="text-muted small">Minimum Amount</div>
+                                        <div class="fw-medium" id="view-min-amount">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Maximum Amount</div>
+                                        <div class="fw-medium" id="view-max-amount">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Interest Rate</div>
+                                        <div class="fw-medium" id="view-interest-rate">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Calculation Type</div>
+                                        <div class="fw-medium" id="view-calculation-type">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fees & Penalties -->
+                    <div class="col-12">
+                        <div class="card border">
+                            <div class="card-header bg-light py-3">
+                                <h6 class="mb-0 fw-bold">Fees & Penalties</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="text-muted small">Processing Fee</div>
+                                        <div class="fw-medium" id="view-processing-fee">--</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="text-muted small">Late Payment Penalty</div>
+                                        <div class="fw-medium" id="view-late-penalty">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary edit-from-view" id="edit-from-view-btn">
+                    <i class="bi bi-pencil me-1"></i>Edit Loan Type
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Loan Type Modal -->
+<div class="modal fade" id="loanTypeModal" tabindex="-1" aria-labelledby="loanTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="loanTypeModalLabel">Add Loan Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-loading" class="text-center py-5" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading loan type details...</p>
+                </div>
+                
+                <form id="loan-type-form">
+                    <input type="hidden" id="loan-type-id" name="id" value="">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <!-- Basic Information -->
+                        <div class="col-12">
+                            <div class="card border">
+                                <div class="card-header bg-light py-3">
+                                    <h6 class="mb-0 fw-bold">Basic Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-12">
+                                            <label for="name" class="form-label">Loan Type Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="name" name="name" required>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label for="description" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Optional description of this loan type (will be displayed to members when applying)"></textarea>
+                                            <div class="form-text">This description will be shown to members when they apply for this loan type.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Eligibility Requirements -->
+                        <div class="col-md-6">
+                            <div class="card border h-100">
+                                <div class="card-header bg-light py-3">
+                                    <h6 class="mb-0 fw-bold">Eligibility Requirements</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="minimum_year" class="form-label">Minimum Years <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="minimum_year" name="minimum_year" min="0" required>
+                                            <div class="form-text">Minimum years of membership required</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="minimum_contribution_amount" class="form-label">Minimum Contribution <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">₵</span>
+                                                <input type="number" class="form-control" id="minimum_contribution_amount" name="minimum_contribution_amount" min="0" step="0.01" required>
+                                            </div>
+                                            <div class="form-text">Minimum amount contributed to PF</div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="requires_membership" name="requires_membership" checked>
+                                                <label class="form-check-label" for="requires_membership">Requires Membership</label>
+                                            </div>
+                                            <div class="form-text">If checked, only enrolled members can apply</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Loan Amount & Interest -->
+                        <div class="col-md-6">
+                            <div class="card border h-100">
+                                <div class="card-header bg-light py-3">
+                                    <h6 class="mb-0 fw-bold">Loan Amount & Interest</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="min_amount" class="form-label">Minimum Amount <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">₵</span>
+                                                <input type="number" class="form-control" id="min_amount" name="min_amount" min="0" step="0.01" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="max_amount" class="form-label">Maximum Amount <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">₵</span>
+                                                <input type="number" class="form-control" id="max_amount" name="max_amount" min="0" step="0.01" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="loan_interest_rate" class="form-label">Interest Rate (%) <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="loan_interest_rate" name="loan_interest_rate" min="0" step="0.01" required>
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <div class="form-text">Annual interest rate</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="interest_calculation_type" class="form-label">Calculation Type <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="interest_calculation_type" name="interest_calculation_type" required>
+                                                <option value="FLAT">Flat</option>
+                                                <option value="REDUCING">Reducing Balance</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Fees & Penalties -->
+                        <div class="col-12">
+                            <div class="card border">
+                                <div class="card-header bg-light py-3">
+                                    <h6 class="mb-0 fw-bold">Fees & Penalties</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="loan_fee_percentage" class="form-label">Processing Fee (%) <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="loan_fee_percentage" name="loan_fee_percentage" min="0" step="0.01" required>
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <div class="form-text">Percentage of loan amount charged as processing fee</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="late_payment_penalty" class="form-label">Late Payment Penalty (%) <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="late_payment_penalty" name="late_payment_penalty" min="0" step="0.01" required>
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <div class="form-text">Daily penalty for defaulters as percentage</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-loan-type-btn">Save Loan Type</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this loan type? This action cannot be undone.</p>
+                <p class="mb-0"><strong>Note:</strong> Deleting a loan type will not affect existing loans of this type.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete Loan Type</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="notificationToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto toast-title">Notification</strong>
+            <small class="text-muted toast-time">just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <!-- Toast message will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Initialize modals
+        var viewLoanTypeModal = new bootstrap.Modal(document.getElementById('viewLoanTypeModal'));
+        var loanTypeModal = new bootstrap.Modal(document.getElementById('loanTypeModal'));
+        var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        
+        // Handle add loan type button
+        $('#add-loan-type-btn').on('click', function() {
+            // Reset form
+            $('#loan-type-form')[0].reset();
+            $('#loan-type-id').val('');
+            
+            // Update modal title
+            $('#loanTypeModalLabel').text('Add Loan Type');
+            
+            // Show modal
+            loanTypeModal.show();
+        });
+        
+        // Handle view loan type button
+        $('.view-loan-type').on('click', function() {
+            var loanTypeId = $(this).data('id');
+            
+            // Store loan type ID for edit button
+            $('#edit-from-view-btn').data('id', loanTypeId);
+            
+            // Show loading state
+            $('#view-modal-loading').show();
+            $('#view-modal-content').hide();
+            
+            // Show the modal while loading
+            viewLoanTypeModal.show();
+            
+            // Fetch loan type details from the server
+            var tenantId = '{{ request.tenant.id }}';
+            
+            $.ajax({
+                url: `/${tenantId}/loans/loan-type-details/${loanTypeId}/`,
+                type: 'GET',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Populate view with loan type details
+                        populateLoanTypeView(response.data);
+                        
+                        // Hide loading and show content
+                        $('#view-modal-loading').hide();
+                        $('#view-modal-content').fadeIn();
+                    } else {
+                        viewLoanTypeModal.hide();
+                        showToast('Error', response.message || 'Failed to load loan type details', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching loan type details:', error);
+                    viewLoanTypeModal.hide();
+                    showToast('Error', 'Failed to load loan type details. Please try again.', 'danger');
+                }
+            });
+        });
+        
+        // Function to populate loan type view
+        function populateLoanTypeView(data) {
+            // Basic Information
+            $('#view-name').text(data.name);
+            $('#view-description').text(data.description || 'No description provided');
+            
+            // Eligibility Requirements
+            $('#view-minimum-year').text(`${data.minimum_year} year(s)`);
+            $('#view-minimum-contribution').text(`₵${parseFloat(data.minimum_contribution_amount).toFixed(2)}`);
+            $('#view-requires-membership').text(data.requires_membership ? 'Enrolled members only' : 'All members eligible');
+            
+            // Loan Amount & Interest
+            $('#view-min-amount').text(`₵${parseFloat(data.min_amount).toFixed(2)}`);
+            $('#view-max-amount').text(`₵${parseFloat(data.max_amount).toFixed(2)}`);
+            $('#view-interest-rate').text(`${data.loan_interest_rate}% per annum`);
+            $('#view-calculation-type').text(data.interest_calculation_type === 'FLAT' ? 'Flat Rate' : 'Reducing Balance');
+            
+            // Fees & Penalties
+            $('#view-processing-fee').text(`${data.loan_fee_percentage}% of loan amount`);
+            $('#view-late-penalty').text(`${data.late_payment_penalty}% daily penalty`);
+        }
+        
+        // Handle edit from view button
+        $('#edit-from-view-btn').on('click', function() {
+            var loanTypeId = $(this).data('id');
+            
+            // Hide view modal
+            viewLoanTypeModal.hide();
+            
+            // Update modal title
+            $('#loanTypeModalLabel').text('Edit Loan Type');
+            
+            // Show loading state
+            $('#modal-loading').show();
+            $('#loan-type-form').hide();
+            
+            // Show the edit modal while loading
+            loanTypeModal.show();
+            
+            // Fetch loan type details from the server
+            var tenantId = '{{ request.tenant.id }}';
+            
+            $.ajax({
+                url: `/${tenantId}/loans/loan-type-details/${loanTypeId}/`,
+                type: 'GET',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Populate form with loan type details
+                        populateLoanTypeForm(response.data);
+                        
+                        // Hide loading and show form
+                        $('#modal-loading').hide();
+                        $('#loan-type-form').fadeIn();
+                    } else {
+                        loanTypeModal.hide();
+                        showToast('Error', response.message || 'Failed to load loan type details', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching loan type details:', error);
+                    loanTypeModal.hide();
+                    showToast('Error', 'Failed to load loan type details. Please try again.', 'danger');
+                }
+            });
+        });
+        
+        // Handle edit loan type button
+        $('.edit-loan-type').on('click', function() {
+            var loanTypeId = $(this).data('id');
+            
+            // Update modal title
+            $('#loanTypeModalLabel').text('Edit Loan Type');
+            
+            // Show loading state
+            $('#modal-loading').show();
+            $('#loan-type-form').hide();
+            
+            // Show the modal while loading
+            loanTypeModal.show();
+            
+            // Fetch loan type details from the server
+            var tenantId = '{{ request.tenant.id }}';
+            
+            $.ajax({
+                url: `/${tenantId}/loans/loan-type-details/${loanTypeId}/`,
+                type: 'GET',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Populate form with loan type details
+                        populateLoanTypeForm(response.data);
+                        
+                        // Hide loading and show form
+                        $('#modal-loading').hide();
+                        $('#loan-type-form').fadeIn();
+                    } else {
+                        loanTypeModal.hide();
+                        showToast('Error', response.message || 'Failed to load loan type details', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching loan type details:', error);
+                    loanTypeModal.hide();
+                    showToast('Error', 'Failed to load loan type details. Please try again.', 'danger');
+                }
+            });
+        });
+        
+        // Function to populate loan type form
+        function populateLoanTypeForm(data) {
+            $('#loan-type-id').val(data.id);
+            $('#name').val(data.name);
+            $('#description').val(data.description);
+            $('#minimum_year').val(data.minimum_year);
+            $('#minimum_contribution_amount').val(data.minimum_contribution_amount);
+            $('#requires_membership').prop('checked', data.requires_membership);
+            $('#min_amount').val(data.min_amount);
+            $('#max_amount').val(data.max_amount);
+            $('#loan_interest_rate').val(data.loan_interest_rate);
+            $('#interest_calculation_type').val(data.interest_calculation_type);
+            $('#loan_fee_percentage').val(data.loan_fee_percentage);
+            $('#late_payment_penalty').val(data.late_payment_penalty);
+        }
+        
+        // Handle save loan type button
+        $('#save-loan-type-btn').on('click', function() {
+            // Validate form
+            if (!$('#loan-type-form')[0].checkValidity()) {
+                $('#loan-type-form')[0].reportValidity();
+                return;
+            }
+            
+            // Get form data
+            var formData = new FormData($('#loan-type-form')[0]);
+            var loanTypeId = $('#loan-type-id').val();
+            var isEdit = loanTypeId !== '';
+            
+            // Show loading state
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+            
+            // Submit form via AJAX
+            var tenantId = '{{ request.tenant.id }}';
+            var url = isEdit 
+                ? `/${tenantId}/loans/update-loan-type/${loanTypeId}/`
+                : `/${tenantId}/loans/add-loan-type/`;
+            
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Show success message
+                        showToast('Success', response.message || (isEdit ? 'Loan type updated successfully' : 'Loan type added successfully'), 'success');
+                        
+                        // Close modal
+                        loanTypeModal.hide();
+                        
+                        // Refresh the page after a delay
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        // Show error message
+                        showToast('Error', response.message || 'Failed to save loan type', 'danger');
+                        
+                        // Reset button
+                        $('#save-loan-type-btn').prop('disabled', false).html('Save Loan Type');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error saving loan type:', error);
+                    
+                    // Show error message
+                    showToast('Error', 'Failed to save loan type. Please try again.', 'danger');
+                    
+                    // Reset button
+                    $('#save-loan-type-btn').prop('disabled', false).html('Save Loan Type');
+                }
+            });
+        });
+        
+        // Handle delete loan type button
+        $('.delete-loan-type').on('click', function() {
+            var loanTypeId = $(this).data('id');
+            
+            // Store loan type ID for delete confirmation
+            $('#confirm-delete-btn').data('id', loanTypeId);
+            
+            // Show delete confirmation modal
+            deleteModal.show();
+        });
+        
+        // Handle confirm delete button
+        $('#confirm-delete-btn').on('click', function() {
+            var loanTypeId = $(this).data('id');
+            
+            // Show loading state
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...');
+            
+            // Submit delete request via AJAX
+            var tenantId = '{{ request.tenant.id }}';
+            
+            $.ajax({
+                url: `/${tenantId}/loans/delete-loan-type/${loanTypeId}/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        console.log('Loan type deleted successfully');
+                        // Show success message
+                        showToast('Success', response.message || 'Loan type deleted successfully', 'success');
+                        
+                        // Close modal
+                        deleteModal.hide();
+                        
+                        // Refresh the page after a delay
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        console.error('Error deleting loan type:', response.message, response);
+                        // Show error message
+                        showToast('Error', response.message || 'Failed to delete loan type', 'danger');
+                        
+                        // Reset button
+                        $('#confirm-delete-btn').prop('disabled', false).html('Delete Loan Type');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error deleting loan type:', error);
+                    
+                    // Show error message
+                    showToast('Error', 'Failed to delete loan type. Please try again.', 'danger');
+                    
+                    // Reset button
+                    $('#confirm-delete-btn').prop('disabled', false).html('Delete Loan Type');
+                }
+            });
+        });
+        
+        // Form validation - ensure max amount is greater than min amount
+        $('#min_amount, #max_amount').on('change', function() {
+            var minAmount = parseFloat($('#min_amount').val()) || 0;
+            var maxAmount = parseFloat($('#max_amount').val()) || 0;
+            
+            if (maxAmount > 0 && minAmount > maxAmount) {
+                showToast('Warning', 'Minimum amount cannot be greater than maximum amount', 'warning');
+                $('#max_amount').val(minAmount);
+            }
+        });
+        
+        // Toast notification function
+        function showToast(title, message, type) {
+            var toast = $('#notificationToast');
+            
+            // Set toast content
+            toast.find('.toast-title').text(title);
+            toast.find('.toast-body').text(message);
+            toast.find('.toast-time').text('just now');
+            
+            // Set toast color based on type
+            toast.removeClass('bg-success bg-danger bg-warning bg-info');
+            
+            switch(type) {
+                case 'success':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-check-circle-fill text-success me-2');
+                    break;
+                case 'danger':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-circle-fill text-danger me-2');
+                    break;
+                case 'warning':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-triangle-fill text-warning me-2');
+                    break;
+                case 'info':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+                    break;
+                default:
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+            }
+            
+            // Show toast
+            var bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+    });
+</script>
+{% endblock %}

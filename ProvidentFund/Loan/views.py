@@ -1,14 +1,15 @@
+from django.forms import model_to_dict
 from django.shortcuts import render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse
-from django.views.generic import ListView,CreateView,View,TemplateView
-from .models import LoanApplication,LoanRepayment
-from .forms import LoanForm
+from django.views.generic import ListView,CreateView,View,TemplateView,DetailView,UpdateView,DeleteView
+from .models import LoanApplication,LoanRepayment,LoanType
+from .forms import LoanForm,LoanTypeForm
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_login_required,tenant_required
 from Admin.decorators import role_required
 from decimal import Decimal,ROUND_HALF_UP
-import json
+from django.utils import timezone
 
 
 # Create your views here.
@@ -16,7 +17,131 @@ import json
 class LoanApplicationView(TemplateView):
     template_name = 'loan_application.html'
 
+class LoanTypeView(ListView):
+    model = LoanType
+    template_name = 'loan_types.html'
+    context_object_name = 'loan_types'
+    paginate_by = 10
 
+
+
+class CreateLoanType(CreateView):
+    model = LoanType
+    form_class = LoanTypeForm
+
+    def form_valid(self, form):
+        tenant = getattr(self.request, 'tenant', None)
+
+        if tenant:
+            form.instance.tenant = tenant
+            self.object = form.save()
+            return JsonResponse({
+                'status':'success',
+                'redirect_url':self.get_success_url()
+            })
+        return JsonResponse({
+            'status':'error',
+            'message':'Unauthorized or invalid tenant.'
+        })
+
+    def form_invalid(self, form):
+        return JsonResponse({
+            'status':'error',
+            'message':form.errors.get_json_data()
+        })
+
+    def get_success_url(self):
+        tenant = getattr(self.request, 'tenant',None)
+
+        return reverse('loan_types',kwargs={'tenant_id':tenant.id})
+
+
+"""
+UPDATE VIEW FOR LOAN TYPE
+"""
+class LoanTypeUpdate(UpdateView):
+    model = LoanType
+    form_class = LoanTypeForm
+
+    def form_valid(self, form):
+        tenant = getattr(self.request, 'tenant', None)
+
+        if tenant and form.instance.tenant == tenant:
+            self.object = form.save()
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Loan type updated successfully.'
+            })
+
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Unauthorized or invalid tenant.'
+        }, status=403)
+
+    def form_invalid(self, form):
+        return JsonResponse({
+            'status': 'error',
+            'errors': form.errors.get_json_data()
+        }, status=400)
+
+    def get_success_url(self):
+        tenant = getattr(self.request, 'tenant', None)
+        return reverse('loan_types', kwargs={'tenant_id': tenant.id})
+
+
+"""
+DELETE VIEW FOR LOAN TYPE
+"""
+class LoanTypeDelete(DeleteView):
+    model = LoanType
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return super().get_queryset().filter(tenant=tenant)
+        return LoanType.objects.none()
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.delete()
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Loan type deleted successfully.',
+            'redirect_url': self.get_success_url()
+        })
+
+    def get_success_url(self):
+        tenant = getattr(self.request, 'tenant', None)
+        return reverse('loan_types', kwargs={'tenant_id': tenant.id})
+
+
+
+"""
+DETAIL VIEW FOR LOAN TYPE
+"""
+class LoanTypeDetail(DetailView):
+    model = LoanType
+
+    def get(self, request, *args, **kwargs):
+        tenant = getattr(request, 'tenant', None)
+
+        loan_type = self.get_object()
+
+        if(tenant and loan_type.tenant != tenant):
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid request - Access denied'
+            }, status=403)
+        
+        data = model_to_dict(
+            loan_type,
+            exclude=['created_at']
+        )
+
+        return JsonResponse({
+            'status':'success',
+            'data':data
+        })
 
 class HandleLoanSubmission(View):
     def post(self, request, *args, **kwargs):
@@ -48,15 +173,21 @@ class HandleLoanSubmission(View):
         else:
             return JsonResponse({"status": "error", "errors": form.errors}, status=400)
 
+
+
+
 class LoanApprovalView(ListView):
     model = LoanApplication
     template_name = 'loan_approval.html'
 
 
+"""
+CLASS TO CALCULATE AND DISPLAY EMI TO MEMBER
+"""
 class LoanDetails:
     def total_interest_flat(self, amount, tenure):
         p = Decimal(amount)
-        r = Decimal('6.5')  # This can be made dynamic later
+        r = Decimal('6.5')  # This must be made dynamic for each tenant
         t_months = Decimal(tenure)
         t_years = t_months / Decimal('12')
 
@@ -74,15 +205,18 @@ class LoanDetails:
 
     def calculate_monthly_installments_flat(self, amount, tenure):
         p = Decimal(amount)
-        r = Decimal('6.5')
-        t_months = Decimal(tenure)
-        t_years = t_months / Decimal('12')
+        annual_rate = Decimal('6.5')  # Make this tenant-specific later
+        r = (annual_rate / Decimal('1200'))  # Monthly rate as decimal
+        T = Decimal(tenure)
 
-        total_interest = (p * r * t_years / Decimal('100'))
-        total_amount_payable = p + total_interest
-        monthly_emi = total_amount_payable / t_months
+        if r == 0:
+            emi = p / T  # Simple division if zero interest
+        else:
+            numerator = p * r * (1 + r) ** T
+            denominator = ((1 + r) ** T) - 1
+            emi = numerator / denominator
 
-        return monthly_emi.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return emi.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
 
@@ -319,6 +453,7 @@ def loan_count_metrics(tenant,status):
     queryset = model.objects.filter(
         tenant=tenant
     )
+    context = {}
 
     if queryset:
         pending_applications_count = queryset.filter(
@@ -342,14 +477,16 @@ def loan_count_metrics(tenant,status):
             approved = False,
             disbursed = False
         ).count()
-    
-    return {
+
+        context = {
         'pending_count':pending_applications_count,
         'approved_count':approved_applications_count,
         'disbursed_count':disbursed_applications_count,
         'rejected_count':rejected_applications_count,
         'active_tab':status
-    }
+        }
+    
+    return context
 
 
 """
