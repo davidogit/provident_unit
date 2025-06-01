@@ -14,6 +14,7 @@ urlpatterns = [
     path('add-loan-type/', views.CreateLoanType.as_view(),name='add_loan_type'),
     path('loan-type-details/<int:pk>/', views.LoanTypeDetail.as_view()),
     path('update-loan-type/<int:pk>/', views.LoanTypeUpdate.as_view()),
-    path('delete-loan-type/<int:pk>/', views.LoanTypeDelete.as_view())
-
+    path('delete-loan-type/<int:pk>/', views.LoanTypeDelete.as_view()),
+    path('<int:staff_id>/loan_types/', views.MemberLoanTypeView.as_view(), name='member_loan_type'),
+    path('fetch_loan_type_details/', views.FetchLoanTypeDetails.as_view(), name='fetch_loan_types')
 ]

@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import IntegrityError, models
 from Member.models import Member
 from django.conf import settings
 from MultiScheme.models import Tenant
