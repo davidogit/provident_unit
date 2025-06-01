@@ -85,9 +85,30 @@
               </li>
             </ul>
           </div>
-          <a href="{% url 'loan_application' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">Apply for Loans</a>
-          <a href="{% url 'my_loans' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">My Loans</a>
-          
+
+
+          <!-- Loan Nav group -->
+          <div class="nav-group">
+            <a href="#" class="nav-label">Loans</a>
+            <ul class="nav nav-sidebar">
+              <li class="nav-item">
+                <a
+                  class="nav-link"
+                  href="{% url 'member_loan_type' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">
+                  <i class="ri-loan-line"></i> Apply for Loans
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
+                  class="nav-link"
+                  href="{% url 'my_loans' tenant_id=request.tenant.id staff_id=user.member.staff_id %}">
+                  <i class="ri-file-list-3-line"></i> My Loans
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Loan Nav group -->
         </div>
       </div>
       <!-- sidebar-body -->

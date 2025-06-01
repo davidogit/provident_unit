@@ -8,7 +8,8 @@ class LoanForm(forms.ModelForm):
             'amount_requested',
             'purpose',
             'tenure_months',
-            'interest_rate'
+            'interest_rate',
+            # 'loan_type'
         )
 
 

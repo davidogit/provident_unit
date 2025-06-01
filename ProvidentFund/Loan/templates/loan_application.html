@@ -11,141 +11,260 @@
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
     <div class="container-fluid">
-        <div class="row">
-            <!-- Loan Details Card (Left Side) -->
-            <div class="col-lg-7 mb-4 mb-lg-0">
-                <div class="card shadow-sm h-100" id="loan-details-card" style="display: none;">
-                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0 fw-bold">Loan Details</h6>
-                        <span class="badge bg-primary-soft text-primary rounded-pill" id="calculation-status">Preview</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="loading-details" class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+        {% if loan_type %}
+            <!-- Loan Type Information Banner -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm border-primary">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h4 class="fw-bold text-primary mb-2">{{ loan_type.name }}</h4>
+                                    {% if loan_type.description %}
+                                        <p class="text-muted mb-2">{{ loan_type.description }}</p>
+                                    {% endif %}
+                                    <div class="row">
+                                        <div class="col-sm-6 col-md-3 mb-2">
+                                            <small class="text-muted d-block">Interest Rate</small>
+                                            <span class="fw-bold">{{ loan_type.loan_interest_rate }}%</span>
+                                        </div>
+                                        {% if loan_type.min_amount %}
+                                        <div class="col-sm-6 col-md-3 mb-2">
+                                            <small class="text-muted d-block">Minimum Amount</small>
+                                            <span class="fw-bold">₵{{ loan_type.min_amount|floatformat:2 }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if loan_type.max_amount %}
+                                        <div class="col-sm-6 col-md-3 mb-2">
+                                            <small class="text-muted d-block">Maximum Amount</small>
+                                            <span class="fw-bold">₵{{ loan_type.max_amount|floatformat:2 }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if loan_type.interest_calculation_type %}
+                                        <div class="col-sm-6 col-md-3 mb-2">
+                                            <small class="text-muted d-block">Interest Calculation Type</small>
+                                            <span class="fw-bold">{{ loan_type.interest_calculation_type }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <span class="badge bg-success-soft text-success fs-6 px-3 py-2">
+                                        <i class="bi bi-check-circle me-1"></i>Available
+                                    </span>
+                                </div>
                             </div>
-                            <p class="mt-2">Calculating loan details...</p>
                         </div>
-                        
-                        <div id="loan-details-content" style="display: none;">
-                            <div class="row g-4">
-                                <!-- Repayment Summary -->
-                                <div class="col-md-12">
-                                    <div class="card border mb-0">
-                                        <div class="card-body">
-                                            <h5 class="fw-bold mb-3">Repayment Summary</h5>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="d-flex justify-content-between mb-2">
-                                                        <span class="text-muted">Loan Amount:</span>
-                                                        <span class="fw-medium" id="summary-amount">₵0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Application Form and Preview -->
+            <div class="row">
+                <!-- Loan Details Card (Left Side) -->
+                <div class="col-lg-7 mb-4 mb-lg-0">
+                    <div class="card shadow-sm h-100" id="loan-details-card" style="display: none;">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold">Loan Details</h6>
+                            <span class="badge bg-primary-soft text-primary rounded-pill" id="calculation-status">Preview</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="loading-details" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Calculating loan details...</p>
+                            </div>
+                            
+                            <div id="loan-details-content" style="display: none;">
+                                <div class="row g-4">
+                                    <!-- Repayment Summary -->
+                                    <div class="col-md-12">
+                                        <div class="card border mb-0">
+                                            <div class="card-body">
+                                                <h5 class="fw-bold mb-3">Repayment Summary</h5>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <span class="text-muted">Loan Amount:</span>
+                                                            <span class="fw-medium" id="summary-amount">₵0.00</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <span class="text-muted">Interest Rate:</span>
+                                                            <span class="fw-medium" id="summary-rate">0%</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <span class="text-muted">Tenure:</span>
+                                                            <span class="fw-medium" id="summary-tenure">0 Months</span>
+                                                        </div>
                                                     </div>
-                                                    <div class="d-flex justify-content-between mb-2">
-                                                        <span class="text-muted">Interest Rate:</span>
-                                                        <span class="fw-medium" id="summary-rate">0%</span>
-                                                    </div>
-                                                    <div class="d-flex justify-content-between mb-2">
-                                                        <span class="text-muted">Tenure:</span>
-                                                        <span class="fw-medium" id="summary-tenure">0 Months</span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="d-flex justify-content-between mb-2">
-                                                        <span class="text-muted">Processing Fee:</span>
-                                                        <span class="fw-medium" id="summary-fee">$0.00</span>
-                                                    </div>
-                                                    <div class="d-flex justify-content-between mb-2">
-                                                        <span class="text-muted">Disbursement:</span>
-                                                        <span class="fw-medium" id="disbursement-amount">₵0.00</span>
-                                                    </div>
-                                                    <div class="d-flex justify-content-between mb-2">
-                                                        <span class="fw-bold">Total Repayment:</span>
-                                                        <span class="fw-bold" id="summary-total">$0.00</span>
+                                                    <div class="col-md-6">
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <span class="text-muted">Processing Fee:</span>
+                                                            <span class="fw-medium" id="summary-fee">₵0.00</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <span class="text-muted">Disbursement:</span>
+                                                            <span class="fw-medium" id="disbursement-amount">₵0.00</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <span class="fw-bold">Total Repayment:</span>
+                                                            <span class="fw-bold" id="summary-total">₵0.00</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <!-- Monthly Installment -->
-                                <div class="col-md-6">
-                                    <div class="card border bg-success-soft h-100">
-                                        <div class="card-body text-center">
-                                            <h5 class="fw-bold mb-3 text-success">Monthly Installment</h5>
-                                            <div class="display-5 fw-bold text-success mb-2" id="monthly-installment">₵0.00</div>
-                                            <p class="text-success" id="installment-period">per month for 0 months</p>
+                                    
+                                    <!-- Monthly Installment -->
+                                    <div class="col-md-6">
+                                        <div class="card border bg-success-soft h-100">
+                                            <div class="card-body text-center">
+                                                <h5 class="fw-bold mb-3 text-success">Monthly Installment</h5>
+                                                <div class="display-5 fw-bold text-success mb-2" id="monthly-installment">₵0.00</div>
+                                                <p class="text-success" id="installment-period">per month for 0 months</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <!-- Information Alert -->
-                                <div class="col-md-6">
-                                    <div class="alert alert-info h-100 d-flex align-items-center mb-0">
-                                        <i class="bi bi-info-circle me-2 fs-5"></i>
-                                        <div>Your loan application will be reviewed within 24-48 hours.</div>
+                                    
+                                    <!-- Information Alert -->
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info h-100 d-flex align-items-center mb-0">
+                                            <i class="bi bi-info-circle me-2 fs-5"></i>
+                                            <div>Your loan application will be reviewed within 24-48 hours.</div>
+                                        </div>
                                     </div>
-                                </div>
-                                
-                                <!-- Submit Button -->
-                                <div class="col-12">
-                                    <button class="btn btn-primary w-100" type="button" id="submit-btn" style="display: none;">
-                                        <i class="bi bi-send me-2"></i>Submit Loan Application
-                                    </button>
+                                    
+                                    <!-- Submit Button -->
+                                    <div class="col-12">
+                                        <button class="btn btn-primary w-100" type="button" id="submit-btn" style="display: none;">
+                                            <i class="bi bi-send me-2"></i>Submit Loan Application
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Loan Application Form Card (Right Side) -->
-            <div class="col-lg-5">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header py-3">
-                        <h6 class="mb-0 fw-bold">Apply for a Loan</h6>
-                    </div>
-                    <div class="card-body">
-                        <form action="" method="POST" id="loan-form">
-                            <!-- {% csrf_token %} -->
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label for="amount_requested" class="form-label">Loan Amount</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">₵</span>
-                                        <input type="number" class="form-control" id="amount_requested" name="amount_requested" placeholder="Enter amount" min="100" required>
+                
+                <!-- Loan Application Form Card (Right Side) -->
+                <div class="col-lg-5">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header py-3">
+                            <h6 class="mb-0 fw-bold">Apply for {{ loan_type.name }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <form action="" method="POST" id="loan-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="loan_type_id" value="{{ loan_type.id }}">
+                                
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label for="amount_requested" class="form-label">Loan Amount</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">₵</span>
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   id="amount_requested" 
+                                                   name="amount_requested" 
+                                                   placeholder="Enter amount" 
+                                                   {% if loan_type.min_amount %}min="{{ loan_type.min_amount }}"{% else %}min="100"{% endif %}
+                                                   {% if loan_type.max_amount %}max="{{ loan_type.max_amount }}"{% endif %}
+                                                   required>
+                                        </div>
+                                        {% if loan_type.min_amount or loan_type.max_amount %}
+                                        <small class="form-text text-muted">
+                                            {% if loan_type.min_amount and loan_type.max_amount %}
+                                                Amount must be between ₵{{ loan_type.min_amount|floatformat:2 }} and ₵{{ loan_type.max_amount|floatformat:2 }}
+                                            {% elif loan_type.min_amount %}
+                                                Minimum amount: ₵{{ loan_type.min_amount|floatformat:2 }}
+                                            {% elif loan_type.max_amount %}
+                                                Maximum amount: ₵{{ loan_type.max_amount|floatformat:2 }}
+                                            {% endif %}
+                                        </small>
+                                        {% endif %}
                                     </div>
+                                    
+                                    <div class="col-12">
+                                        <label for="tenure_months" class="form-label">Loan Tenure</label>
+                                        <select class="form-select" id="tenure_months" name="tenure_months" required>
+                                            <option value="">Select tenure period</option>
+                                            <option value="1">1 Month</option>
+                                            <option value="3">3 Months</option>
+                                            <option value="6">6 Months</option>
+                                            <option value="12">12 Months</option>
+                                            <option value="18">18 Months</option>
+                                            <option value="24">24 Months</option>
+                                        </select>
+                                        {% if loan_type.max_tenure_months %}
+                                        <small class="form-text text-muted">
+                                            Maximum tenure: {{ loan_type.max_tenure_months }} months
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <label for="purpose" class="form-label">Loan Purpose</label>
+                                        <textarea class="form-control" 
+                                                  id="purpose" 
+                                                  name="purpose" 
+                                                  rows="5" 
+                                                  placeholder="Briefly describe why you need this loan" 
+                                                  required>
+                                        </textarea>
+                                    </div>
+                                    
+                                    <!-- Hidden field for interest rate -->
+                                    <input type="hidden" id="interest_rate" name="interest_rate" value="{{ loan_type.interest_rate }}">
                                 </div>
                                 
-                                <div class="col-12">
-                                    <label for="tenure_months" class="form-label">Loan Tenure</label>
-                                    <select class="form-select" id="tenure_months" name="tenure_months" required>
-                                        <option value="">Select tenure period</option>
-                                        <option value="1">1 Month</option>
-                                        <option value="3">3 Months</option>
-                                        <option value="6">6 Months</option>
-                                        <option value="12">12 Months</option>
-                                        <option value="24">24 Months</option>
-                                    </select>
+                                <div class="mt-4 text-center d-lg-none">
+                                    <p class="text-muted small">Fill in the details above to see loan calculation</p>
                                 </div>
-                                
-                                <div class="col-12">
-                                    <label for="purpose" class="form-label">Loan Purpose</label>
-                                    <textarea class="form-control" id="purpose" name="purpose" rows="5" placeholder="Briefly describe why you need this loan" required></textarea>
-                                </div>
-                                
-                                <!-- Hidden field for interest rate -->
-                                <input type="hidden" id="interest_rate" name="interest_rate" value="">
-                            </div>
-                            
-                            <div class="mt-4 text-center d-lg-none">
-                                <p class="text-muted small">Fill in the details above to see loan calculation</p>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+        {% else %}
+            <!-- No Loan Type Available Message -->
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm text-center">
+                        <div class="card-body py-5">
+                            <div class="mb-4">
+                                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                            </div>
+                            <h3 class="fw-bold mb-3">Loan Type Not Available</h3>
+                            <p class="text-muted mb-4 fs-5">
+                                Sorry, the requested loan type is not currently available or does not exist. 
+                                This could be due to:
+                            </p>
+                            <div class="row justify-content-center mb-4">
+                                <div class="col-md-8">
+                                    <ul class="list-unstyled text-start">
+                                        <li class="mb-2"><i class="bi bi-dot text-primary"></i> The loan type has been temporarily suspended</li>
+                                        <li class="mb-2"><i class="bi bi-dot text-primary"></i> You may not be eligible for this loan type</li>
+                                        <li class="mb-2"><i class="bi bi-dot text-primary"></i> The loan type configuration is incomplete</li>
+                                        <li class="mb-2"><i class="bi bi-dot text-primary"></i> An invalid loan type was requested</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+                                <a href="" class="btn btn-primary">
+                                    <i class="bi bi-list-ul me-2"></i>View Available Loan Types
+                                </a>
+                                <a href="" class="btn btn-outline-secondary">
+                                    <i class="bi bi-house me-2"></i>Return to Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
 </div>
 
@@ -184,6 +303,10 @@
     
     .card.border {
         border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .card.border-primary {
+        border: 1px solid var(--bs-primary) !important;
     }
     
     /* Badge Styles */
@@ -233,6 +356,7 @@
     }
 </style>
 
+{% if loan_type %}
 <script>
     $(document).ready(function(){
         // Initialize tooltips
@@ -269,6 +393,7 @@
             var amount = parseFloat($('#amount_requested').val());
             var tenure = parseInt($('#tenure_months').val());
             var tenantId = '{{ request.tenant.id }}';
+            var loanTypeId = '{{ loan_type.id }}';
             
             if (isNaN(amount) || isNaN(tenure) || amount <= 0 || tenure <= 0) {
                 showToast('Error', 'Please enter valid loan amount and tenure', 'danger');
@@ -283,7 +408,8 @@
                 type: 'GET',
                 data: {
                     amount: amount,
-                    tenure: tenure
+                    tenure: tenure,
+                    loan_type_id: loanTypeId
                 },
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
@@ -435,4 +561,5 @@
         }
     });
 </script>
+{% endif %}
 {% endblock %}

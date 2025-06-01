@@ -1,250 +1,177 @@
 {% extends 'member_base.html' %}
 
 {% block title %}
-<title>Loan Details & Payments</title>
+<title>My Loans</title>
 {% endblock %}
 
 {% block header %}
-<h5 class="fw-bold"><i class="bi bi-credit-card me-2"></i>Loan Details & Payments</h5>
+<h5 class="fw-bold"><i class="bi bi-credit-card me-2"></i>My Loans</h5>
 {% endblock %}
 
 {% block content %}
 <div class="main main-app p-3 p-lg-4">
-    {% if loan %}
     <div class="container-fluid">
-        <!-- Loan Summary Section -->
-        <div class="row mb-4">
-            <div class="col-lg-8">
-                <div class="card shadow-sm">
-                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0 fw-bold">Current Loan</h6>
-                        <span class="badge bg-success">{{ loan.status }}</span>
+        {% if loans %}
+            <!-- Loan Filter and Search Section -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+                <div class="mb-3 mb-md-0">
+                    <h6 class="fw-bold mb-1">Your Loans</h6>
+                    <p class="text-muted mb-0">Showing {{ loans|length }} loan{% if loans|length != 1 %}s{% endif %}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
+                            <li><a class="dropdown-item active" href="#">All Loans</a></li>
+                            <li><a class="dropdown-item" href="#">Active Loans</a></li>
+                            <li><a class="dropdown-item" href="#">Completed Loans</a></li>
+                            <li><a class="dropdown-item" href="#">Pending Approval</a></li>
+                        </ul>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <!-- Loan Details -->
-                            <div class="col-md-7">
-                                <h5 class="fw-bold mb-3">Loan Details</h5>
-                                <div class="row g-3">
-                                    <div class="col-6">
-                                        <div class="text-muted small">Loan ID</div>
-                                        <div class="fw-medium">{{loan.id}}</div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="text-muted small">Date Issued</div>
-                                        <div class="fw-medium">{{loan.disbursement_date}}</div>
-                                    </div>
-                                    <div class="col-6">
+                    <div class="input-group" style="width: auto;">
+                        <input type="text" class="form-control" placeholder="Search loans" aria-label="Search loans">
+                        <button class="btn btn-outline-secondary" type="button">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loans Horizontal Scrolling Section -->
+            <div class="loans-container mb-4">
+                <div class="row flex-nowrap overflow-auto pb-3" style="scroll-padding: 1rem; scroll-behavior: smooth;">
+                    {% for loan in loans %}
+                    <div class="col-11 col-md-6 col-lg-4 col-xl-3">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold">Loan #{{ loan.id }}</h6>
+                                {% if loan.status == 'Active' %}
+                                    <span class="badge bg-success">{{ loan.status }}</span>
+                                {% elif loan.status == 'Pending' %}
+                                    <span class="badge bg-warning text-dark">{{ loan.status }}</span>
+                                {% elif loan.status == 'Completed' %}
+                                    <span class="badge bg-info">{{ loan.status }}</span>
+                                {% elif loan.status == 'Rejected' %}
+                                    <span class="badge bg-danger">{{ loan.status }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ loan.status }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
                                         <div class="text-muted small">Loan Amount</div>
-                                        <div class="fw-medium">₵{{loan.amount_requested}}</div>
+                                        <div class="fw-bold fs-4">₵{{ loan.amount_requested }}</div>
                                     </div>
+                                    <div class="text-end">
+                                        <div class="text-muted small">Monthly Payment</div>
+                                        <div class="fw-medium">₵{{ loan.monthly_installments }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-muted small">Progress</span>
+                                        <span class="text-muted small">{{ loan.percentage_paid }}% paid</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ loan.percentage_paid }}%;" 
+                                             aria-valuenow="{{ loan.percentage_paid }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-2 mb-3">
                                     <div class="col-6">
                                         <div class="text-muted small">Interest Rate</div>
-                                        <div class="fw-medium">{{loan.interest_rate}}%</div>
+                                        <div class="fw-medium">{{ loan.interest_rate }}%</div>
                                     </div>
                                     <div class="col-6">
                                         <div class="text-muted small">Tenure</div>
-                                        <div class="fw-medium">{{loan.tenure_months}} Months</div>
+                                        <div class="fw-medium">{{ loan.tenure_months }} Months</div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="text-muted small">Monthly Installment</div>
-                                        <div class="fw-medium">₵{{loan.monthly_installments}}</div>
+                                        <div class="text-muted small">Date Issued</div>
+                                        <div class="fw-medium">{{ loan.disbursement_date|date:"M d, Y" }}</div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="text-muted small">Purpose</div>
-                                        <div class="fw-medium">{{loan.purpose}}</div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="text-muted small">Next Payment Due</div>
-                                        <div class="fw-medium text-danger">June 15, 2023</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Payment Progress -->
-                            <div class="col-md-5 border-start">
-                                <h5 class="fw-bold mb-3">Payment Progress</h5>
-                                <div class="text-center mb-4">
-                                    <div class="position-relative d-inline-block">
-                                        <svg width="160" height="160" viewBox="0 0 160 160">
-                                            <circle cx="80" cy="80" r="70" fill="none" stroke="#e9ecef" stroke-width="12" />
-                                            <circle cx="80" cy="80" r="70" fill="none" stroke="#198754" stroke-width="12" 
-                                                stroke-dasharray="439.6" stroke-dashoffset="329.7" stroke-linecap="round" />
-                                        </svg>
-                                        <div class="position-absolute top-50 start-50 translate-middle text-center">
-                                            <h3 class="mb-0 fw-bold">{{percentage_paid}}%</h3>
-                                            <p class="mb-0 small text-muted">Paid</p>
+                                        <div class="text-muted small">Next Payment</div>
+                                        <div class="fw-medium {% if loan.next_payment_overdue %}text-danger{% endif %}">
+                                            {{ loan.next_payment_date|date:"M d, Y" }}
                                         </div>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Total Amount:</span>
-                                    <span class="fw-medium">₵{{loan.amount_requested}}</span>
+                                
+                                {% if loan.status == 'Active' %}
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'loan_details' tenant_id=request.tenant.id loan_id=loan.id %}" class="btn btn-primary flex-grow-1">
+                                        <i class="bi bi-eye me-1"></i>Details
+                                    </a>
+                                    <a href="{% url 'make_payment' tenant_id=request.tenant.id loan_id=loan.id %}" class="btn btn-outline-success flex-grow-1">
+                                        <i class="bi bi-credit-card me-1"></i>Pay
+                                    </a>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Amount Paid:</span>
-                                    <span class="fw-medium">₵{{amount_paid}}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span class="text-muted">Remaining:</span>
-                                    <span class="fw-bold">₵{{remaining_amount}}</span>
-                                </div>
-                                <div class="progress mb-2" style="height: 8px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{percentage_paid}}%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                <div class="d-flex justify-content-between small">
-                                    <span>{{count_of_repayments}} of {{loan.tenure_months}} payments</span>
-                                    <span>{{remaining_payments}} remaining</span>
-                                </div>
+                                {% else %}
+                                <a href="" class="btn btn-primary w-100">
+                                    <i class="bi bi-eye me-1"></i>View Details
+                                </a>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
             
-            <!-- Make Payment Card -->
-            <div class="col-lg-4">
-                <div class="card shadow-sm">
-                    <div class="card-header py-3">
-                        <h6 class="mb-0 fw-bold">Make a Payment</h6>
-                    </div>
-                    <div class="card-body">
-                        <form id="payment-form">
-                            <div class="mb-3">
-                                <label for="payment_amount" class="form-label">Payment Amount</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">₵</span>
-                                    <input type="number" class="form-control" id="payment_amount" value="933.33" min="100" step="0.01" required>
-                                </div>
-                                <div class="form-text">Regular installment: ₵933.33</div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="payment_method" class="form-label">Payment Method</label>
-                                <select class="form-select" id="payment_method" required>
-                                    <option value="">Select payment method</option>
-                                    <option value="mobile_money" selected>Mobile Money</option>
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="card">Credit/Debit Card</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="payment_note" class="form-label">Note (Optional)</label>
-                                <textarea class="form-control" id="payment_note" rows="2" placeholder="Add a note to this payment"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-credit-card me-2"></i>Make Payment
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Payment History Section -->
-        <div class="card shadow-sm">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold">Payment History</h6>
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-funnel me-1"></i>Filter
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
-                        <li><a class="dropdown-item active" href="#">All Payments</a></li>
-                        <li><a class="dropdown-item" href="#">Last 3 Months</a></li>
-                        <li><a class="dropdown-item" href="#">Last 6 Months</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#">Download Statement</a></li>
+            <!-- Pagination for Mobile -->
+            <div class="d-flex justify-content-center d-md-none mb-4">
+                <nav aria-label="Loan pagination">
+                    <ul class="pagination pagination-sm">
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
                     </ul>
+                </nav>
+            </div>
+            
+            <!-- Apply for New Loan Card -->
+            <div class="card shadow-sm border-primary-soft">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8 mb-3 mb-lg-0">
+                            <h5 class="fw-bold mb-2">Need additional financing?</h5>
+                            <p class="text-muted mb-0">You may be eligible for another loan. Check your options and apply today.</p>
+                        </div>
+                        <div class="col-lg-4 text-lg-end">
+                            <a href="{% url 'member_loan_type' tenant_id=request.tenant.id staff_id=request.user.member.user_id %}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-2"></i>Apply for a New Loan
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <!-- Payment Card 1 -->
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card border">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="badge bg-success-soft text-success">Successful</span>
-                                    <span class="text-muted small">May 15, 2023</span>
-                                </div>
-                                <h5 class="fw-bold mb-1">₵933.33</h5>
-                                <p class="text-muted mb-3">Payment for May 2023</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="small text-muted">
-                                        <i class="bi bi-credit-card me-1"></i>Mobile Money
-                                    </span>
-                                    <span class="small text-muted">
-                                        Ref: PAY-2023-0012
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Payment Card 2 -->
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card border">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="badge bg-success-soft text-success">Successful</span>
-                                    <span class="text-muted small">April 15, 2023</span>
-                                </div>
-                                <h5 class="fw-bold mb-1">₵933.33</h5>
-                                <p class="text-muted mb-3">Payment for April 2023</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="small text-muted">
-                                        <i class="bi bi-credit-card me-1"></i>Mobile Money
-                                    </span>
-                                    <span class="small text-muted">
-                                        Ref: PAY-2023-0008
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Payment Card 3 -->
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card border">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="badge bg-success-soft text-success">Successful</span>
-                                    <span class="text-muted small">March 15, 2023</span>
-                                </div>
-                                <h5 class="fw-bold mb-1">₵933.33</h5>
-                                <p class="text-muted mb-3">Payment for March 2023</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="small text-muted">
-                                        <i class="bi bi-bank me-1"></i>Bank Transfer
-                                    </span>
-                                    <span class="small text-muted">
-                                        Ref: PAY-2023-0003
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Empty State (will be shown when no payments) -->
-                    <div class="col-12 d-none">
-                        <div class="text-center py-5">
+        {% else %}
+            <!-- Empty State - No Loans -->
+            <div class="card shadow-sm">
+                <div class="card-body py-5">
+                    <div class="text-center">
+                        <div class="mb-4">
                             <i class="bi bi-credit-card fs-1 text-muted"></i>
-                            <h5 class="mt-3">No Payment History</h5>
-                            <p class="text-muted">You haven't made any payments yet.</p>
                         </div>
+                        <h4 class="fw-bold mb-3">No Loans Found</h4>
+                        <p class="text-muted mb-4">You haven't applied for any loans yet. Start your first loan application today.</p>
+                        <a href="{% url 'member_loan_type' tenant_id=request.tenant.id staff_id=request.user.member.user_id %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Apply for a Loan
+                        </a>
                     </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="container-fluid text-center py-5">
-        <i class="bi bi-exclamation-circle fs-1 text-muted"></i>
-        <h5 class="mt-3">No Active Loan</h5>
-        <p class="text-muted">You do not have any active loans at the moment.</p>
-        <a href="{% url 'apply_loan' tenant_id=request.tenant.id member_id=request.user.member.user_id%}" class="btn btn-primary">Apply for a Loan</a>
-    </div>
-    {% endif %}
 </div>
 
 <style>
@@ -267,6 +194,11 @@
     
     .card.border {
         border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .card.border-primary-soft {
+        border: 1px solid rgba(13, 110, 253, 0.3) !important;
+        background-color: rgba(13, 110, 253, 0.03);
     }
     
     /* Badge Styles */
@@ -303,19 +235,30 @@
         background-color: #e9ecef;
     }
     
-    /* Border Styles */
-    @media (min-width: 768px) {
-        .border-start {
-            border-left: 1px solid rgba(0, 0, 0, 0.1) !important;
-        }
+    /* Horizontal Scrolling */
+    .loans-container .row {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        margin-left: -0.75rem;
+        margin-right: -0.75rem;
+    }
+    
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .loans-container .row::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .loans-container .row {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
     }
     
     /* Responsive adjustments */
-    @media (max-width: 767.98px) {
-        .border-start {
-            border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
-            padding-top: 1.5rem;
-            margin-top: 1.5rem;
+    @media (min-width: 768px) {
+        .loans-container .row {
+            flex-wrap: wrap;
+            overflow: visible;
         }
     }
 </style>
@@ -328,20 +271,15 @@
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
         
-        // Handle payment form submission
-        $('#payment-form').on('submit', function(e) {
-            e.preventDefault();
-            
-            // In a real application, this would submit the form to the server
-            // For now, just show a success message
-            alert('Payment successful! Thank you for your payment.');
-            
-            // Reset form
-            this.reset();
-            
-            // Set default value for payment amount
-            $('#payment_amount').val('933.33');
-        });
+        // Add shadow to cards on hover
+        $('.card').hover(
+            function() {
+                $(this).addClass('shadow');
+            },
+            function() {
+                $(this).removeClass('shadow');
+            }
+        );
     });
 </script>
 {% endblock %}

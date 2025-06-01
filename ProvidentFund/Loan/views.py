@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.forms import model_to_dict
 from django.shortcuts import render
 from django.urls import reverse, reverse_lazy
@@ -9,6 +10,7 @@ from django.utils.decorators import method_decorator
 from Member.decorators import tenant_login_required,tenant_required
 from Admin.decorators import role_required
 from decimal import Decimal,ROUND_HALF_UP
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 
@@ -17,11 +19,38 @@ from django.utils import timezone
 class LoanApplicationView(TemplateView):
     template_name = 'loan_application.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = getattr(self.request, 'tenant', None)
+        loan_type_id = self.request.GET.get('loan_type')
+
+        if not tenant or not loan_type_id:
+            return context
+
+        loan_type = LoanType.objects.filter(
+            tenant=tenant,
+            id=loan_type_id
+        ).first()
+
+        if loan_type:
+            context['loan_type'] = loan_type
+
+        return context
+
+
 class LoanTypeView(ListView):
     model = LoanType
     template_name = 'loan_types.html'
     context_object_name = 'loan_types'
     paginate_by = 10
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return self.model.objects.filter(
+                tenant=tenant
+            ).order_by('-created_at')
+        return super().get_queryset().none()
 
 
 
@@ -63,6 +92,14 @@ class LoanTypeUpdate(UpdateView):
     model = LoanType
     form_class = LoanTypeForm
 
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return self.model.objects.filter(
+                tenant=tenant
+            )
+        return super().get_queryset().none()
+
     def form_valid(self, form):
         tenant = getattr(self.request, 'tenant', None)
 
@@ -103,7 +140,15 @@ class LoanTypeDelete(DeleteView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+
+        if self.object.loan_applications.all():
+            return JsonResponse({
+                'status':'error',
+                'message': 'Cannot delete this loan type as it is still referenced by existing loan applications.'
+            })
+        
         self.object.delete()
+        
         return JsonResponse({
             'status': 'success',
             'message': 'Loan type deleted successfully.',
@@ -149,17 +194,32 @@ class HandleLoanSubmission(View):
 
         tenant = getattr(request, 'tenant', None)
         member = getattr(request.user, 'member', None)
-        
-        print(tenant , member)
-
-        print("member.user: " , getattr(member, 'user',None))
+        loan_type_id = self.request.POST.get('loan_type_id')
 
         if not tenant or not member:
             return JsonResponse({
                 'status':'error',
                 'message': 'Missing tenant or member'
             })
-        print("Function Called 1")
+        
+
+        # check for existing loan type
+        loan_type = None
+        if loan_type_id:
+            loan_type = LoanType.objects.filter(
+                tenant=tenant,
+                id=loan_type_id
+            ).first()
+        
+
+        if not loan_type:
+            return JsonResponse({
+                'status':'error',
+                'message':'Could not find specified loan type.'
+            })
+        
+        # Eligibility Logic
+        #TODO ensure min and max amount
 
         form = LoanForm(request.POST)
         if form.is_valid():
@@ -167,9 +227,17 @@ class HandleLoanSubmission(View):
             form.instance.tenant = tenant
             form.instance.user = member
             form.instance.status = 'Pending'
+            form.instance.loan_type = loan_type
             
-            form.save()
-            return JsonResponse({"status": "success", "message": "Loan application submitted."})
+            try:
+                form.save()
+                return JsonResponse({"status": "success", "message": "Loan application submitted."})
+            except Exception as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'{e}'
+                })
+
         else:
             return JsonResponse({"status": "error", "errors": form.errors}, status=400)
 
@@ -269,50 +337,153 @@ class CalculatePotentialLoan(View):
         })
 
 
+"""
+MEMBER VIEW TO TRACK LOANS
+"""
 # Page for member to view and track loan detailsfrom decimal 
-class MemberLoanPage(TemplateView):
+class MemberLoanPage(ListView):
+    model = LoanApplication
+    paginate_by = 5
     template_name = 'member_loan_page.html'
+    context_object_name = 'loans'
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
 
+    def get_queryset(self):
         tenant = getattr(self.request, 'tenant', None)
         member = getattr(self.request.user, 'member', None)
+        print("Tenant: ", tenant , "Member: ", member)
+        if tenant and member:
+            loans = self.model.objects.filter(
+                tenant=tenant,
+                user=member,
+                approved=True,
+                disbursed=True
+            )
+            print("List of Loans: ", loans)
+            return loans
+        return super().get_queryset().none()
 
-        loan = LoanApplication.objects.prefetch_related('loan_repayments').filter(
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+
+    #     tenant = getattr(self.request, 'tenant', None)
+    #     member = getattr(self.request.user, 'member', None)
+
+    #     loan = LoanApplication.objects.prefetch_related('loan_repayments').filter(
+    #         tenant=tenant,
+    #         user=member
+    #     ).first() if tenant and member else None
+
+    #     loan_repayments = loan.loan_repayments.all() if loan else []
+
+    #     percentage_paid = self.calculate_percentage_paid(loan, loan_repayments) if loan else Decimal(0)
+
+    #     amount_paid = sum(i.amount_paid for i in loan_repayments) if loan_repayments else Decimal(0.0)
+
+    #     context.update({
+    #         'loan': loan,
+    #         'repayments': loan_repayments,
+    #         'percentage_paid': percentage_paid,
+    #         'amount_paid':amount_paid,
+    #         'remaining_amount': loan.amount_requested - amount_paid,
+    #         'count_of_repayments':loan_repayments.count(),
+    #         'remaining_payments':loan.tenure_months - loan_repayments.count()
+    #     })
+    #     return context
+    
+    # def calculate_percentage_paid(self, loan, payments):
+    #     loan_amount = loan.amount_requested
+    #     if loan_amount == 0:
+    #         return Decimal(0)
+
+    #     amount_paid = sum(i.amount_paid for i in payments) if payments else Decimal(0)
+
+    #     percent = (amount_paid / loan_amount) * 100
+    #     return percent.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
+
+
+"""
+PAGE TO DISPLAY ALL LOAN TYPES TO MEMBERS
+"""
+class MemberLoanTypeView(ListView):
+    model = LoanType
+    template_name = 'member_loan_type_page.html'
+    paginate_by = 9
+    context_object_name = 'loan_types'
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+
+        if tenant:
+            return self.model.objects.filter(
+                tenant=tenant
+            )
+        
+        return self.model.objects.none()
+
+
+"""
+VIEW TO FETCH LOAN TYPE DETAILS
+"""
+class FetchLoanTypeDetails(View):
+    def get(self,*args,**kwargs):
+        tenant = getattr(self.request, 'tenant', None)
+        loan_type_id = self.request.GET.get("loan_type_id")
+
+        print(f"Fetching Loan Type Details for {loan_type_id} and {tenant}")
+
+        if not tenant:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid request. Missing Tenant.'
+            })
+        if not loan_type_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid request. Missing loan type ID.'
+            })
+        
+        loan_type = LoanType.objects.filter(
             tenant=tenant,
-            user=member
-        ).first() if tenant and member else None
+            id=loan_type_id
+        ).first()
 
-        loan_repayments = loan.loan_repayments.all() if loan else []
+        return JsonResponse({
+            'status':'success',
+            'data':{
+                'name':loan_type.name,
+                'description':loan_type.description,
+                'requires_membership':loan_type.requires_membership,
+                'loan_interest_rate':loan_type.loan_interest_rate,
+                'interest_calculation_type':loan_type.interest_calculation_type,
+                'loan_fee_percentage':loan_type.loan_fee_percentage,
+                'min_amount':loan_type.min_amount,
+                'max_amount':loan_type.max_amount,
+                'late_payment_penalty':loan_type.late_payment_penalty,
+                'minimum_year':loan_type.minimum_year,
+                'minimum_contribution_amount':loan_type.minimum_contribution_amount
 
-        percentage_paid = self.calculate_percentage_paid(loan, loan_repayments) if loan else Decimal(0)
-
-        amount_paid = sum(i.amount_paid for i in loan_repayments) if loan_repayments else Decimal(0.0)
-
-        context.update({
-            'loan': loan,
-            'repayments': loan_repayments,
-            'percentage_paid': percentage_paid,
-            'amount_paid':amount_paid,
-            'remaining_amount': loan.amount_requested - amount_paid,
-            'count_of_repayments':loan_repayments.count(),
-            'remaining_payments':loan.tenure_months - loan_repayments.count()
+            }
         })
-        return context
-    
-    def calculate_percentage_paid(self, loan, payments):
-        loan_amount = loan.amount_requested
-        if loan_amount == 0:
-            return Decimal(0)
-
-        amount_paid = sum(i.amount_paid for i in payments) if payments else Decimal(0)
-
-        percent = (amount_paid / loan_amount) * 100
-        return percent.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+LOAN APPROVAL VIEW
+"""
 class LoanApprovalView(ListView):
     model = LoanApplication
     template_name = 'loan_approval_base.html'
