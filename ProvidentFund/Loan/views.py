@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse
 from django.views.generic import ListView,CreateView,View,TemplateView,DetailView,UpdateView,DeleteView
-from .models import LoanApplication,LoanRepayment,LoanType
+from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule
 from .forms import LoanForm,LoanTypeForm
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_login_required,tenant_required
@@ -253,38 +253,74 @@ class LoanApprovalView(ListView):
 CLASS TO CALCULATE AND DISPLAY EMI TO MEMBER
 """
 class LoanDetails:
-    def total_interest_flat(self, amount, tenure):
-        p = Decimal(amount)
-        r = Decimal('6.5')  # This must be made dynamic for each tenant
-        t_months = Decimal(tenure)
-        t_years = t_months / Decimal('12')
+    def __init__(self, principal, tenure_months, loan_type):
+        self.principal = Decimal(principal)
+        self.tenure_months = Decimal(tenure_months)
+        self.tenure_years = self.tenure_months / Decimal('12')
+        self.loan_type = loan_type
 
-        return (p * r * t_years / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        self.annual_rate = Decimal(loan_type.loan_interest_rate)
+        self.monthly_rate = self.annual_rate / Decimal('1200')
+        self.processing_fee_percent = Decimal(loan_type.loan_fee_percentage)
+        self.interest_calc_type = loan_type.interest_calculation_type.upper()  # "FLAT" or "REDUCING"
 
-    def loan_processing_fee_flat(self, amount):
-        p = Decimal(amount)
-        return (p * Decimal('0.015')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    def total_interest_flat(self):
+        total_interest = (self.principal * self.annual_rate * self.tenure_years) / Decimal('100')
+        return total_interest.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    def total_payable_amount_flat(self, amount, tenure):
-        return (Decimal(amount) + self.total_interest_flat(amount, tenure)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    def loan_processing_fee(self):
+        fee_decimal = self.processing_fee_percent / Decimal('100')
+        processing_fee = self.principal * fee_decimal
+        return processing_fee.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    def disbursement_amount(self, amount):
-        return (Decimal(amount) - self.loan_processing_fee_flat(amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    def total_payable_amount_flat(self):
+        return (self.principal + self.total_interest_flat()).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    def calculate_monthly_installments_flat(self, amount, tenure):
-        p = Decimal(amount)
-        annual_rate = Decimal('6.5')  # Make this tenant-specific later
-        r = (annual_rate / Decimal('1200'))  # Monthly rate as decimal
-        T = Decimal(tenure)
+    def disbursement_amount(self):
+        return (self.principal - self.loan_processing_fee()).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-        if r == 0:
-            emi = p / T  # Simple division if zero interest
+    def calculate_monthly_emi(self):
+        if self.interest_calc_type == 'FLAT':
+            total_interest = self.total_interest_flat()
+            total_payable = self.principal + total_interest
+            emi = total_payable / self.tenure_months
+
+        elif self.interest_calc_type == 'REDUCING':
+            r = self.monthly_rate
+            T = self.tenure_months
+            P = self.principal
+
+            if r == 0:
+                emi = P / T
+            else:
+                numerator = P * r * (1 + r) ** T
+                denominator = ((1 + r) ** T) - 1
+                emi = numerator / denominator
+
         else:
-            numerator = p * r * (1 + r) ** T
-            denominator = ((1 + r) ** T) - 1
-            emi = numerator / denominator
+            raise ValueError("Invalid interest calculation type.")
 
         return emi.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    def estimate_total_interest(self):
+        if self.interest_calc_type == 'FLAT':
+            return self.total_interest_flat()
+        elif self.interest_calc_type == 'REDUCING':
+            remaining_balance = self.principal
+            total_interest = Decimal('0.00')
+            emi = self.calculate_monthly_emi()
+
+            for _ in range(int(self.tenure_months)):
+                interest_component = (remaining_balance * self.monthly_rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                total_interest += interest_component
+                principal_component = emi - interest_component
+                remaining_balance -= principal_component
+                if remaining_balance <= 0:
+                    break
+
+            return total_interest.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        else:
+            raise ValueError("Invalid interest calculation type.")
 
 
 
@@ -298,13 +334,19 @@ class CalculatePotentialLoan(View):
         tenant = self.request.tenant
         potential_loan_amount_str = self.request.GET.get('amount')
         tenure_str = self.request.GET.get('tenure')
+        loan_type_id = self.request.GET.get('loan_type_id')
 
         if not tenant:
             return JsonResponse({
                 'status':'error',
                 'message':'Invalid request.'
             })
-        
+
+        if not loan_type_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid request. Missing loan type ID.'
+            })
         # Fetch details
         if not potential_loan_amount_str and not tenure_str:
             return JsonResponse({
@@ -320,19 +362,46 @@ class CalculatePotentialLoan(View):
                 'status': 'error',
                 'message': 'Amount and tenure must be valid numbers.'
             })
+
+        # Fetch Loan Type
+        loan_type = LoanType.objects.filter(
+            tenant=tenant,
+            id=loan_type_id
+        ).first()
+
+        if not loan_type:
+            return JsonResponse({
+                'status':'error',
+                'message':'Could not find specified loan type.'
+            })
         
         # Instantiate class to get loan details
-        loan_details = LoanDetails()
+        loan_details = LoanDetails(
+            principal=amount,
+            tenure_months=tenure,
+            loan_type=loan_type
+        )
+
+        try:
+            processing_fee = loan_details.loan_processing_fee()
+            total_repayment = loan_details.total_payable_amount_flat()
+            monthly_installment = loan_details.calculate_monthly_emi()
+            disbursement_amount = loan_details.disbursement_amount()
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'Error calculating loan details: {e}'
+            })
 
         return JsonResponse({
             'status':'success',
             'data':{
                 'formatted_amount':amount,
-                'interest_rate':6.5,
-                'formatted_processing_fee':loan_details.loan_processing_fee_flat(amount),
-                'formatted_total_repayment':loan_details.total_payable_amount_flat(amount,tenure),
-                'formatted_monthly_installment':loan_details.calculate_monthly_installments_flat(amount,tenure),
-                'formatted_disbursement_amount':loan_details.disbursement_amount(amount)
+                'interest_rate':loan_type.loan_interest_rate,
+                'formatted_processing_fee':processing_fee,
+                'formatted_total_repayment':total_repayment,
+                'formatted_monthly_installment':monthly_installment,
+                'formatted_disbursement_amount':disbursement_amount,
             }
         })
 
@@ -340,7 +409,7 @@ class CalculatePotentialLoan(View):
 """
 MEMBER VIEW TO TRACK LOANS
 """
-# Page for member to view and track loan detailsfrom decimal 
+# Page for member to view and track loan details
 class MemberLoanPage(ListView):
     model = LoanApplication
     paginate_by = 5
@@ -576,6 +645,7 @@ class DisburseApprovedLoans(ListView):
     """
     # TODO: HANDLE DISBURSEMENT LOGIC
     def post(self,*args,**kwargs):
+
         return
 
 
@@ -724,3 +794,45 @@ class FetchLoanDetails(View):
                 }
             }
         })
+
+
+class MemberLoanDetailView(ListView):
+    model = LoanAmortizationSchedule
+    template_name = 'member_loan_details.html'
+    context_object_name = 'loan_amortization_schedule'
+    paginate_by = 12
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        member = getattr(self.request.user, 'member', None)
+        loan_id = self.kwargs.get('loan_id')
+
+        if tenant and member and loan_id:
+            print("Fetching Loan Amortization Schedule for Loan ID:", loan_id)
+            return self.model.objects.filter(
+                tenant=tenant,
+                user=member,
+                loan__id=loan_id
+            ).order_by('installment_number')
+
+        return self.model.objects.none()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = getattr(self.request, 'tenant', None)
+        member = getattr(self.request.user, 'member', None)
+        loan_id = self.kwargs.get('loan_id')
+
+        print(f"Amortizations: {self.get_queryset()}")
+
+        if tenant and member and loan_id:
+            loan = LoanApplication.objects.filter(
+                tenant=tenant,
+                user=member,
+                id=loan_id
+            ).first()
+
+            if loan:
+                context['loan'] = loan
+
+        return context

@@ -6,6 +6,8 @@ from decimal import Decimal,ROUND_HALF_UP
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db.models import UniqueConstraint
+from django.db import transaction
+import datetime
 """
 CHART OF ACCOUNTS IMPORT
 """
@@ -247,15 +249,34 @@ class LoanApplication(models.Model):
     APPROVE LOAN -- BY ADMIN
     """ 
     def approve_loan(self, user):
-        if self.approved == True:
+        if self.approved:
             raise Exception("Loan already processed.")
-        
+
+        # Generate amortization schedule
+        generate_amortization_schedule(self)
+
+        # update loan details
         self.status = 'APPROVED'
         self.approved_by = user
         self.approved = True
         self.approval_date = timezone.now()
         self.save()
-        
+
+
+    """
+    DISBURSE LOAN -- BY ADMIN
+    """
+    def disburse_loan(self, user):
+        if not self.approved:
+            raise Exception("Loan not approved yet.")
+        if self.disbursed:
+            raise Exception("Loan already disbursed.")
+
+        self.status = 'DISBURSED'
+        self.disbursed_by = user
+        self.disbursed = True
+        self.disbursement_date = timezone.now()
+        self.save()
     
 
     """
@@ -269,6 +290,55 @@ class LoanApplication(models.Model):
             else:
                 raise Exception("Missing required fields")
         return super().save(*args,**kwargs)
+
+
+
+"""
+LOAN AMORTIZATION SCHEDULE MODEL
+"""
+class LoanAmortizationSchedule(models.Model):
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='loan_amortization_schedules'
+    )
+    user = models.ForeignKey(
+        Member,
+        on_delete=models.CASCADE,
+        related_name='loan_amortization_schedules'
+    )
+    loan = models.ForeignKey(
+        LoanApplication,
+        on_delete=models.CASCADE,
+        related_name='amortization_schedule'
+    )
+    installment_number = models.PositiveIntegerField(
+        help_text='Installment number (1, 2, 3, ...)'
+    )
+    installment_date = models.DateField(
+        help_text='Expected payment date for this installment'
+    )
+    principal_component = models.DecimalField(
+        decimal_places=2,
+        max_digits=12
+    )
+    interest_component = models.DecimalField(
+        decimal_places=2,
+        max_digits=12
+    )
+    total_installment_amount = models.DecimalField(
+        decimal_places=2,
+        max_digits=12
+    )
+    remaining_balance = models.DecimalField(
+        decimal_places=2,
+        max_digits=12
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Loan: {self.loan.id} - Installment {self.installment_number}'
+
 
 
 
@@ -321,7 +391,7 @@ class LoanRepayment(models.Model):
     def update_total_amount_paid(self):
         amount = self.amount_paid
 
-        # Add amount to Loans total_amount_paid field
+        # Add amount to the Loans total_amount_paid field
         self.loan.total_amount_paid += amount
 
         # save update
@@ -400,3 +470,65 @@ class LoanAccountMapping(models.Model):
     def save(self,*args,**kwargs):
         self.clean()
         super().save(*args,**kwargs)
+
+
+
+"""
+METHOD TO HANDLE AMORTIZATION SCHEDULE GENERATION
+"""
+def generate_amortization_schedule(self):
+    """
+    Generates an amortization schedule for this loan.
+    Deletes existing schedule first. Uses bulk_create for efficiency.
+    """
+    with transaction.atomic():
+        # Delete the existing schedule first
+        self.amortization_schedule.all().delete()
+
+        schedule_list = []
+
+        # Initial loan details
+        p = self.amount_requested
+        annual_rate = self.loan_type.loan_interest_rate
+        r = Decimal(annual_rate) / Decimal('1200')  # Monthly interest rate
+        T = Decimal(self.tenure_months)
+
+        monthly_installment = self.calculate_monthly_installments()
+        remaining_balance = p
+
+        # Start from disbursement_date if set, else today
+        current_date = self.disbursement_date or timezone.now().date()
+
+        for i in range(1, int(T) + 1):
+            if self.loan_type.interest_calculation_type == 'FLAT':
+                interest_component = (p * Decimal(annual_rate) * (Decimal('1') / Decimal('12'))) / Decimal('100')
+                principal_component = monthly_installment - interest_component
+            else:  # REDUCING balance method
+                interest_component = (remaining_balance * r).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                principal_component = monthly_installment - interest_component
+
+            # Guard against rounding errors on the last installment
+            if principal_component > remaining_balance:
+                principal_component = remaining_balance
+
+            # Build schedule row
+            schedule_entry = LoanAmortizationSchedule(
+                tenant=self.tenant,
+                user=self.user,
+                loan=self,
+                installment_number=i,
+                installment_date=current_date,
+                principal_component=principal_component,
+                interest_component=interest_component,
+                total_installment_amount=principal_component + interest_component,
+                remaining_balance=(remaining_balance - principal_component).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            )
+            schedule_list.append(schedule_entry)
+
+            # Update for next loop
+            remaining_balance -= principal_component
+            # Advance by approx 1 month (30 days)
+            current_date += datetime.timedelta(days=30)
+
+        # Efficient bulk insert
+        LoanAmortizationSchedule.objects.bulk_create(schedule_list)
