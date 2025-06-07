@@ -403,27 +403,27 @@ Approved Loans
 <script>
     $(document).ready(function(){
         // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-        
+
         // Initialize modals
-        var applicationModal = new bootstrap.Modal(document.getElementById('applicationModal'));
-        var disburseModal = new bootstrap.Modal(document.getElementById('disburseModal'));
-        
+        const applicationModal = new bootstrap.Modal(document.getElementById('applicationModal'));
+        const disburseModal = new bootstrap.Modal(document.getElementById('disburseModal'));
+
         // Set today's date as default for disbursement date
-        var today = new Date();
-        var dd = String(today.getDate()).padStart(2, '0');
-        var mm = String(today.getMonth() + 1).padStart(2, '0');
-        var yyyy = today.getFullYear();
+        let today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
         today = yyyy + '-' + mm + '-' + dd;
         $('#disburse-date').val(today);
         
         // Handle view application button
         $('.view-application').on('click', function() {
-            var applicationId = $(this).data('id');
-            
+            const applicationId = $(this).data('id');
+
             // Show loading state
             $('#modal-loading').show();
             $('#modal-content').hide();
@@ -432,8 +432,8 @@ Approved Loans
             applicationModal.show();
             
             // Fetch application details from the server
-            var tenantId = '{{ request.tenant.id }}';
-            
+            const tenantId = '{{ request.tenant.id }}';
+
             $.ajax({
                 url: `/${tenantId}/loans/approved-loan-details/${applicationId}/`,
                 type: 'GET',

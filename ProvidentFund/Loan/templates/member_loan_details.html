@@ -1,0 +1,418 @@
+{% extends 'member_base.html' %}
+
+{% block title %}
+<title>Loan Details - #{{ loan.id }}</title>
+{% endblock %}
+
+{% block header %}
+<div class="d-flex align-items-center">
+    <a href="{% url 'my_loans' tenant_id=request.tenant.id staff_id=request.user.member.user_id %}" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="fw-bold mb-0"><i class="bi bi-credit-card me-2"></i>Loan Details - #{{ loan.id }}</h5>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="container-fluid">
+        <!-- Loan Summary Section -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">Loan Summary</h6>
+                        {% if loan.status == 'Approved' %}
+                            <span class="badge bg-success">{{ loan.status }}</span>
+                        {% elif loan.status == 'Pending' %}
+                            <span class="badge bg-warning text-dark">{{ loan.status }}</span>
+                        {% elif loan.status == 'Completed' %}
+                            <span class="badge bg-info">{{ loan.status }}</span>
+                        {% elif loan.status == 'Rejected' %}
+                            <span class="badge bg-danger">{{ loan.status }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ loan.status }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Loan Basic Information -->
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3">Basic Information</h6>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="text-muted small">Loan Type</div>
+                                        <div class="fw-medium">{{ loan.loan_type.name }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Application Date</div>
+                                        <div class="fw-medium">{{ loan.application_date|date:"M d, Y" }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Loan Amount</div>
+                                        <div class="fw-medium">₵{{ loan.amount_requested|floatformat:2 }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Interest Rate</div>
+                                        <div class="fw-medium">{{ loan.interest_rate }}% per annum</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Tenure</div>
+                                        <div class="fw-medium">{{ loan.tenure_months }} Months</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Monthly Payment</div>
+                                        <div class="fw-medium">₵{{ loan.monthly_installments|floatformat:2 }}</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="text-muted small">Purpose</div>
+                                        <div class="fw-medium">{{ loan.purpose }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Payment Progress -->
+                            <div class="col-md-6 border-start">
+                                <h6 class="fw-bold mb-3">Payment Progress</h6>
+                                <div class="text-center mb-4">
+                                    <div class="position-relative d-inline-block">
+                                        <svg width="120" height="120" viewBox="0 0 120 120">
+                                            <circle cx="60" cy="60" r="50" fill="none" stroke="#e9ecef" stroke-width="8" />
+                                            <circle cx="60" cy="60" r="50" fill="none" stroke="#198754" stroke-width="8" 
+                                                stroke-dasharray="314.16" stroke-dashoffset="{{ progress_offset }}" stroke-linecap="round" />
+                                        </svg>
+                                        <div class="position-absolute top-50 start-50 translate-middle text-center">
+                                            <h4 class="mb-0 fw-bold">{{ percentage_paid }}%</h4>
+                                            <p class="mb-0 small text-muted">Paid</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Total Loan:</span>
+                                    <span class="fw-medium">₵{{ loan.amount_requested|floatformat:2 }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Amount Paid:</span>
+                                    <span class="fw-medium text-success">₵{{ amount_paid|floatformat:2 }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-muted">Remaining:</span>
+                                    <span class="fw-bold text-primary">₵{{ remaining_amount|floatformat:2 }}</span>
+                                </div>
+                                <div class="progress mb-2" style="height: 10px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ percentage_paid }}%;" 
+                                         aria-valuenow="{{ percentage_paid }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100"></div>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span>{{ payments_made }} of {{ loan.tenure_months }} payments</span>
+                                    <span>{{ remaining_payments }} remaining</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions Card -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header py-3">
+                        <h6 class="mb-0 fw-bold">Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if loan.status == 'Active' %}
+                            <div class="mb-3">
+                                <div class="text-muted small">Next Payment Due</div>
+                                <div class="fw-bold fs-5 {% if next_payment_overdue %}text-danger{% else %}text-primary{% endif %}">
+                                    {{ next_payment_date|date:"M d, Y" }}
+                                </div>
+                                {% if next_payment_overdue %}
+                                    <small class="text-danger">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Overdue
+                                    </small>
+                                {% endif %}
+                            </div>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'make_payment' tenant_id=request.tenant.id loan_id=loan.id %}" 
+                                   class="btn btn-primary">
+                                    <i class="bi bi-credit-card me-2"></i>Make Payment
+                                </a>
+                                <button class="btn btn-outline-secondary" onclick="downloadStatement()">
+                                    <i class="bi bi-download me-2"></i>Download Statement
+                                </button>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="bi bi-info-circle fs-2 text-muted mb-2"></i>
+                                <p class="text-muted mb-3">This loan is {{ loan.status|lower }}.</p>
+                                <button class="btn btn-outline-secondary" onclick="downloadStatement()">
+                                    <i class="bi bi-download me-2"></i>Download Statement
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Amortization Schedule Section -->
+        <div class="card shadow-sm">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Amortization Schedule</h6>
+                <div class="d-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                id="scheduleFilter" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="scheduleFilter">
+                            <li><a class="dropdown-item active" href="#" data-filter="all">All Payments</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="paid">Paid</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="pending">Pending</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="overdue">Overdue</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Table View (Default) -->
+                <div id="tableView" class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="fw-bold">#</th>
+                                <th class="fw-bold">Due Date</th>
+                                <th class="fw-bold">Principal</th>
+                                <th class="fw-bold">Interest</th>
+                                <th class="fw-bold">Total Payment</th>
+                                <th class="fw-bold">Balance</th>
+                                <th class="fw-bold">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for schedule in loan_amortization_schedule %}
+                            <tr class="schedule-row" data-status="{{ schedule.payment_status }}">
+                                <td class="fw-medium">{{ schedule.installment_number }}</td>
+                                <td>{{ schedule.installment_date|date:"M d, Y" }}</td>
+                                <td>₵{{ schedule.principal_component|floatformat:2 }}</td>
+                                <td>₵{{ schedule.interest_component|floatformat:2 }}</td>
+                                <td class="fw-medium">₵{{ schedule.total_installment_amount|floatformat:2 }}</td>
+                                <td>₵{{ schedule.remaining_balance|floatformat:2 }}</td>
+                                <td>
+                                    {% if schedule.payment_status == 'paid' %}
+                                        <span class="badge bg-success-soft text-success">
+                                            <i class="bi bi-check-circle me-1"></i>Paid
+                                        </span>
+                                    {% elif schedule.payment_status == 'overdue' %}
+                                        <span class="badge bg-danger-soft text-danger">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>Overdue
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning-soft text-warning">
+                                            <i class="bi bi-clock me-1"></i>Pending
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Card View (Hidden by default) -->
+                <div id="cardView" class="p-3" style="display: none;">
+                    <div class="row g-3">
+                        {% for schedule in amortization_schedule %}
+                        <div class="col-md-6 col-lg-4 schedule-card" data-status="{{ schedule.payment_status }}">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="fw-bold mb-0">Payment #{{ schedule.installment_number }}</h6>
+                                        {% if schedule.payment_status == 'paid' %}
+                                            <span class="badge bg-success-soft text-success">
+                                                <i class="bi bi-check-circle me-1"></i>Paid
+                                            </span>
+                                        {% elif schedule.payment_status == 'overdue' %}
+                                            <span class="badge bg-danger-soft text-danger">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Overdue
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning-soft text-warning">
+                                                <i class="bi bi-clock me-1"></i>Pending
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="text-muted small">Due Date</div>
+                                        <div class="fw-medium">{{ schedule.installment_date|date:"M d, Y" }}</div>
+                                    </div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <div class="text-muted small">Principal</div>
+                                            <div class="fw-medium">₵{{ schedule.principal_component|floatformat:2 }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-muted small">Interest</div>
+                                            <div class="fw-medium">₵{{ schedule.interest_component|floatformat:2 }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold">Total Payment:</span>
+                                        <span class="fw-bold fs-5">₵{{ schedule.total_installment_amount|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small">Remaining Balance:</span>
+                                        <span class="text-muted small">₵{{ schedule.remaining_balance|floatformat:2 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .card.border {
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    /* Table Styles */
+    .table th {
+        border-top: none;
+        font-size: 0.875rem;
+        padding: 1rem 0.75rem;
+    }
+    
+    .table td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.025);
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    /* Progress Bar */
+    .progress {
+        border-radius: 0.5rem;
+        background-color: #e9ecef;
+    }
+    
+    /* Border Styles */
+    @media (min-width: 768px) {
+        .border-start {
+            border-left: 1px solid rgba(0, 0, 0, 0.1) !important;
+            padding-left: 1.5rem;
+        }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+        .border-start {
+            border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+            padding-left: 0;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+    }
+    
+    /* Animation for view toggle */
+    #tableView, #cardView {
+        transition: opacity 0.3s ease-in-out;
+    }
+</style>
+
+<script>
+    $(document).ready(function(){
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Filter functionality
+        $('.dropdown-item[data-filter]').on('click', function(e) {
+            e.preventDefault();
+            var filter = $(this).data('filter');
+            
+            // Update active state
+            $('.dropdown-item[data-filter]').removeClass('active');
+            $(this).addClass('active');
+            
+            // Filter rows/cards
+            if (filter === 'all') {
+                $('.schedule-row, .schedule-card').show();
+            } else {
+                $('.schedule-row, .schedule-card').hide();
+                $('.schedule-row[data-status="' + filter + '"], .schedule-card[data-status="' + filter + '"]').show();
+            }
+        });
+    });
+    
+    // Download statement function
+    function downloadStatement() {
+        // In a real application, this would trigger a download
+        alert('Statement download will be implemented. This will generate a PDF with loan details and payment history.');
+    }
+</script>
+{% endblock %}

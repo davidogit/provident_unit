@@ -360,14 +360,14 @@
 <script>
     $(document).ready(function(){
         // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-        
+
         // Variables to track input changes
-        var typingTimer;
-        var doneTypingInterval = 500; // wait time in ms
+        let typingTimer;
+        const doneTypingInterval = 500; // wait time in ms
         
         // On input change, start the countdown
         $('#amount_requested, #tenure_months').on('input change', function() {
@@ -379,22 +379,22 @@
                 $('#loading-details').show();
                 $('#loan-details-content').hide();
                 $('#calculation-status').text('Calculating...');
-                $('#submit-btn').hide(); // Hide submit button when recalculating
+                $('#submit-btn').hide(); // Hide the submit button when recalculating
                 
                 typingTimer = setTimeout(fetchLoanDetails, doneTypingInterval);
             } else {
                 $('#loan-details-card').hide();
-                $('#submit-btn').hide(); // Hide submit button when inputs are cleared
+                $('#submit-btn').hide(); // Hide the submit button when inputs are cleared
             }
         });
         
         // Fetch loan details from backend
         function fetchLoanDetails() {
-            var amount = parseFloat($('#amount_requested').val());
-            var tenure = parseInt($('#tenure_months').val());
-            var tenantId = '{{ request.tenant.id }}';
-            var loanTypeId = '{{ loan_type.id }}';
-            
+            const amount = parseFloat($('#amount_requested').val());
+            const tenure = parseInt($('#tenure_months').val());
+            const tenantId = '{{ request.tenant.id }}';
+            const loanTypeId = '{{ loan_type.id }}';
+
             if (isNaN(amount) || isNaN(tenure) || amount <= 0 || tenure <= 0) {
                 showToast('Error', 'Please enter valid loan amount and tenure', 'danger');
                 $('#loan-details-card').hide();
