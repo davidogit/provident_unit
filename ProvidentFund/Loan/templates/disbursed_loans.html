@@ -1,0 +1,158 @@
+{% extends 'loan_approval_base.html' %}
+
+<!-- Title block -->
+{% block loan_title %}
+- Disbursed Loans
+{% endblock %}
+
+<!-- header block -->
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Disbursed Loans</h5>
+{% endblock %}
+
+<!-- Loan Page Content -->
+{% block loan_content %}
+        <!-- Applications List -->
+        <div class="card shadow-sm">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Disbursed Loans</h6>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary me-2">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Export to Excel
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-printer me-1"></i>Print Report
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Applicant</th>
+                                <th>Loan Details</th>
+                                <th>Disbursement Date</th>
+                                <th>Status</th>
+                                <th width="100">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in disbursed_loans %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% with initials=loan.user.user.first_name|default:loan.user.user.username|make_list %}
+                                        <div class="avatar-initial rounded-circle bg-{{ loan.user.id|divisibleby:5|yesno:'primary,success,info,warning,danger' }} text-white me-2">
+                                            {{ initials.0|upper }}{% if initials.1 %}{{ initials.1|upper }}{% endif %}
+                                        </div>
+                                        {% endwith %}
+                                        <div>
+                                            <h6 class="mb-0 fw-medium">{{ loan.user.user.first_name|default:loan.user.user.username }}</h6>
+                                            <small class="text-muted">ID: {{ loan.user.staff_id|default:loan.user.id }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span class="fw-medium">₵{{ loan.amount_requested|floatformat:2 }}</span>
+                                        <span class="text-muted mx-1">•</span>
+                                        <span class="text-muted">{{ loan.tenure_months }} months</span>
+                                    </div>
+                                    <small class="text-muted">{{ loan.purpose|truncatechars:30 }}</small>
+                                </td>
+                                <td>
+                                    <div>{{ loan.disbursement_date|date:"M d, Y" }}</div>
+                                    <small class="text-muted">via {{ loan.disbursement_method|default:"Bank Transfer" }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">Disbursed</span>
+                                    <small class="d-block mt-1">{{ loan.disbursement_date|timesince }} ago</small>
+                                </td>
+                                <td>
+                                    <a href="" class="btn btn-sm btn-outline-primary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                                    <p class="mt-3 mb-0">No disbursed loans found</p>
+                                    <p class="text-muted">There are no disbursed loans to display.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if disbursed_loans.has_other_pages %}
+                <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                    <div class="text-muted small">
+                        Showing {{ disbursed_loans.start_index }} to {{ disbursed_loans.end_index }} of {{ disbursed_loans.paginator.count }} loans
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if disbursed_loans.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ disbursed_loans.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for i in disbursed_loans.paginator.page_range %}
+                                {% if disbursed_loans.number == i %}
+                                <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                                {% elif i > disbursed_loans.number|add:'-3' and i < disbursed_loans.number|add:'3' %}
+                                <li class="page-item"><a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if disbursed_loans.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ disbursed_loans.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+{% endblock %}
+
+<!-- Loan Modal -->
+{% block loan_modal %}
+<!-- No modal needed -->
+{% endblock %}
+
+<!-- Loan Scripts -->
+{% block loan_scripts %}
+<script>
+    $(document).ready(function(){
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock %}

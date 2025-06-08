@@ -143,6 +143,22 @@ class LoanApplication(models.Model):
         blank=True,
         help_text='Date loan was paid to Member.'
     )
+    rejected = models.BooleanField(
+        default=False,
+        help_text='If loan was rejected'
+    )
+    rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='rejected_loans',
+        null=True,
+        blank=True
+    )
+    rejected_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Date loan was rejected.'
+    )
     repayment_due_date = models.DateField(
         null=True,
         blank=True
@@ -173,6 +189,7 @@ class LoanApplication(models.Model):
         return f'Loan application - {self.user.user.username} - Amount- {self.amount_requested}.'
     
 
+    # TODO Refactor loan interest calculation to cater for bot flat and reducing balance methods
     """
     TOTAL INTEREST FLAT
     """
@@ -252,6 +269,7 @@ class LoanApplication(models.Model):
         if self.approved:
             raise Exception("Loan already processed.")
 
+        # TODO Finalize which action is to generate amortization schedule
         # Generate amortization schedule
         generate_amortization_schedule(self)
 
@@ -277,7 +295,9 @@ class LoanApplication(models.Model):
         self.disbursed = True
         self.disbursement_date = timezone.now()
         self.save()
-    
+
+
+    # TODO Add method to reject loan application
 
     """
     SAVE METHOD
@@ -342,6 +362,7 @@ class LoanAmortizationSchedule(models.Model):
 
 
 
+# TODO Figure out how to handle repayments and also track them with amortization schedule
 # Model to keep track of repayments
 class LoanRepayment(models.Model):
     tenant = models.ForeignKey(

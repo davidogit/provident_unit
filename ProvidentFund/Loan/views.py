@@ -244,11 +244,6 @@ class HandleLoanSubmission(View):
 
 
 
-class LoanApprovalView(ListView):
-    model = LoanApplication
-    template_name = 'loan_approval.html'
-
-
 """
 CLASS TO CALCULATE AND DISPLAY EMI TO MEMBER
 """
@@ -432,45 +427,6 @@ class MemberLoanPage(ListView):
             return loans
         return super().get_queryset().none()
 
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-
-    #     tenant = getattr(self.request, 'tenant', None)
-    #     member = getattr(self.request.user, 'member', None)
-
-    #     loan = LoanApplication.objects.prefetch_related('loan_repayments').filter(
-    #         tenant=tenant,
-    #         user=member
-    #     ).first() if tenant and member else None
-
-    #     loan_repayments = loan.loan_repayments.all() if loan else []
-
-    #     percentage_paid = self.calculate_percentage_paid(loan, loan_repayments) if loan else Decimal(0)
-
-    #     amount_paid = sum(i.amount_paid for i in loan_repayments) if loan_repayments else Decimal(0.0)
-
-    #     context.update({
-    #         'loan': loan,
-    #         'repayments': loan_repayments,
-    #         'percentage_paid': percentage_paid,
-    #         'amount_paid':amount_paid,
-    #         'remaining_amount': loan.amount_requested - amount_paid,
-    #         'count_of_repayments':loan_repayments.count(),
-    #         'remaining_payments':loan.tenure_months - loan_repayments.count()
-    #     })
-    #     return context
-    
-    # def calculate_percentage_paid(self, loan, payments):
-    #     loan_amount = loan.amount_requested
-    #     if loan_amount == 0:
-    #         return Decimal(0)
-
-    #     amount_paid = sum(i.amount_paid for i in payments) if payments else Decimal(0)
-
-    #     percent = (amount_paid / loan_amount) * 100
-    #     return percent.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    
-
 
 """
 PAGE TO DISPLAY ALL LOAN TYPES TO MEMBERS
@@ -535,20 +491,6 @@ class FetchLoanTypeDetails(View):
 
             }
         })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 """
 LOAN APPROVAL VIEW
@@ -633,20 +575,66 @@ class DisburseApprovedLoans(ListView):
                 tenant=tenant,
                 approved=True,
                 status='APPROVED',
-                disbursed=False
+                disbursed=False,
+                rejected=False
             ).order_by(
                 '-approval_date'
             )
-
         return self.model.objects.none()
-    
+
     """
     HANDLE DISBURSEMENT OPERATION
     """
     # TODO: HANDLE DISBURSEMENT LOGIC
     def post(self,*args,**kwargs):
+        tenant = getattr(self.request,'tenant',None)
+        user = getattr(self.request.user,'user',None)
+        # loan details
+        loan_id = self.request.POST.get('loan_id')
 
-        return
+        if not tenant:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid request.'
+            })
+
+        if not loan_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Loan ID is required.'
+            })
+
+        # get loan object
+        loan = self.get_queryset().filter(
+            id=loan_id
+        ).first()
+
+        if not loan:
+            return JsonResponse({
+                'status':'error',
+                'message':'Loan not found.'
+            })
+
+        # Check if the loan is already disbursed
+        if loan.disbursed:
+            return JsonResponse({
+                'status':'error',
+                'message':'Loan has already been disbursed.'
+            })
+
+        # disburse the loan
+        try:
+            loan.disburse_loan(user)
+        except Exception as e:
+            return JsonResponse({
+                'status':'error',
+                'message':f'Error disbursing loan: {e}'
+            })
+
+        return JsonResponse({
+            'status':'success',
+            'message':'Loan disbursed successfully.'
+        })
 
 
 
@@ -656,7 +644,35 @@ class DisburseApprovedLoans(ListView):
         
         context.update(loan_count_metrics(tenant,status='approved'))
         return context
-    
+
+
+"""
+DISBURSED LOANS LIST VIEW
+"""
+class DisbursedLoans(ListView):
+    model = LoanApplication
+    paginate_by = 10
+    template_name = "disbursed_loans.html"
+    context_object_name = 'disbursed_loans'
+
+    def get_queryset(self):
+        tenant = getattr(self.request,'tenant',None)
+
+        if not tenant:
+            return self.model.objects.none()
+        return self.model.objects.filter(
+            tenant=tenant,
+            approved=True,
+            disbursed=True
+        ).order_by('-disbursement_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = getattr(self.request, 'tenant', None)
+
+        context.update(loan_count_metrics(tenant,status='disbursed'))
+        return context
+
 
 """
 REJECTED LOAN APPLICATIONS LIST VIEW
@@ -738,7 +754,7 @@ class FetchLoanDetails(View):
     
     def get(self,request,*args,**kwargs):
         tenant = getattr(request,'tenant',None)
-        loan_id = kwargs.get('approved_loan_id')
+        loan_id = kwargs.get('loan_id')
 
         if not tenant:
             return JsonResponse({
@@ -756,9 +772,6 @@ class FetchLoanDetails(View):
         loan = self.model.objects.filter(
             tenant=tenant,
             id=loan_id,
-            approved=True,
-            disbursed=False,
-            status='APPROVED'
         ).first()
 
         if not loan:
@@ -790,7 +803,10 @@ class FetchLoanDetails(View):
                     'interest_rate':loan.interest_rate,
                     'monthly_installment':loan.monthly_installments,
                     'total_repayment':Decimal(0), #At this point there is no repayment
-                    'purpose':loan.purpose
+                    'purpose':loan.purpose,
+                #     Rejection details
+                    'rejected_date':loan.rejected_date,
+                    'rejected_by':loan.rejected_by.__str__() if loan.rejected_by else None,
                 }
             }
         })
