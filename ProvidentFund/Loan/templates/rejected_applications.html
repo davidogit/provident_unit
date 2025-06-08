@@ -2,7 +2,7 @@
 
 <!-- Title block -->
 {% block loan_title %}
-Rejected Applications
+- Rejected Applications
 {% endblock %}
 
 <!-- header block -->
@@ -330,7 +330,7 @@ Rejected Applications
             var tenantId = '{{ request.tenant.id }}';
             
             $.ajax({
-                url: `/${tenantId}/loans/rejected-loan-details/${applicationId}/`,
+                url: `/${tenantId}/loans/loan-details/${applicationId}/`,
                 type: 'GET',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
@@ -341,7 +341,7 @@ Rejected Applications
                         updateLoanSummary(response.data);
                         
                         // Update rejection details
-                        updateRejectionDetails(response.data.rejection);
+                        updateRejectionDetails(response.data.loan);
                         
                         // Update applicant information
                         updateApplicantInfo(response.data.user);
@@ -393,7 +393,7 @@ Rejected Applications
         // Function to update rejection details
         function updateRejectionDetails(rejection) {
             // Format rejection date
-            var rejDate = new Date(rejection.rejection_date);
+            var rejDate = new Date(rejection.rejected_date);
             var formattedRejDate = rejDate.toLocaleDateString('en-US', {
                 year: 'numeric', 
                 month: 'long', 

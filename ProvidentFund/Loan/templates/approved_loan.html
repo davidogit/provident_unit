@@ -2,7 +2,7 @@
 
 <!-- Title block -->
 {% block loan_title %}
-Approved Loans
+- Approved Loans
 {% endblock %}
 
 <!-- header block -->
@@ -435,7 +435,7 @@ Approved Loans
             const tenantId = '{{ request.tenant.id }}';
 
             $.ajax({
-                url: `/${tenantId}/loans/approved-loan-details/${applicationId}/`,
+                url: `/${tenantId}/loans/loan-details/${applicationId}/`,
                 type: 'GET',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
@@ -544,6 +544,9 @@ Approved Loans
             
             $('#loan-purpose').text(loan.purpose);
             $('#approval-notes').text(loan.approval_notes || 'No notes provided.');
+
+            $('#disburse-btn').data('id', loan.id);
+            $('#generate-agreement-btn').data('id', loan.id);
         }
         
         // Function to get initials from name
@@ -586,7 +589,7 @@ Approved Loans
             var tenantId = '{{ request.tenant.id }}';
             
             $.ajax({
-                url: `/${tenantId}/loans/approved-loan-details/${loanId}/`,
+                url: `/${tenantId}/loans/loan-details/${loanId}/`,
                 type: 'GET',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
@@ -646,7 +649,7 @@ Approved Loans
             var tenantId = '{{ request.tenant.id }}';
             
             $.ajax({
-                url: `/${tenantId}/loans/disburse-loan/`,
+                url: ``,
                 type: 'POST',
                 data: {
                     loan_id: loanId,

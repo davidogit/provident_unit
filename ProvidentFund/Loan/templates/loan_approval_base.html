@@ -28,7 +28,7 @@
                         </a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link {% if active_tab == 'disbursed' %}active{% endif %} py-3" href="">
+                        <a class="nav-link {% if active_tab == 'disbursed' %}active{% endif %} py-3" href="{% url 'disbursed_loans' tenant_id=request.tenant.id %}">
                             <i class="bi bi-check-circle me-2"></i>Disbursed Loans
                             <span class="badge rounded-pill bg-success ms-2">{{ disbursed_count|default:"0" }}</span>
                         </a>
@@ -503,14 +503,14 @@
 <script>
     $(document).ready(function(){
         // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-        
+
         // Initialize modal
-        var applicationModal = new bootstrap.Modal(document.getElementById('applicationModal'));
-        
+        const applicationModal = new bootstrap.Modal(document.getElementById('applicationModal'));
+
         // Handle select all checkbox
         $('#select-all').on('change', function() {
             $('.application-checkbox').prop('checked', $(this).prop('checked'));
@@ -532,7 +532,7 @@
             var tenantId = '{{ request.tenant.id }}';
             
             $.ajax({
-                url: `/${tenantId}/loans/application-details/${applicationId}/`,
+                url: `/${tenantId}/loans/loan-details/${applicationId}/`,
                 type: 'GET',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
@@ -590,7 +590,7 @@
         function updateLoanInfo(loan) {
             $('#loan-id').text(loan.id);
             $('#loan-date').text(loan.application_date);
-            $('#loan-amount').text(`₵${loan.amount_requested.toFixed(2)}`);
+            $('#loan-amount').text(`₵${loan.amount_requested}`);
             $('#loan-tenure').text(`${loan.tenure_months} Months`);
             $('#loan-interest').text(`${loan.interest_rate || 12}%`);
             $('#loan-installment').text(`₵${loan.monthly_installment || 'N/A'}`);
