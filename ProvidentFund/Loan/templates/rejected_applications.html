@@ -307,18 +307,18 @@
 <script>
     $(document).ready(function(){
         // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-        
+
         // Initialize modals
-        var applicationModal = new bootstrap.Modal(document.getElementById('applicationModal'));
-        
+        const applicationModal = new bootstrap.Modal(document.getElementById('applicationModal'));
+
         // Handle view application button
         $('.view-application').on('click', function() {
-            var applicationId = $(this).data('id');
-            
+            const applicationId = $(this).data('id');
+
             // Show loading state
             $('#modal-loading').show();
             $('#modal-content').hide();
@@ -327,8 +327,8 @@
             applicationModal.show();
             
             // Fetch application details from the server
-            var tenantId = '{{ request.tenant.id }}';
-            
+            const tenantId = '{{ request.tenant.id }}';
+
             $.ajax({
                 url: `/${tenantId}/loans/loan-details/${applicationId}/`,
                 type: 'GET',
@@ -368,14 +368,14 @@
         // Function to update loan summary in the modal
         function updateLoanSummary(data) {
             // Extract user data
-            var user = data.user;
-            var loan = data.loan;
-            
-            // Extract initials from name
-            var initials = getInitials(user.full_name || user.username);
-            
+            const user = data.user;
+            const loan = data.loan;
+
+            // Extract initials from a name
+            const initials = getInitials(user.full_name || user.username);
+
             // Set user avatar color based on user ID
-            var colorClasses = ['primary', 'success', 'info', 'warning', 'danger'];
+            const colorClasses = ['primary', 'success', 'info', 'warning', 'danger'];
             var colorIndex = (user.id % 5);
             var colorClass = colorClasses[colorIndex];
             

@@ -8,6 +8,9 @@ from django.core.exceptions import ValidationError
 from django.db.models import UniqueConstraint
 from django.db import transaction
 import datetime
+
+from ProvidentFund.settings import AUTH_USER_MODEL
+
 """
 CHART OF ACCOUNTS IMPORT
 """
@@ -112,12 +115,23 @@ class LoanApplication(models.Model):
     amount_requested = models.DecimalField(
         decimal_places=2,
         max_digits=12,
+        help_text='Requested amount(Principal of loan) to be paid to member.'
+    )
+    interest_amount = models.DecimalField(
+        decimal_places=2,
+        max_digits=12,
+        default=Decimal(0),
+        help_text='Interest amount to be paid on this loan.'
     )
     purpose = models.TextField()
     status = models.CharField(
         choices=STATUS_CHOICES,
         default='PENDING',
         max_length=10
+    )
+    is_loan_fully_paid = models.BooleanField(
+        default=False,
+        help_text='Indicates if the loan has been fully paid'
     )
     application_date = models.DateTimeField(
         auto_now_add=True
@@ -235,6 +249,25 @@ class LoanApplication(models.Model):
         )
     """
     def calculate_monthly_installments(self):
+        """
+        Calculates the monthly installment amount (EMI) based on the loan parameters.
+
+        The method computes the EMI for both "FLAT" and "REDUCING" interest calculation
+        types. It considers the requested loan amount, annual interest rate, tenure in
+        months, and interest calculation type. If the interest rate is zero, a simple
+        division of the amount over the tenure is done. For "FLAT" type, the EMI is
+        calculated by dividing the total payable amount (principal + total interest)
+        over the tenure. For the "REDUCING" type, the standard reducing balance formula
+        is used. An exception is raised for invalid interest calculation types.
+
+        Returns the EMI as a Decimal rounded to two decimal places.
+
+        Raises:
+            ValueError: If the interest calculation type is invalid.
+
+        Returns:
+            Decimal: The monthly EMI value.
+        """
         p = self.amount_requested
         annual_rate = self.loan_type.loan_interest_rate  # e.g., 6.5%
         r = Decimal(annual_rate) / Decimal('1200')  # Monthly interest rate
@@ -251,11 +284,17 @@ class LoanApplication(models.Model):
                 total_payable = p + total_interest
                 emi = total_payable / T
 
+                #update interest field on loan application
+                self.interest_amount = total_interest.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
             elif self.loan_type.interest_calculation_type == 'REDUCING':
                 # Reducing balance formula (standard EMI)
                 numerator = p * r * (1 + r) ** T
                 denominator = ((1 + r) ** T) - 1
                 emi = numerator / denominator
+
+                #update interest field on loan application
+                self.interest_amount = ((emi * T) - p).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)  # Total interest paid over the tenure
             else:
                 raise ValueError("Invalid interest calculation type.")
 
@@ -266,6 +305,18 @@ class LoanApplication(models.Model):
     APPROVE LOAN -- BY ADMIN
     """ 
     def approve_loan(self, user):
+        """
+        Approves the loan request, updates its status, sets approval details, and
+        generates the amortization schedule.
+
+        Parameters:
+        user : Any
+            The user who approves the loan.
+
+        Raises:
+        Exception
+            If the loan is already approved and processed.
+        """
         if self.approved:
             raise Exception("Loan already processed.")
 
@@ -285,6 +336,18 @@ class LoanApplication(models.Model):
     DISBURSE LOAN -- BY ADMIN
     """
     def disburse_loan(self, user):
+        """
+        Disburses the loan if it has been approved and not already disbursed.
+
+        This method checks the current status of the loan to ensure it has been
+        approved but not yet disbursed. If the loan is in a valid state, it proceeds
+        to mark the loan as disbursed, record the user who performed the disbursement,
+        and set the disbursement date to the current time.
+
+        Raises:
+            Exception: If the loan has not been approved.
+            Exception: If the loan has already been disbursed.
+        """
         if not self.approved:
             raise Exception("Loan not approved yet.")
         if self.disbursed:
@@ -295,6 +358,41 @@ class LoanApplication(models.Model):
         self.disbursed = True
         self.disbursement_date = timezone.now()
         self.save()
+
+
+    """
+    HANDLE FULLY REPAYMENT OF LOAN
+    """
+    def handle_full_repayment(self):
+        """
+        Handles the process of marking a loan as fully repaid. This entails updating the
+        loan's status, flagging it as fully paid, and marking all unpaid installments
+        in the loan's amortization schedule as paid in an atomic transaction.
+
+        Raises:
+            Exception: If the loan is already marked as fully paid.
+        """
+        if self.is_loan_fully_paid:
+            raise Exception("Loan already marked as fully paid.")
+
+        with transaction.atomic():
+            # Update loan status
+            self.status = 'REPAID'
+            self.is_loan_fully_paid = True
+            self.save()
+
+            # Update the amortization schedule to mark all installments as paid
+            amortizations = self.amortization_schedule.filter(is_paid=False)
+            if amortizations:
+                for amortization in amortizations:
+                    amortization.is_paid = True
+                    amortization.payment_status = 'PAID'
+
+                self.amortization_schedule.model.objects.bulk_update(
+                    amortizations,
+                    ['is_paid', 'payment_status']
+                )
+
 
 
     # TODO Add method to reject loan application
@@ -309,6 +407,7 @@ class LoanApplication(models.Model):
                 self.monthly_installments = self.calculate_monthly_installments()
             else:
                 raise Exception("Missing required fields")
+        # self.calculate_monthly_installments()
         return super().save(*args,**kwargs)
 
 
@@ -354,6 +453,20 @@ class LoanAmortizationSchedule(models.Model):
         decimal_places=2,
         max_digits=12
     )
+    is_paid = models.BooleanField(
+        default=False,
+        help_text='Indicates if this installment has been paid'
+    )
+    payment_status = models.CharField(
+        max_length=10,
+        choices=[
+            ('PENDING', 'Pending'),
+            ('PAID', 'Paid'),
+            ('OVERDUE', 'Overdue')
+        ],
+        default='PENDING',
+        help_text='Current status of this installment payment'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -371,9 +484,11 @@ class LoanRepayment(models.Model):
         related_name='loan_repayments'
     )
     user = models.ForeignKey(
-        Member,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='loan_repayments'
+        related_name='loan_repayments',
+        null=True,
+        help_text='Assigned when a repayment is made by an admin or staff member'
     )
     loan = models.ForeignKey(
         LoanApplication,
@@ -383,34 +498,78 @@ class LoanRepayment(models.Model):
     date_paid = models.DateField(
         auto_now_add=True
     )
-    amount_paid = models.DecimalField(
+    principal_paid = models.DecimalField(
         decimal_places=2,
-        max_digits=12
+        max_digits=12,
+        default=Decimal(0),
+        help_text='Principal amount paid for this repayment'
+    )
+    interest_paid = models.DecimalField(
+        decimal_places=2,
+        max_digits=12,
+        default=Decimal(0),
+        help_text='Interest amount paid for this repayment'
     )
     is_full_payment = models.BooleanField(
-        default=False
+        default=False,
+        help_text='Indicates if this repayment covers the full monthly installment'
     )
     payment_period = models.DateField(
-        help_text='Month this payment is for. eg: 01-12-2025'
+        help_text='Month this payment is for. eg: 01-12-2025',
+        null=True
+    )
+    payment_type = models.CharField(
+        max_length=20,
+        choices= [
+            ('FULL', 'full'),
+            ('INSTALLMENT', 'installment'),
+            ('PARTIAL', 'partial'),
+            ('NONE', 'none')
+        ],
+        default='NONE',
+        help_text='Indicates if this repayment covers the full monthly installment'
     )
     created_at = models.DateTimeField(
         auto_now_add=True
     )
 
-    def check_is_full_payment(self):
-        monthly_installment = self.loan.monthly_installments
-
-        # Total paid for the same loan/user/month
-        total_paid = LoanRepayment.objects.filter(
-            loan=self.loan,
-            user=self.user,
-            payment_period=self.payment_period
-        ).aggregate(total=models.Sum('amount_paid'))['total'] or 0
-
-        self.is_full_payment = total_paid >= monthly_installment
+    # def check_is_full_payment(self):
+    #     """
+    #     Checks if the loan repayment for the current month equals or exceeds the
+    #     monthly installment amount. This indicates whether the payment is fully
+    #     settled.
+    #
+    #     Attributes:
+    #         is_full_payment (bool): A flag indicating if the total payment made
+    #                                 for the current loan and payment period meets or
+    #                                 exceeds the required monthly installment amount.
+    #
+    #     Raises:
+    #         DoesNotExist: If the `LoanRepayment` object lookup fails for the specified
+    #                       loan and payment period.
+    #     """
+    #     monthly_installment = self.loan.monthly_installments
+    #
+    #     # TODO ensure to refactor the filtering for LoanRepayment
+    #     # Total paid for the same loan/user/month
+    #     total_paid = LoanRepayment.objects.filter(
+    #         loan=self.loan,
+    #         payment_period=self.payment_period
+    #     ).aggregate(total=models.Sum('amount_paid'))['total'] or 0
+    #
+    #     self.is_full_payment = total_paid >= monthly_installment
 
     def update_total_amount_paid(self):
-        amount = self.amount_paid
+        """
+        Updates the total amount paid toward a loan.
+
+        This method adds the current payment amount to the total amount paid
+        on the associated loan and saves the updated loan data.
+
+        Raises:
+            None
+        """
+        amount = self.principal_paid + self.interest_paid
 
         # Add amount to the Loans total_amount_paid field
         self.loan.total_amount_paid += amount
@@ -425,9 +584,9 @@ class LoanRepayment(models.Model):
             super().save(*args, **kwargs)  # Save to get an ID
 
         # Run dependent logic
-        self.check_is_full_payment()
+        # self.check_is_full_payment()
 
-        # Update related loan object
+        # Update the related loan object
         self.update_total_amount_paid()  #This auto updates the Loan object
 
         # Save
