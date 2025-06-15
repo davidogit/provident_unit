@@ -70,7 +70,7 @@
                                     <small class="d-block mt-1">{{ loan.disbursement_date|timesince }} ago</small>
                                 </td>
                                 <td>
-                                    <a href="" class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <a href="{% url 'disbursed_loan_details' tenant_id=request.tenant.id pk=loan.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </td>
@@ -87,7 +87,8 @@
                         </tbody>
                     </table>
                 </div>
-                
+
+                <!-- TODO: Ensure pagination works fine-->
                 <!-- Pagination -->
                 {% if disbursed_loans.has_other_pages %}
                 <div class="d-flex justify-content-between align-items-center p-3 border-top">

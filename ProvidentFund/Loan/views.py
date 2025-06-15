@@ -1,9 +1,14 @@
+import datetime
+
 from django.db import IntegrityError
+from django.db.models import Sum, DecimalField
 from django.forms import model_to_dict
 from django.shortcuts import render
 from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse
 from django.views.generic import ListView,CreateView,View,TemplateView,DetailView,UpdateView,DeleteView
+from pyexpat.errors import messages
+
 from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule
 from .forms import LoanForm,LoanTypeForm
 from django.utils.decorators import method_decorator
@@ -590,7 +595,7 @@ class DisburseApprovedLoans(ListView):
         tenant = getattr(self.request,'tenant',None)
         user = getattr(self.request.user,'user',None)
         # loan details
-        loan_id = self.request.POST.get('loan_id')
+        loan_id = int(self.request.POST.get('loan_id'))
 
         if not tenant:
             return JsonResponse({
@@ -672,6 +677,198 @@ class DisbursedLoans(ListView):
 
         context.update(loan_count_metrics(tenant,status='disbursed'))
         return context
+
+
+"""
+DETAIL VIEW OF DISBURSED LOAN 
+-- FULL/PARTIAL REPAYMENT 
+-- SCHEDULE RECALCULATION
+"""
+class DisbursedLoanDetailView(DetailView):
+    model = LoanApplication
+    template_name = "disbursed_loan_details.html"
+    context_object_name = 'loan'
+
+    def get_object(self, queryset=None):
+        tenant = getattr(self.request, 'tenant', None)
+        loan_id = self.kwargs.get('pk')
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            id=loan_id,
+            approved=True,
+            disbursed=True
+        ).first()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        loan = self.get_object()
+        # Next payment date calculation
+        now = timezone.now()
+        next_payment = LoanAmortizationSchedule.objects.filter(
+            loan=loan,
+            is_paid=False,
+            installment_date__gte=now.date()
+        ).order_by('installment_date').first()
+
+        next_payment_date = next_payment.installment_date if next_payment else None
+
+        # calculate loan metrics
+        repayments = loan.loan_repayments.all().aggregate(
+            total_principal=Sum('principal_paid'),
+            total_interest=Sum('interest_paid')
+        )
+        total_interest = repayments['total_interest'] or Decimal('0.00')
+        total_principal = repayments['total_principal'] or Decimal('0.00')
+
+        total_repayments = Decimal(total_interest + total_principal)
+
+        total_loan_amount = loan.amortization_schedule.all().aggregate(total=Sum('total_installment_amount'))['total'] or Decimal('0.00')
+
+        context['next_payment_date'] = next_payment_date
+        context['total_repayments'] = total_repayments
+        context['outstanding_balance'] = (total_loan_amount - total_repayments).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        context['percentage_paid'] = Decimal((total_repayments / total_loan_amount * 100)).quantize(Decimal("0.01"), ROUND_HALF_UP) if total_loan_amount > 0 else Decimal('0.00')
+
+        if loan:
+            context['amortization_schedule'] = loan.amortization_schedule.all()
+        else:
+            context['amortization_schedule'] = []
+
+        return context
+
+
+
+"""
+LOAN PAYMENT VIEW
+--FULL/PARTIAL REPAYMENT
+"""
+class AdminLoanPaymentView(View):
+    model = LoanApplication
+
+    def post(self, request, *args, **kwargs):
+        tenant = getattr(request, 'tenant', None)
+        loan_id = self.request.POST.get('loan_id')
+        payment_amount_str = self.request.POST.get('payment_amount')
+        payment_type = self.request.POST.get('payment_type')  # 'full' or 'partial'
+        user = self.request.user
+        print(f"USER: {user}")
+
+        payment_amount = Decimal(payment_amount_str)
+        total_amount_payable = Decimal('0.00')
+
+        if not tenant or not user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request.'
+            })
+        if not loan_id or not payment_amount_str or not payment_type:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Loan ID, Payment Type and Payment Amount are required.'
+            })
+
+        loan = self.model.objects.filter(
+            tenant=tenant,
+            id=loan_id,
+        ).first()
+
+        if not loan:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Loan not found.'
+            })
+
+        # TODO continue from here next time -- handle admin loan repayment options
+        print(f"Form Data {self.request.POST}")
+
+        if payment_type == 'full':
+            total_principal_paid = loan.loan_repayments.aggregate(
+                total=Sum('principal_paid')
+            )['total'] or Decimal('0.00')
+
+            total_outstanding_principal = loan.amount_requested - total_principal_paid
+
+            last_payment = loan.amortization_schedule.filter(
+                is_paid=True
+            ).order_by('-installment_date').first()
+
+            if last_payment:
+                days = (timezone.now().date() - last_payment.installment_date).days
+                daily_rate = loan.interest_rate / Decimal('36500')
+                total_accrued_interest = total_outstanding_principal * daily_rate * days
+            else:
+                total_accrued_interest = Decimal('0.00')
+
+            total_amount_payable = total_outstanding_principal + total_accrued_interest
+
+            if payment_amount < total_amount_payable:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Payment amount cannot be less than the total outstanding balance.'
+                })
+
+            # Record the full repayment
+            LoanRepayment.objects.create(
+                tenant=tenant,
+                user=user,
+                loan=loan,
+                date_paid=timezone.now(),
+                principal_paid=total_outstanding_principal,
+                interest_paid=total_accrued_interest,
+                is_full_payment=True,
+                payment_type='full'
+            )
+
+            try:
+                loan.handle_full_repayment()
+            except Exception as e:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Error updating loan status: {e}'
+                })
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Loan has been fully repaid and marked as PAID.'
+            })
+
+
+        if payment_type == 'partial':
+            try:
+                payment_amount = Decimal(payment_amount_str)
+            except ValueError:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid payment amount.'
+                })
+
+            if payment_amount <= 0:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Payment amount must be greater than zero.'
+                })
+
+            #TODO: Handle partial repayment logic
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Partial repayment processing is not implemented yet.'
+            })
+
+        if payment_type == 'installment':
+            amount = loan.monthly_installments
+            #TODO: Handle installment payment logic
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Installment payment processing is not implemented yet.'
+            })
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid payment type. Must be "full", "partial", or "installment".'
+            })
 
 
 """
