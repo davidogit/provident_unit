@@ -554,8 +554,26 @@
   <div class="sidebar">
     <div class="sidebar-header">
       <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
+      
     </div><!-- sidebar-header -->
     <div id="sidebarMenu" class="sidebar-body">
+
+      <!-- Loan -->
+      <div class="nav-item">
+        {% if 'Finance Manager' in user_groups or 'Supervisor' in user_groups or 'Analyst' in user_groups %}
+        <a href="#" class="nav-label">Loans</a>
+        <ul class="nav nav-sidebar">
+          <li class="nav-item">
+            <a href="{% url 'approve_loans' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-file-list-3-line fs-32 lh-1 me-3"></i> <span>Loan Applications</span></a>
+          </li>
+          {% if 'Finance Manager' in user_groups or 'Supervisor' in user_groups or 'Analyst' in user_groups %}
+          <li class="nav-item">
+            <a href="{% url 'disburse_approved_loans' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-money-dollar-circle-line fs-32 lh-1 me-3"></i> <span>Repayment Approval</span></a>
+          </li>
+          {% endif %}
+        </ul>
+        {% endif %}
+      </div><!--nav-group -->
 
       <!-- General Payout -->
       <div class="nav-item">
@@ -639,7 +657,7 @@
       </div><!--nav-group -->
       {% endif %}
   
-      <div class="nav-item border-5 border-bottom border-secondary">
+      <div class="nav-item">
         {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups or 'Super User' in user_groups %}
         <a href="#" class="nav-label">Configuration</a>
         <ul class="nav nav-sidebar">
@@ -666,6 +684,34 @@
           </li>
           {% endif %}
 
+
+          <!-- Nav Item for Loan Config -->
+
+          <li class="nav-item">
+            <a href="#" class="nav-link has-sub"><i class="ri-file-list-3-line fs-32 lh-1 me-3"></i> <span>Loan Configuration</span></a>
+
+            <nav class="nav nav-sub"> 
+              {% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups %}
+              <a href="{% url 'loan_types' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Loan Types
+              </a>
+              {% endif %}
+            </nav>
+
+          </li>
+
+          {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups %}
+          <li class="nav-item">
+            <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Configuration</span></a>
+              <nav class="nav nav-sub"> 
+                {% if 'Scheme Manager' in user_groups %}
+                <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Scheme Approval
+                </a>
+                {% endif %}
+              </nav>    
+          </li>
+          {% endif %}
 
           {% if 'Super User' in user_groups %}
           <li class="nav-item">
@@ -720,43 +766,39 @@
           {% endif %}
         </ul>
         {% endif %}
+      </div>
     
-    {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups %}
-    <div>
-      <a href="#" class="nav-label">Scheme</a>
-        <ul class="nav nav-sidebar">
-        <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Setup</span></a>
-        <nav class="nav nav-sub"> 
-          {% if 'Scheme Analyst' in user_groups %}
-          <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}"
-            class="nav-sub-link">Add Scheme
-          </a>
-          {% endif %}
-          <a href="{% url 'scheme_list' tenant_id=request.tenant.id %}"
-            class="nav-sub-link">Active Schemes
-          </a>
-          {% if 'Scheme Manager' in user_groups %}
-          <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
-          class="nav-sub-link">Scheme Approval
-          </a>
-          {% endif %}
-        </nav>    
-      </ul>
-    </div>
+      {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups %}
+      <div>
+        <a href="#" class="nav-label">Scheme</a>
+          <ul class="nav nav-sidebar">
+          <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Setup</span></a>
+          <nav class="nav nav-sub"> 
+            {% if 'Scheme Analyst' in user_groups %}
+            <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Add Scheme
+            </a>
+            {% endif %}
+            <a href="{% url 'scheme_list' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Active Schemes
+            </a>
+          </nav>    
+        </ul>
+      </div>
       {% endif %}
-    
-    {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups or 'Super User' in user_groups %}
-      <a href="#" class="nav-label">Financials</a>
-      <ul class="nav nav-sidebar">
-        <li class="nav-item">
-        <a href="{% url 'account_balances' tenant_id=request.tenant.id %}" class="nav-link">
-          <i class="ri-wallet-line fs-32 lh-1 me-3"></i> 
-          <span>Balances</span>
-        </a>
-        </li>
-      </ul> 
-    </div>
-    {% endif %}
+      <div class="nav-item border-5 border-bottom border-secondary">
+        {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups or 'Super User' in user_groups %}
+        <a href="#" class="nav-label">Financials</a>
+        <ul class="nav nav-sidebar">
+          <li class="nav-item">
+          <a href="{% url 'account_balances' tenant_id=request.tenant.id %}" class="nav-link">
+            <i class="ri-wallet-line fs-32 lh-1 me-3"></i> 
+            <span>Balances</span>
+          </a>
+          </li>
+        </ul> 
+      </div>
+      {% endif %}
     
     
       <!--nav-group -->

@@ -1,0 +1,891 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+<title>Loans {% block loan_title %}{% endblock %}</title>
+{% endblock %}
+
+{% block header %}
+<h5 class="fw-bold"><i class="bi bi-clipboard-check me-2"></i>Loan Applications</h5>
+{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="container-fluid">
+        <!-- Navigation Tabs -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body p-0">
+                <ul class="nav nav-tabs nav-fill" id="applicationTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if active_tab == 'pending' %}active{% endif %} py-3" href="{% url 'approve_loans' tenant_id=request.tenant.id %}">
+                            <i class="bi bi-hourglass-split me-2"></i>Pending Applications
+                            <span class="badge rounded-pill bg-warning text-dark ms-2">{{ pending_count|default:"0" }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if active_tab == 'approved' %}active{% endif %} py-3" href="{% url 'disburse_approved_loans' tenant_id=request.tenant.id %}">
+                            <i class="bi bi-check-circle me-2"></i>Approved Applications
+                            <span class="badge rounded-pill bg-primary ms-2">{{ approved_count|default:"0" }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if active_tab == 'disbursed' %}active{% endif %} py-3" href="{% url 'disbursed_loans' tenant_id=request.tenant.id %}">
+                            <i class="bi bi-check-circle me-2"></i>Disbursed Loans
+                            <span class="badge rounded-pill bg-success ms-2">{{ disbursed_count|default:"0" }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if active_tab == 'rejected' %}active{% endif %} py-3" href="{% url 'rejected_loans' tenant_id=request.tenant.id %}">
+                            <i class="bi bi-x-circle me-2"></i>Rejected Applications
+                            <span class="badge rounded-pill bg-danger ms-2">{{ rejected_count|default:"0" }}</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="GET" action="" id="filter-form">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="date-filter" class="form-label">Date Range</label>
+                            <select class="form-select" id="date-filter" name="date_range" onchange="this.form.submit()">
+                                <option value="today" {% if date_range == 'today' %}selected{% endif %}>Today</option>
+                                <option value="week" {% if date_range == 'week' or not date_range %}selected{% endif %}>This Week</option>
+                                <option value="month" {% if date_range == 'month' %}selected{% endif %}>This Month</option>
+                                <option value="all" {% if date_range == 'all' %}selected{% endif %}>All Time</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="search-input" class="form-label">Search</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="search-input" name="search" placeholder="Search by name, ID..." value="{{ search_query|default:'' }}">
+                                <button class="btn btn-outline-secondary" type="submit">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        {% block loan_content %}
+        <!-- Applications List -->
+        <div class="card shadow-sm">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Pending Applications</h6>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary me-2">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="bulkActions" data-bs-toggle="dropdown" aria-expanded="false">
+                            Bulk Actions
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bulkActions">
+                            <li><a class="dropdown-item" href="#" id="bulk-approve">Approve Selected</a></li>
+                            <li><a class="dropdown-item" href="#" id="bulk-reject">Reject Selected</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th width="40">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="select-all">
+                                    </div>
+                                </th>
+                                <th>Applicant</th>
+                                <th>Loan Details</th>
+                                <th>Date Applied</th>
+                                <th>Status</th>
+                                <th width="120">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in loan_applications %}
+                            <tr>
+                                <td>
+                                    <div class="form-check">
+                                        <input class="form-check-input application-checkbox" type="checkbox" value="{{ loan.id }}" id="application-{{ loan.id }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% with initials=loan.user.user.first_name|default:loan.user.user.username|make_list %}
+                                        <div class="avatar-initial rounded-circle bg-{{ loan.user.id|divisibleby:5|yesno:'primary,success,info,warning,danger' }} text-white me-2">
+                                            {{ initials.0|upper }}{% if initials.1 %}{{ initials.1|upper }}{% endif %}
+                                        </div>
+                                        {% endwith %}
+                                        <div>
+                                            <h6 class="mb-0 fw-medium">{{ loan.user.user.first_name|default:loan.user.user.username }}</h6>
+                                            <small class="text-muted">ID: {{ loan.user.staff_id|default:loan.user.id }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span class="fw-medium">₵{{ loan.amount_requested|floatformat:2 }}</span>
+                                        <span class="text-muted mx-1">•</span>
+                                        <span class="text-muted">{{ loan.tenure_months }} months</span>
+                                    </div>
+                                    <small class="text-muted">{{ loan.purpose|truncatechars:30 }}</small>
+                                </td>
+                                <td>
+                                    <div>{{ loan.application_date|date:"M d, Y" }}</div>
+                                    <small class="text-muted">{{ loan.application_date|time:"g:i A" }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge {% if loan.status == 'pending' %}bg-warning text-dark{% elif loan.status == 'approved' %}bg-success{% elif loan.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {{ loan.status|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1 view-application" data-id="{{ loan.id }}" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success approve-application" data-id="{{ loan.id }}" title="Approve">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger reject-application" data-id="{{ loan.id }}" title="Reject">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                                    <p class="mt-3 mb-0">No applications found</p>
+                                    <p class="text-muted">There are no pending loan applications at this time.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if loan_applications.has_other_pages %}
+                <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                    <div class="text-muted small">
+                        Showing {{ loan_applications.start_index }} to {{ loan_applications.end_index }} of {{ loan_applications.paginator.count }} applications
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if loan_applications.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ loan_applications.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for i in loan_applications.paginator.page_range %}
+                                {% if loan_applications.number == i %}
+                                <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                                {% elif i > loan_applications.number|add:'-3' and i < loan_applications.number|add:'3' %}
+                                <li class="page-item"><a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if loan_applications.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ loan_applications.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endblock %}
+    </div>
+</div>
+
+{% block loan_modal %}
+<!-- Application Details Modal -->
+<div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="applicationModalLabel">Loan Application Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading application details...</p>
+                </div>
+                
+                <div id="modal-content" class="row g-4" style="display: none;">
+                    <!-- Applicant Information -->
+                    <div class="col-md-6">
+                        <div class="card border h-100">
+                            <div class="card-header bg-light py-3">
+                                <h6 class="mb-0 fw-bold">Applicant Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3 text-center">
+                                    <div id="user-avatar" class="avatar-initial rounded-circle bg-primary text-white d-inline-flex p-4 mb-2">
+                                        <span class="fs-4" id="user-initials">--</span>
+                                    </div>
+                                    <h5 class="fw-bold mb-0" id="user-name">--</h5>
+                                    <p class="text-muted" id="user-id">--</p>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="text-muted small">Department</div>
+                                        <div class="fw-medium" id="user-department">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Position</div>
+                                        <div class="fw-medium" id="user-position">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Employment Date</div>
+                                        <div class="fw-medium" id="user-employment-date">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Salary</div>
+                                        <div class="fw-medium" id="user-salary">--</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="text-muted small">Contact</div>
+                                        <div class="fw-medium" id="user-contact">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Loan Information -->
+                    <div class="col-md-6">
+                        <div class="card border h-100">
+                            <div class="card-header bg-light py-3">
+                                <h6 class="mb-0 fw-bold">Loan Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="text-muted small">Application ID</div>
+                                        <div class="fw-medium" id="loan-id">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Date Applied</div>
+                                        <div class="fw-medium" id="loan-date">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Amount Requested</div>
+                                        <div class="fw-medium" id="loan-amount">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Tenure</div>
+                                        <div class="fw-medium" id="loan-tenure">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Interest Rate</div>
+                                        <div class="fw-medium" id="loan-interest">--</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Monthly Installment</div>
+                                        <div class="fw-medium" id="loan-installment">--</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="text-muted small">Purpose</div>
+                                        <div class="fw-medium" id="loan-purpose">--</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="text-muted small">Additional Details</div>
+                                        <div class="fw-medium" id="loan-details">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Approval Form -->
+                    <div class="col-12">
+                        <form id="approval-form">
+                            <input type="hidden" id="application-id" value="">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="approval-status" class="form-label">Decision</label>
+                                    <select class="form-select" id="approval-status" required>
+                                        <option value="">Select decision</option>
+                                        <option value="approved">Approve</option>
+                                        <option value="rejected">Reject</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="interest-rate" class="form-label">Interest Rate (%)</label>
+                                    <input type="number" class="form-control" id="interest-rate" value="12" min="0" max="30" step="0.5">
+                                </div>
+                                <div class="col-12">
+                                    <label for="approval-notes" class="form-label">Notes</label>
+                                    <textarea class="form-control" id="approval-notes" rows="3" placeholder="Add notes about this decision"></textarea>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="modal-reject-btn">Reject</button>
+                <button type="button" class="btn btn-success" id="modal-approve-btn">Approve</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="notificationToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto toast-title">Notification</strong>
+            <small class="text-muted toast-time">just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <!-- Toast message will be inserted here -->
+        </div>
+    </div>
+</div>
+
+{% block loan_styles %}
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .card.border {
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15);
+    }
+    
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+    
+    .bg-info-soft {
+        background-color: rgba(13, 202, 240, 0.15);
+    }
+    
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15);
+    }
+    
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.15);
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    /* Table Styles */
+    .table {
+        font-size: 0.9rem;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Avatar Styles */
+    .avatar-initial {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 500;
+    }
+    
+    /* Pagination Styles */
+    .pagination .page-link {
+        border-radius: 0.25rem;
+        margin: 0 0.125rem;
+    }
+    
+    /* Modal Styles */
+    .modal-content {
+        border-radius: 0.75rem;
+        border: none;
+    }
+    
+    .modal-header, .modal-footer {
+        border-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Nav Tabs */
+    .nav-tabs .nav-link {
+        border: none;
+        font-weight: 500;
+        color: #6c757d;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        border-bottom: 2px solid #0d6efd;
+        background-color: transparent;
+    }
+    
+    .nav-tabs .nav-link:hover:not(.active) {
+        border-bottom: 2px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+
+{% block loan_scripts %}
+<script>
+    $(document).ready(function(){
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Initialize modal
+        const applicationModal = new bootstrap.Modal(document.getElementById('applicationModal'));
+
+        // Handle select all checkbox
+        $('#select-all').on('change', function() {
+            $('.application-checkbox').prop('checked', $(this).prop('checked'));
+        });
+        
+        // Handle view application button
+        $('.view-application').on('click', function() {
+            var applicationId = $(this).data('id');
+            $('#application-id').val(applicationId);
+            
+            // Show loading state
+            $('#modal-loading').show();
+            $('#modal-content').hide();
+            
+            // Show the modal while loading
+            applicationModal.show();
+            
+            // Fetch application details from the server
+            var tenantId = '{{ request.tenant.id }}';
+            
+            $.ajax({
+                url: `/${tenantId}/loans/loan-details/${applicationId}/`,
+                type: 'GET',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Update user information
+                        updateUserInfo(response.data.user);
+                        
+                        // Update loan information
+                        updateLoanInfo(response.data.loan);
+                        
+                        // Set default interest rate
+                        $('#interest-rate').val(response.data.loan.interest_rate || 12);
+                        
+                        // Hide loading and show content
+                        $('#modal-loading').hide();
+                        $('#modal-content').fadeIn();
+                    } else {
+                        applicationModal.hide();
+                        showToast('Error', response.message || 'Failed to load application details', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching application details:', error);
+                    applicationModal.hide();
+                    showToast('Error', 'Failed to load application details. Please try again.', 'danger');
+                }
+            });
+        });
+        
+        // Function to update user information in the modal
+        function updateUserInfo(user) {
+            // Extract initials from name
+            var initials = getInitials(user.full_name || user.username);
+            
+            // Set user avatar color based on user ID
+            var colorClasses = ['primary', 'success', 'info', 'warning', 'danger'];
+            var colorIndex = (user.id % 5);
+            var colorClass = colorClasses[colorIndex];
+            
+            // Update user information
+            $('#user-initials').text(initials);
+            $('#user-avatar').removeClass().addClass(`avatar-initial rounded-circle bg-${colorClass} text-white d-inline-flex p-4 mb-2`);
+            $('#user-name').text(user.full_name || user.username);
+            $('#user-id').text(user.staff_id || `ID: ${user.id}`);
+            $('#user-department').text(user.department || 'N/A');
+            $('#user-position').text(user.position || 'N/A');
+            $('#user-employment-date').text(user.employment_date || 'N/A');
+            $('#user-salary').text(user.salary ? `₵${user.salary}/month` : 'N/A');
+            $('#user-contact').text(user.contact || 'N/A');
+        }
+        
+        // Function to update loan information in the modal
+        function updateLoanInfo(loan) {
+            $('#loan-id').text(loan.id);
+            $('#loan-date').text(loan.application_date);
+            $('#loan-amount').text(`₵${loan.amount_requested}`);
+            $('#loan-tenure').text(`${loan.tenure_months} Months`);
+            $('#loan-interest').text(`${loan.interest_rate || 12}%`);
+            $('#loan-installment').text(`₵${loan.monthly_installment || 'N/A'}`);
+            $('#loan-purpose').text(loan.purpose);
+            $('#loan-details').text(loan.additional_details || 'No additional details provided.');
+        }
+        
+        // Function to get initials from name
+        function getInitials(name) {
+            if (!name) return '--';
+            
+            var names = name.split(' ');
+            if (names.length === 1) {
+                return names[0].charAt(0).toUpperCase();
+            } else {
+                return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+            }
+        }
+        
+        // Handle approve application button (inline)
+        $('.approve-application').on('click', function() {
+            var applicationId = $(this).data('id');
+            approveApplication(applicationId);
+        });
+        
+        // Handle reject application button (inline)
+        $('.reject-application').on('click', function() {
+            var applicationId = $(this).data('id');
+            rejectApplication(applicationId);
+        });
+        
+        // Handle approve button in modal
+        $('#modal-approve-btn').on('click', function() {
+            var applicationId = $('#application-id').val();
+            var interestRate = $('#interest-rate').val();
+            var notes = $('#approval-notes').val();
+            
+            approveApplication(applicationId, interestRate, notes);
+            applicationModal.hide();
+        });
+        
+        // Handle reject button in modal
+        $('#modal-reject-btn').on('click', function() {
+            var applicationId = $('#application-id').val();
+            var notes = $('#approval-notes').val();
+            
+            rejectApplication(applicationId, notes);
+            applicationModal.hide();
+        });
+        
+        // Handle bulk approve button
+        $('#bulk-approve').on('click', function(e) {
+            e.preventDefault();
+            
+            var selectedIds = [];
+            $('.application-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                showToast('Warning', 'Please select at least one application to approve', 'warning');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to approve ' + selectedIds.length + ' selected applications?')) {
+                var tenantId = '{{ request.tenant.id }}';
+                
+                $.ajax({
+                    url: `/${tenantId}/loans/bulk-approve/`,
+                    type: 'POST',
+                    data: {
+                        loan_ids: selectedIds.join(',')
+                    },
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            showToast('Success', response.message || selectedIds.length + ' applications have been approved', 'success');
+                            
+                            // Remove approved applications from the table
+                            $('.application-checkbox:checked').closest('tr').fadeOut(500, function() {
+                                $(this).remove();
+                                
+                                // Check if table is empty
+                                if ($('tbody tr').length === 0) {
+                                    $('tbody').html(`
+                                        <tr>
+                                            <td colspan="6" class="text-center py-5">
+                                                <i class="bi bi-inbox fs-1 text-muted"></i>
+                                                <p class="mt-3 mb-0">No applications found</p>
+                                                <p class="text-muted">There are no pending loan applications at this time.</p>
+                                            </td>
+                                        </tr>
+                                    `);
+                                }
+                            });
+                        } else {
+                            showToast('Error', response.message || 'Failed to approve applications', 'danger');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error approving applications:', error);
+                        showToast('Error', 'Failed to approve applications. Please try again.', 'danger');
+                    }
+                });
+            }
+        });
+        
+        // Handle bulk reject button
+        $('#bulk-reject').on('click', function(e) {
+            e.preventDefault();
+            
+            var selectedIds = [];
+            $('.application-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                showToast('Warning', 'Please select at least one application to reject', 'warning');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to reject ' + selectedIds.length + ' selected applications?')) {
+                var tenantId = '{{ request.tenant.id }}';
+                
+                $.ajax({
+                    url: `/${tenantId}/loans/bulk-reject/`,
+                    type: 'POST',
+                    data: {
+                        loan_ids: selectedIds.join(',')
+                    },
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            showToast('Success', response.message || selectedIds.length + ' applications have been rejected', 'success');
+                            
+                            // Remove rejected applications from the table
+                            $('.application-checkbox:checked').closest('tr').fadeOut(500, function() {
+                                $(this).remove();
+                                
+                                // Check if table is empty
+                                if ($('tbody tr').length === 0) {
+                                    $('tbody').html(`
+                                        <tr>
+                                            <td colspan="6" class="text-center py-5">
+                                                <i class="bi bi-inbox fs-1 text-muted"></i>
+                                                <p class="mt-3 mb-0">No applications found</p>
+                                                <p class="text-muted">There are no pending loan applications at this time.</p>
+                                            </td>
+                                        </tr>
+                                    `);
+                                }
+                            });
+                        } else {
+                            showToast('Error', response.message || 'Failed to reject applications', 'danger');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error rejecting applications:', error);
+                        showToast('Error', 'Failed to reject applications. Please try again.', 'danger');
+                    }
+                });
+            }
+        });
+        
+        // Function to approve an application
+        function approveApplication(id, interestRate, notes) {
+            var tenantId = '{{ request.tenant.id }}';
+            
+            $.ajax({
+                url: `/${tenantId}/loans/approve-loans/`,
+                type: 'POST',
+                data: {
+                    loan_id: id,
+                    interest_rate: interestRate || 12,
+                    notes: notes || ''
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        showToast('Success', response.message || 'Loan application has been approved', 'success');
+                        
+                        // Remove the approved application from the table
+                        $('[data-id="' + id + '"]').closest('tr').fadeOut(500, function() {
+                            $(this).remove();
+                            
+                            // Check if table is empty
+                            if ($('tbody tr').length === 0) {
+                                $('tbody').html(`
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                                            <p class="mt-3 mb-0">No applications found</p>
+                                            <p class="text-muted">There are no pending loan applications at this time.</p>
+                                        </td>
+                                    </tr>
+                                `);
+                            }
+                        });
+                    } else {
+                        showToast('Error', response.message || 'Failed to approve loan application', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error approving loan application:', error);
+                    showToast('Error', 'Failed to approve loan application. Please try again.', 'danger');
+                }
+            });
+        }
+        
+        // Function to reject an application
+        function rejectApplication(id, notes) {
+            var tenantId = '{{ request.tenant.id }}';
+            
+            $.ajax({
+                url: `/${tenantId}/loans/reject-loans/`,
+                type: 'POST',
+                data: {
+                    loan_id: id,
+                    notes: notes || ''
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        showToast('Success', response.message || 'Loan application has been rejected', 'success');
+                        
+                        // Remove the rejected application from the table
+                        $('[data-id="' + id + '"]').closest('tr').fadeOut(500, function() {
+                            $(this).remove();
+                            
+                            // Check if table is empty
+                            if ($('tbody tr').length === 0) {
+                                $('tbody').html(`
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                                            <p class="mt-3 mb-0">No applications found</p>
+                                            <p class="text-muted">There are no pending loan applications at this time.</p>
+                                        </td>
+                                    </tr>
+                                `);
+                            }
+                        });
+                    } else {
+                        showToast('Error', response.message || 'Failed to reject loan application', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error rejecting loan application:', error);
+                    showToast('Error', 'Failed to reject loan application. Please try again.', 'danger');
+                }
+            });
+        }
+        
+        // Toast notification function
+        function showToast(title, message, type) {
+            var toast = $('#notificationToast');
+            
+            // Set toast content
+            toast.find('.toast-title').text(title);
+            toast.find('.toast-body').text(message);
+            toast.find('.toast-time').text('just now');
+            
+            // Set toast color based on type
+            toast.removeClass('bg-success bg-danger bg-warning bg-info');
+            
+            switch(type) {
+                case 'success':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-check-circle-fill text-success me-2');
+                    break;
+                case 'danger':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-circle-fill text-danger me-2');
+                    break;
+                case 'warning':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-triangle-fill text-warning me-2');
+                    break;
+                case 'info':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+                    break;
+                default:
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+            }
+            
+            // Show toast
+            var bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

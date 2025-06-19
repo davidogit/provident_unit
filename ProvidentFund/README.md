@@ -102,6 +102,7 @@ ProvidentFund/
 ├── Admin/              # Admin management module
 ├── Chart_of_Accounts/ # Financial accounting module
 ├── Fund/              # Fund management module
+├── Loan/              # Loan management module
 ├── Member/            # Member management module
 ├── MultiScheme/       # Multi-scheme support
 ├── contributions/     # Contribution management

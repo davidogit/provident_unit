@@ -15,7 +15,7 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
 from .forms import InvestmentUpdateForm,InvestmentApprovalForm,InvestmentCreationForm
-from Fund.tasks import actual_member_interest,rollover_inv_creation,send_excel_sheet_to_bank_for_payment
+from Fund.tasks import actual_member_interest,rollover_inv_creation,send_excel_sheet_to_bank_for_payment,calculate_staff_contribution
 from Member.tasks import gen_send_email
 from django.core.exceptions import ValidationError
 import logging
@@ -26,7 +26,6 @@ from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
 from Chart_of_Accounts.models import BankAccount,ChartOfAccounts,AccountMapping
-from Fund.tasks import calculate_staff_contribution
 from Fund.generate_invoice import generate_short_alpha_numeric_id,generate_purchase_invoice_number
 from Admin.models import User
 import openpyxl
