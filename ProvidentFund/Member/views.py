@@ -38,7 +38,7 @@ from .tasks import notify_user_email_sms,notify_withdrawal_approval,send_otp_cod
 
 logger = logging.getLogger(__name__)
 
-# Registration View
+#Registration View
 @method_decorator(unauthenticated_user, name='dispatch')
 class MemberRegistrationView(TemplateView):
     template_name = 'register.html'
@@ -49,77 +49,83 @@ class MemberRegistrationView(TemplateView):
         member_data = MemberForm(request.POST)
 
         if user_data.is_valid() and member_data.is_valid():
-            # Set tenant on user_form and member_form
+            # Set tenant on both forms
             user_data.instance.tenant = tenant
             member_data.instance.tenant = tenant
 
-            # Check with endpoint if staff ID exists
-            url = tenant.api_endpoint_member
+            #  Try local DB check first
+            staff_id = member_data.cleaned_data['staff_id']
+            staff = StaffAPI.objects.filter(staff_number=staff_id, tenant=tenant).first()
 
-            api_user_data = None
-            try:
-                api_response = requests.get(url, timeout=10)
-                api_response.raise_for_status()
-                
-                data = api_response.json()
-                api_user_data = any(member['staff_number'] == member_data.cleaned_data['staff_id'] for member in data)
+            # If not found locally, try external API
+            if not staff:
+                url = tenant.api_endpoint_member
+                try:
+                    api_response = requests.get(url, timeout=10)
+                    api_response.raise_for_status()
+                    data = api_response.json()
 
-                if not api_user_data:
+                    found_in_api = any(member['staff_number'] == staff_id for member in data)
+                    if not found_in_api:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'No matching staff ID found in uploaded records or external database.'
+                        })
+
+                except requests.ConnectionError:
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'No matching staff ID found in database.'
+                        'message': 'Unable to reach external server, please try again.'
                     })
-                            
-            except requests.ConnectionError:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Unable to reach external server, please try again.'
-                })
-            except requests.Timeout:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Request timed out.'
-                })
-            except requests.RequestException as req_exc:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': f'Request error occurred: {str(req_exc)}'
-                })
+                except requests.Timeout:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Request to external server timed out.'
+                    })
+                except requests.RequestException as req_exc:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'External request error: {str(req_exc)}'
+                    })
 
-            # Get group for user
+            # Proceed with registration
             try:
                 user_group = Group.objects.get(name='Member')
-            except Exception:
+            except Group.DoesNotExist:
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'Could not get user assigned group.'
+                    'message': 'User group "Member" not found.'
                 })
-            
-            with transaction.atomic():
-                # Process and Save user/member data
-                user = user_data.save(commit=False)
-                user.set_password(user_data.cleaned_data['password1'])  # Ensure correct field
-                user.save()
 
-                # Assign group
+            with transaction.atomic():
+                # Save User
+                user = user_data.save(commit=False)
+                user.set_password(user_data.cleaned_data['password1'])
+                user.save()
                 user.groups.add(user_group)
 
-                # Set relationship between user and member
+                # Save Member
                 member = member_data.save(commit=False)
                 member.user = user
                 member.save()
+
+                # Link User to StaffAPI if found locally
+                if staff:
+                    staff.user = user
+                    staff.save()
 
                 return JsonResponse({
                     'status': 'success',
                     'redirect_url': self.get_success_url()
                 })
+
         else:
-            # Capture and return specific form errors, including password validation issues
+            # Return form validation errors
             errors = {**user_data.errors, **member_data.errors}
             return JsonResponse({
                 'status': 'error',
                 'message': 'Form validation failed.',
-                'errors': errors  # Detailed error messages
+                'errors': errors
             })
 
     def get_success_url(self):

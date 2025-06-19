@@ -191,7 +191,8 @@ class Contribution(models.Model):
     investment_scheme = models.ForeignKey(
         InvestmentScheme,
         on_delete=models.CASCADE,
-        null=True
+        null=True,
+        related_name='contribution'
     )
     member = models.ForeignKey(
         StaffAPI,

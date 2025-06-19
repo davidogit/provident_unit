@@ -2,12 +2,13 @@ from decimal import Decimal
 from django.db.models import Q,Count,Sum,Prefetch
 from django.http import HttpRequest, JsonResponse
 from django.http.response import HttpResponse as HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
+import pandas as pd
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder,ReceivedItems
 from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
 from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings,TenantEventNotification
-from contributions.models import StaffAPI, Contribution
+from contributions.models import StaffAPI, Contribution, Membership
 from django.urls import reverse
 from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
@@ -34,6 +35,16 @@ from django.db import transaction
 logger = logging.getLogger(__name__)
 # Importing custom decorators
 from Member.decorators import tenant_required,tenant_login_required
+import csv
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q, Count
+from django.core.paginator import Paginator
+from django.http import JsonResponse, HttpResponse
+from django.template.loader import render_to_string
+from MultiScheme.models import InvestmentScheme
+import csv
+from django.contrib.admin.models import LogEntry
 
 
 class LandingPage(TemplateView):
@@ -1619,11 +1630,11 @@ class ApproveContributions(TemplateView):
         except Exception:
             return JsonResponse({
                 'status':'error',
-                'message':'No account mapping for "contribution" found. Please create a mapping for this event and try again.'
+                'message':'No account mapping for "contributioin" found. Please create a mapping for this event and try again.'
             })
         
         try:
-            # Mapping for Delayed Interest
+            # Mappingh for Delayed Interest
             delayed_int_mapping = scheme.account_mapping.get(name='Delayed Interest')
         except Exception:
             return JsonResponse({
@@ -1637,22 +1648,17 @@ class ApproveContributions(TemplateView):
                 'message':'Month and Year are required'
             })
         
-        # Get or create settings for the scheme
-        try:
-            settings = SchemeSettings.objects.get(
-                investment_scheme=scheme,
-                investment_scheme__tenant=tenant
+        # collect settings related to the scheme
+        settings = SchemeSettings.objects.get(
+            investment_scheme=scheme,
+            investment_scheme__tenant=tenant
             )
-        except SchemeSettings.DoesNotExist:
-            # Create default settings if they don't exist
-            settings = SchemeSettings.objects.create(
-                investment_scheme=scheme,
-                contribution_day=15,  # Default to 15th of the month
-                grace_period_contribution=7,  # Default 7 days grace period
-                delayed_interest_rate=Decimal('5.00'),  # Default 5% delayed interest rate
-                period_of_delayed_calculation=30  # Default 30 days calculation period
-            )
-            message_1 = 'Default scheme settings were created. Please review and update them as needed.'
+
+        if not settings:
+            return JsonResponse({
+                'status':'error',
+                'message':'Ensure scheme settings is configured and try again'
+            })
        
         # Collect investments within the provided month
         contributions = Contribution.objects.filter(
@@ -1665,7 +1671,7 @@ class ApproveContributions(TemplateView):
         if not contributions.exists():
             return JsonResponse({'status': 'error', 'message': 'No contributions found for the given month.'})
         
-        # Aggregate total_contributions
+        # Aggregtae total_contributions
         total_contribution = contributions.aggregate(
                 total=Sum('total_contribution')
                 )['total'] or 0
@@ -1675,7 +1681,7 @@ class ApproveContributions(TemplateView):
                 'message':'Total contributions is zero.'
             })
         
-        # Approve contributions and perform debit and credit operations
+        # Approve contributions and peform debit and credit operations
         with transaction.atomic():
             # Fetch debit and credit accounts from mapping obj
             debit_account = mapping.debit_acc
@@ -1687,41 +1693,22 @@ class ApproveContributions(TemplateView):
                     'message':'Debit or Credit accounts not properly configured'
                 })
             
-            # Check if debit account has sufficient balance
-            if debit_account.current_balance < total_contribution:
-                return JsonResponse({
-                    'status':'error',
-                    'message':f'Insufficient balance in debit account. Required: {total_contribution}, Available: {debit_account.current_balance}'
-                })
+            # update contributions
+            contributions.update(approved_contribution=True)
             
-            try:
-                # update contributions
-                contributions.update(approved_contribution=True)
-                
-                # perform debit and credit operations
-                debit_account.record_transaction(
-                    amount=total_contribution,
-                    transaction_type='DEBIT',
-                    created_by=self.request.user,
-                    description=f'Contributions for {month}/{year}'
-                ) 
-                credit_account.record_transaction(
-                    amount=total_contribution,
-                    transaction_type='CREDIT',
-                    created_by=self.request.user,
-                    description=f'Contributions for {month}/{year}'
-                ) 
+            # perform debit anf credit operations
+            debit_account.record_transaction(
+                amount=total_contribution,transaction_type='DEBIT',created_by=self.request.user,description='Contributions'
+            ) 
+            credit_account.record_transaction(
+                amount=total_contribution,transaction_type='CREDIT',created_by=self.request.user,description='Contributions'
+            ) 
 
-            except ValidationError as e:
-                return JsonResponse({
-                    'status':'error',
-                    'message':str(e)
-                })
-            except Exception as e:
-                return JsonResponse({
-                    'status':'error',
-                    'message':f'Error processing transaction: {str(e)}'
-                })
+            """
+            # save account balances
+            debit_account.save()
+            credit_account.save()
+            """
 
         # update staff contributions using task
         calculate_staff_contribution.delay(
@@ -1740,6 +1727,7 @@ class ApproveContributions(TemplateView):
         # First day of month
         first_day_of_month = now.replace(day=1,month=int(month),year=int(year))
 
+        print(first_day_of_month)
         # expected payment date
         due_date = first_day_of_month + timedelta(contribution_day)
         # due date after grace period
@@ -1748,7 +1736,7 @@ class ApproveContributions(TemplateView):
         # check if payment is delayed past grace period
         if now > grace_period_end: #if payment date is over grace period
             
-            # Calculate delayed interest principal = accrued interest on contributions until approval date after grace period
+            # Calculate delayed interest principal = acrued interest on contributions until approval date after grace period
 
             # monthly contribution total
             month_contribution = Contribution.objects.filter(
@@ -1772,7 +1760,7 @@ class ApproveContributions(TemplateView):
             n = 365
             p = month_contribution
             r = daily_delayed_rate
-            c = p*(1+(r/n))**(n*t) #compound interest assuming t=1 year
+            c = p*(1+(r/n))**(n*t) #compound interest asuming t=1 year
             delayed_principal = c-p
 
             # create delayed interest object
@@ -1949,13 +1937,13 @@ class MassMemberUpload(CreateView):
         excel_file = request.FILES["excel_sheet"]
 
         try:
-            wb = load_workbook(excel_file, read_only=True, data_only=True)
+            wb = openpyxl.load_workbook(excel_file, read_only=True, data_only=True)
             sheet = wb.active
         except Exception:
             return JsonResponse({'status': 'error', 'message': 'Unsupported file format'})
 
-        all_members = []
-        member_scheme_codes = []
+        created_count = 0
+        updated_count = 0
         error_message = ''
 
         for row in sheet.iter_rows(min_row=2, values_only=True):
@@ -1963,65 +1951,78 @@ class MassMemberUpload(CreateView):
                 continue
 
             try:
-                staff_number, first_name, last_name, scheme_code, contributions, actual_amount, subscription_date = row
+                # Unpack 13 expected fields
+                (
+                    staff_number, first_name, last_name, scheme_name, fund_type,
+                    contributions, actual_amount, subscription_date,
+                    contribution_date, employee_amount, employer_amount,
+                    retro_employee_amount, retro_employer_amount
+                ) = row
 
-                # Convert scheme codes to list of strings
-                if isinstance(scheme_code, str):
-                    scheme_codes = [s.strip() for s in scheme_code.split(',')]
-                else:
-                    scheme_codes = [str(scheme_code).strip()]
+                # Clean and convert dates
+                subscription_date = subscription_date.date() if isinstance(subscription_date, datetime) else subscription_date
+                contribution_date = contribution_date.date() if isinstance(contribution_date, datetime) else contribution_date
 
-                member_instance = StaffAPI(
+                # Convert amounts to decimals safely
+                employee_amount = Decimal(employee_amount or 0)
+                employer_amount = Decimal(employer_amount or 0)
+                retro_employee_amount = Decimal(retro_employee_amount or 0)
+                retro_employer_amount = Decimal(retro_employer_amount or 0)
+                contributions = Decimal(contributions or 0)
+                actual_amount = Decimal(actual_amount or 0)
+
+                # Get or create staff
+                staff, created = StaffAPI.objects.get_or_create(
                     tenant=tenant,
                     staff_number=staff_number,
-                    first_name=first_name,
-                    last_name=last_name,
-                    contributions=contributions,
-                    actual_amount=actual_amount,
-                    subscription_date=subscription_date
+                    defaults={
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'fund_type': fund_type,
+                        'subscription_date': subscription_date,
+                        'contributions': contributions,
+                        'actual_amount': actual_amount,
+                    }
                 )
 
-                all_members.append(member_instance)
-                member_scheme_codes.append(scheme_codes)
+                if not created:
+                    updated_count += 1
+                else:
+                    created_count += 1
+
+                # Link staff to scheme
+                scheme = InvestmentScheme.objects.filter(name=scheme_name, tenant=tenant, approved=True).first()
+                if not scheme:
+                    error_message += f"Scheme not found: {scheme_name} for {staff_number}\n"
+                    continue
+
+                staff.investment_scheme.add(scheme)
+
+                # Ensure membership exists
+                Membership.objects.get_or_create(
+                    tenant=tenant,
+                    staff=staff,
+                    scheme=scheme
+                )
+
+                # Create contribution record
+                Contribution.objects.create(
+                    investment_scheme=scheme,
+                    member=staff,
+                    contribution_date=contribution_date,
+                    employee_amount=employee_amount,
+                    employer_amount=employer_amount,
+                    retro_employee_amount=retro_employee_amount,
+                    retro_employer_amount=retro_employer_amount,
+                    approved_contribution=True
+                )
 
             except Exception as e:
                 error_message += f"Error processing row {row}: {str(e)}\n"
 
-        try:
-            with transaction.atomic():
-                created_members = StaffAPI.objects.bulk_create(all_members)
-                created_members = StaffAPI.objects.filter(
-                    staff_number__in=[member.staff_number for member in all_members]
-                )
-
-                for member, scheme_codes in zip(created_members, member_scheme_codes):
-                    try:
-                        schemes = InvestmentScheme.objects.filter(
-                            tenant=tenant,
-                            code__in=scheme_codes,
-                            approved=True
-                        )
-
-                        member.investment_scheme.add(*schemes)
-
-                        # Check if all codes matched
-                        found_codes = set(schemes.values_list('code', flat=True))
-                        missing = set(scheme_codes) - found_codes
-                        if missing:
-                            raise MissingSchemeCodeError(missing)
-
-                    except MissingSchemeCodeError as e:
-                        error_message += f"{e.message} for {member.first_name} {member.last_name}\n"
-                        continue
-                    except Exception as e:
-                        error_message += f"Unexpected error for {member.first_name} {member.last_name}: {e}\n"
-
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'An error occurred: {e}'})
-
         return JsonResponse({
             'status': 'success',
-            'message': f'{len(all_members)} member(s) created, 0 updated. Issues: {error_message or "None"}'
+            'message': f'{created_count} member(s) created, {updated_count} updated.\nIssues:\n{error_message or "None"}'
         })
 
                 
@@ -4409,3 +4410,166 @@ class DeleteEventNotificationMapping(DeleteView):
                 'status':'error',
                 'message':f'Could not delete mapping.'
             })
+
+
+
+
+class SchemesBrowseView(TemplateView):
+    template_name = 'dashboard/schemes_browse.html'
+
+    def get(self, request, *args, **kwargs):
+        tenant_id = self.kwargs.get('tenant_id')
+        request.tenant = request.tenant
+
+        schemes = InvestmentScheme.objects.filter(tenant=request.tenant)
+
+        search_query = request.GET.get('search', '').strip()
+        if search_query:
+            schemes = schemes.filter(
+                Q(name__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+
+        # status = request.GET.get('status', '')
+        # if status:
+        #     schemes = schemes.filter(status=status)
+
+        schemes = schemes.annotate(
+            member_count=Count('membership', distinct=True),
+            total_contribution=Sum('contribution__total_contribution')
+)
+        schemes = schemes.order_by('name')
+
+        export_format = request.GET.get('export')
+        if export_format == 'csv':
+            return export_schemes_csv(schemes)
+        elif export_format == 'xlsx':
+            return export_schemes_excel(schemes)
+        # elif export_format == 'pdf':
+        #     return export_schemes_pdf(schemes)
+
+        paginator = Paginator(schemes, 12)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        scheme_types = InvestmentScheme.objects.filter(tenant=request.tenant).values_list('name', flat=True).distinct()
+
+        context = {
+            'page_obj': page_obj,
+            'schemes': page_obj.object_list,
+            'total_schemes': schemes.count(),
+            'scheme_types': scheme_types,
+        }
+        return self.render_to_response(context)
+
+def export_schemes_csv(schemes):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="schemes_export.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Scheme Name', 'Description', 'Member Count', 'Created Date', 'Last Updated'])
+    for scheme in schemes:
+        writer.writerow([
+            scheme.name,
+            scheme.description,
+            scheme.member_count,
+            scheme.created_date.strftime('%Y-%m-%d'),
+            scheme.updated_date.strftime('%Y-%m-%d')
+        ])
+    return response
+
+def export_schemes_excel(schemes):
+    data = [
+        {
+            'Scheme Name': scheme.name,
+            'Description': scheme.description,
+            'Member Count': scheme.member_count,
+            'Created Date': scheme.created_at.strftime('%Y-%m-%d'),
+            'Last Updated': scheme.updated_at.strftime('%Y-%m-%d'),
+        } for scheme in schemes
+    ]
+    df = pd.DataFrame(data)
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="schemes_export.xlsx"'
+    df.to_excel(response, index=False)
+    return response
+
+
+
+class SchemeSettingsView(TemplateView):
+    template_name = 'dashboard/configure_settings.html'
+
+    def get(self, request, *args, **kwargs):
+        tenant_id = self.kwargs.get('tenant_id')
+        request.tenant = request.tenant
+
+        schemes = InvestmentScheme.objects.filter(tenant=request.tenant)
+
+        search_query = request.GET.get('search', '').strip()
+        if search_query:
+            schemes = schemes.filter(
+                Q(name__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+
+        # status = request.GET.get('status', '')
+        # if status:
+        #     schemes = schemes.filter(status=status)
+
+        schemes = schemes.annotate(
+            member_count=Count('membership', distinct=True),
+            total_contribution=Sum('contribution__total_contribution')
+)
+        schemes = schemes.order_by('name')
+
+        export_format = request.GET.get('export')
+        if export_format == 'csv':
+            return export_schemes_csv(schemes)
+        elif export_format == 'xlsx':
+            return export_schemes_excel(schemes)
+        # elif export_format == 'pdf':
+        #     return export_schemes_pdf(schemes)
+
+        paginator = Paginator(schemes, 12)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        scheme_types = InvestmentScheme.objects.filter(tenant=request.tenant).values_list('name', flat=True).distinct()
+
+        context = {
+            'page_obj': page_obj,
+            'schemes': page_obj.object_list,
+            'total_schemes': schemes.count(),
+            'scheme_types': scheme_types,
+        }
+        return self.render_to_response(context)
+
+def export_schemes_csv(schemes):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="schemes_export.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Scheme Name', 'Description', 'Member Count', 'Created Date', 'Last Updated'])
+    for scheme in schemes:
+        writer.writerow([
+            scheme.name,
+            scheme.description,
+            scheme.member_count,
+            scheme.created_date.strftime('%Y-%m-%d'),
+            scheme.updated_date.strftime('%Y-%m-%d')
+        ])
+    return response
+
+def export_schemes_excel(schemes):
+    data = [
+        {
+            'Scheme Name': scheme.name,
+            'Description': scheme.description,
+            'Member Count': scheme.member_count,
+            'Created Date': scheme.created_at.strftime('%Y-%m-%d'),
+            'Last Updated': scheme.updated_at.strftime('%Y-%m-%d'),
+        } for scheme in schemes
+    ]
+    df = pd.DataFrame(data)
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="schemes_export.xlsx"'
+    df.to_excel(response, index=False)
+    return response

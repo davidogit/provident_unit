@@ -68,7 +68,7 @@
                         </div>
                         <div>
                           <p class="text-muted small mb-0">Total Contribution</p>
-                          <h6 class="fw-bold mb-0">GH₵ {% get_total_contribution scheme request.tenant request.user.member.staff_id %}</h6>
+                          <h6 class="fw-bold mb-0">GH₵ {% get_total_contribution scheme request.tenant request.user.member.staff_id as total %}  {{ total|floatformat:3 }}</h6>
                         </div>
                       </div>
                     </div>

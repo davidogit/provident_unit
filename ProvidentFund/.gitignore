@@ -30,3 +30,6 @@ backup.sql
 
 # API Data Fetcher
 contributions/data_fetcher.py
+
+# Ignore the management folder in the contributions app
+contributions/management/

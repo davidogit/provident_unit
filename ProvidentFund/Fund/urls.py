@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from . import views
+from .views import SchemesBrowseView
 
 urlpatterns =[
     path('', views.LandingPage.as_view(), name='landing_page'),
@@ -141,4 +142,7 @@ urlpatterns =[
     path('event_mapping/', views.EventMapping.as_view(), name='event_mapping'),
     # Delete mapping
     path('delete-mapping/<int:pk>/', views.DeleteEventNotificationMapping.as_view(), name='delete_notification_mapping'),
+    # Scheme Browse and settings
+    path('schemes/', SchemesBrowseView.as_view(), name='schemes_browse'),
+    path('scheme-settings/',views.SchemeSettingsView.as_view(),name='scheme_settings')
 ]

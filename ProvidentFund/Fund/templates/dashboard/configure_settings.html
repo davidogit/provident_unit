@@ -1,0 +1,331 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+<title> Scheme Settings - {{ request.tenant.name }}</title>
+{% endblock %}
+
+{% block header %}
+<div class="d-flex align-items-center">
+  <h4 class="mb-0">Scheme Settings</h4>
+  <span class="badge bg-primary ms-3">{{ schemes|length }} scheme{{ schemes|length|pluralize }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<main class="main main-app p-3 p-lg-4">
+  <!-- Search and Filter Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="GET" id="schemeSearchForm">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-6">
+                <label for="search" class="form-label">Search Schemes</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="ri-search-line"></i></span>
+                  <input type="text" name="search" id="search" class="form-control" 
+                         placeholder="Search by name or description..." 
+                         value="{{ request.GET.search }}">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select">
+                  <option value="">All Status</option>
+                  <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                  <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                  <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="ri-search-line me-2"></i>Search
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <p class="text-muted mb-0">
+          Showing {{ schemes|length }} of {{ total_schemes }} schemes
+          {% if request.GET.search %}
+            for "{{ request.GET.search }}"
+          {% endif %}
+        </p>
+        <div class="d-flex gap-2">
+          {% if 'Scheme Analyst' in user_groups %}
+          <a href="{% url 'add_scheme' tenant_id=request.tenant.id %}" class="btn btn-success btn-sm">
+            <i class="ri-add-line me-1"></i>Add New Scheme
+          </a>
+          {% endif %}
+          <button class="btn btn-outline-secondary btn-sm" onclick="exportSchemes()">
+            <i class="ri-download-line me-1"></i>Export
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- List View -->
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Scheme Name</th>
+              <th>Members</th>
+              <th>Total Value</th>
+              <th>Last Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for scheme in schemes %}
+            <tr class="scheme-row" data-scheme-id="{{ scheme.id }}">
+              <td>
+                <div>
+                  <div class="fw-semibold">{{ scheme.name }}</div>
+                  <small class="text-muted">{{ scheme.description|truncatewords:10 }}</small>
+                </div>
+              </td>
+              <td>{{ scheme.member_count|default:0 }}</td>
+              <td>GHC{{ scheme.total_contribution|default:"0"|floatformat:0 }}</td>
+              <td>{{ scheme.updated_date|date:"M d, Y" }}</td>
+              <td>
+                <!-- Enhanced Actions Dropdown -->
+                <div class="dropdown">
+                  <button class="btn btn-primary btn-sm dropdown-toggle" type="button" 
+                          id="actionsDropdown{{ scheme.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ri-more-line me-1"></i>Actions
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionsDropdown{{ scheme.id }}"> 
+                    <!-- Scheme Settings Section -->
+                    {% if 'Scheme Supervisor' in user_groups %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header"><i class="ri-settings-5-line me-2"></i>Scheme Administration</h6></li>
+                    <li>
+                      <a class="dropdown-item" href="{% url 'scheme_settings' tenant_id=request.tenant.id pk=scheme.id %}">
+                        <i class="ri-settings-line me-2"></i>Configure Settings
+                      </a>
+                    </li>
+                    {% endif %}
+                  </ul>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-5">
+                <i class="ri-folder-open-line display-4 text-muted"></i>
+                <div class="mt-3">
+                  <h5>No schemes found</h5>
+                  <p class="text-muted">Try adjusting your search criteria.</p>
+                  {% if 'Scheme Analyst' in user_groups %}
+                  <a href="{% url 'add_scheme' tenant_id=request.tenant.id %}" class="btn btn-primary">
+                    <i class="ri-add-line me-2"></i>Create First Scheme
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if is_paginated %}
+  <div class="row mt-4">
+    <div class="col-12">
+      <nav aria-label="Schemes pagination">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
+          </li>
+          {% endif %}
+          
+          {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+          </li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+          </li>
+          {% endif %}
+          {% endfor %}
+          
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+  {% endif %}
+</main>
+
+<style>
+.scheme-row:hover {
+  background-color: rgba(0,123,255,0.05);
+}
+
+.table th {
+  border-top: none;
+  font-weight: 600;
+  color: #495057;
+}
+
+/* Enhanced dropdown styling */
+.dropdown-menu {
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  border: none;
+  border-radius: 8px;
+}
+
+.dropdown-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+  padding: 0.5rem 1rem 0.25rem;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(0,123,255,0.1);
+  color: #0d6efd;
+}
+
+.dropdown-item i {
+  width: 16px;
+  text-align: center;
+}
+
+.dropdown-divider {
+  margin: 0.25rem 0;
+}
+
+/* Responsive dropdown adjustments */
+@media (max-width: 768px) {
+  .dropdown-menu {
+    max-height: 300px;
+  }
+  
+  .dropdown-item {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+</style>
+
+<script>
+// Auto-submit form on filter change
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('schemeSearchForm');
+    const selects = form.querySelectorAll('select');
+    
+    selects.forEach(element => {
+        element.addEventListener('change', function() {
+            form.submit();
+        });
+    });
+    
+    // Real-time search with debounce
+    const searchInput = document.getElementById('search');
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            form.submit();
+        }, 500);
+    });
+    
+    // Enhanced dropdown functionality
+    const dropdowns = document.querySelectorAll('.dropdown-toggle');
+    dropdowns.forEach(dropdown => {
+        dropdown.addEventListener('click', function(e) {
+            // Add loading state
+            const icon = this.querySelector('i');
+            if (icon && icon.classList.contains('ri-more-line')) {
+                icon.classList.remove('ri-more-line');
+                icon.classList.add('ri-loader-4-line');
+                icon.style.animation = 'spin 1s linear infinite';
+                
+                // Reset after dropdown opens
+                setTimeout(() => {
+                    icon.classList.remove('ri-loader-4-line');
+                    icon.classList.add('ri-more-line');
+                    icon.style.animation = '';
+                }, 300);
+            }
+        });
+    });
+    
+    // Track dropdown item clicks for analytics
+    const dropdownItems = document.querySelectorAll('.dropdown-item');
+    dropdownItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            const schemeName = this.closest('[data-scheme-id]')?.dataset.schemeId;
+            const actionText = this.textContent.trim();
+            console.log(`Scheme Action: ${schemeName} - ${actionText}`);
+            
+            // Add visual feedback
+            const icon = this.querySelector('i');
+            if (icon) {
+                const originalClass = icon.className;
+                icon.className = 'ri-loader-4-line me-2';
+                icon.style.animation = 'spin 1s linear infinite';
+                
+                // Reset after navigation
+                setTimeout(() => {
+                    icon.className = originalClass;
+                    icon.style.animation = '';
+                }, 1000);
+            }
+        });
+    });
+});
+
+function exportSchemes() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'csv');
+    window.location.href = '?' + params.toString();
+}
+
+// Add CSS animation for loading spinner
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}
