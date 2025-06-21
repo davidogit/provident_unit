@@ -202,11 +202,11 @@
                                 <td class="fw-medium">₵{{ schedule.total_installment_amount|floatformat:2 }}</td>
                                 <td>₵{{ schedule.remaining_balance|floatformat:2 }}</td>
                                 <td>
-                                    {% if schedule.payment_status == 'paid' %}
+                                    {% if schedule.payment_status == 'PAID' %}
                                         <span class="badge bg-success-soft text-success">
                                             <i class="bi bi-check-circle me-1"></i>Paid
                                         </span>
-                                    {% elif schedule.payment_status == 'overdue' %}
+                                    {% elif schedule.payment_status == 'OVERDUE' %}
                                         <span class="badge bg-danger-soft text-danger">
                                             <i class="bi bi-exclamation-triangle me-1"></i>Overdue
                                         </span>

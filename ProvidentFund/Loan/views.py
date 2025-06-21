@@ -1,6 +1,6 @@
 import datetime
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Sum, DecimalField
 from django.forms import model_to_dict
 from django.shortcuts import render
@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.views.generic import ListView,CreateView,View,TemplateView,DetailView,UpdateView,DeleteView
 from pyexpat.errors import messages
 
-from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule
+from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule, build_amortization_schedule
 from .forms import LoanForm,LoanTypeForm
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_login_required,tenant_required
@@ -721,14 +721,15 @@ class DisbursedLoanDetailView(DetailView):
         total_interest = repayments['total_interest'] or Decimal('0.00')
         total_principal = repayments['total_principal'] or Decimal('0.00')
 
-        total_repayments = Decimal(total_interest + total_principal)
+        total_repayments = Decimal(total_interest + total_principal).quantize(Decimal('0.00'))
 
-        total_loan_amount = loan.amortization_schedule.all().aggregate(total=Sum('total_installment_amount'))['total'] or Decimal('0.00')
+        total_loan_amount = loan.amount_requested + loan.interest_amount
+
 
         context['next_payment_date'] = next_payment_date
         context['total_repayments'] = total_repayments
         context['outstanding_balance'] = (total_loan_amount - total_repayments).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        context['percentage_paid'] = Decimal((total_repayments / total_loan_amount * 100)).quantize(Decimal("0.01"), ROUND_HALF_UP) if total_loan_amount > 0 else Decimal('0.00')
+        context['percentage_paid'] = Decimal(((total_repayments / total_loan_amount) * 100)).quantize(Decimal("0.01"), ROUND_HALF_UP) if total_loan_amount > 0 else Decimal('0.00')
 
         if loan:
             context['amortization_schedule'] = loan.amortization_schedule.all()
@@ -754,7 +755,14 @@ class AdminLoanPaymentView(View):
         user = self.request.user
         print(f"USER: {user}")
 
-        payment_amount = Decimal(payment_amount_str)
+        try:
+            payment_amount = Decimal(payment_amount_str)
+        except ValueError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid payment amount.'
+            })
+
         total_amount_payable = Decimal('0.00')
 
         if not tenant or not user:
@@ -783,9 +791,7 @@ class AdminLoanPaymentView(View):
         print(f"Form Data {self.request.POST}")
 
         if payment_type == 'full':
-            total_principal_paid = loan.loan_repayments.aggregate(
-                total=Sum('principal_paid')
-            )['total'] or Decimal('0.00')
+            total_principal_paid = loan.total_principal_paid
 
             total_outstanding_principal = loan.amount_requested - total_principal_paid
 
@@ -796,7 +802,7 @@ class AdminLoanPaymentView(View):
             if last_payment:
                 days = (timezone.now().date() - last_payment.installment_date).days
                 daily_rate = loan.interest_rate / Decimal('36500')
-                total_accrued_interest = total_outstanding_principal * daily_rate * days
+                total_accrued_interest = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             else:
                 total_accrued_interest = Decimal('0.00')
 
@@ -808,20 +814,22 @@ class AdminLoanPaymentView(View):
                     'message': 'Payment amount cannot be less than the total outstanding balance.'
                 })
 
-            # Record the full repayment
-            LoanRepayment.objects.create(
-                tenant=tenant,
-                user=user,
-                loan=loan,
-                date_paid=timezone.now(),
-                principal_paid=total_outstanding_principal,
-                interest_paid=total_accrued_interest,
-                is_full_payment=True,
-                payment_type='full'
-            )
 
             try:
-                loan.handle_full_repayment()
+                with transaction.atomic():
+                    # Record the full repayment
+                    LoanRepayment.objects.create(
+                        tenant=tenant,
+                        user=user,
+                        loan=loan,
+                        date_paid=timezone.now(),
+                        principal_paid=total_outstanding_principal,
+                        interest_paid=total_accrued_interest,
+                        is_full_payment=True,
+                        payment_type='full'
+                    )
+                    # Mark all amortization installments as paid
+                    loan.handle_full_repayment()
             except Exception as e:
                 return JsonResponse({
                     'status': 'error',
@@ -834,14 +842,9 @@ class AdminLoanPaymentView(View):
             })
 
 
+        #TODO finalize partial repayment logic
         if payment_type == 'partial':
-            try:
-                payment_amount = Decimal(payment_amount_str)
-            except ValueError:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Invalid payment amount.'
-                })
+            partial_payment_amount = payment_amount
 
             if payment_amount <= 0:
                 return JsonResponse({
@@ -849,26 +852,78 @@ class AdminLoanPaymentView(View):
                     'message': 'Payment amount must be greater than zero.'
                 })
 
-            #TODO: Handle partial repayment logic
+            # 1. Total principal paid so far
+            total_principal_paid = loan.total_principal_paid
+
+            total_outstanding_principal = loan.amount_requested - total_principal_paid
+
+            if partial_payment_amount >= total_outstanding_principal:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Payment amount is too high. Use full repayment instead.'
+                })
+
+            # 2. Find the last paid installment (if any)
+            last_paid_schedule = loan.amortization_schedule.filter(
+                is_paid=True
+            ).order_by('-installment_date').first()
+
+            # 3. Calculate interest accrued since the last paid installment (or disbursement)
+            last_payment_date = last_paid_schedule.installment_date if last_paid_schedule else loan.disbursement_date
+            today = timezone.now().date()
+            days = (today - last_payment_date).days if last_payment_date else 0
+
+            interest_accrued = Decimal('0.00')
+            if days > 0:
+                daily_rate = loan.interest_rate / Decimal('36500')
+                interest_accrued = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'))
+
+            # 4. Deduct interest from payment, rest goes to principal
+            if partial_payment_amount <= interest_accrued:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Partial payment is too small to cover accrued interest.'
+                })
+
+            principal_paid = partial_payment_amount - interest_accrued
+            new_outstanding_principal = total_outstanding_principal - principal_paid
+
+            try:
+                with transaction.atomic():
+                    # Record repayment
+                    LoanRepayment.objects.create(
+                        tenant=tenant,
+                        user=user,
+                        loan=loan,
+                        date_paid=timezone.now(),
+                        principal_paid=principal_paid,
+                        interest_paid=interest_accrued,
+                        is_full_payment=False,
+                        payment_type='partial'
+                    )
+
+                    # Rebuild amortization schedule from today using a new principal
+                    build_amortization_schedule(
+                        loan=loan,
+                        principal=new_outstanding_principal,
+                        start_date=timezone.now().date()
+                    )
+
+            except Exception as e:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Error processing partial repayment: {str(e)}'
+                })
 
             return JsonResponse({
                 'status': 'success',
-                'message': 'Partial repayment processing is not implemented yet.'
+                'message': f'Partial payment of {partial_payment_amount} recorded. Interest: {interest_accrued}, Principal: {principal_paid}'
             })
 
-        if payment_type == 'installment':
-            amount = loan.monthly_installments
-            #TODO: Handle installment payment logic
-
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Installment payment processing is not implemented yet.'
-            })
-        else:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid payment type. Must be "full", "partial", or "installment".'
-            })
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid payment type. Must be "full", "partial", or "installment".'
+        })
 
 
 """
@@ -928,8 +983,7 @@ def loan_count_metrics(tenant,status):
 
         rejected_applications_count = queryset.filter(
             status = "REJECTED",
-            approved = False,
-            disbursed = False
+            rejected = True
         ).count()
 
         context = {

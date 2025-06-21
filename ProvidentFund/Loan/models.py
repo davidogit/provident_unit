@@ -5,7 +5,7 @@ from MultiScheme.models import Tenant
 from decimal import Decimal,ROUND_HALF_UP
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from django.db.models import UniqueConstraint
+from django.db.models import UniqueConstraint, Sum
 from django.db import transaction
 import datetime
 
@@ -201,7 +201,14 @@ class LoanApplication(models.Model):
 
     def __str__(self):
         return f'Loan application - {self.user.user.username} - Amount- {self.amount_requested}.'
-    
+
+
+    @property
+    def total_principal_paid(self):
+        return self.loan_repayments.aggregate(
+            total=Sum('principal_paid')
+        )['total'] or Decimal('0.00')
+
 
     # TODO Refactor loan interest calculation to cater for bot flat and reducing balance methods
     """
@@ -248,7 +255,7 @@ class LoanApplication(models.Model):
             REDUCING BALANCE OR FLAT
         )
     """
-    def calculate_monthly_installments(self):
+    def calculate_monthly_installments(self, principal_override=None):
         """
         Calculates the monthly installment amount (EMI) based on the loan parameters.
 
@@ -268,7 +275,7 @@ class LoanApplication(models.Model):
         Returns:
             Decimal: The monthly EMI value.
         """
-        p = self.amount_requested
+        p = principal_override if principal_override is not None else self.amount_requested
         annual_rate = self.loan_type.loan_interest_rate  # e.g., 6.5%
         r = Decimal(annual_rate) / Decimal('1200')  # Monthly interest rate
         T = Decimal(self.tenure_months)
@@ -322,7 +329,8 @@ class LoanApplication(models.Model):
 
         # TODO Finalize which action is to generate amortization schedule
         # Generate amortization schedule
-        generate_amortization_schedule(self)
+        # generate_amortization_schedule(self)
+        build_amortization_schedule(loan=self, principal=self.amount_requested)
 
         # update loan details
         self.status = 'APPROVED'
@@ -656,59 +664,126 @@ class LoanAccountMapping(models.Model):
 """
 METHOD TO HANDLE AMORTIZATION SCHEDULE GENERATION
 """
-def generate_amortization_schedule(self):
+# def generate_amortization_schedule(self):
+#     """
+#     Generates an amortization schedule for this loan.
+#     Deletes existing schedule first. Uses bulk_create for efficiency.
+#     """
+#     with transaction.atomic():
+#         # Delete the existing schedule first
+#         self.amortization_schedule.all().delete()
+#
+#         schedule_list = []
+#
+#         # Initial loan details
+#         p = self.amount_requested
+#         annual_rate = self.loan_type.loan_interest_rate
+#         r = Decimal(annual_rate) / Decimal('1200')  # Monthly interest rate
+#         T = Decimal(self.tenure_months)
+#
+#         monthly_installment = self.calculate_monthly_installments()
+#         remaining_balance = p
+#
+#         # Start from disbursement_date if set, else today
+#         current_date = self.disbursement_date or timezone.now().date()
+#
+#         for i in range(1, int(T) + 1):
+#             if self.loan_type.interest_calculation_type == 'FLAT':
+#                 interest_component = (p * Decimal(annual_rate) * (Decimal('1') / Decimal('12'))) / Decimal('100')
+#                 principal_component = monthly_installment - interest_component
+#             else:  # REDUCING balance method
+#                 interest_component = (remaining_balance * r).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+#                 principal_component = monthly_installment - interest_component
+#
+#             # Guard against rounding errors on the last installment
+#             if principal_component > remaining_balance:
+#                 principal_component = remaining_balance
+#
+#             # Build schedule row
+#             schedule_entry = LoanAmortizationSchedule(
+#                 tenant=self.tenant,
+#                 user=self.user,
+#                 loan=self,
+#                 installment_number=i,
+#                 installment_date=current_date,
+#                 principal_component=principal_component,
+#                 interest_component=interest_component,
+#                 total_installment_amount=principal_component + interest_component,
+#                 remaining_balance=(remaining_balance - principal_component).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+#             )
+#             schedule_list.append(schedule_entry)
+#
+#             # Update for next loop
+#             remaining_balance -= principal_component
+#             # Advance by approx 1 month (30 days)
+#             current_date += datetime.timedelta(days=30)
+#
+#         # Efficient bulk insert
+#         LoanAmortizationSchedule.objects.bulk_create(schedule_list)
+
+
+"""
+BUILD AMORTIZATION SCHEDULE
+"""
+def build_amortization_schedule(*, loan, principal, start_date=None):
     """
-    Generates an amortization schedule for this loan.
-    Deletes existing schedule first. Uses bulk_create for efficiency.
+    Generates amortization schedule for given loan and principal.
+    Deletes only unpaid entries and regenerates from start_date onward.
     """
     with transaction.atomic():
-        # Delete the existing schedule first
-        self.amortization_schedule.all().delete()
+        # Step 1: Delete only unpaid schedule entries
+        unpaid_qs = loan.amortization_schedule.exclude(payment_status="Paid")
+        unpaid_qs.delete()
+
+        # Step 2: Fetch the number of installments already paid
+        paid_count = loan.amortization_schedule.filter(payment_status="Paid").count()
+
+        # Step 3: Determine installment number offset
+        start_installment_number = paid_count + 1
 
         schedule_list = []
 
-        # Initial loan details
-        p = self.amount_requested
-        annual_rate = self.loan_type.loan_interest_rate
+        annual_rate = loan.loan_type.loan_interest_rate
         r = Decimal(annual_rate) / Decimal('1200')  # Monthly interest rate
-        T = Decimal(self.tenure_months)
+        T = Decimal(loan.tenure_months)
 
-        monthly_installment = self.calculate_monthly_installments()
-        remaining_balance = p
+        monthly_installment = loan.calculate_monthly_installments(principal_override=principal)
+        remaining_balance = principal
 
-        # Start from disbursement_date if set, else today
-        current_date = self.disbursement_date or timezone.now().date()
+        # update the loan's monthly installments
+        loan.monthly_installments = monthly_installment
+        loan.save()
 
-        for i in range(1, int(T) + 1):
-            if self.loan_type.interest_calculation_type == 'FLAT':
-                interest_component = (p * Decimal(annual_rate) * (Decimal('1') / Decimal('12'))) / Decimal('100')
+        # Step 4: Determine the actual start date
+        current_date = start_date or timezone.now().date()
+
+        # Step 5: Generate only the remaining schedule entries
+        for i in range(start_installment_number, int(T) + 1):
+            if loan.loan_type.interest_calculation_type == 'FLAT':
+                interest_component = (principal * Decimal(annual_rate) * (Decimal('1') / Decimal('12'))) / Decimal('100')
                 principal_component = monthly_installment - interest_component
-            else:  # REDUCING balance method
+            else:
                 interest_component = (remaining_balance * r).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 principal_component = monthly_installment - interest_component
 
-            # Guard against rounding errors on the last installment
             if principal_component > remaining_balance:
                 principal_component = remaining_balance
 
-            # Build schedule row
             schedule_entry = LoanAmortizationSchedule(
-                tenant=self.tenant,
-                user=self.user,
-                loan=self,
+                tenant=loan.tenant,
+                user=loan.user,
+                loan=loan,
                 installment_number=i,
                 installment_date=current_date,
                 principal_component=principal_component,
                 interest_component=interest_component,
                 total_installment_amount=principal_component + interest_component,
-                remaining_balance=(remaining_balance - principal_component).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                remaining_balance=(remaining_balance - principal_component).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+                payment_status="Pending",  # Mark new entries as Pending
             )
             schedule_list.append(schedule_entry)
 
-            # Update for next loop
             remaining_balance -= principal_component
-            # Advance by approx 1 month (30 days)
             current_date += datetime.timedelta(days=30)
 
-        # Efficient bulk insert
         LoanAmortizationSchedule.objects.bulk_create(schedule_list)
