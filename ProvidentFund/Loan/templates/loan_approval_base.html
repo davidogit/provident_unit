@@ -495,11 +495,31 @@
     .nav-tabs .nav-link:hover:not(.active) {
         border-bottom: 2px solid #dee2e6;
     }
+
+    /* SweetAlert2 Custom Styles */
+    .swal2-textarea {
+        min-height: 100px !important;
+        resize: horizontal;
+        min-width: 80% !important;
+    }
+
+    .swal2-input, .swal2-textarea {
+        border-radius: 0.5rem !important;
+        border: 1px solid #ced4da !important;
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    .swal2-input:focus, .swal2-textarea:focus {
+        border-color: #86b7fe !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
 </style>
 {% endblock %}
 
-
 {% block loan_scripts %}
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     $(document).ready(function(){
         // Initialize tooltips
@@ -515,22 +535,22 @@
         $('#select-all').on('change', function() {
             $('.application-checkbox').prop('checked', $(this).prop('checked'));
         });
-        
+
         // Handle view application button
         $('.view-application').on('click', function() {
             var applicationId = $(this).data('id');
             $('#application-id').val(applicationId);
-            
+
             // Show loading state
             $('#modal-loading').show();
             $('#modal-content').hide();
-            
+
             // Show the modal while loading
             applicationModal.show();
-            
+
             // Fetch application details from the server
             var tenantId = '{{ request.tenant.id }}';
-            
+
             $.ajax({
                 url: `/${tenantId}/loans/loan-details/${applicationId}/`,
                 type: 'GET',
@@ -541,13 +561,13 @@
                     if (response.status === 'success') {
                         // Update user information
                         updateUserInfo(response.data.user);
-                        
+
                         // Update loan information
                         updateLoanInfo(response.data.loan);
-                        
+
                         // Set default interest rate
                         $('#interest-rate').val(response.data.loan.interest_rate || 12);
-                        
+
                         // Hide loading and show content
                         $('#modal-loading').hide();
                         $('#modal-content').fadeIn();
@@ -563,17 +583,17 @@
                 }
             });
         });
-        
+
         // Function to update user information in the modal
         function updateUserInfo(user) {
             // Extract initials from name
             var initials = getInitials(user.full_name || user.username);
-            
+
             // Set user avatar color based on user ID
             var colorClasses = ['primary', 'success', 'info', 'warning', 'danger'];
             var colorIndex = (user.id % 5);
             var colorClass = colorClasses[colorIndex];
-            
+
             // Update user information
             $('#user-initials').text(initials);
             $('#user-avatar').removeClass().addClass(`avatar-initial rounded-circle bg-${colorClass} text-white d-inline-flex p-4 mb-2`);
@@ -585,7 +605,7 @@
             $('#user-salary').text(user.salary ? `₵${user.salary}/month` : 'N/A');
             $('#user-contact').text(user.contact || 'N/A');
         }
-        
+
         // Function to update loan information in the modal
         function updateLoanInfo(loan) {
             $('#loan-id').text(loan.id);
@@ -597,11 +617,11 @@
             $('#loan-purpose').text(loan.purpose);
             $('#loan-details').text(loan.additional_details || 'No additional details provided.');
         }
-        
+
         // Function to get initials from name
         function getInitials(name) {
             if (!name) return '--';
-            
+
             var names = name.split(' ');
             if (names.length === 1) {
                 return names[0].charAt(0).toUpperCase();
@@ -609,160 +629,357 @@
                 return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
             }
         }
-        
-        // Handle approve application button (inline)
+
+        // Handle approve application button (inline) - WITH SWEETALERT2 CONFIRMATION
         $('.approve-application').on('click', function() {
             var applicationId = $(this).data('id');
-            approveApplication(applicationId);
+            showApprovalConfirmation(applicationId);
         });
-        
-        // Handle reject application button (inline)
+
+        // Handle reject application button (inline) - WITH SWEETALERT2 CONFIRMATION
         $('.reject-application').on('click', function() {
             var applicationId = $(this).data('id');
-            rejectApplication(applicationId);
+            showRejectionConfirmation(applicationId);
         });
-        
-        // Handle approve button in modal
+
+        // Handle approve button in modal - WITH SWEETALERT2 CONFIRMATION
         $('#modal-approve-btn').on('click', function() {
             var applicationId = $('#application-id').val();
             var interestRate = $('#interest-rate').val();
             var notes = $('#approval-notes').val();
-            
-            approveApplication(applicationId, interestRate, notes);
+
+            showApprovalConfirmation(applicationId, interestRate, notes);
             applicationModal.hide();
         });
-        
-        // Handle reject button in modal
+
+        // Handle reject button in modal - WITH SWEETALERT2 CONFIRMATION
         $('#modal-reject-btn').on('click', function() {
             var applicationId = $('#application-id').val();
             var notes = $('#approval-notes').val();
-            
-            rejectApplication(applicationId, notes);
+
+            showRejectionConfirmation(applicationId, notes);
             applicationModal.hide();
         });
-        
-        // Handle bulk approve button
+
+        // SweetAlert2 Approval Confirmation
+        function showApprovalConfirmation(applicationId, interestRate, notes) {
+            Swal.fire({
+                title: 'Approve Loan Application',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">Please provide a reason for approving this loan application:</p>
+                        <div class="mb-3">
+                            <label for="approval-reason" class="form-label fw-medium">Approval Reason <span class="text-danger">*</span></label>
+                            <textarea id="approval-reason" class="swal2-textarea" placeholder="Enter the reason for approval (e.g., Good credit history, stable income, meets all criteria...)" required></textarea>
+                        </div>
+                        ${interestRate ? `<div class="mb-2"><small class="text-muted">Interest Rate: ${interestRate}%</small></div>` : ''}
+                        ${notes ? `<div class="mb-2"><small class="text-muted">Additional Notes: ${notes}</small></div>` : ''}
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Approve Application',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const reason = document.getElementById('approval-reason').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage('Please provide a reason for approval');
+                        return false;
+                    }
+                    if (reason.length < 10) {
+                        Swal.showValidationMessage('Reason must be at least 10 characters long');
+                        return false;
+                    }
+                    return { reason: reason };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const approvalReason = result.value.reason;
+                    const finalNotes = notes ? `${notes}\n\nApproval Reason: ${approvalReason}` : `Approval Reason: ${approvalReason}`;
+                    approveApplication(applicationId, interestRate, finalNotes);
+                }
+            });
+        }
+
+        // SweetAlert2 Rejection Confirmation
+        function showRejectionConfirmation(applicationId, notes) {
+            Swal.fire({
+                title: 'Reject Loan Application',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">Please provide a reason for rejecting this loan application:</p>
+                        <div class="mb-3">
+                            <label for="rejection-reason" class="form-label fw-medium">Rejection Reason <span class="text-danger">*</span></label>
+                            <textarea id="rejection-reason" class="swal2-textarea" placeholder="Enter the reason for rejection (e.g., Insufficient income, poor credit history, incomplete documentation...)" required></textarea>
+                        </div>
+                        ${notes ? `<div class="mb-2"><small class="text-muted">Additional Notes: ${notes}</small></div>` : ''}
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Reject Application',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const reason = document.getElementById('rejection-reason').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage('Please provide a reason for rejection');
+                        return false;
+                    }
+                    if (reason.length < 10) {
+                        Swal.showValidationMessage('Reason must be at least 10 characters long');
+                        return false;
+                    }
+                    return { reason: reason };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const rejectionReason = result.value.reason;
+                    const finalNotes = notes ? `${notes}\n\nRejection Reason: ${rejectionReason}` : `Rejection Reason: ${rejectionReason}`;
+                    rejectApplication(applicationId, finalNotes);
+                }
+            });
+        }
+
+        // Handle bulk approve button - WITH SWEETALERT2 CONFIRMATION
         $('#bulk-approve').on('click', function(e) {
             e.preventDefault();
-            
+
             var selectedIds = [];
             $('.application-checkbox:checked').each(function() {
                 selectedIds.push($(this).val());
             });
-            
+
             if (selectedIds.length === 0) {
                 showToast('Warning', 'Please select at least one application to approve', 'warning');
                 return;
             }
-            
-            if (confirm('Are you sure you want to approve ' + selectedIds.length + ' selected applications?')) {
-                var tenantId = '{{ request.tenant.id }}';
-                
-                $.ajax({
-                    url: `/${tenantId}/loans/bulk-approve/`,
-                    type: 'POST',
-                    data: {
-                        loan_ids: selectedIds.join(',')
-                    },
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            showToast('Success', response.message || selectedIds.length + ' applications have been approved', 'success');
-                            
-                            // Remove approved applications from the table
-                            $('.application-checkbox:checked').closest('tr').fadeOut(500, function() {
-                                $(this).remove();
-                                
-                                // Check if table is empty
-                                if ($('tbody tr').length === 0) {
-                                    $('tbody').html(`
-                                        <tr>
-                                            <td colspan="6" class="text-center py-5">
-                                                <i class="bi bi-inbox fs-1 text-muted"></i>
-                                                <p class="mt-3 mb-0">No applications found</p>
-                                                <p class="text-muted">There are no pending loan applications at this time.</p>
-                                            </td>
-                                        </tr>
-                                    `);
-                                }
-                            });
-                        } else {
-                            showToast('Error', response.message || 'Failed to approve applications', 'danger');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error approving applications:', error);
-                        showToast('Error', 'Failed to approve applications. Please try again.', 'danger');
+
+            // SweetAlert2 Bulk Approval Confirmation
+            Swal.fire({
+                title: 'Bulk Approve Applications',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">You are about to approve <strong>${selectedIds.length}</strong> loan applications.</p>
+                        <p class="mb-3">Please provide a reason for this bulk approval:</p>
+                        <div class="mb-3">
+                            <label for="bulk-approval-reason" class="form-label fw-medium">Bulk Approval Reason <span class="text-danger">*</span></label>
+                            <textarea id="bulk-approval-reason" class="swal2-textarea" placeholder="Enter the reason for bulk approval (e.g., All applications meet standard criteria, batch processing approved...)" required></textarea>
+                        </div>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: `Approve ${selectedIds.length} Applications`,
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const reason = document.getElementById('bulk-approval-reason').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage('Please provide a reason for bulk approval');
+                        return false;
                     }
-                });
-            }
+                    if (reason.length < 10) {
+                        Swal.showValidationMessage('Reason must be at least 10 characters long');
+                        return false;
+                    }
+                    return { reason: reason };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const approvalReason = result.value.reason;
+                    performBulkApproval(selectedIds, approvalReason);
+                }
+            });
         });
-        
-        // Handle bulk reject button
+
+        // Handle bulk reject button - WITH SWEETALERT2 CONFIRMATION
         $('#bulk-reject').on('click', function(e) {
             e.preventDefault();
-            
+
             var selectedIds = [];
             $('.application-checkbox:checked').each(function() {
                 selectedIds.push($(this).val());
             });
-            
+
             if (selectedIds.length === 0) {
                 showToast('Warning', 'Please select at least one application to reject', 'warning');
                 return;
             }
-            
-            if (confirm('Are you sure you want to reject ' + selectedIds.length + ' selected applications?')) {
-                var tenantId = '{{ request.tenant.id }}';
-                
-                $.ajax({
-                    url: `/${tenantId}/loans/bulk-reject/`,
-                    type: 'POST',
-                    data: {
-                        loan_ids: selectedIds.join(',')
-                    },
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            showToast('Success', response.message || selectedIds.length + ' applications have been rejected', 'success');
-                            
-                            // Remove rejected applications from the table
-                            $('.application-checkbox:checked').closest('tr').fadeOut(500, function() {
-                                $(this).remove();
-                                
-                                // Check if table is empty
-                                if ($('tbody tr').length === 0) {
-                                    $('tbody').html(`
-                                        <tr>
-                                            <td colspan="6" class="text-center py-5">
-                                                <i class="bi bi-inbox fs-1 text-muted"></i>
-                                                <p class="mt-3 mb-0">No applications found</p>
-                                                <p class="text-muted">There are no pending loan applications at this time.</p>
-                                            </td>
-                                        </tr>
-                                    `);
-                                }
-                            });
-                        } else {
-                            showToast('Error', response.message || 'Failed to reject applications', 'danger');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error rejecting applications:', error);
-                        showToast('Error', 'Failed to reject applications. Please try again.', 'danger');
+
+            // SweetAlert2 Bulk Rejection Confirmation
+            Swal.fire({
+                title: 'Bulk Reject Applications',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">You are about to reject <strong>${selectedIds.length}</strong> loan applications.</p>
+                        <p class="mb-3">Please provide a reason for this bulk rejection:</p>
+                        <div class="mb-3">
+                            <label for="bulk-rejection-reason" class="form-label fw-medium">Bulk Rejection Reason <span class="text-danger">*</span></label>
+                            <textarea id="bulk-rejection-reason" class="swal2-textarea" placeholder="Enter the reason for bulk rejection (e.g., Policy changes, insufficient documentation, batch review failed...)" required></textarea>
+                        </div>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: `Reject ${selectedIds.length} Applications`,
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const reason = document.getElementById('bulk-rejection-reason').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage('Please provide a reason for bulk rejection');
+                        return false;
                     }
-                });
-            }
+                    if (reason.length < 10) {
+                        Swal.showValidationMessage('Reason must be at least 10 characters long');
+                        return false;
+                    }
+                    return { reason: reason };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const rejectionReason = result.value.reason;
+                    performBulkRejection(selectedIds, rejectionReason);
+                }
+            });
         });
-        
+
+        // Function to perform bulk approval
+        function performBulkApproval(selectedIds, reason) {
+            var tenantId = '{{ request.tenant.id }}';
+
+            $.ajax({
+                url: `/${tenantId}/loans/bulk-approve/`,
+                type: 'POST',
+                data: {
+                    loan_ids: selectedIds.join(','),
+                    notes: `Bulk Approval Reason: ${reason}`
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message || `${selectedIds.length} applications have been approved`,
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+
+                        // Remove approved applications from the table
+                        $('.application-checkbox:checked').closest('tr').fadeOut(500, function() {
+                            $(this).remove();
+
+                            // Check if table is empty
+                            if ($('tbody tr').length === 0) {
+                                $('tbody').html(`
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                                            <p class="mt-3 mb-0">No applications found</p>
+                                            <p class="text-muted">There are no pending loan applications at this time.</p>
+                                        </td>
+                                    </tr>
+                                `);
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to approve applications',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error approving applications:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to approve applications. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+
+        // Function to perform bulk rejection
+        function performBulkRejection(selectedIds, reason) {
+            var tenantId = '{{ request.tenant.id }}';
+
+            $.ajax({
+                url: `/${tenantId}/loans/bulk-reject/`,
+                type: 'POST',
+                data: {
+                    loan_ids: selectedIds.join(','),
+                    notes: `Bulk Rejection Reason: ${reason}`
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message || `${selectedIds.length} applications have been rejected`,
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+
+                        // Remove rejected applications from the table
+                        $('.application-checkbox:checked').closest('tr').fadeOut(500, function() {
+                            $(this).remove();
+
+                            // Check if table is empty
+                            if ($('tbody tr').length === 0) {
+                                $('tbody').html(`
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                                            <p class="mt-3 mb-0">No applications found</p>
+                                            <p class="text-muted">There are no pending loan applications at this time.</p>
+                                        </td>
+                                    </tr>
+                                `);
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to reject applications',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error rejecting applications:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to reject applications. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+
         // Function to approve an application
         function approveApplication(id, interestRate, notes) {
             var tenantId = '{{ request.tenant.id }}';
-            
+
             $.ajax({
                 url: `/${tenantId}/loans/approve-loans/`,
                 type: 'POST',
@@ -776,12 +993,17 @@
                 },
                 success: function(response) {
                     if (response.status === 'success') {
-                        showToast('Success', response.message || 'Loan application has been approved', 'success');
-                        
+                        Swal.fire({
+                            title: 'Approved!',
+                            text: response.message || 'Loan application has been approved',
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+
                         // Remove the approved application from the table
                         $('[data-id="' + id + '"]').closest('tr').fadeOut(500, function() {
                             $(this).remove();
-                            
+
                             // Check if table is empty
                             if ($('tbody tr').length === 0) {
                                 $('tbody').html(`
@@ -796,22 +1018,32 @@
                             }
                         });
                     } else {
-                        showToast('Error', response.message || 'Failed to approve loan application', 'danger');
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to approve loan application',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error approving loan application:', error);
-                    showToast('Error', 'Failed to approve loan application. Please try again.', 'danger');
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to approve loan application. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
                 }
             });
         }
-        
+
         // Function to reject an application
         function rejectApplication(id, notes) {
             var tenantId = '{{ request.tenant.id }}';
-            
+
             $.ajax({
-                url: `/${tenantId}/loans/reject-loans/`,
+                url: `/${tenantId}/loans/reject-loan/`,
                 type: 'POST',
                 data: {
                     loan_id: id,
@@ -822,12 +1054,17 @@
                 },
                 success: function(response) {
                     if (response.status === 'success') {
-                        showToast('Success', response.message || 'Loan application has been rejected', 'success');
-                        
+                        Swal.fire({
+                            title: 'Rejected!',
+                            text: response.message || 'Loan application has been rejected',
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+
                         // Remove the rejected application from the table
                         $('[data-id="' + id + '"]').closest('tr').fadeOut(500, function() {
                             $(this).remove();
-                            
+
                             // Check if table is empty
                             if ($('tbody tr').length === 0) {
                                 $('tbody').html(`
@@ -842,17 +1079,27 @@
                             }
                         });
                     } else {
-                        showToast('Error', response.message || 'Failed to reject loan application', 'danger');
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to reject loan application',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error rejecting loan application:', error);
-                    showToast('Error', 'Failed to reject loan application. Please try again.', 'danger');
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to reject loan application. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
                 }
             });
         }
-        
-        // Toast notification function
+
+        // Toast notification function (kept for backward compatibility)
         function showToast(title, message, type) {
             var toast = $('#notificationToast');
             

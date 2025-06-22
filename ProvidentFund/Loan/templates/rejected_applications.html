@@ -68,7 +68,7 @@
                                 <td>
                                     <span class="badge bg-danger">Rejected</span>
                                     <small class="d-block mt-1">{{ loan.rejection_date|date:"M d, Y" }} by {{ loan.rejected_by|default:"Admin" }}</small>
-                                    <small class="d-block text-muted text-truncate" style="max-width: 200px;">{{ loan.rejection_reason|default:"No reason provided" }}</small>
+                                    <small class="d-block text-muted text-truncate" style="max-width: 200px;">{{ loan.note|default:"No reason provided" }}</small>
                                 </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary view-application" data-id="{{ loan.id }}" title="View Details">
@@ -402,7 +402,7 @@
             $('#rejection-date').text(formattedRejDate);
             
             $('#rejected-by').text(rejection.rejected_by || 'Admin');
-            $('#rejection-reason').text(rejection.rejection_reason || 'No reason provided');
+            $('#rejection-reason').text(rejection.note || 'No reason provided');
             $('#rejection-notes').text(rejection.rejection_notes || 'No additional notes');
         }
         
