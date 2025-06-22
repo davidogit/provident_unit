@@ -163,9 +163,6 @@
                                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#paymentModal">
                                     <i class="bi bi-credit-card me-2"></i>Make Payment
                                 </button>
-                                <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#increasePrincipalModal">
-                                    <i class="bi bi-plus-circle me-2"></i>Increase Principal
-                                </button>
                                 <button class="btn btn-outline-secondary" onclick="downloadStatement()">
                                     <i class="bi bi-download me-2"></i>Download Statement
                                 </button>
@@ -272,72 +269,6 @@
     </div>
 </div>
 
-<!-- Increase Principal Modal -->
-<div class="modal fade" id="increasePrincipalModal" tabindex="-1" aria-labelledby="increasePrincipalModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="increasePrincipalModalLabel">
-                    <i class="bi bi-plus-circle me-2"></i>Increase Loan Principal
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Increasing your loan principal will adjust your payment schedule and may extend your loan term.
-                </div>
-
-                <form id="increasePrincipalForm">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="currentPrincipal" class="form-label fw-medium">Current Principal</label>
-                        <div class="input-group">
-                            <span class="input-group-text">₵</span>
-                            <input type="text" class="form-control" id="currentPrincipal"
-                                   value="{{ loan.current_principal|floatformat:2 }}" readonly>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="additionalAmount" class="form-label fw-medium">Additional Amount</label>
-                        <div class="input-group">
-                            <span class="input-group-text">₵</span>
-                            <input type="number" class="form-control" id="additionalAmount" name="additional_amount"
-                                   placeholder="Enter additional amount" min="100" step="0.01" required>
-                        </div>
-                        <div class="form-text">Minimum additional amount: ₵100.00</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="newPrincipal" class="form-label fw-medium">New Principal</label>
-                        <div class="input-group">
-                            <span class="input-group-text">₵</span>
-                            <input type="text" class="form-control" id="newPrincipal" readonly>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="increaseReason" class="form-label fw-medium">Reason for Increase</label>
-                        <textarea class="form-control" id="increaseReason" name="reason" rows="3"
-                                  placeholder="Please explain why you need to increase the loan principal" required></textarea>
-                    </div>
-
-                    <div class="alert alert-warning">
-                        <strong>Note:</strong> This request will be reviewed and approved by our loan officers.
-                        Your payment schedule will be recalculated upon approval.
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="submitIncrease">
-                    <i class="bi bi-plus-circle me-2"></i>Submit Request
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Toast Notification -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
@@ -646,59 +577,6 @@
                 error: function(xhr, status, error) {
                     //console.error('Payment error:', error);
                     showToast('Error', 'An error occurred while processing your payment. Please try again.', 'danger');
-                },
-                complete: function() {
-                    // Reset button state
-                    submitBtn.removeClass('btn-loading').prop('disabled', false);
-                    submitBtn.html(originalText);
-                }
-            });
-        });
-
-        // Submit principal increase request
-        $('#submitIncrease').on('click', function() {
-            var form = $('#increasePrincipalForm');
-            var submitBtn = $(this);
-
-            // Validate form
-            if (!form[0].checkValidity()) {
-                form[0].reportValidity();
-                return;
-            }
-
-            // Show loading state
-            submitBtn.addClass('btn-loading').prop('disabled', true);
-            var originalText = submitBtn.html();
-            submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...');
-
-            // Prepare form data
-            var formData = {
-                'loan_id': '{{ loan.id }}',
-                'additional_amount': $('#additionalAmount').val(),
-                'reason': $('#increaseReason').val(),
-                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-            };
-
-            // Make AJAX request
-            $.ajax({
-                url: '/{{ request.tenant.id }}/loans/increase-principal/',
-                type: 'POST',
-                data: formData,
-                success: function(response) {
-                    if (response.status === 'success') {
-                        showToast('Success', response.message || 'Principal increase request submitted successfully!', 'success');
-                        $('#increasePrincipalModal').modal('hide');
-
-                        // Reset form
-                        form[0].reset();
-                        $('#newPrincipal').val('');
-                    } else {
-                        showToast('Error', response.message || 'Failed to submit request', 'danger');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Principal increase error:', error);
-                    showToast('Error', 'An error occurred while submitting your request. Please try again.', 'danger');
                 },
                 complete: function() {
                     // Reset button state

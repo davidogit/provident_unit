@@ -9,8 +9,9 @@ from django.http import JsonResponse
 from django.views.generic import ListView,CreateView,View,TemplateView,DetailView,UpdateView,DeleteView
 from pyexpat.errors import messages
 
-from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule, build_amortization_schedule
-from .forms import LoanForm,LoanTypeForm
+from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule, build_amortization_schedule, \
+    LoanTopUp
+from .forms import LoanForm, LoanTypeForm, LoanTopUpRequestForm
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_login_required,tenant_required
 from Admin.decorators import role_required
@@ -22,6 +23,14 @@ from django.utils import timezone
 # Create your views here.
 
 class LoanApplicationView(TemplateView):
+    """
+    Represents a view for handling loan-application-related functionality.
+
+    This class extends TemplateView to render the loan application page and fetch
+    additional context data based on the current tenant and the loan type specified
+    in the request. It facilitates the integration of loan-specific information by
+    overriding the context data for the page.
+    """
     template_name = 'loan_application.html'
 
     def get_context_data(self, **kwargs):
@@ -44,6 +53,21 @@ class LoanApplicationView(TemplateView):
 
 
 class LoanTypeView(ListView):
+    """
+    Represents a view for displaying LoanType objects in a listing format.
+
+    LoanTypeView is a subclass of ListView that provides functionality
+    to display and paginate a queryset of LoanType objects. This view is
+    designed to consider tenant-specific filtering for LoanType objects
+    and displays them sorted by creation date in descending order.
+
+    Attributes:
+        model (Type[LoanType]): Specifies the model associated with the view.
+        template_name (str): Defines the template used to render the view.
+        context_object_name (str): The name of the context variable
+            used to pass the queryset to the template.
+        paginate_by (int): Defines the number of records displayed per page.
+    """
     model = LoanType
     template_name = 'loan_types.html'
     context_object_name = 'loan_types'
@@ -60,6 +84,23 @@ class LoanTypeView(ListView):
 
 
 class CreateLoanType(CreateView):
+    """
+    Class-based view for creating a LoanType object.
+
+    This view handles the creation of LoanType instances. It validates the
+    provided form, ensures that the tenant is associated correctly, and responds
+    with a JSON object indicating success or failure. It extends the Django
+    CreateView and customizes form validation and success URL behavior.
+
+    Attributes:
+        model: Specifies the model associated with this view (LoanType).
+        form_class: Specifies the form class used to create a LoanType.
+
+    Methods:
+        form_valid: Called when the submitted form data is valid.
+        form_invalid: Called when the submitted form data is invalid.
+        get_success_url: Determines the URL to redirect upon successful creation.
+    """
     model = LoanType
     form_class = LoanTypeForm
 
@@ -94,6 +135,17 @@ class CreateLoanType(CreateView):
 UPDATE VIEW FOR LOAN TYPE
 """
 class LoanTypeUpdate(UpdateView):
+    """
+    Handles updating of LoanType objects.
+
+    This class-based view provides functionality for securely updating LoanType
+    objects associated with a specific tenant. It ensures tenant-based filtering
+    and validation while handling update operations for the LoanType model.
+
+    Attributes:
+        model: The LoanType model being updated.
+        form_class: The form class used to validate and update LoanType objects.
+    """
     model = LoanType
     form_class = LoanTypeForm
 
@@ -135,6 +187,28 @@ class LoanTypeUpdate(UpdateView):
 DELETE VIEW FOR LOAN TYPE
 """
 class LoanTypeDelete(DeleteView):
+    """
+    A view to handle the deletion of LoanType objects.
+
+    This class-based view is used to delete instances of the LoanType model. It
+    ensures that only loan types associated with the current tenant can be
+    retrieved and deleted. Additionally, it strictly prevents the deletion of loan
+    types that are referenced by existing loan applications.
+
+    Attributes:
+        model (LoanType): The model that this DeleteView operates on.
+
+    Methods:
+        get_queryset:
+            Returns the queryset limited to LoanType objects for the current
+            tenant, or none if the tenant is not set.
+        post:
+            Handles the POST request for deleting a LoanType. Prevents deletion
+            if the LoanType is referenced by loan applications.
+        get_success_url:
+            Provides the URL to redirect to after successful deletion of a
+            LoanType.
+    """
     model = LoanType
 
     def get_queryset(self):
@@ -170,6 +244,18 @@ class LoanTypeDelete(DeleteView):
 DETAIL VIEW FOR LOAN TYPE
 """
 class LoanTypeDetail(DetailView):
+    """
+    Represents a detailed view for a LoanType instance.
+
+    This class is used to handle HTTP GET requests for retrieving specific details
+    of a LoanType based on its id and validating tenant access. It checks if the
+    authenticated tenant matches the tenant associated with the requested LoanType
+    object. If the tenants do not match, it denies access, otherwise, it provides
+    the required data as a serialized JSON response.
+
+    Attributes:
+        model (LoanType): Specifies the model associated with the view.
+    """
     model = LoanType
 
     def get(self, request, *args, **kwargs):
@@ -194,6 +280,18 @@ class LoanTypeDetail(DetailView):
         })
 
 class HandleLoanSubmission(View):
+    """
+    HandleLoanSubmission is a class-based Django view to handle loan application
+    submissions via HTTP POST requests.
+
+    This view processes loan applications by validating request data, checking for
+    eligibility, and saving the loan application to the database. It also ensures
+    that both the tenant and the user (member) submitting the application exist. If
+    specified, the loan type will be validated to ensure it is associated with the
+    current tenant. On successful validation and saving, it returns a success
+    response; otherwise, it returns error messages detailing the issues with the
+    submission.
+    """
     def post(self, request, *args, **kwargs):
         print("Function Called")
 
@@ -253,6 +351,43 @@ class HandleLoanSubmission(View):
 CLASS TO CALCULATE AND DISPLAY EMI TO MEMBER
 """
 class LoanDetails:
+    """
+    Represents the details and calculations for a specific loan.
+
+    The LoanDetails class performs various computations related to a loan, including
+    interest, processing fees, monthly EMIs, total payable amount, and disbursement
+    amount. It supports both flat and reducing interest calculation methods, using
+    parameters provided for the loan type and tenure.
+
+    Attributes:
+        principal (Decimal): The principal loan amount.
+        tenure_months (Decimal): The tenure of the loan in months.
+        tenure_years (Decimal): The tenure of the loan in years, divided by 12.
+        loan_type: The type of the loan, containing interest rate, calculation type, and fee percentage.
+        annual_rate (Decimal): The annual interest rate derived from the loan type.
+        monthly_rate (Decimal): The monthly interest rate derived by dividing the annual rate by 1200.
+        processing_fee_percent (Decimal): The processing fee percentage derived from the loan type.
+        interest_calc_type (str): The interest calculation type, either 'FLAT' or 'REDUCING'.
+
+    Methods:
+        total_interest_flat():
+            Computes the total interest based on the flat rate calculation method.
+
+        loan_processing_fee():
+            Computes the processing fee for the loan.
+
+        total_payable_amount_flat():
+            Computes the total payable amount for the loan under flat rate calculation.
+
+        disbursement_amount():
+            Computes the disbursement amount after subtracting the processing fee.
+
+        calculate_monthly_emi():
+            Computes the monthly EMI amount based on the interest calculation type.
+
+        estimate_total_interest():
+            Estimates the total interest payable based on the interest calculation type.
+    """
     def __init__(self, principal, tenure_months, loan_type):
         self.principal = Decimal(principal)
         self.tenure_months = Decimal(tenure_months)
@@ -330,6 +465,18 @@ before user proceeds to apply
 """
 # Fetch Loan details to display upon application
 class CalculatePotentialLoan(View):
+    """
+    Handles the calculation of loan details and provides the necessary response.
+
+    This class is a Django view responsible for processing loan-related calculations
+    based on the request sent by the client. It extracts data from the request,
+    validates it, fetches the correct loan type, and performs detailed computations
+    such as loan processing fees, total payable amount, monthly installment, and
+    disbursement amount.
+
+    Attributes:
+        None
+    """
     def get(self, *args, **kwargs):
         tenant = self.request.tenant
         potential_loan_amount_str = self.request.GET.get('amount')
@@ -411,6 +558,19 @@ MEMBER VIEW TO TRACK LOANS
 """
 # Page for member to view and track loan details
 class MemberLoanPage(ListView):
+    """
+    Represents a view that displays a paginated list of loan applications specific to a member.
+
+    This class extends the ListView to provide functionality for viewing loan applications
+    associated with a particular member of a tenant. It customizes the queryset to retrieve only
+    approved and disbursed loans for the currently authenticated member within a specific tenant.
+
+    Attributes:
+        model: The model class associated with this ListView, which is LoanApplication.
+        paginate_by: An integer specifying the number of objects to display per page.
+        template_name: A string specifying the path to the template used by the view.
+        context_object_name: A string defining the name of the context object in the template.
+    """
     model = LoanApplication
     paginate_by = 5
     template_name = 'member_loan_page.html'
@@ -437,9 +597,22 @@ class MemberLoanPage(ListView):
 PAGE TO DISPLAY ALL LOAN TYPES TO MEMBERS
 """
 class MemberLoanTypeView(ListView):
+    """
+    View for displaying a paginated list of loan types specific to a tenant.
+
+    This view retrieves and displays loan types associated with the tenant
+    making the request. The results are paginated, rendered using a specific
+    template, and assigned a context name for template access.
+
+    Attributes:
+        model : The model class being used for the query, representing loan types.
+        template_name : Template file to render the results.
+        paginate_by : The number of items displayed per page.
+        context_object_name : The name of the context variable in the template.
+    """
     model = LoanType
     template_name = 'member_loan_type_page.html'
-    paginate_by = 9
+    paginate_by = 10
     context_object_name = 'loan_types'
 
     def get_queryset(self):
@@ -457,6 +630,22 @@ class MemberLoanTypeView(ListView):
 VIEW TO FETCH LOAN TYPE DETAILS
 """
 class FetchLoanTypeDetails(View):
+    """
+    Fetches loan type details based on tenant and loan type ID provided in the
+    request.
+
+    This class-based view handles GET requests to retrieve loan type details
+    for a specified tenant. The tenant is identified based on the request's
+    attributes, and the loan type is retrieved using the loan type ID passed
+    as a query parameter.
+
+    Attributes:
+        None
+
+    Methods:
+        get(*args, **kwargs):
+            Handles GET requests for fetching loan type details.
+    """
     def get(self,*args,**kwargs):
         tenant = getattr(self.request, 'tenant', None)
         loan_type_id = self.request.GET.get("loan_type_id")
@@ -501,6 +690,27 @@ class FetchLoanTypeDetails(View):
 LOAN APPROVAL VIEW
 """
 class LoanApprovalView(ListView):
+    """
+    LoanApprovalView is a view for managing and approving loan applications.
+
+    This class extends Django's ListView and provides functionality to list
+    pending loan applications for a specific tenant, approve loan applications
+    via a POST request, and display additional loan-related metrics in the
+    context data.
+
+    Attributes:
+        model: The model associated with the view, LoanApplication.
+        template_name: The template used to render the page.
+        paginate_by: The number of records displayed per page in the view.
+        context_object_name: The context variable name for the list of loan applications.
+
+    Methods:
+        get_queryset: Filters loan applications based on the current tenant,
+                      application's approval status, and application status.
+        post: Handles loan approval requests submitted via POST.
+        get_context_data: Extends the context data to include metrics
+                          related to pending loan applications.
+    """
     model = LoanApplication
     template_name = 'loan_approval_base.html'
     paginate_by = 20
@@ -568,6 +778,20 @@ class LoanApprovalView(ListView):
 APPROVED LOANS AND DISBURSEMENT FUNCTIONALITIES
 """
 class DisburseApprovedLoans(ListView):
+    """
+    Class for displaying and managing the disbursement of approved loans.
+
+    This class is a Django ListView that interacts with the LoanApplication model to display
+    a list of approved loans ready to be disbursed. It provides functionalities to filter
+    loans based on approval and tenant status, handle loan disbursement actions through POST
+    requests, and enhance the context data with additional loan metrics.
+
+    Attributes:
+        model: The LoanApplication model class the view interacts with.
+        template_name: The name of the template file used to render the view.
+        context_object_name: The name of the context variable containing the list
+            of approved loans for use in the template.
+    """
     model = LoanApplication
     template_name = 'approved_loan.html'
     context_object_name = 'approved_loans'
@@ -587,10 +811,6 @@ class DisburseApprovedLoans(ListView):
             )
         return self.model.objects.none()
 
-    """
-    HANDLE DISBURSEMENT OPERATION
-    """
-    # TODO: HANDLE DISBURSEMENT LOGIC
     def post(self,*args,**kwargs):
         tenant = getattr(self.request,'tenant',None)
         user = getattr(self.request.user,'user',None)
@@ -655,6 +875,20 @@ class DisburseApprovedLoans(ListView):
 DISBURSED LOANS LIST VIEW
 """
 class DisbursedLoans(ListView):
+    """
+    Manages the display and retrieval of disbursed loans in a paginated view.
+
+    This class provides functionality to query and display disbursed loans
+    specific to a tenant user. It renders the loans in a template while
+    calculating and injecting additional context metrics related to the
+    disbursed loans.
+
+    Attributes:
+        model (LoanApplication): The model used to query disbursed loans.
+        paginate_by (int): Number of loans to display per page in the view.
+        template_name (str): Path to the template rendering the view.
+        context_object_name (str): Name of the object used in the template context.
+    """
     model = LoanApplication
     paginate_by = 10
     template_name = "disbursed_loans.html"
@@ -685,6 +919,36 @@ DETAIL VIEW OF DISBURSED LOAN
 -- SCHEDULE RECALCULATION
 """
 class DisbursedLoanDetailView(DetailView):
+    """
+    View to display detailed information about a disbursed loan.
+
+    This class is used to fetch and present detailed data for a disbursed loan
+    application. It ensures that the loan is associated with the current tenant
+    and is both approved and disbursed. The view provides contextual data
+    related to the loan, including next payment details, total repayments,
+    outstanding balance, payment percentage, and the amortization schedule.
+    It serves as a part of the loan management system for tenants.
+
+    Attributes:
+        model: The model class that this view is based on, which is LoanApplication.
+        template_name: The path to the template used to render the view.
+        context_object_name: The name of the variable through which the object is
+                             made available in the template.
+
+    Methods:
+        get_object:
+            Retrieves the loan object if it's approved and disbursed and is
+            associated with the currently logged-in tenant.
+
+        get_context_data:
+            Provides additional context data, including loan metrics such as
+            next payment date, total repayments, outstanding balance,
+            payment percentage, and amortization schedule.
+
+    Returns:
+        Rendered template containing the detailed loan information based on
+        the context data.
+    """
     model = LoanApplication
     template_name = "disbursed_loan_details.html"
     context_object_name = 'loan'
@@ -745,6 +1009,21 @@ LOAN PAYMENT VIEW
 --FULL/PARTIAL REPAYMENT
 """
 class AdminLoanPaymentView(View):
+    """
+    View to handle loan payments by an admin user.
+
+    This view manages both full and partial loan repayments for a given loan application.
+    It processes payment submissions, calculates interest and principal amounts based
+    on the payment type, and updates the loan records accordingly. The view ensures
+    validation checks are performed before processing payments and handles edge cases
+    such as invalid payment amounts, non-existent loans, and insufficient payments.
+
+    Attributes:
+        model: The model class representing the loan application (LoanApplication).
+
+    Methods:
+        post(request, *args, **kwargs): Processes a POST request for loan repayment.
+    """
     model = LoanApplication
 
     def post(self, request, *args, **kwargs):
@@ -786,9 +1065,6 @@ class AdminLoanPaymentView(View):
                 'status': 'error',
                 'message': 'Loan not found.'
             })
-
-        # TODO continue from here next time -- handle admin loan repayment options
-        print(f"Form Data {self.request.POST}")
 
         if payment_type == 'full':
             total_principal_paid = loan.total_principal_paid
@@ -842,7 +1118,6 @@ class AdminLoanPaymentView(View):
             })
 
 
-        #TODO finalize partial repayment logic
         if payment_type == 'partial':
             partial_payment_amount = payment_amount
 
@@ -930,6 +1205,15 @@ class AdminLoanPaymentView(View):
 REJECTED LOAN APPLICATIONS LIST VIEW
 """
 class RejectedLoanApplications(ListView):
+    """
+    View for displaying rejected loan applications.
+
+    The RejectedLoanApplications class is a subclass of ListView that is responsible
+    for displaying a list of loan applications marked as rejected. It filters the
+    loan applications based on the current tenant and the rejection status. The
+    view is rendered using a specified template, and the context includes additional
+    metrics about rejected loans for the current tenant.
+    """
     model = LoanApplication
     template_name = 'rejected_applications.html'
     context_object_name = 'rejected_loans'
@@ -940,6 +1224,7 @@ class RejectedLoanApplications(ListView):
             return self.model.objects.filter(
                 tenant=tenant,
                 status='REJECTED',
+                rejected=True
             ).order_by('-application_date')
         return self.model.objects.none()
     
@@ -957,6 +1242,24 @@ class RejectedLoanApplications(ListView):
 Function to return count metrics of loan applications
 """
 def loan_count_metrics(tenant,status):
+    """
+    Generates a dictionary containing the counts of loan applications based on their
+    statuses for a given tenant and returns contextual information about these counts
+    including the active tab status.
+
+    Parameters:
+        tenant: The object representing the tenant for whom the loan application data
+            is being queried.
+        status: str
+            Indicates the currently active status tab (e.g., "PENDING", "APPROVED",
+            "DISBURSED", "REJECTED").
+
+    Returns:
+        dict
+            A dictionary containing the count of loan applications categorized by their
+            statuses ('pending_count', 'approved_count', 'disbursed_count',
+            'rejected_count') along with the status of the currently 'active_tab'.
+    """
     model = LoanApplication
 
     queryset = model.objects.filter(
@@ -1001,6 +1304,17 @@ def loan_count_metrics(tenant,status):
 VIEW To fetch a specific loan details and return a JSON object
 """
 class FetchLoanDetails(View):
+    """
+    FetchLoanDetails class is responsible for handling the retrieval of loan application details.
+
+    This class provides functionality to fetch information about a loan application for a given tenant
+    and loan ID using a GET request. It validates the request for required parameters and returns loan
+    and related user details in the form of a JSON response. If the tenant or loan ID is invalid or missing,
+    or if the loan is not found, an appropriate error response is returned.
+
+    Attributes:
+        model: The model class associated with the retrieval of loan applications.
+    """
     model = LoanApplication
     
     def get(self,request,*args,**kwargs):
@@ -1058,12 +1372,41 @@ class FetchLoanDetails(View):
                 #     Rejection details
                     'rejected_date':loan.rejected_date,
                     'rejected_by':loan.rejected_by.__str__() if loan.rejected_by else None,
+                    'note':loan.note
                 }
             }
         })
 
 
 class MemberLoanDetailView(ListView):
+    """
+    A view to display the loan amortization schedule for a member.
+
+    This class-based view extends ListView to present detailed information
+    about a specific loan's amortization schedule, tailored for a member. It
+    retrieves and paginates amortization details and provides relevant context
+    data for rendering in a template.
+
+    Attributes
+    ----------
+    model : Model
+        The model used for retrieving loan amortization schedules.
+    template_name : str
+        The name of the template for rendering the view.
+    context_object_name : str
+        The name of the context variable for the queryset.
+    paginate_by : int
+        The number of items to display per page.
+
+    Methods
+    -------
+    get_queryset()
+        Retrieves the queryset for loan amortization schedules, filtering
+        based on tenant, member, and loan ID if available.
+    get_context_data(**kwargs)
+        Provides additional context data for the template, including loan
+        information for the given tenant, member, and loan ID.
+    """
     model = LoanAmortizationSchedule
     template_name = 'member_loan_details.html'
     context_object_name = 'loan_amortization_schedule'
@@ -1103,3 +1446,145 @@ class MemberLoanDetailView(ListView):
                 context['loan'] = loan
 
         return context
+
+
+class RejectLoanApplication(View):
+    """
+    Handles the rejection of loan applications.
+
+    This class is a view that manages the logic for rejecting pending loan applications.
+    It processes incoming POST requests, validates required data, ensures the loan
+    application exists and is in a pending state, and calls the `reject_loan` method
+    to change the status of the loan application to "Rejected".
+
+    Attributes:
+        None
+    """
+    def post(self, request, *args, **kwargs):
+        tenant = getattr(request, 'tenant', None)
+        loan_id = self.request.POST.get('loan_id')
+        user = getattr(request,'user', None)
+        note = self.request.POST.get('notes')
+
+        if not tenant or not loan_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request. Missing tenant or loan ID.'
+            })
+
+        loan = LoanApplication.objects.filter(
+            tenant=tenant,
+            id=loan_id
+        ).first()
+
+        if not loan:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Loan application not found.'
+            })
+
+        if loan.status != 'PENDING':
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Only pending applications can be rejected.'
+            })
+
+        try:
+            loan.reject_loan(user, note=note)
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Loan application rejected successfully.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error rejecting loan application: {e}'
+            })
+
+
+class LoanTopUpRequestView(CreateView):
+    """
+    Handles requests for loan top-ups by extending the CreateView class.
+
+    LoanTopUpRequestView is a Django-based view that processes loan top-up requests made
+    by users. It ensures that the request meets all necessary criteria, validates the
+    associated loan and user information, and creates a loan top-up record. This view
+    handles both valid and invalid form submissions, returning appropriate JSON responses.
+
+    Attributes:
+        model: The model associated with the top-up request. This should be LoanTopUp.
+        form_class: The form class used to validate and process requests. This should be
+             a LoanTopUpRequestForm.
+
+    Methods:
+        form_valid: Processes a loan top-up request when the submitted form is valid.
+        form_invalid: Handles form validation errors by returning a JSON response with
+            details about the error.
+
+    Parameters:
+        model: Class variable specifying the model (LoanTopUp) to use for storing top-up
+            request data.
+        form_class: Class variable that determines the form class (LoanTopUpRequestForm)
+            that validates the input data.
+    """
+    model = LoanTopUp
+    form_class = LoanTopUpRequestForm
+
+    def form_valid(self, form):
+        tenant = getattr(self.request, 'tenant', None)
+        member = getattr(self.request.user, 'member', None)
+
+        if not tenant or not member:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request.'
+            })
+
+        loan_id = self.request.POST.get('loan_id')
+        if not loan_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Loan ID is required for top-up.'
+            })
+
+        loan = LoanApplication.objects.filter(
+            tenant=tenant,
+            id=loan_id,
+            user=member
+        ).first()
+
+        if not loan:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request. Missing application.'
+            })
+
+        if not loan.approved or not loan.disbursed:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Loan must be approved before requesting a top-up.'
+            })
+
+        if self.model.objects.filter(loan=loan, user=member, status='PENDING').exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'You already have a pending top-up request for this loan.'
+            })
+
+        form.instance.tenant = tenant
+        form.instance.user = member
+        form.instance.loan = loan
+
+        form.save(commit=True)
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Top-up request submitted successfully.'
+        })
+
+    def form_invalid(self, form):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid form data.',
+            'errors': form.errors
+        }, status=400)
