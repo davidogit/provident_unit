@@ -2,10 +2,12 @@ from datetime import timedelta
 import calendar
 from decimal import Decimal
 from celery import shared_task
+
+from Chart_of_Accounts.models import AccountingService
 from .models import InvestmentDetail,BankInterest,DelayedInterest
 from django.utils import timezone
 from MultiScheme.models import Tenant, InvestmentScheme,TenantEventNotification
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from contributions.models import StaffAPI,Contribution,Membership
 from django.db import transaction
 from django.db.models import Sum,FloatField,Q,DecimalField
@@ -230,11 +232,11 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
                 else:
                     logger.info('Not working')
                     membership.total_earnings += Decimal(0.0)
+            logger.info(f'Actual profit calculated for: {tenant.name}\'s members at: {timezone.now()}')
         else:
             logger.info(f'No contribution found for {tenant.name} during actual interest calculation on {timezone.now}')
             return
                     
-        logger.info(f'Actual profit calculated for: {tenant.name}\'s members at: {timezone.now()}')
 
     except Exception as e:
         logger.error(f'Error: {e}')
@@ -246,118 +248,94 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
         return
 
 
+# TODO refactor this task and ensure debit and credit are well handled
 # Task to reduce remaining days by 1 every midnight 12:00 am
+STATUS_ACTIVE = 'Active'
+STATUS_EXPIRED = 'Expired'
+STATUS_NOT_STARTED = 'Not Start'
+
 @shared_task(bind=True)
-def reduce_date(self):
-    # Filter only unapproved investments
-    investments = InvestmentDetail.objects.filter(
-        approval_status=False,
-        approved=True
-    )
+def update_investment_statuses(self):
     current_date = timezone.now().date()
 
-    # update[] will hold all potential updates and save them in bulk
+    try:
+        investments = InvestmentDetail.objects.filter(
+            approval_status=False,
+            approved=True
+        )
+    except Exception as e:
+        logger.error(f'Failed to fetch investments: {e}')
+        return None
+
     updates = []
+
     for inv in investments:
-        # Checks if the investment is within duration
-        if (inv.interest_start_date <= current_date <= inv.interest_end_date):     
-            inv.remaining_days = (inv.interest_end_date-current_date).days
-            inv.status = 'Active'
-        
-        # Checks if investment is expired
-        elif (current_date>inv.interest_end_date):
-            inv.remaining_days = 0
-            inv.status = 'Expired'
-
-        # checks if investment is yet to begin
-        elif (current_date < inv.interest_start_date):
-            remaining_days = inv.tenure
-            inv.remaining_days = remaining_days
-            inv.status = 'Not Start'
-
-        # Make sures remaining days do not go to negative due to daily deduction
-        if inv.remaining_days<0:
-            inv.remaining_days = 0
-
-        updates.append(inv)
-
-        # Check if today is inv maturity_date if True peform debit and credit for interest earned
-        if current_date == inv.interest_end_date:
-            from Chart_of_Accounts.models import AccountMapping
-            scheme = inv.investment_scheme
-            tenant = scheme.tenant
-            # fetch related mapping
-            try:
-                mapping = AccountMapping.objects.get(tenant=tenant,scheme=scheme)
-            except Exception as e:
-                mapping = None
-                logger.info(f'No mapping of "Interest Earned" for {tenant.name} - {scheme.name}')
-                return
-            # Fetch debit and credit accounts
-
-            debit_account = mapping.debit_acc
-            credit_account = mapping.credit_acc
-
-            if not debit_account or not credit_account:
-                logger.info(f'Tenant: {tenant.name} Scheme: {scheme.name} missing debit or credit accounts')
-                return
-            
-            if debit_account.current_balance < inv.interest_amount:
-                logger.info(f'Tenant: {tenant.name} Scheme: {scheme.name} Insufficient amount in {debit_account} account')
-                return
-
-            try:
-                with transaction.atomic():
-                    # perform credit and debit
-                    debit_account.record_transaction(
-                        amount=Decimal(inv.interest_amount),transaction_type='DEBIT',created_by=None,description='Interest earned on investment at maturity date'
-                    )
-                    credit_account.record_transaction(
-                        amount=Decimal(inv.interest_amount),transaction_type='CREDIT',created_by=None,description='Interest earned on investment at maturity date'
-                    )
-                    """
-                    # Save accounts 
-                    debit_account.save()
-                    credit_account.save()
-                    """
-                    logger.info(f'Interest transaction successful completed for: Tenant: {tenant.name} Scheme: {scheme.name}')
-            except Exception as e:
-                logger.info(f'Transaction failed for: Tenant: {tenant.name} Scheme: {scheme.name}')
-                return
-
-
-        ###########################################################################
-        # Send Email to tenant
         try:
-            if inv.interest_end_date == timezone.now().date():
-                # send email notification to tenant email
-                tenant_email = inv.investment_scheme.tenant.email
-                send_mail(
-                    subject='Investment Due',
-                    message= f'Investment with Invoice Number:{inv.invoice_number} and Acc No.: {inv.account_number} is due. Approve investment if funds have been recorgnised',
-                    from_email=EMAIL_HOST_USER,
-                    recipient_list=[tenant_email,],
-                    fail_silently=False
-                )
+            # Update status and remaining days
+            if inv.interest_start_date <= current_date <= inv.interest_end_date:
+                inv.remaining_days = (inv.interest_end_date - current_date).days
+                inv.status = STATUS_ACTIVE
+            elif current_date > inv.interest_end_date:
+                inv.remaining_days = 0
+                inv.status = STATUS_EXPIRED
+            else:
+                inv.remaining_days = inv.tenure
+                inv.status = STATUS_NOT_STARTED
 
-        # Handling any error that might occur from sending the notification
-        except SMTPException as e:
-            logger.error(f'Unexpected error occured when trying to send due notification to tenant:{inv.investment_scheme.tenant.name} error:{e}')
-    
+            if inv.remaining_days < 0:
+                inv.remaining_days = 0
 
-        ###########################################################################
+            updates.append(inv)
 
-    # Using bulk update to save every instance at once for efficiency
-    # InvestmentDetail.objects.bulk_update(updates, ['_remaining_days','_status'])
+            # Handle maturity event
+            if current_date == inv.interest_end_date:
+                scheme = inv.investment_scheme
+                tenant = scheme.tenant
+                mapping = scheme.account_mapping.filter(name='Earned Revenue').first()
+
+                if not mapping:
+                    logger.warning(f'No mapping for "Earned Revenue" for scheme: {scheme.name}, tenant: {tenant.name}')
+                else:
+                    try:
+                        with transaction.atomic():
+                            accounting_service = AccountingService(tenant=tenant, user=None,scheme=scheme)
+                            accounting_service.create_entry(
+                                action='Earned Revenue',
+                                amount=Decimal(inv.interest_amount),
+                                description='Interest earned on investment at maturity date'
+                            )
+                    except ValidationError as e:
+                        logger.error(f'Accounting failed: {e.message} | Scheme: {scheme.name}, Tenant: {tenant.name}')
+                    except Exception as e:
+                        logger.error(f'Unexpected error during accounting: {e}')
+
+                # Email tenant
+                try:
+                    tenant_email = tenant.email
+                    send_mail(
+                        subject='Investment Due',
+                        message=f'Investment #{inv.invoice_number} (Acc: {inv.account_number}) is due. Approve if funds are recognized.',
+                        from_email=EMAIL_HOST_USER,
+                        recipient_list=[tenant_email],
+                        fail_silently=False
+                    )
+                except SMTPException as e:
+                    logger.error(f'Email send failed for tenant {tenant.name}: {e}')
+
+        except Exception as e:
+            logger.exception(f'Failed to process investment ID {inv.id}: {e}')
+            continue  # Keep going with the next investment
+
+    # Bulk update
     try:
         with transaction.atomic():
-            InvestmentDetail.objects.bulk_update(updates, ['_remaining_days','_status'])
-            logger.info('Investment Details Updated Succesfully')
+            InvestmentDetail.objects.bulk_update(updates, ['_remaining_days', '_status'])
+            logger.info(f'Updated {len(updates)} investments')
     except Exception as e:
-        logger.error(f'Error trying to update Investment Details {e}')
-        return
+        logger.error(f'Bulk update failed: {e}')
+        return None
 
-    return 'day_reduced_by_1'
+    return 'investments_updated'
 
 
 # Task to handle client page visit
@@ -418,12 +396,9 @@ def rollover_inv_creation(self,**kwargs):
         logger.info(e)
         return
 
-    logger.info(type(rollover_rate))
-    logger.info(type(rollover_principal))
     
     try:
         with transaction.atomic():
-            logger.info('Start')
             InvestmentDetail.objects.create(
                 investment_scheme = scheme,
                 account_name=inv_name,
@@ -438,30 +413,18 @@ def rollover_inv_creation(self,**kwargs):
                 compounding_frequency=compounding_frequency,
                 years=duration,
             )
-            logger.info('Start 1')
+
             # Debit and Credit operations
             if debit_or_credit:
-                mapping = scheme.account_mapping.get(name='Roll Over')
+                accounting_service = AccountingService(tenant=tenant,user=None,scheme=scheme)
+                account_action = 'Roll Over'
+                description = 'Investment Rollover'
+                try:
+                    accounting_service.create_entry(account_action,Decimal(debit_or_credit_amount),description)
+                except ValidationError as e:
+                    logger.info(f'Error: {e}')
+                    return
 
-                # Fetch debit and credit accounts from mapping obj
-                debit_account = mapping.debit_acc
-                credit_account = mapping.credit_acc
-                logger.info('Start debit and credit operations')
-
-                # perform debit anf credit operations
-                debit_account.record_transaction(
-                    amount=Decimal(debit_or_credit_amount),transaction_type='DEBIT',description='Investment Rollover'
-                )
-                credit_account.record_transaction(
-                    amount=Decimal(debit_or_credit_amount),transaction_type='CREDIT',description='Investment Rollover'
-                )
-                logger.info('Done with debit and credit operations')
-
-                """
-                # save account balances
-                debit_account.save()
-                credit_account.save()
-                """
             logger.info(f'Roll over for inv {inv_name} added')
     except Exception as e:
         logger.info(f'Inv Adding Error: {e}')
