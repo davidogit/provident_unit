@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import TemplateView,DeleteView,UpdateView,View,CreateView,ListView
-from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount,AccountParameters,AccountTransaction
+from Chart_of_Accounts.models import ChartOfAccounts,AccountMapping,BankAccount,AccountParameters,AccountLedgerEntry
 from MultiScheme.models import InvestmentScheme
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
@@ -563,7 +563,7 @@ class FetchAccountTransactions(View):
                 'status':'error',
                 'message':'Invalid account ID.'
             })
-        account_transactions = AccountTransaction.objects.filter(
+        account_transactions = AccountLedgerEntry.objects.filter(
             tenant=tenant,
             account__id=account_id
         ).values('date','description','amount','balance','transaction_type').order_by('-date')

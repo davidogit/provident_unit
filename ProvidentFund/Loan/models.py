@@ -5,7 +5,7 @@ from MultiScheme.models import Tenant
 from decimal import Decimal,ROUND_HALF_UP
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from django.db.models import UniqueConstraint
+from django.db.models import UniqueConstraint, Sum
 from django.db import transaction
 import datetime
 
@@ -198,31 +198,47 @@ class LoanApplication(models.Model):
         default=Decimal(0),
         help_text='to be calculated automatically when a payment is made'
     )
+    note = models.TextField(
+        null=True,
+        blank=True,
+        help_text='Optional note or reason for when the loan is rejected or approved'
+    )
 
     def __str__(self):
         return f'Loan application - {self.user.user.username} - Amount- {self.amount_requested}.'
-    
 
-    # TODO Refactor loan interest calculation to cater for bot flat and reducing balance methods
-    """
-    TOTAL INTEREST FLAT
-    """
-    def total_interest_flat(self):
-        p = self.amount_requested
-        r = self.loan_type.loan_interest_rate
-        t_months = self.tenure_months
-        t_years = t_months/Decimal('12') #convert months to years
 
-        interest = (p*r*t_years)/Decimal('100')
+    @property
+    def total_principal_paid(self):
+        """
+        Returns the total principal paid from all loan repayments.
 
-        return interest.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        Calculates the sum of the 'principal_paid' field across all related
+        loan repayment records and returns the total. If no repayments are
+        found or no principal amount is paid, it defaults to Decimal('0.00').
+
+        Returns:
+            Decimal: The total amount of principal paid aggregated from
+            loan repayments.
+        """
+        return self.loan_repayments.aggregate(
+            total=Sum('principal_paid')
+        )['total'] or Decimal('0.00')
     
 
     """
     PROCESSING FEE ON LOAN
     """
     def loan_processing_fee_flat(self):
-        # 1.5% of loan amount
+        """
+        Calculates and returns the loan processing fee based on a flat percentage.
+
+        Computes the processing fee using the loan type's fee percentage and the
+        requested loan amount, rounding the result to two decimal places.
+
+        Returns:
+            Decimal: The calculated processing fee for the loan.
+        """
         fee_percentage_in_decimal = self.loan_type.loan_fee_percentage/Decimal('100')
         processing_fee = Decimal(self.amount_requested*fee_percentage_in_decimal)
 
@@ -233,14 +249,16 @@ class LoanApplication(models.Model):
     DISBURSEMENT AMOUNT
     """
     def disbursement_amount(self):
-        return self.amount_requested - self.loan_processing_fee_flat()
+        """
+        Calculates the disbursement amount by subtracting the loan processing fee
+        from the requested loan amount. The result is rounded to two decimal places
+        using the HALF_UP rounding method.
 
+        Returns:
+            Decimal: The disbursement amount rounded to two decimal places.
+        """
+        return Decimal(self.amount_requested - self.loan_processing_fee_flat()).quantize(Decimal("0.01"),rounding= ROUND_HALF_UP)
 
-    """
-    TOTAL LOAN AMOUNT PAYABLE
-    """
-    def total_payable_amount_flat(self):
-        return round(self.amount_requested + self.total_interest_flat(), 2)
 
 
     """
@@ -248,7 +266,7 @@ class LoanApplication(models.Model):
             REDUCING BALANCE OR FLAT
         )
     """
-    def calculate_monthly_installments(self):
+    def calculate_monthly_installments(self, principal_override=None):
         """
         Calculates the monthly installment amount (EMI) based on the loan parameters.
 
@@ -268,7 +286,7 @@ class LoanApplication(models.Model):
         Returns:
             Decimal: The monthly EMI value.
         """
-        p = self.amount_requested
+        p = principal_override if principal_override is not None else self.amount_requested
         annual_rate = self.loan_type.loan_interest_rate  # e.g., 6.5%
         r = Decimal(annual_rate) / Decimal('1200')  # Monthly interest rate
         T = Decimal(self.tenure_months)
@@ -302,7 +320,7 @@ class LoanApplication(models.Model):
         
         
     """
-    APPROVE LOAN -- BY ADMIN
+    APPROVE LOAN AND GENERATE SCHEDULE-- BY ADMIN
     """ 
     def approve_loan(self, user):
         """
@@ -320,9 +338,8 @@ class LoanApplication(models.Model):
         if self.approved:
             raise Exception("Loan already processed.")
 
-        # TODO Finalize which action is to generate amortization schedule
         # Generate amortization schedule
-        generate_amortization_schedule(self)
+        build_amortization_schedule(loan=self, principal=self.amount_requested)
 
         # update loan details
         self.status = 'APPROVED'
@@ -360,6 +377,32 @@ class LoanApplication(models.Model):
         self.save()
 
 
+    def reject_loan(self, user, note=None):
+        """
+        Rejects the loan application, updates its status, and records the rejection details.
+
+        This method sets the loan's status to 'REJECTED', marks it as rejected, and
+        records the user who rejected it along with an optional note explaining the
+        reason for rejection.
+
+        Parameters:
+            user: The user who is rejecting the loan.
+            note: An optional note explaining the reason for rejection.
+
+        Raises:
+            Exception: If the loan has already been approved or processed.
+        """
+        if self.approved or self.disbursed:
+            raise Exception("Loan already processed.")
+
+        self.status = 'REJECTED'
+        self.rejected = True
+        self.rejected_by = user
+        self.note = note
+        self.rejected_date = timezone.now()
+        self.save()
+
+
     """
     HANDLE FULLY REPAYMENT OF LOAN
     """
@@ -393,7 +436,99 @@ class LoanApplication(models.Model):
                     ['is_paid', 'payment_status']
                 )
 
+    """
+    METHOD TO APPLY TOP-UP
+    """
+    def apply_topup(self, topup: 'LoanTopUp'):
+        """
+        Applies a top-up to an existing loan. This method updates the loan's amount
+        requested, tenure, and related amortization schedule based on the provided
+        top-up details. Deleted unpaid amortization schedule entries are replaced with
+        newly calculated ones based on the updated loan parameters.
 
+        Attributes
+        ----------
+        self.amount_requested : Decimal
+            The total amount requested for the loan, including the new top-up amount.
+        self.tenure_months : int
+            The updated tenure of the loan in months, adjusted if a new tenure is
+            provided in the top-up.
+        self.loan_repayments : QuerySet
+            QuerySet representing loan repayments, used to calculate the total
+            principal paid.
+        self.amortization_schedule : QuerySet
+            QuerySet representing the loan's amortization schedule entries.
+        self.loan_type : ForeignKey (LoanType)
+            The associated loan type, which determines the interest rate and interest
+            calculation type.
+        self.tenant : Any
+            The tenant related to the loan.
+        self.user : Any
+            The user associated with the loan.
+
+        Parameters
+        ----------
+        topup : LoanTopUp
+            Object containing loan top-up details, including the top-up amount and
+            new tenure months.
+        """
+        with transaction.atomic():
+            # Update loan values
+            self.amount_requested += topup.topup_amount
+            if topup.new_tenure_months > 0:
+                self.tenure_months = topup.new_tenure_months
+            self.save()
+
+            # Delete only unpaid schedule entries
+            self.amortization_schedule.filter(is_paid=False).delete()
+
+            # Paid installments count
+            paid_count = self.amortization_schedule.filter(is_paid=True).count()
+            start_installment_number = paid_count + 1
+
+            # Calculate remaining balance
+            total_principal_paid = self.loan_repayments.aggregate(total=Sum('principal_paid'))['total'] or Decimal('0.00')
+            new_principal = self.amount_requested - total_principal_paid
+
+            # Start from today
+            start_date = timezone.now().date()
+            annual_rate = self.loan_type.loan_interest_rate
+            r = Decimal(annual_rate) / Decimal('1200')
+            T = Decimal(self.tenure_months)
+
+            monthly_installment = self.calculate_monthly_installments(principal_override=new_principal)
+            remaining_balance = new_principal
+
+            schedule_list = []
+
+            for i in range(start_installment_number, int(T) + 1):
+                if self.loan_type.interest_calculation_type == 'FLAT':
+                    interest_component = (new_principal * Decimal(annual_rate) / Decimal('12')) / Decimal('100')
+                    principal_component = monthly_installment - interest_component
+                else:  # REDUCING
+                    interest_component = (remaining_balance * r).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    principal_component = monthly_installment - interest_component
+
+                if principal_component > remaining_balance:
+                    principal_component = remaining_balance
+
+                schedule_entry = LoanAmortizationSchedule(
+                    tenant=self.tenant,
+                    user=self.user,
+                    loan=self,
+                    installment_number=i,
+                    installment_date=start_date,
+                    principal_component=principal_component,
+                    interest_component=interest_component,
+                    total_installment_amount=principal_component + interest_component,
+                    remaining_balance=(remaining_balance - principal_component).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
+                )
+
+                schedule_list.append(schedule_entry)
+                remaining_balance -= principal_component
+                start_date += datetime.timedelta(days=30)
+
+            LoanAmortizationSchedule.objects.bulk_create(schedule_list)
 
     # TODO Add method to reject loan application
 
@@ -595,6 +730,172 @@ class LoanRepayment(models.Model):
 
 
 """
+LOAN TOP UP MODEL
+"""
+class LoanTopUp(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('DISBURSED', 'Disbursed'),
+        ('REJECTED', 'Rejected')
+    ]
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='loan_topups'
+    )
+    user = models.ForeignKey(
+        Member,
+        on_delete=models.CASCADE,
+        related_name='loan_topups'
+    )
+    loan = models.ForeignKey(
+        LoanApplication,
+        on_delete=models.CASCADE,
+        related_name='topups'
+    )
+    topup_amount = models.DecimalField(
+        decimal_places=2,
+        max_digits=12,
+        help_text='Amount to be added to the existing loan'
+    )
+    disbursed_amount = models.DecimalField(
+        decimal_places=2,
+        max_digits=12,
+        default=Decimal(0),
+        help_text='Amount that has been disbursed to the member'
+    )
+    new_tenure_months = models.PositiveIntegerField(
+        default=0,
+        help_text='New tenure in months after the top-up is applied'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+    disbursed = models.BooleanField(
+        default=False,
+        help_text='Indicates if the top-up has been disbursed'
+    )
+    approved = models.BooleanField(
+        default=False,
+        help_text='Indicates if the top-up has been approved'
+    )
+    rejected = models.BooleanField(
+        default=False,
+        help_text='Indicates if the top-up has been rejected'
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='approved_topups',
+        null=True,
+        blank=True,
+        help_text='User who approved the top-up'
+    )
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Date when the top-up was approved'
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='PENDING',
+        help_text='Current status of the top-up request'
+    )
+    note = models.TextField(
+        null=True,
+        blank=True,
+        help_text='Optional note or reason for when the top-up is rejected or approved'
+    )
+
+
+    def __str__(self):
+        return f'Top Up of {self.topup_amount} for {self.loan.id}'
+
+    def approve_topup(self, user):
+        """
+        Approves the loan top-up request, updates its status, sets approval details,
+        and marks it as approved.
+
+        Parameters:
+        user : Any
+            The user who approves the top-up.
+
+        Raises:
+        Exception
+            If the top-up is already approved or processed.
+        """
+        if self.approved or self.disbursed:
+            raise Exception("Top-up already processed.")
+
+        self.status = 'APPROVED'
+        self.approved_by = user
+        self.approved = True
+        self.approved_at = timezone.now()
+        self.save()
+
+    def reject_topup(self, user, note=None):
+        """
+        Rejects the loan top-up request, updates its status, sets rejection details,
+        and marks it as rejected.
+
+        Parameters:
+        user : Any
+            The user who rejects the top-up.
+        note : str, optional
+            An optional note explaining the reason for rejection.
+
+        Raises:
+        Exception
+            If the top-up is already approved or processed.
+        """
+        if self.approved or self.disbursed:
+            raise Exception("Top-up already processed.")
+
+        self.status = 'REJECTED'
+        self.rejected = True
+        self.rejected_by = user
+        self.note = note
+        self.save()
+
+    def disburse_topup(self, user):
+        """
+        Disburses a top-up loan only if it has been approved and not disbursed yet. Updates
+        the status and related properties of the top-up, marks it as disbursed, and applies
+        the top-up to the associated loan.
+
+        Args:
+            user: The user who is disbursing the top-up.
+
+        Raises:
+            Exception: If the top-up has not been approved.
+            Exception: If the top-up has already been disbursed.
+        """
+        if not self.approved:
+            raise Exception("Top-up not approved yet.")
+        if self.disbursed:
+            raise Exception("Top-up already disbursed.")
+
+        self.status = 'DISBURSED'
+        self.disbursed_by = user
+        self.disbursed = True
+        self.disbursement_date = timezone.now()
+        self.save()
+
+#       apply the top-up to the loan
+        self.loan.apply_topup(self)
+
+
+
+
+
+
+
+
+
+
+"""
 ACCOUNT MAPPINGS FOR LOANS
 """
 class LoanAccountMapping(models.Model):
@@ -656,59 +957,126 @@ class LoanAccountMapping(models.Model):
 """
 METHOD TO HANDLE AMORTIZATION SCHEDULE GENERATION
 """
-def generate_amortization_schedule(self):
+# def generate_amortization_schedule(self):
+#     """
+#     Generates an amortization schedule for this loan.
+#     Deletes existing schedule first. Uses bulk_create for efficiency.
+#     """
+#     with transaction.atomic():
+#         # Delete the existing schedule first
+#         self.amortization_schedule.all().delete()
+#
+#         schedule_list = []
+#
+#         # Initial loan details
+#         p = self.amount_requested
+#         annual_rate = self.loan_type.loan_interest_rate
+#         r = Decimal(annual_rate) / Decimal('1200')  # Monthly interest rate
+#         T = Decimal(self.tenure_months)
+#
+#         monthly_installment = self.calculate_monthly_installments()
+#         remaining_balance = p
+#
+#         # Start from disbursement_date if set, else today
+#         current_date = self.disbursement_date or timezone.now().date()
+#
+#         for i in range(1, int(T) + 1):
+#             if self.loan_type.interest_calculation_type == 'FLAT':
+#                 interest_component = (p * Decimal(annual_rate) * (Decimal('1') / Decimal('12'))) / Decimal('100')
+#                 principal_component = monthly_installment - interest_component
+#             else:  # REDUCING balance method
+#                 interest_component = (remaining_balance * r).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+#                 principal_component = monthly_installment - interest_component
+#
+#             # Guard against rounding errors on the last installment
+#             if principal_component > remaining_balance:
+#                 principal_component = remaining_balance
+#
+#             # Build schedule row
+#             schedule_entry = LoanAmortizationSchedule(
+#                 tenant=self.tenant,
+#                 user=self.user,
+#                 loan=self,
+#                 installment_number=i,
+#                 installment_date=current_date,
+#                 principal_component=principal_component,
+#                 interest_component=interest_component,
+#                 total_installment_amount=principal_component + interest_component,
+#                 remaining_balance=(remaining_balance - principal_component).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+#             )
+#             schedule_list.append(schedule_entry)
+#
+#             # Update for next loop
+#             remaining_balance -= principal_component
+#             # Advance by approx 1 month (30 days)
+#             current_date += datetime.timedelta(days=30)
+#
+#         # Efficient bulk insert
+#         LoanAmortizationSchedule.objects.bulk_create(schedule_list)
+
+
+"""
+BUILD AMORTIZATION SCHEDULE
+"""
+def build_amortization_schedule(*, loan, principal, start_date=None):
     """
-    Generates an amortization schedule for this loan.
-    Deletes existing schedule first. Uses bulk_create for efficiency.
+    Generates amortization schedule for given loan and principal.
+    Deletes only unpaid entries and regenerates from start_date onward.
     """
     with transaction.atomic():
-        # Delete the existing schedule first
-        self.amortization_schedule.all().delete()
+        # Step 1: Delete only unpaid schedule entries
+        unpaid_qs = loan.amortization_schedule.exclude(is_paid=True)
+        unpaid_qs.delete()
+
+        # Step 2: Fetch the number of installments already paid
+        paid_count = loan.amortization_schedule.filter(is_paid=True).count()
+
+        # Step 3: Determine installment number offset
+        start_installment_number = paid_count + 1
 
         schedule_list = []
 
-        # Initial loan details
-        p = self.amount_requested
-        annual_rate = self.loan_type.loan_interest_rate
+        annual_rate = loan.loan_type.loan_interest_rate
         r = Decimal(annual_rate) / Decimal('1200')  # Monthly interest rate
-        T = Decimal(self.tenure_months)
+        T = Decimal(loan.tenure_months)
 
-        monthly_installment = self.calculate_monthly_installments()
-        remaining_balance = p
+        monthly_installment = loan.calculate_monthly_installments(principal_override=principal)
+        remaining_balance = principal
 
-        # Start from disbursement_date if set, else today
-        current_date = self.disbursement_date or timezone.now().date()
+        # update the loan's monthly installments
+        loan.monthly_installments = monthly_installment
+        loan.save()
 
-        for i in range(1, int(T) + 1):
-            if self.loan_type.interest_calculation_type == 'FLAT':
-                interest_component = (p * Decimal(annual_rate) * (Decimal('1') / Decimal('12'))) / Decimal('100')
+        # Step 4: Determine the actual start date
+        current_date = start_date or timezone.now().date()
+
+        # Step 5: Generate only the remaining schedule entries
+        for i in range(start_installment_number, int(T) + 1):
+            if loan.loan_type.interest_calculation_type == 'FLAT':
+                interest_component = (principal * Decimal(annual_rate) * (Decimal('1') / Decimal('12'))) / Decimal('100')
                 principal_component = monthly_installment - interest_component
-            else:  # REDUCING balance method
+            else:
                 interest_component = (remaining_balance * r).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 principal_component = monthly_installment - interest_component
 
-            # Guard against rounding errors on the last installment
             if principal_component > remaining_balance:
                 principal_component = remaining_balance
 
-            # Build schedule row
             schedule_entry = LoanAmortizationSchedule(
-                tenant=self.tenant,
-                user=self.user,
-                loan=self,
+                tenant=loan.tenant,
+                user=loan.user,
+                loan=loan,
                 installment_number=i,
                 installment_date=current_date,
                 principal_component=principal_component,
                 interest_component=interest_component,
                 total_installment_amount=principal_component + interest_component,
-                remaining_balance=(remaining_balance - principal_component).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                remaining_balance=(remaining_balance - principal_component).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+                payment_status="Pending",  # Mark new entries as Pending
             )
             schedule_list.append(schedule_entry)
 
-            # Update for next loop
             remaining_balance -= principal_component
-            # Advance by approx 1 month (30 days)
             current_date += datetime.timedelta(days=30)
 
-        # Efficient bulk insert
         LoanAmortizationSchedule.objects.bulk_create(schedule_list)

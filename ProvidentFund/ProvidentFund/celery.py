@@ -19,7 +19,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*'),
     },
     'reduce_day_by_1':{
-        'task': 'Fund.tasks.reduce_date',
+        'task': 'Fund.tasks.update_investment_statuses',
         'schedule': crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
     },
     'fetch_memberships_every_month': {

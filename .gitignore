@@ -4297,3 +4297,5 @@ media/
 /celerybeat-schedule.dir
 
 /backup.json
+
+.env

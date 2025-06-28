@@ -21,4 +21,6 @@ urlpatterns = [
     path('disbursed-loans/', views.DisbursedLoans.as_view(), name='disbursed_loans'),
     path('disbursed-loan-details/<int:pk>/', views.DisbursedLoanDetailView.as_view(), name='disbursed_loan_details'),
     path('admin-loan-repayment/', views.AdminLoanPaymentView.as_view(), name='admin_loan_repayment'),
+    path('reject-loan/', views.RejectLoanApplication.as_view(), name='reject_loan'),
+    path('loan-topup/', views.LoanTopUpRequestView.as_view(), name='loan_topup'),
 ]
