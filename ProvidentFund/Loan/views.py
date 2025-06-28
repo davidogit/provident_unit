@@ -1279,7 +1279,6 @@ def loan_count_metrics(tenant,status):
         ).count()
 
         disbursed_applications_count = queryset.filter(
-            status = "DISBURSED",
             approved = True,
             disbursed = True
         ).count()
