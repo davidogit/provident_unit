@@ -1,18 +1,14 @@
-from decimal import Decimal
-from django.db.models import Q,Count,Sum,Prefetch
-from django.http import HttpRequest, JsonResponse
-from django.http.response import HttpResponse as HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+from django.db.models import Sum,Prefetch
+from django.http import HttpRequest
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 import pandas as pd
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder,ReceivedItems
 from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
-from MultiScheme.models import InvestmentScheme,Tenant,SchemeSettings,TenantEventNotification
+from MultiScheme.models import Tenant,SchemeSettings,TenantEventNotification
 from contributions.models import StaffAPI, Contribution, Membership
 from django.urls import reverse
-from django.core.paginator import Paginator
 from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
 from Admin.decorators import role_required
 from .forms import InvestmentUpdateForm,InvestmentApprovalForm,InvestmentCreationForm
 from Fund.tasks import actual_member_interest,rollover_inv_creation,send_excel_sheet_to_bank_for_payment,calculate_staff_contribution
@@ -25,26 +21,20 @@ from django.utils.dateparse import parse_date
 from urllib.parse import urlencode
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import ObjectDoesNotExist
-from Chart_of_Accounts.models import BankAccount,ChartOfAccounts,AccountMapping
+from Chart_of_Accounts.models import BankAccount, ChartOfAccounts, AccountMapping, AccountingService
 from Fund.generate_invoice import generate_short_alpha_numeric_id,generate_purchase_invoice_number
 from Admin.models import User
 import openpyxl
-from openpyxl import load_workbook
 from django.db import transaction
-logger = logging.getLogger(__name__)
-# Importing custom decorators
 from Member.decorators import tenant_required,tenant_login_required
-import csv
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponse
-from django.template.loader import render_to_string
 from MultiScheme.models import InvestmentScheme
 import csv
-from django.contrib.admin.models import LogEntry
-
+logger = logging.getLogger(__name__)
 
 class LandingPage(TemplateView):
     template_name = 'dashboard/landing_page.html'
@@ -363,11 +353,9 @@ class InvestmentDetailView(DetailView):
     context_object_name = 'investment_detail'
 
     # We override the get_queryset method to be able to filter the objects before its being accesed in this view
-    def get_queryset(self):  
-        # Get Tenant
-        tenant = self.request.tenant        
-        # Get scheme name
-        scheme_id = self.request.scheme_name
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
         # Filtering Queryset by Tenant
         if tenant:
@@ -384,37 +372,37 @@ class InvestmentDetailView(DetailView):
         inv_id = request.POST.get('inv_id')
         termination_date_str = request.POST.get('termination_date')
         termination_interest_str = request.POST.get('termination_interest')
-        termination_interest = Decimal(termination_interest_str)
+        termination_interest_str = request.POST.get('termination_interest', '').strip()
 
+        # Validate interest input
         try:
-            scheme = InvestmentScheme.objects.filter(
+            termination_interest = Decimal(termination_interest_str)
+        except (InvalidOperation, TypeError, ValueError):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid termination interest amount. Please enter a valid number.'
+            }, status=400)
+
+        scheme = InvestmentScheme.objects.filter(
                 tenant=tenant,
                 id = scheme_id,
                 approved=True
             ).prefetch_related('account_mapping').first()
-        except Exception:
-            return JsonResponse({
-                'status':'error',
-                'message':'Investment scheme not found.'
-            })
-        
-        try:
-            mapping = scheme.account_mapping.get(name='Redeem Investment')
-        except Exception:
-            return JsonResponse({
-                'status':'error',
-                'message':'No account mapping for "Investment Redemption" found. Please create a mapping for this event and try again.'
-            })
-        
-        # fetch debit and credit accounts
-        debit_account = mapping.debit_acc
-        credit_account = mapping.credit_acc
 
-        if not debit_account or not credit_account:
+        if not scheme:
             return JsonResponse({
                 'status':'error',
-                'message':'Debit or Credit accounts not properly configured'
+                'message':'Investment scheme not found'
             })
+        
+
+        mapping = scheme.account_mapping.filter(name='Redeem Investment').first()
+        if not mapping:
+            return JsonResponse({
+                'status':'error',
+                'message':'Mapping not found. Make sure a mapping is created for this event then try again.'
+            })
+
 
         if not inv_id or not termination_date_str:
             return JsonResponse({'status': 'error', 'message': 'Missing required parameters.'})
@@ -442,7 +430,7 @@ class InvestmentDetailView(DetailView):
                 'message':'This investment is matured hence can\'t be terminated.'
             })
 
-        # Calculate interest up to termination date
+        # Calculate interest up to the termination date
         days_to_termination = (termination_date - current_date).days
         if days_to_termination < 0 or termination_date > inv.interest_end_date:
             return JsonResponse({'status': 'error', 'message': 'Termination date cannot be in the past or after maturity date.'})
@@ -455,19 +443,14 @@ class InvestmentDetailView(DetailView):
             inv.save()
 
             # Perform debit and credit operations
-            debit_account.record_transaction(
-                amount=Decimal(termination_interest),transaction_type='DEBIT',created_now=self.request.user,description='Redeemed Investment'
-            )
-            credit_account.record_transaction(
-                amount=Decimal(termination_interest),transaction_type='CREDIT',created_now=self.request.user,description='Redeemed Investment'
-            )
+            accounting_service = AccountingService(tenant=tenant,user=self.request.user,scheme=scheme)
+            action_name = 'Redeem Investment'
+            description = 'Redeemed Investment'
+            try:
+                accounting_service.create_entry(action_name,Decimal(termination_interest),description)
+            except ValidationError as e:
+                return JsonResponse({'status':'error','message':str(e)})
 
-            """
-            The record transaction saves the details so no need to call save() on here 
-            debit_account.save()
-            credit_account.save()
-            """
-        
         return JsonResponse({'status': 'success', 'message': 'Investment terminated successfully.'})
 
 
@@ -481,17 +464,22 @@ class AddInvestment(CreateView):
     template_name = 'dashboard/investment_form.html'
     form_class = InvestmentCreationForm
 
+    def dispatch(self, request, *args, **kwargs):
+        self.tenant = getattr(request, 'tenant', None)
+        self.scheme_id = getattr(request, 'scheme_name', None)
+
+        if not self.tenant or not self.scheme_id:
+            return JsonResponse({'status': 'error', 'message': 'Tenant or scheme not found.'}, status=400)
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Get tenant from request
-        tenant = self.request.tenant
 
-        if tenant:
-            context.update({
-                'account_type':InvestmentDetail.account,
-                'inv_type':InvestmentDetail.inv_type
-            })
-
+        context.update({
+            'account_type':InvestmentDetail.account,
+            'inv_type':InvestmentDetail.inv_type
+        })
         return context
     
     def get_form(self, form_class=None):
@@ -500,18 +488,20 @@ class AddInvestment(CreateView):
         return form
     
     def form_invalid(self, form):
-        print(f'Form is invalid')
         return JsonResponse({
             'status':'error',
-            'message':f'An error occured:'
+            'message':f'An error occurred:{form.errors}'
         })
-        # return super().form_invalid(form)
 
-    # Make sure we are updating details under the right tenant
     def form_valid(self, form):
-        print('Form Valid')
-        tenant = self.request.tenant
-        scheme_name = self.request.scheme_name
+        tenant = self.tenant
+        scheme_name = self.scheme_id
+
+        if not tenant or not scheme_name:
+            return JsonResponse({
+                'status':'error',
+                'message':'Tenant or scheme not found.'
+            })
 
         scheme = InvestmentScheme.objects.filter(
             id=scheme_name,
@@ -534,56 +524,27 @@ class AddInvestment(CreateView):
         
         # Fetch investment principal
         investment_amount = form.cleaned_data['principal_amount']
-        
-        with transaction.atomic():
-            # Fetch debit and credit accounts from mapping obj
-            debit_account = mapping.debit_acc
-            credit_account = mapping.credit_acc
 
-            if not debit_account and credit_account:
-                return JsonResponse({
-                    'status':'error',
-                    'message':'Debit and Credit accounts not properly configured'
-                })
-            
-            # Prevent cases of insufficient balance when trying to debit an account
-            # if debit_account.current_balance < investment_amount:
-            #     return JsonResponse({
-            #         'status':'error',
-            #         'message':f'Insufficient balance for {debit_account}'
-            #     })
-            
+
+        if self.request.POST.get('type_of_tbill') == '':
+            form.instance.type_of_tbill = 'Fixed Deposit'
+
+        form.instance.investment_scheme = scheme
+
+        with transaction.atomic():
+            self.object = form.save()
+
             # perform debit anf credit operations
+            accounting_service = AccountingService(tenant=tenant,user=self.request.user,scheme=scheme)
+            action_name = 'Investment'
+            description = 'Investment purchased'
             try:
-                debit_account.record_transaction(
-                    amount=Decimal(investment_amount),transaction_type='DEBIT',created_by=self.request.user,description='Investment bought.'
-                )
-                credit_account.record_transaction(
-                    amount=Decimal(investment_amount),transaction_type='CREDIT',created_by=self.request.user,description='Investment bought.'
-                )
+                accounting_service.create_entry(action_name,Decimal(investment_amount),description)
             except ValidationError as e:
                 return JsonResponse({
                     'status':'error',
                     'message':f'{str(e)}'
                 })
-
-            """
-            # save account balances
-            debit_account.save()
-            credit_account.save()
-            """
-        # Set type of Tbill for Fixed Deposit to Fixed Deposit
-        if self.request.POST.get('type_of_tbill') == '':
-            form.instance.type_of_tbill == 'Fixed Deposit'
-        # set scheme on investment object
-        form.instance.investment_scheme = scheme
-        try:
-            super().form_valid(form)
-        except ValidationError as e:
-            return JsonResponse({
-                'status':'error',
-                'message':f'{str(e)}'
-            })
 
         return JsonResponse({
             'status':'success',
@@ -593,8 +554,8 @@ class AddInvestment(CreateView):
     
 
     def get_success_url(self):
-        scheme = self.request.scheme_name
-        tenant =  self.request.tenant
+        scheme = getattr(self.request, 'scheme_name', None)
+        tenant =  getattr(self.request, 'tenant', None)
         return reverse('investment_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id}) 
 
 
@@ -786,7 +747,6 @@ class RolloverInvestment(TemplateView):
         account_type = inv.account_type
 
         # Check if rollover is principal only or principal+interest
-        debit_or_credit = None
         debit_or_credit_amount = None
         if rollover_type == 'principal':
             debit_or_credit = False
@@ -1085,20 +1045,38 @@ class InvestmentQuery(ListView):
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
 class DelayedInterestListView(ListView):
+    """
+    View responsible for managing a paginated list of delayed interest records.
+
+    This view handles the display and approval of delayed interests for
+    a specific tenant and investment scheme. It ensures appropriate role-based
+    access and provides functionalities for filtering, approving, and updating
+    delayed interests along with handling associated debit/credit operations.
+
+    Attributes:
+        template_name (str): Path to the template used for rendering the view.
+        model (Type[Model]): The model associated with the view.
+        paginate_by (int): Number of items to display per page in pagination.
+        context_object_name (str): Name of the context variable for the data passed
+            to the template.
+
+    Methods:
+        get_queryset: Retrieves a filtered queryset of delayed interests based on
+            tenant and scheme.
+        post: Processes approval actions on delayed interests, performs debit/credit
+            operations, and saves status updates.
+        get_context_data: Fetches and calculates additional context variables for
+            rendering in the template.
+    """
     template_name = 'dashboard/delayed_interest_list.html'
     model = DelayedInterest
-    paginate_by = 5
+    paginate_by = 10
     context_object_name = 'delayed_interest'
 
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
     def get_queryset(self):
-         
-        # Get Tenant
-        tenant = self.request.tenant
-        # Get scheme name
-        scheme_id = self.request.scheme_name
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
-        # Filtering Queryset by Tenant
         if tenant:
             return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('status','-created_date')
         else:
@@ -1106,12 +1084,9 @@ class DelayedInterestListView(ListView):
     
     # Post method to handle approval and debit/credit operations
     def post(self, *args, **kwargs):
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
         delayed_int_id = self.request.POST.get('d_int_id', None)
-
-        # Log inputs for debugging
-        print(f'Did: {delayed_int_id}, SchemeID: {scheme_id}')
 
         # Validate required fields
         fields = [tenant, scheme_id, delayed_int_id]
@@ -1132,35 +1107,24 @@ class DelayedInterestListView(ListView):
                 'message': 'Investment scheme not found.'
             })
 
-        try:
-            # Fetch account mapping
-            mapping = scheme.account_mapping.get(name='Approved Delayed Interest')
-        except ObjectDoesNotExist:
+
+        mapping = scheme.account_mapping.filter(name='Approved Delayed Interest').first()
+        if not mapping:
             return JsonResponse({
                 'status': 'error',
-                'message': 'No mapping found for "Approved Delayed Interest".'
+                'message': 'Mapping not found. Make sure a mapping is created for this event then try again.'
             })
 
-        try:
-            # Fetch delayed interest object
-            delayed_interest_object = scheme.delayed_interest.get(id=delayed_int_id)
-        except ObjectDoesNotExist:
+
+        # Fetch the delayed-interest object
+        delayed_interest_object = scheme.delayed_interest.filter(id=delayed_int_id).first()
+        if not delayed_interest_object:
             return JsonResponse({
                 'status': 'error',
-                'message': 'Delayed interest not found.'
+                'message': 'Delayed interest object not found.'
             })
 
         with transaction.atomic():
-            # Fetch debit and credit accounts
-            debit_account = mapping.debit_acc
-            credit_account = mapping.credit_acc
-
-            if not (debit_account and credit_account):
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Debit and Credit accounts are not properly configured.'
-                })
-
             # Validate delayed interest amount
             delayed_interest_amount = delayed_interest_object.principal
             if delayed_interest_amount <= 0:
@@ -1169,27 +1133,22 @@ class DelayedInterestListView(ListView):
                     'message': 'Invalid delayed interest amount.'
                 })
 
-            # Perform debit and credit operations
-            debit_account.record_transaction(
-                amount=delayed_interest_amount,transaction_type='DEBIT',created_by=self.request.user,description='Delayed Interest'
-            )
-            credit_account.record_transaction(
-                amount=delayed_interest_amount,transaction_type='CREDIT',created_by=self.request.user,description='Delayed Interest'
-            )
-
-            """
-            # Save account balances
-            debit_account.save()
-            credit_account.save()
-            """
-
             # Update delayed interest status
             delayed_interest_object.approved = True
             delayed_interest_object.status = 'Paid'
             delayed_interest_object.approved_by = self.request.user
             delayed_interest_object.save()
 
-        # Return success response
+            # Perform debit and credit operations
+            accounting_service = AccountingService(tenant=tenant, user=self.request.user,scheme=scheme)
+            action_name = 'Approved Delayed Interest'
+            description = 'Approved Delayed Interest'
+
+            try:
+                accounting_service.create_entry(action_name,delayed_interest_amount,description)
+            except ValidationError as e:
+                return JsonResponse({'status': 'error', 'message': str(e.message)})
+
         return JsonResponse({
             'status': 'success',
             'message': 'Delayed interest approved successfully.'
@@ -1321,11 +1280,12 @@ class DelayedInterestQuery(ListView):
 @method_decorator(role_required(role=['Treasury Supervisor']), name='dispatch')
 class ApproveMaturedInvestment(ListView):
     model = InvestmentDetail
+    paginate_by = 10
     template_name = 'dashboard/matured_investment_approval.html'
 
     def get_queryset(self):
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
         if tenant and scheme_id:
             # Matured investments to be approved
@@ -1345,11 +1305,15 @@ class ApproveMaturedInvestment(ListView):
         scheme_id = request.scheme_name
         tenant_id = tenant.id
 
-        scheme = InvestmentScheme.objects.filter(tenant=tenant,id=scheme_id,approved=True).prefetch_related('account_mapping').first()
-
-        # Check if 'investment_id' is provided
         if not inv_id:
             return JsonResponse({'status': 'error', 'message': 'Investment ID is required.'})
+
+        scheme = InvestmentScheme.objects.filter(
+            tenant=tenant,id=scheme_id,approved=True
+        ).prefetch_related('account_mapping').first()
+
+        if not scheme:
+            return JsonResponse({'status': 'error', 'message': 'Investment scheme not found.'})
 
         if form.is_valid():
             investment = self.get_queryset().filter(id=inv_id).first()
@@ -1366,48 +1330,32 @@ class ApproveMaturedInvestment(ListView):
                     'status':'error',
                     'message':'Investment scheme not found.'
                 })
-            
-            try:
-                mapping = scheme.account_mapping.get(name='Approved Revenue')
-            except Exception as e:
-                return JsonResponse({
-                    'status':'error',
-                    'message':f'Account mapping not found for Approved Revenue event: Please create a mapping for this event and try again.'
-                })
-            
-            # fetch debit and credit accounts
-            debit_account = mapping.debit_acc
-            credit_account = mapping.credit_acc
 
-            if not debit_account or not credit_account:
+            mapping = scheme.account_mapping.filter(name='Approved Revenue').first()
+            if not mapping:
                 return JsonResponse({
                     'status':'error',
-                    'message':'Debit or Credit accounts not set for "Approved Revenue" mapping'
+                    'message':'Mapping not found. Make sure a mapping is created for this event then try again.'
                 })
 
             # Check if closing amount == expected amount
             with transaction.atomic():
                 if investment.interest_amount==closing_amount:
-                    # Alter fields of approval and save
                     investment.approval_status = approval_status
                     investment.closing_amount = closing_amount
                     investment.save()
 
                     # perform debit and credit operation
-                    debit_account.record_transaction(
-                        amount=Decimal(investment.interest_amount),transaction_type='DEBIT',created_by=self.request.user,description='Investment Recorgnized'
-                    )
-                    credit_account.record_transaction(
-                        amount=Decimal(investment.interest_amount),transaction_type='CREDIT',created_by=self.request.user,description='Investment Recorgnized'
-                    )
+                    accounting_service = AccountingService(tenant=tenant, user=request.user,scheme=scheme)
+                    action_name = 'Investment Approval'
+                    description = 'Investment Approval'
 
-                    """
-                    # Save accounts
-                    debit_account.save()
-                    credit_account.save()
-                    """
+                    try:
+                        accounting_service.create_entry(action_name,investment.interest_amount,description)
+                    except ValidationError as e:
+                        return JsonResponse({'status': 'error', 'message': str(e.message)})
 
-                    # After saving changes now we calculate members actual profit using tasks
+                    # After saving changes now we calculate members' actual profit using tasks
                     actual_member_interest.delay(tenant_id,scheme_id,inv_id)
 
                     return JsonResponse({'status':'success','message':'Investment approved successfully and accounts updated.'})
@@ -1416,7 +1364,7 @@ class ApproveMaturedInvestment(ListView):
                     error_message = 'Closing amount does not match with expected amount'
                     return JsonResponse({'status':'error', 'message':error_message})
 
-        # return JsonResponse({'status':'error'}, status=400)
+        return JsonResponse({'status':'error','message':'Invalid form data.'})
 
 
     def get_context_data(self, **kwargs):
@@ -1604,12 +1552,12 @@ class ApproveContributions(TemplateView):
     template_name = 'dashboard/approve_contributions.html'
 
     def post(self,request,*args,**kwargs):
-        tenant = request.tenant
+        tenant = getattr(request, 'tenant', None)
+        scheme_id = getattr(request, 'scheme_name', None)
         tenant_id = tenant.id
-        scheme_id = request.scheme_name
         month = request.POST.get('month')
         year = request.POST.get('year')
-        message_1 = '' #holder for extra message to user
+        message_1 = '' #holder for an extra message to user
 
         scheme = InvestmentScheme.objects.filter(
             id=scheme_id,
@@ -1622,23 +1570,19 @@ class ApproveContributions(TemplateView):
                 'status':'error',
                 'message':'Investment scheme not found.'
             })
-        
-        try:
-            # Mapping for contribution
-            mapping = scheme.account_mapping.get(name='Contribution')
-        except Exception:
+
+        mapping = scheme.account_mapping.filter(name='Approved Contribution').first()
+        if not mapping:
             return JsonResponse({
                 'status':'error',
-                'message':'No account mapping for "contributioin" found. Please create a mapping for this event and try again.'
+                'message':'Mapping not found. Make sure a mapping is created for this event then try again.'
             })
-        
-        try:
-            # Mappingh for Delayed Interest
-            delayed_int_mapping = scheme.account_mapping.get(name='Delayed Interest')
-        except Exception:
+
+        delayed_int_mapping = scheme.account_mapping.filter(name='Delayed Interest').first()
+        if not delayed_int_mapping:
             return JsonResponse({
                 'status':'error',
-                'message':'No account mapping for "Delayed Interest" found. Please create a mapping for this event and try again.'
+                'message':'Mapping for Delayed Interest not found. Make sure a mapping is created for this event then try again.'
             })
         
         if not month and year:
@@ -1648,10 +1592,10 @@ class ApproveContributions(TemplateView):
             })
         
         # collect settings related to the scheme
-        settings = SchemeSettings.objects.get(
+        settings = SchemeSettings.objects.filter(
             investment_scheme=scheme,
             investment_scheme__tenant=tenant
-            )
+        ).first()
 
         if not settings:
             return JsonResponse({
@@ -1667,20 +1611,21 @@ class ApproveContributions(TemplateView):
             year=year,
             approved_contribution=False)
 
-        if not contributions.exists():
+        if not contributions:
             return JsonResponse({'status': 'error', 'message': 'No contributions found for the given month.'})
         
-        # Aggregtae total_contributions
+        # Aggregate total_contributions
         total_contribution = contributions.aggregate(
                 total=Sum('total_contribution')
-                )['total'] or 0
-        if total_contribution == 0:
+        )['total'] or Decimal(0.0)
+
+        if total_contribution == Decimal(0.0):
             return JsonResponse({
                 'status':'error',
                 'message':'Total contributions is zero.'
             })
         
-        # Approve contributions and peform debit and credit operations
+        # Approve contributions and perform debit and credit operations
         with transaction.atomic():
             # Fetch debit and credit accounts from mapping obj
             debit_account = mapping.debit_acc
@@ -1696,20 +1641,16 @@ class ApproveContributions(TemplateView):
             contributions.update(approved_contribution=True)
             
             # perform debit anf credit operations
-            debit_account.record_transaction(
-                amount=total_contribution,transaction_type='DEBIT',created_by=self.request.user,description='Contributions'
-            ) 
-            credit_account.record_transaction(
-                amount=total_contribution,transaction_type='CREDIT',created_by=self.request.user,description='Contributions'
-            ) 
+            accounting_service = AccountingService(tenant=tenant, user=request.user,scheme=scheme)
+            action_name = 'Approved Contribution'
+            description = 'Approved Contribution'
 
-            """
-            # save account balances
-            debit_account.save()
-            credit_account.save()
-            """
+            try:
+                accounting_service.create_entry(action_name,total_contribution,description)
+            except ValidationError as e:
+                return JsonResponse({'status': 'error', 'message': str(e.message)})
 
-        # update staff contributions using task
+        # update staff contributions using a task
         calculate_staff_contribution.delay(
             scheme_id,
             tenant_id,
@@ -1723,19 +1664,16 @@ class ApproveContributions(TemplateView):
         # Check for Delayed Interest on Contribution
         now = timezone.now()
 
-        # First day of month
+        # First day of the month
         first_day_of_month = now.replace(day=1,month=int(month),year=int(year))
 
-        print(first_day_of_month)
         # expected payment date
         due_date = first_day_of_month + timedelta(contribution_day)
-        # due date after grace period
+
         grace_period_end = due_date + timedelta(grace_period)
 
-        # check if payment is delayed past grace period
-        if now > grace_period_end: #if payment date is over grace period
-            
-            # Calculate delayed interest principal = acrued interest on contributions until approval date after grace period
+        if now > grace_period_end:
+            # Calculate delayed interest principal = accrued interest on contributions until approval date after grace period
 
             # monthly contribution total
             month_contribution = Contribution.objects.filter(
@@ -1748,21 +1686,21 @@ class ApproveContributions(TemplateView):
                 total=Sum('total_contribution')
             )['total'] or Decimal(0.0)
 
-            # Calculate amount due after grace period
+            # Calculate amount due after the grace period
             duration = (now - grace_period_end).days
 
             # convert percentage --> decimal
-            daily_delayed_rate = (rate/100) 
+            daily_delayed_rate = Decimal(rate/100)
 
             # Using compound interest to calculate the delayed Interest on contribution
-            t = Decimal((duration/30)/12) #convert duration from days to years
+            t = Decimal(duration/365) #convert duration from days to years
             n = 365
-            p = month_contribution
+            p = Decimal(month_contribution)
             r = daily_delayed_rate
-            c = p*(1+(r/n))**(n*t) #compound interest asuming t=1 year
+            c = Decimal(p*(1+(r/n))**(n*t)).quantize(Decimal("0.01"), ROUND_HALF_UP) #compound interest asuming t=1 year
             delayed_principal = c-p
 
-            # create delayed interest object
+            # create a delayed interest object
             DelayedInterest.objects.create(
                 investment_scheme=scheme,
                 remarks = f'Delayed Interest for {month} /{year}',
@@ -1771,38 +1709,21 @@ class ApproveContributions(TemplateView):
                 principal = delayed_principal,
             )
 
-            # After creating delayed interest perform debit and credit operations
-
             with transaction.atomic():
-                # Fetch debit and credit accounts from mapping obj
-                debit_account_delayed = delayed_int_mapping.debit_acc
-                credit_account_delayed = delayed_int_mapping.credit_acc
-
-                if not debit_account_delayed or not credit_account_delayed:
-                    return JsonResponse({
-                        'status':'error',
-                        'message':'Debit or Credit accounts not properly configured'
-                    })
-                
                 # perform debit anf credit operations
-                debit_account_delayed.record_transaction(
-                    amount=delayed_principal,transaction_type='DEBIT',created_by=self.request.user,description='Delayed Interest Created'
-                )
-                credit_account_delayed.record_transaction(
-                    amount=delayed_principal,transaction_type='CREDIT',created_by=self.request.user,description='Delayed Interest Created'
-                )
+                accounting_service = AccountingService(tenant=tenant, user=request.user,scheme=scheme)
+                action_name = 'Delayed Interest'
+                description = 'Delayed Interest Created'
 
-                """
-                # save account balances
-                debit_account_delayed.save()
-                credit_account_delayed.save()
-                """
+                try:
+                    accounting_service.create_entry(action_name,delayed_principal,description)
+                except ValidationError as e:
+                    return JsonResponse({'status': 'error', 'message': str(e.message)})
 
             message_1 = (
                 f'This payment is overdue hence a delayed interest entry is created for '
                 f'the month of {month}/{year}'
             )
-        
         message = f'Successfully approved investments for {month}/{year}, and Accounts updated successfully  NB:{message_1}'
         return JsonResponse({'status':'success', 'message':message})
 
@@ -1856,56 +1777,60 @@ class ApproveExitedMembers(TemplateView):
     # context_object_name = 'exiting_members'
 
     def post(self,request,*args,**kwargs):
-        if request.method == 'POST':
-            tenant = request.tenant
-            application_id = request.POST.get('application_id')
-            approved = request.POST.get('approved')
-            member_id = request.POST.get('member_id')
-            staff_id = request.POST.get('staff_id')
-            scheme_id = request.POST.get('scheme_id')
-            member = get_object_or_404(Member,id=member_id)
+        tenant = getattr(request, 'tenant', None)
+        scheme_id = getattr(request, 'scheme_name', None)
 
-            if tenant and application_id and approved:
-                application = ExitApproval.objects.get(tenant=tenant,member=member,id=application_id)
+        application_id = request.POST.get('application_id')
+        approved = request.POST.get('approved')
+        member_id = request.POST.get('member_id')
+        staff_id = request.POST.get('staff_id')
 
-                if application:
+        if not tenant and not scheme_id:
+            return JsonResponse({'status':'error', 'message':'Bad Request'})
+
+        member = get_object_or_404(Member,id=member_id)
+
+        if tenant and application_id and approved:
+            application = ExitApproval.objects.get(tenant=tenant,member=member,id=application_id)
+
+            if application:
+                try:
+                    application.approved = True
+                    application.approval_date = timezone.now()
+                    application.save()
+
+                    # Remove scheme from memeber list of schemes
+                    staff = get_object_or_404(StaffAPI,tenant=tenant,Id=staff_id)
+
+                    # Scheme to remove from member list of schemes
+                    scheme_to_remove = get_object_or_404(
+                        InvestmentScheme,
+                        tenant=tenant,
+                        id=scheme_id,
+                        approved=True
+                    )
+
+                    # Remove schemes and save staff instance
+                    staff.investment_scheme.remove(scheme_to_remove)
+                    staff.save()
+
+                    # Delete Previous application to scheme
                     try:
-                        application.approved = True
-                        application.approval_date = timezone.now()
-                        application.save()
-
-                        # Remove scheme from memeber list of schemes
-                        staff = get_object_or_404(StaffAPI,tenant=tenant,Id=staff_id)
-
-                        # Scheme to remove from member list of schemes
-                        scheme_to_remove = get_object_or_404(
-                            InvestmentScheme,
-                            tenant=tenant,
-                            id=scheme_id,
-                            approved=True
-                        )
-
-                        # Remove schemes and save staff instance
-                        staff.investment_scheme.remove(scheme_to_remove)
-                        staff.save()
-
-                        # Delete Previous application to scheme
-                        try:
-                            SchemeApproval.objects.get(tenant=tenant,scheme=scheme_to_remove,member=member).delete()
-                        except:
-                            return JsonResponse({'status':'error','message':'Application approved but Member cannot apply to this scheme in the future. Contact Management to resolve this issue.'})
+                        SchemeApproval.objects.get(tenant=tenant,scheme=scheme_to_remove,member=member).delete()
+                    except:
+                        return JsonResponse({'status':'error','message':'Application approved but Member cannot apply to this scheme in the future. Contact Management to resolve this issue.'})
 
 
-                        # Notify member of successful exit
-                    except Exception as e:
-                        return JsonResponse({'status':'error','message':'Application cannot be approved at the moment'})
-                    
-                    return JsonResponse({'status':'success', 'message':'Exit Application approved successfully'})
-                else:
-                    return JsonResponse({'status':'error', 'message':'Application cannot be approved at the moment'})
+                    # Notify member of successful exit
+                except Exception as e:
+                    return JsonResponse({'status':'error','message':'Application cannot be approved at the moment'})
+
+                return JsonResponse({'status':'success', 'message':'Exit Application approved successfully'})
             else:
-                return JsonResponse({'status':'error', 'message':'Something went wrong, can not approve application at this time. Try again later'})
-    
+                return JsonResponse({'status':'error', 'message':'Application cannot be approved at the moment'})
+        else:
+            return JsonResponse({'status':'error', 'message':'Something went wrong, can not approve application at this time. Try again later'})
+
     def get_context_data(self, **kwargs):
         tenant = self.request.tenant
         context = super().get_context_data(**kwargs)
@@ -3794,15 +3719,21 @@ class CreateInvoiceView(TemplateView):
     template_name = 'suppliers_expenses/create_invoice.html'
 
     def post(self,*args,**kwargs):
-        tenant =  self.request.tenant
+        tenant =  getattr(self.request,'tenant',None)
         order_id = self.request.POST.get('order_number')
         supplier_invoice_amount = self.request.POST.get('supplier_invoice_amount')
         debit_account_id = self.request.POST.get('debit_account_id')
-        print(debit_account_id)
+
+        if not tenant or not self.request.user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Bad request.'
+            })
+
         if not debit_account_id:
             return JsonResponse({
                 'status':'error',
-                'message':'Selected accoung has no ID.'
+                'message':'Selected account has no ID.'
             })
         
         if not order_id:
@@ -3810,13 +3741,7 @@ class CreateInvoiceView(TemplateView):
                 'status':'error',
                 'message':'Invalid order ID.'
             })
-        
-        if not tenant:
-            return JsonResponse({
-                'status':'error',
-                'message':'Bad request.'
-            })
-        
+
         if not AccountMapping.objects.filter(
                 tenant=tenant,
                 name='Supplier Invoice Creation'
@@ -3826,35 +3751,44 @@ class CreateInvoiceView(TemplateView):
                 'message':'Mapping for "Supplier Invoice Creation" not found.'
             })
         
-        try:
-            debit_account = ChartOfAccounts.objects.filter(
+
+        debit_account = ChartOfAccounts.objects.filter(
                 tenant=tenant,
                 id=debit_account_id
             ).first()
-            credit_account = AccountMapping.objects.filter(
+        credit_account = AccountMapping.objects.filter(
                 tenant=tenant,
                 name='Supplier Invoice Creation'
             ).first().credit_acc
-        except Exception:
+
+        if not debit_account and not credit_account:
             return JsonResponse({
                 'status':'error',
-                'message':'No accounts found for this event.'
+                'message':'Debit or Credit account not found. Please map accounts and try again.'
             })
+
         
         try:
-            purchase_order = PurchaseOrder.objects.get(
+            purchase_order = PurchaseOrder.objects.filter(
                 requisition__tenant=tenant,
                 id=order_id,
-            )
-            # check if requested amount is less than the amount to be paid
-            receieved_items_object = purchase_order.received_items
-            if not receieved_items_object:
+            ).first()
+
+            if not purchase_order:
+                return JsonResponse({
+                    'status':'error',
+                    'message':'Purchase order not found.'
+                })
+
+            # check if the requested amount is less than the amount to be paid
+            received_items_object = purchase_order.received_items
+            if not received_items_object:
                 return JsonResponse({
                     'status':'error',
                     'message':'This purchase order has not been received yet.'
                 })
             
-            if Decimal(supplier_invoice_amount) > receieved_items_object.amount_to_pay:
+            if Decimal(supplier_invoice_amount) > received_items_object.amount_to_pay:
                 return JsonResponse({
                     'status':'error',
                     'message':'Supplier amount cannot be greater than the expected amount to pay.'
@@ -3869,37 +3803,29 @@ class CreateInvoiceView(TemplateView):
                     supplier=purchase_order.requisition.supplier,
                     debit_account = debit_account
                 )
-                # Update amount_to_pay field by subtrating invoice amount to be paid
-                receieved_items_object.amount_to_pay -= Decimal(supplier_invoice_amount)
+                # Update amount_to_pay field by subtracting invoice amount to be paid
+                received_items_object.amount_to_pay -= Decimal(supplier_invoice_amount)
                 # Save update
-                receieved_items_object.save()
+                received_items_object.save()
 
                 # Debit and Credit operations
-                debit_account.record_transaction(
-                    amount=Decimal(supplier_invoice_amount),transaction_type='DEBIT',created_by=self.request.user,description='Supplier invoice creted'
-                )
-                credit_account.record_transaction(
-                    amount=Decimal(supplier_invoice_amount),transaction_type='CREDIT',created_by=self.request.user,description='Supplier invoice creted'
-                )
-
-                """
+                accounting_service = AccountingService(tenant=tenant,user=self.request.user,scheme=None)
                 try:
-                    debit_account.save()
-                    credit_account.save()
-                except Exception as e:
+                    accounting_service.create_manual_entry(debit_account,credit_account,Decimal(supplier_invoice_amount))
+                except ValidationError as e:
                     return JsonResponse({
                         'status':'error',
-                        'message':f'{str(e)}'
+                        'message':f'An error occurred while creating manual entry: {str(e)}'
                     })
-                """
-                # Notify who is in charge of invoice payment.
+
+                #TODO Notify who is in charge of invoice payment.
 
                 return JsonResponse({
                     'status':'success',
-                    'message':'Invoice created successfuly. Payment will be initiated once invoice is cleared.'
+                    'message':'Invoice created successfully. Payment will be initiated once invoice is cleared.'
                 })
             except Exception as e:
-                logger.info(f'An error occured while creating an invoice for Tenant: {tenant} Purchase Order: {purchase_order.id} || Error: {str(e)}')
+                logger.info(f'An error occurred while creating an invoice for Tenant: {tenant} Purchase Order: {purchase_order.id} || Error: {str(e)}')
                 return JsonResponse({
                     'status':'error',
                     'message':f'Invoice could not be created now, please try again later and contact Admin if issue persists.'
@@ -4037,7 +3963,7 @@ class PayoutInvoiceView(ListView):
     context_object_name = 'invoice_list'
 
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         return super().get_queryset().filter(
             purchase_order__requisition__tenant = tenant,
             approved = True,
@@ -4045,9 +3971,15 @@ class PayoutInvoiceView(ListView):
         ).order_by('paid','-created_date')
 
     def post(self,*args,**kwargs):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         invoice_number = self.request.POST.get('invoice_number')
         withholding_tax = self.request.POST.get('withholding_tax')
+
+        if not tenant or not self.request.user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Bad request.'
+            })
 
         if not invoice_number:
             return JsonResponse({
@@ -4064,20 +3996,15 @@ class PayoutInvoiceView(ListView):
         # convert tax amount to decimal value
         withholding_tax = Decimal(withholding_tax)
         
-        try:
-            invoice = self.get_queryset().get(
+
+        invoice = self.get_queryset().filter(
                 invoice_number=invoice_number
-            )
-        except ObjectDoesNotExist:
+        ).first()
+
+        if not invoice:
             return JsonResponse({
                 'status':'error',
                 'message':'Invoice not found.'
-            })
-        except Exception as e:
-            logger.info(f'An error occured while fetching invoice: {str(e)}')
-            return JsonResponse({
-                'status':'error',
-                'message':f'An error occured {str(e)}'
             })
         
         # Perform debit and credit transactions: if successful update invoice to paid
@@ -4091,47 +4018,32 @@ class PayoutInvoiceView(ListView):
                 'status':'error',
                 'message':'No account mapping found for this. Map this event and try again.'
             })
-        
-        debit_account = account_mapping.debit_acc
-        credit_account = account_mapping.credit_acc
 
         # Calculate Net amount 
         net_amount = (invoice.amount - withholding_tax)
 
         # Perform debit and credit transactions
-        try:
-            debit_account.record_transaction(
-                amount=Decimal(net_amount),transaction_type='DEBIT',created_by=self.request.user,description='Invoice Payment'
-            )
-            credit_account.record_transaction(
-                amount=Decimal(net_amount),transaction_type='CREDIT',created_by=self.request.user,description='Invoice Payment'
-            )
-        except ValidationError as e:
-            return JsonResponse({
-                'status':'error',
-                'message':f'{e}'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'status':'error',
-                'message':f'{str(e)}'
-            })
+        with transaction.atomic():
 
-        """ 
-        # Save changes
-        debit_account.save()
-        credit_account.save()
-        """
-    
-        # Set withholding tax amount on invoice
-        invoice.withholding_tax = withholding_tax
+            # Set withholding tax amount on the invoice
+            invoice.withholding_tax = withholding_tax
 
-        invoice.paid = True
-        invoice.date_paid = timezone.now()
-        invoice.save()
+            invoice.paid = True
+            invoice.date_paid = timezone.now()
+            invoice.save()
 
-        # Create a Transaction for the payment
+            #TODO Create a Transaction for the payment
 
+            accounting_service = AccountingService(tenant=tenant,user=self.request.user,scheme=None)
+            action_name = 'Supplier Invoice Payment'
+            description = 'Invoice Payment'
+            try:
+                accounting_service.create_entry(action_name,net_amount,description)
+            except ValidationError as e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'{e}'
+                })
         return JsonResponse({
             'status':'success',
             'message':f'Invoice paid. Net amount = {net_amount}'
