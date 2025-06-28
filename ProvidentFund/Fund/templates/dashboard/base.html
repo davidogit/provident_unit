@@ -18,6 +18,7 @@
 
   <!-- bootstrap icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- <title>Provident Fund</title> -->
 
   <!-- Sweetalert CSS -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -29,15 +30,17 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
+
   {% block title %}
   <!-- Title goes here. -->
   {% endblock %}
 
   <link rel="stylesheet" href="{% static 'lib/remixicon/fonts/remixicon.css' %}">
   <link rel="stylesheet" href="{% static '/lib/apexcharts/apexcharts.css' %}">
+
   <link rel="stylesheet" href="{% static 'assets/css/style.min.css' %}">
 
-  <!-- Hiding Search Results -->
+  <!-- Hiding Serch Results -->
   <style>
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -56,26 +59,12 @@
       scrollbar-width: none;  /* Hide scrollbar for Firefox */
     }
 
-    /* Scheme link highlight */
-    .scheme-access-link {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white !important;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-    }
-
-    .scheme-access-link:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-      color: white !important;
-    }
-
-    .scheme-access-link i {
-      color: white !important;
-    }
   </style>
-  <!-- JQuery for Search implementation -->
+  <!-- Hiding Serch Results -->
+  <!-- JQuery for Serch implementation -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- JQuery for Serch implementation -->
+
 </head>
 
 <body>
@@ -83,8 +72,26 @@
   <div class="sidebar">
     <div class="sidebar-header">
       <a href="{% url 'finance_page' tenant_id=request.tenant.id %}" class="sidebar-logo">{{ request.tenant.name }}</a>
+      
     </div><!-- sidebar-header -->
     <div id="sidebarMenu" class="sidebar-body">
+
+      <!-- Loan -->
+      <div class="nav-item">
+        {% if 'Finance Manager' in user_groups or 'Supervisor' in user_groups or 'Analyst' in user_groups %}
+        <a href="#" class="nav-label">Loans</a>
+        <ul class="nav nav-sidebar">
+          <li class="nav-item">
+            <a href="{% url 'approve_loans' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-file-list-3-line fs-32 lh-1 me-3"></i> <span>Loan Applications</span></a>
+          </li>
+          {% if 'Finance Manager' in user_groups or 'Supervisor' in user_groups or 'Analyst' in user_groups %}
+          <li class="nav-item">
+            <a href="{% url 'disburse_approved_loans' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-money-dollar-circle-line fs-32 lh-1 me-3"></i> <span>Repayment Approval</span></a>
+          </li>
+          {% endif %}
+        </ul>
+        {% endif %}
+      </div><!--nav-group -->
 
       <!-- General Payout -->
       <div class="nav-item">
@@ -137,6 +144,7 @@
       </div>
       {% endif %}
 
+
       <!-- Expense Payment -->
        {% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups %}
       <div class="nav-item">
@@ -160,12 +168,14 @@
           </li>
           <li class="nav-item">
             <a href="{% url 'supplier_view' tenant_id=request.tenant.id %}" class="nav-link"><i class="ri-truck-line fs-32 lh-1 me-3"></i> <span>Suppliers</span></a>
+            <nav class="nav nav-sub">
+            </nav>
           </li>
         </ul>
       </div><!--nav-group -->
       {% endif %}
   
-      <div class="nav-item border-5 border-bottom border-secondary">
+      <div class="nav-item">
         {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups or 'Super User' in user_groups %}
         <a href="#" class="nav-label">Configuration</a>
         <ul class="nav nav-sidebar">
@@ -174,11 +184,50 @@
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-book-2-line fs-32 lh-1 me-3"></i> <span>Accounts</span></a>
             <nav class="nav nav-sub"> 
-              <a href="{% url 'add_chart_of_account' tenant_id=request.tenant.id %}" class="nav-sub-link">Chart of Accounts</a>
-              <a href="{% url 'map_account' tenant_id=request.tenant.id %}" class="nav-sub-link">Accounts Mapping</a>
-              <a href="{% url 'bank_accounts' tenant_id=request.tenant.id %}" class="nav-sub-link">Bank Accounts</a>
-              <a href="{% url 'account_parameters' tenant_id=request.tenant.id %}" class="nav-sub-link">Account Parameters</a>
+              <a href="{% url 'add_chart_of_account' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Chart of Accounts
+              </a>
+
+              <a href="{% url 'map_account' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Accounts Mapping
+              </a>
+
+              <a href="{% url 'bank_accounts' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Bank Accounts
+              </a>
+              <a href="{% url 'account_parameters' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Account Parameters
+              </a>
             </nav>
+          </li>
+          {% endif %}
+
+
+          <!-- Nav Item for Loan Config -->
+
+          <li class="nav-item">
+            <a href="#" class="nav-link has-sub"><i class="ri-file-list-3-line fs-32 lh-1 me-3"></i> <span>Loan Configuration</span></a>
+
+            <nav class="nav nav-sub"> 
+              {% if 'Finance Manager' in user_groups or 'Finance Supervisor' in user_groups or 'Finance Analyst' in user_groups %}
+              <a href="{% url 'loan_types' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Loan Types
+              </a>
+              {% endif %}
+            </nav>
+
+          </li>
+
+          {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups %}
+          <li class="nav-item">
+            <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Configuration</span></a>
+              <nav class="nav nav-sub"> 
+                {% if 'Scheme Manager' in user_groups %}
+                <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Scheme Approval
+                </a>
+                {% endif %}
+              </nav>    
           </li>
           {% endif %}
 
@@ -192,8 +241,14 @@
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-group-line fs-32 lh-1 me-3"></i> <span>Mass Enrollment</span></a>
             <nav class="nav nav-sub"> 
-              <a href="{% url 'mass_enroll' tenant_id=request.tenant.id %}" class="nav-sub-link">Upload File</a>
-              <a href="#" class="nav-sub-link">Recent Uploads</a>
+              <a href="{% url 'mass_enroll' tenant_id=request.tenant.id %}"
+                class="nav-sub-link">Upload File
+              </a>
+
+              <a href="#"
+                class="nav-sub-link">Recent Uploads
+              </a>
+              
             </nav>
           </li>
           {% endif %}
@@ -212,8 +267,12 @@
           <li class="nav-item">
             <a href="#" class="nav-link has-sub"><i class="ri-survey-line fs-32 lh-1 me-3"></i> <span>Scheme Applications</span></a>
             <nav class="nav nav-sub">
-              <a href="{% url 'scheme_application_approval'  tenant_id=request.tenant.id %}" class="nav-sub-link">Member Applications</a>
-              <a href="{% url 'approve_exit_members'  tenant_id=request.tenant.id %}" class="nav-sub-link">Exiting Member Applications</a>
+              <a href="{% url 'scheme_application_approval'  tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Member Applications
+              </a>
+              <a href="{% url 'approve_exit_members'  tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Exiting Member Applications
+              </a>
             </nav>
           </li>
           {% endif %}
@@ -225,42 +284,46 @@
           {% endif %}
         </ul>
         {% endif %}
+      </div>
     
-    <!-- UPDATED: Scheme Setup Section -->
-    {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups %}
-    <div>
-      <a href="#" class="nav-label">Scheme Setup</a>
+      {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups %}
+      <div>
+        <a href="#" class="nav-label">Scheme</a>
+          <ul class="nav nav-sidebar">
+          <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Setup</span></a>
+          <nav class="nav nav-sub"> 
+            {% if 'Scheme Analyst' in user_groups %}
+            <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Add Scheme
+            </a>
+            {% endif %}
+            <a href="{% url 'scheme_list' tenant_id=request.tenant.id %}"
+              class="nav-sub-link">Active Schemes
+            </a>
+          </nav>    
+        </ul>
+      </div>
+      {% endif %}
+      <div class="nav-item border-5 border-bottom border-secondary">
+        {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups or 'Super User' in user_groups %}
+        <a href="#" class="nav-label">Financials</a>
         <ul class="nav nav-sidebar">
-        <a href="#" class="nav-link has-sub"><i class="ri-settings-5-line fs-32 lh-1 me-3"></i> <span>Scheme Configuration</span></a>
-        <nav class="nav nav-sub"> 
-          {% if 'Scheme Analyst' in user_groups %}
-          <a href="{% url 'add_scheme'  tenant_id=request.tenant.id %}" class="nav-sub-link">Add Scheme</a>
-          {% endif %}
-          <a href="{% url 'scheme_list' tenant_id=request.tenant.id %}" class="nav-sub-link">Active Schemes</a>
-          {% if 'Scheme Manager' in user_groups %}
-          <a href="{% url 'scheme_approval'  tenant_id=request.tenant.id %}" class="nav-sub-link">Scheme Approval</a>
-          {% endif %}
-        </nav>    
-      </ul>
-    </div>
-    {% endif %}
-    
-    {% if 'Scheme Manager' in user_groups or 'Scheme Supervisor' in user_groups or 'Scheme Analyst' in user_groups or 'Super User' in user_groups %}
-      <a href="#" class="nav-label">Financials</a>
-      <ul class="nav nav-sidebar">
-        <li class="nav-item">
-        <a href="{% url 'account_balances' tenant_id=request.tenant.id %}" class="nav-link">
-          <i class="ri-wallet-line fs-32 lh-1 me-3"></i> 
-          <span>Balances</span>
-        </a>
-        </li>
-      </ul> 
-    </div>
-    {% endif %}
+          <li class="nav-item">
+          <a href="{% url 'account_balances' tenant_id=request.tenant.id %}" class="nav-link">
+            <i class="ri-wallet-line fs-32 lh-1 me-3"></i> 
+            <span>Balances</span>
+          </a>
+          </li>
+        </ul> 
+      </div>
+      {% endif %}
     
     
+      <!--nav-group -->
+      
+      <!-- Loop through every scheme  -->
 
-    <!-- NEW: Unified Scheme Access Section -->
+       <!-- NEW: Unified Scheme Access Section -->
     {% if schemes %}
     <div class="nav-item border-5 border-bottom border-secondary">
       <a href="#" class="nav-label">Schemes</a>
@@ -296,23 +359,19 @@
       </ul>
     </div>
     {% endif %}
-    
-    
     </div><!-- sidebar-body -->
-    
-    <!-- Rest of the sidebar footer remains the same -->
     <div class="sidebar-footer">
       <div class="sidebar-footer-top">
         <div class="sidebar-footer-thumb">
           <img src="{% static 'assets/img/default_profile_pic.png' %}" alt="">
-        </div>
+        </div><!-- sidebar-footer-thumb -->
         <div class="sidebar-footer-body overflow-auto" style="max-height: 60px;">
           {% for group in user_groups %}
           <small><em>{{ group }}</em></small><br>
           {% endfor %}
-        </div>
+        </div><!-- sidebar-footer-body -->
         <a id="sidebarFooterMenu" href="#" class="dropdown-link"><i class="ri-arrow-down-s-line"></i></a>
-      </div>
+      </div><!-- sidebar-footer-top -->
       <div class="sidebar-footer-menu">
         <nav class="nav">
           <a href="#"><i class="ri-edit-2-line"></i> Edit Profile</a>
@@ -325,20 +384,22 @@
           <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
           <a href="{% url 'logout' tenant_id=request.tenant.id %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
         </nav>
-      </div>
-    </div>
+      </div><!-- sidebar-footer-menu -->
+    </div><!-- sidebar-footer -->
   </div><!-- sidebar -->
 
-  <!-- Rest of the template remains the same -->
   <div class="header-main px-3 px-lg-4">
     <a id="menuSidebar" href="#" class="menu-link me-3 me-lg-4"><i class="ri-menu-2-fill"></i></a>
     <div id="search-bar" class="m-auto">
       {% block header %}
+
       {% endblock %}
-    </div>
+    </div><!-- form-search -->
+
 
     <div class="dropdown dropdown-skin">
-      <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="ri-settings-3-line"></i></a>
+      <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i
+          class="ri-settings-3-line"></i></a>
       <div class="dropdown-menu dropdown-menu-end mt-10-f">
         <label>Skin Mode</label>
         <nav id="skinMode" class="nav nav-skin">
@@ -358,28 +419,29 @@
           <a href="#" class="nav-link active">LTR</a>
           <a href="#" class="nav-link">RTL</a>
         </nav>
-      </div>
-    </div>
+      </div><!-- dropdown-menu -->
+    </div><!-- dropdown -->
 
     <div class="dropdown dropdown-notification ms-3 ms-xl-4">
-      <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><small>3</small><i class="ri-notification-3-line"></i></a>
+      <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside"><small>3</small><i
+          class="ri-notification-3-line"></i></a>
       <div class="dropdown-menu dropdown-menu-end mt-10-f me--10-f">
         <div class="dropdown-menu-header">
           <h6 class="dropdown-menu-title">Notifications</h6>
-        </div>
+        </div><!-- dropdown-menu-header -->
         <ul class="list-group">
           <li class="list-group-item">
             <div class="avatar online"><img src="{% static 'assets/img/default_profile_pic.png' %}" alt=""></div>
             <div class="list-group-body">
-              <p><strong>Dominador Manuel</strong> and <strong>100 other people</strong> reacted to your comment "Tell your partner that..."</p>
+              <p><strong>Dominador Manuel</strong> and <strong>100 other people</strong> reacted to your comment "Tell
+                your partner that...</p>
               <span>Aug 20 08:55am</span>
-            </div>
+            </div><!-- list-group-body -->
           </li>
         </ul>
         <div class="dropdown-menu-footer"><a href="#">Show all Notifications</a></div>
-      </div>
-    </div>
-    
+      </div><!-- dropdown-menu -->
+    </div><!-- dropdown -->
     <div class="dropdown dropdown-profile ms-3 ms-xl-4">
       <a href="#" class="dropdown-link" data-bs-toggle="dropdown" data-bs-auto-close="outside">
         <div class="avatar online"><img src="{% static 'assets/img/default_profile_pic.png' %}" alt=""></div>
@@ -401,26 +463,33 @@
             <a href="#"><i class="ri-user-settings-line"></i> Account Settings</a>
             <a href="{% url 'logout' tenant_id=request.tenant.id %}"><i class="ri-logout-box-r-line"></i> Log Out</a>
           </nav>
-        </div>
-      </div>
-    </div>
-  </div>
+        </div><!-- dropdown-menu-body -->
+      </div><!-- dropdown-menu -->
+    </div><!-- dropdown -->
+  </div><!-- header-main -->
+
+
 
   <!--main-->
   <div class="container-fluid d-flex justify-content-center align-items-center">
     <div class="row w-100">
         <div class="col-12">
           {% block content %}
+
           <!-- Extended templates -->
           {% endblock %}
         </div>
     </div>
   </div>
+  <!-- main -->
+
 
   <div class="main-footer mt-5 position-fixed bottom-0 w-100 d-flex justify-content-between py-2 px-3">
     <span>&copy; 2024. Vestrex Technologies Ltd. All Rights Reserved.</span>
     <span>Created by: <a href="" target="_blank">Vestrex.com</a></span>
+  </div><!-- main-footer -->
   </div>
+
 
   <script src="{% static 'lib/jquery/jquery.min.js' %}"></script>
   <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
@@ -434,18 +503,6 @@
   <script src="{% static 'assets/js/db.finance.js' %}"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
