@@ -115,7 +115,7 @@ def delete_inactive_users(self):
 
 
 # Task to send OTP to members upon login
-@shared_task(bind=True)
+@shared_task(bind=True)  
 def send_otp_code(self,email,otp):
     """
     Send OTP code via an email task.

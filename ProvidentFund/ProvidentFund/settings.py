@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'MultiScheme',
     'Chart_of_Accounts',
     'Loan',
+    'Payments',
     'approval_workflow',
     'notification',
     
@@ -129,21 +130,21 @@ WSGI_APPLICATION = 'ProvidentFund.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'OPTIONS': {
-            'init_command': 'SET default_storage_engine=INNODB',
-        },
-        'NAME': 'provident_fund',
-        'USER': 'root',
-        'PASSWORD': 'collinsxzibit1?',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'OPTIONS': {
+    #         'init_command': 'SET default_storage_engine=INNODB',
+    #     },
+    #     'NAME': 'provident_fund',
+    #     'USER': 'root',
+    #     'PASSWORD': 'collinsxzibit1?',
+    #     'HOST': 'localhost',
+    #     'PORT': '3306',
+    # }
 }
 
 
@@ -226,7 +227,7 @@ CELERY_BEAT_SHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 465))
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True') == 'True'

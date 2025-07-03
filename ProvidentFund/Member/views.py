@@ -820,106 +820,106 @@ class Contributed(ListView):
 
 
 
-@method_decorator(tenant_login_required, name="dispatch")
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Member']), name='dispatch')
-class CreateTransactionView(View):
-    template_name = 'create_transaction.html'
+# @method_decorator(tenant_login_required, name="dispatch")
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['Member']), name='dispatch')
+# class CreateTransactionView(View):
+#     template_name = 'create_transaction.html'
 
-    def get(self, request, *args, **kwargs):
-        tenant = request.tenant
-        schemes = InvestmentScheme.objects.filter(tenant=tenant,approved=True)
-        reference = str(uuid.uuid4())  # Pre-generate a unique reference
+#     def get(self, request, *args, **kwargs):
+#         tenant = request.tenant
+#         schemes = InvestmentScheme.objects.filter(tenant=tenant,approved=True)
+#         reference = str(uuid.uuid4())  # Pre-generate a unique reference
 
-        context = {
-            'schemes': schemes,
-            'PAYSTACK_PUBLIC_KEY': settings.PAYSTACK_PUBLIC_KEY,
-            'reference': reference,
-        }
-        return render(request, self.template_name, context)
+#         context = {
+#             'schemes': schemes,
+#             'PAYSTACK_PUBLIC_KEY': settings.PAYSTACK_PUBLIC_KEY,
+#             'reference': reference,
+#         }
+#         return render(request, self.template_name, context)
 
-    def post(self, request, *args, **kwargs):
-        try:
-            data = json.loads(request.body)
-            tenant = request.tenant
-            staff_id = kwargs.get('staff_id')
-            scheme_id = data.get('scheme_id')
-            amount = data.get('amount')
-            email = data.get('email')
-            reference = data.get('reference')
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             data = json.loads(request.body)
+#             tenant = request.tenant
+#             staff_id = kwargs.get('staff_id')
+#             scheme_id = data.get('scheme_id')
+#             amount = data.get('amount')
+#             email = data.get('email')
+#             reference = data.get('reference')
 
-            if not all([scheme_id, amount, email, reference]):
-                return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
+#             if not all([scheme_id, amount, email, reference]):
+#                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
-            with transaction.atomic():
-                scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id, approved=True)
-                staff = StaffAPI.objects.get(staff_number=staff_id)
+#             with transaction.atomic():
+#                 scheme = InvestmentScheme.objects.get(tenant=tenant, id=scheme_id, approved=True)
+#                 staff = StaffAPI.objects.get(staff_number=staff_id)
 
-                if Transaction.objects.filter(reference=reference).exists():
-                    return JsonResponse({'status': 'error', 'message': 'Duplicate reference detected.'}, status=400)
+#                 if Transaction.objects.filter(reference=reference).exists():
+#                     return JsonResponse({'status': 'error', 'message': 'Duplicate reference detected.'}, status=400)
 
-                amount_in_kobo = int(float(amount) * 100)
-                transaction_obj = Transaction.objects.create(
-                    tenant=tenant,
-                    staff=staff,
-                    # member=member,
-                    scheme=scheme,
-                    amount=amount,
-                    reference=reference
-                )
+#                 amount_in_kobo = int(float(amount) * 100)
+#                 transaction_obj = Transaction.objects.create(
+#                     tenant=tenant,
+#                     staff=staff,
+#                     # member=member,
+#                     scheme=scheme,
+#                     amount=amount,
+#                     reference=reference
+#                 )
 
-                staff.contributions = F('contributions') + amount
-                staff.save(update_fields=['contributions'])
+#                 staff.contributions = F('contributions') + amount
+#                 staff.save(update_fields=['contributions'])
 
-                history_url = reverse('transaction_history', kwargs={
-                    'tenant_id': tenant.id,
-                    'staff_id':  staff.staff_number
-                })
+#                 history_url = reverse('transaction_history', kwargs={
+#                     'tenant_id': tenant.id,
+#                     'staff_id':  staff.staff_number
+#                 })
 
-                return JsonResponse({
-                    'status': 'success',
-                    'transaction_reference': transaction_obj.reference,
-                    'amount': amount_in_kobo,
-                    'email': email,
-                    'redirect_url': history_url
-                })
+#                 return JsonResponse({
+#                     'status': 'success',
+#                     'transaction_reference': transaction_obj.reference,
+#                     'amount': amount_in_kobo,
+#                     'email': email,
+#                     'redirect_url': history_url
+#                 })
 
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON in request body")
-            return JsonResponse({'status': 'error', 'message': 'Invalid JSON in request body'}, status=400)
-        except InvestmentScheme.DoesNotExist:
-            logger.error(f"Invalid scheme ID: {scheme_id}")
-            return JsonResponse({'status': 'error', 'message': 'Invalid scheme ID.'}, status=400)
-        except StaffAPI.DoesNotExist:
-            logger.error(f"Staff not found for member: {staff_id}")
-            return JsonResponse({'status': 'error', 'message': 'Staff not found.'}, status=400)
-        except Exception as e:
-            logger.error(f"Unexpected error in CreateTransactionView: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
+#         except json.JSONDecodeError:
+#             logger.error("Invalid JSON in request body")
+#             return JsonResponse({'status': 'error', 'message': 'Invalid JSON in request body'}, status=400)
+#         except InvestmentScheme.DoesNotExist:
+#             logger.error(f"Invalid scheme ID: {scheme_id}")
+#             return JsonResponse({'status': 'error', 'message': 'Invalid scheme ID.'}, status=400)
+#         except StaffAPI.DoesNotExist:
+#             logger.error(f"Staff not found for member: {staff_id}")
+#             return JsonResponse({'status': 'error', 'message': 'Staff not found.'}, status=400)
+#         except Exception as e:
+#             logger.error(f"Unexpected error in CreateTransactionView: {str(e)}")
+#             return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
 
-    @staticmethod
-    def verify_transaction(reference):
-        headers = {
-            "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
-            "Content-Type": "application/json"
-        }
-        response = requests.get(f"https://api.paystack.co/transaction/verify/{reference}", headers=headers)
-        response.raise_for_status()
-        return response.json()
+#     @staticmethod
+#     def verify_transaction(reference):
+#         headers = {
+#             "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+#             "Content-Type": "application/json"
+#         }
+#         response = requests.get(f"https://api.paystack.co/transaction/verify/{reference}", headers=headers)
+#         response.raise_for_status()
+#         return response.json()
 
 
 
-@require_GET
-def verify_transaction(request, reference):
-    try:
-        response = CreateTransactionView.verify_transaction(reference)
-        if response['data']['status'] == 'success':
-            # Update your transaction status in the database here
-            return JsonResponse({'status': 'success', 'message': 'Payment verified successfully'})
-        else:
-            return JsonResponse({'status': 'error', 'message': 'Payment verification failed'})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)})
+# @require_GET
+# def verify_transaction(request, reference):
+#     try:
+#         response = CreateTransactionView.verify_transaction(reference)
+#         if response['data']['status'] == 'success':
+#             # Update your transaction status in the database here
+#             return JsonResponse({'status': 'success', 'message': 'Payment verified successfully'})
+#         else:
+#             return JsonResponse({'status': 'error', 'message': 'Payment verification failed'})
+#     except Exception as e:
+#         return JsonResponse({'status': 'error', 'message': str(e)})
 
 
 @method_decorator(tenant_login_required, name="dispatch")
@@ -984,133 +984,133 @@ class TransactionView(ListView):
 
 
 
-@method_decorator(tenant_login_required, name="dispatch")
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Member']), name='dispatch')
-class WithdrawalView(TemplateView):
-    template_name = 'withdrawal.html'
+# @method_decorator(tenant_login_required, name="dispatch")
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['Member']), name='dispatch')
+# class WithdrawalView(TemplateView):
+#     template_name = 'withdrawal.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        tenant = self.request.tenant
-        context["schemes"] = InvestmentScheme.objects.filter(tenant=tenant, approved=True)
-        return context
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         tenant = self.request.tenant
+#         context["schemes"] = InvestmentScheme.objects.filter(tenant=tenant, approved=True)
+#         return context
     
-    def post(self, request, *args, **kwargs):
-        try:
-            data = json.loads(request.body)
-            tenant = request.tenant
-            member = request.user.member
-            scheme_id = data.get('scheme_id')
-            amount = data.get('amount')
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             data = json.loads(request.body)
+#             tenant = request.tenant
+#             member = request.user.member
+#             scheme_id = data.get('scheme_id')
+#             amount = data.get('amount')
 
-            #  Validate inputs
-            if not all([scheme_id, amount, member]):
-                return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
+#             #  Validate inputs
+#             if not all([scheme_id, amount, member]):
+#                 return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
 
-            amount = Decimal(amount)
+#             amount = Decimal(amount)
 
-            with transaction.atomic():
-                #  Validate scheme and staff
-                scheme = InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id, approved=True).first()
-                staff = StaffAPI.objects.filter(staff_number=member.staff_id).first()
+#             with transaction.atomic():
+#                 #  Validate scheme and staff
+#                 scheme = InvestmentScheme.objects.filter(tenant=tenant, id=scheme_id, approved=True).first()
+#                 staff = StaffAPI.objects.filter(staff_number=member.staff_id).first()
 
-                if not scheme or not staff:
-                    return JsonResponse({'status': 'error', 'message': 'Invalid scheme or staff information.'}, status=400)
+#                 if not scheme or not staff:
+#                     return JsonResponse({'status': 'error', 'message': 'Invalid scheme or staff information.'}, status=400)
 
-                # Create a withdrawal request
-                withdrawal_request = WithdrawalRequest.objects.create(
-                    tenant=tenant,
-                    staff=staff,
-                    scheme=scheme,
-                    amount=amount,
-                    request_date=timezone.now(),
-                )
-                logger.info(f" WithdrawalRequest created with ID: {withdrawal_request.id}")
+#                 # Create a withdrawal request
+#                 withdrawal_request = WithdrawalRequest.objects.create(
+#                     tenant=tenant,
+#                     staff=staff,
+#                     scheme=scheme,
+#                     amount=amount,
+#                     request_date=timezone.now(),
+#                 )
+#                 logger.info(f" WithdrawalRequest created with ID: {withdrawal_request.id}")
 
-                # Get all recipients for `withdrawal_request` event
-                recipients = TenantEventNotification.objects.filter(
-                    tenant=tenant,
-                    event="withdrawal_request"
-                ).values_list('staff__email', flat=True)  # Get list of emails
+#                 # Get all recipients for `withdrawal_request` event
+#                 recipients = TenantEventNotification.objects.filter(
+#                     tenant=tenant,
+#                     event="withdrawal_request"
+#                 ).values_list('staff__email', flat=True)  # Get list of emails
 
-                if not recipients:
-                    logger.warning(f"No recipients assigned for withdrawal_request event in tenant {tenant.id}")
+#                 if not recipients:
+#                     logger.warning(f"No recipients assigned for withdrawal_request event in tenant {tenant.id}")
 
-                # Trigger Celery task to notify approvers
-                transaction.on_commit(lambda: notify_withdrawal_approval.delay(tenant.id, withdrawal_request.id))
+#                 # Trigger Celery task to notify approvers
+#                 transaction.on_commit(lambda: notify_withdrawal_approval.delay(tenant.id, withdrawal_request.id))
 
 
-                # Trigger Celery task to notify the user
-                notify_user_email_sms.delay(
-                    tenant_id=tenant.id,  
-                    member_name=member.user.get_full_name(),
-                    first_name=member.user.first_name,
-                    last_name=member.user.last_name,
-                    user_email=member.user.email,
-                    tel_number=member.tel_number,
-                    amount=amount,
-                    scheme_name=scheme.name
-                )
+#                 # Trigger Celery task to notify the user
+#                 notify_user_email_sms.delay(
+#                     tenant_id=tenant.id,  
+#                     member_name=member.user.get_full_name(),
+#                     first_name=member.user.first_name,
+#                     last_name=member.user.last_name,
+#                     user_email=member.user.email,
+#                     tel_number=member.tel_number,
+#                     amount=amount,
+#                     scheme_name=scheme.name
+#                 )
 
-                return JsonResponse({
-                    'status': 'success',
-                    'message': 'Withdrawal request submitted for approval. Notifications sent to user and approvers.'
-                })
+#                 return JsonResponse({
+#                     'status': 'success',
+#                     'message': 'Withdrawal request submitted for approval. Notifications sent to user and approvers.'
+#                 })
 
-        except Exception as e:
-            logger.error(f"Unexpected error in WithdrawalView: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
+#         except Exception as e:
+#             logger.error(f"Unexpected error in WithdrawalView: {str(e)}")
+#             return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
         
         
-@method_decorator(tenant_login_required, name="dispatch")
-@method_decorator(tenant_required, name='dispatch')
-@method_decorator(role_required(role=['Member']), name='dispatch')
-class GetBalanceView(View):
-    def get(self, request, *args, **kwargs):
-        scheme_id = self.kwargs["scheme_id"]
-        staff_id = self.kwargs["staff_id"]
-        tenant = self.request.tenant
-        try:
-            staff = StaffAPI.objects.get(staff_number=int(staff_id), tenant=tenant)
-        except ObjectDoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Staff not found'}, status=404)
-        print("tenant:",tenant)
+# @method_decorator(tenant_login_required, name="dispatch")
+# @method_decorator(tenant_required, name='dispatch')
+# @method_decorator(role_required(role=['Member']), name='dispatch')
+# class GetBalanceView(View):
+#     def get(self, request, *args, **kwargs):
+#         scheme_id = self.kwargs["scheme_id"]
+#         staff_id = self.kwargs["staff_id"]
+#         tenant = self.request.tenant
+#         try:
+#             staff = StaffAPI.objects.get(staff_number=int(staff_id), tenant=tenant)
+#         except ObjectDoesNotExist:
+#             return JsonResponse({'status': 'error', 'message': 'Staff not found'}, status=404)
+#         print("tenant:",tenant)
        
-        try:
-        # Fetch the investment scheme
-            scheme = InvestmentScheme.objects.get(id=scheme_id, tenant=tenant,approved=True)
+#         try:
+#         # Fetch the investment scheme
+#             scheme = InvestmentScheme.objects.get(id=scheme_id, tenant=tenant,approved=True)
 
-        except ObjectDoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Investment scheme not found.'})
+#         except ObjectDoesNotExist:
+#             return JsonResponse({'status': 'error', 'message': 'Investment scheme not found.'})
         
-        except Exception as e:
-            logger.error(f"Error in GetBalanceView: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': 'An error occured'})
-        try:
+#         except Exception as e:
+#             logger.error(f"Error in GetBalanceView: {str(e)}")
+#             return JsonResponse({'status': 'error', 'message': 'An error occured'})
+#         try:
         
-            # Validate if the staff_id matches a valid Membership
-            membership = Membership.objects.filter(
-                tenant=tenant,
-                scheme=scheme,
-                staff=staff
-            ).first()
-            print("staff_id:",staff)
-        except ObjectDoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Membership not found.'})
+#             # Validate if the staff_id matches a valid Membership
+#             membership = Membership.objects.filter(
+#                 tenant=tenant,
+#                 scheme=scheme,
+#                 staff=staff
+#             ).first()
+#             print("staff_id:",staff)
+#         except ObjectDoesNotExist:
+#             return JsonResponse({'status': 'error', 'message': 'Membership not found.'})
         
-        except Exception as e:
-            logger.error(f"Error in GetBalanceView: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': 'An error occured'})
+#         except Exception as e:
+#             logger.error(f"Error in GetBalanceView: {str(e)}")
+#             return JsonResponse({'status': 'error', 'message': 'An error occured'})
         
 
-        # Calculate the available balance
-        available_balance = membership.total_earnings
+#         # Calculate the available balance
+#         available_balance = membership.total_earnings
 
-        return JsonResponse({
-            'status': 'success',
-            'balance': Decimal(available_balance)
-        })
+#         return JsonResponse({
+#             'status': 'success',
+#             'balance': Decimal(available_balance)
+#         })
 
 
 class ListMembersView(View):

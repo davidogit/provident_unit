@@ -1,0 +1,235 @@
+<form id="withdrawalForm">
+    {% csrf_token %}
+    
+    <!-- Scheme Selection -->
+    <div class="form-group mb-4">
+      <label for="scheme-type" class="form-label fw-medium">Select Scheme</label>
+      <div class="input-group">
+        <span class="input-group-text  border-end-0">
+          <i class="ri-bank-line text-primary"></i>
+        </span>
+        <select name="scheme_id" id="scheme-type" class="form-select border-start-0 ps-0" required>
+          <option value="" disabled selected>Choose scheme type</option>
+          {% for scheme in schemes %}
+          <option value="{{ scheme.id }}">{{ scheme.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Amount Input -->
+    <div class="form-group mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <label for="amount" class="form-label fw-medium mb-0">Amount (GHS)</label>
+        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">
+          Available: GHS <span id="availableBalance" class="fw-bold">0.00</span>
+        </span>
+      </div>
+      <div class="input-group">
+        <span class="input-group-text  border-end-0">
+          <i class="ri-money-cedi-circle-line text-primary"></i>
+        </span>
+        <input
+          name="amount"
+          type="number"
+          id="amount"
+          class="form-control border-start-0 ps-0"
+          placeholder="Enter amount in GHS"
+          min="1"
+          step="0.01"
+          required
+        />
+      </div>
+      <div class="progress mt-3" style="height: 6px;">
+        <div id="amountProgress" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Withdrawal Notes -->
+    <div class="alert alert-light border-0 bg-light-subtle rounded-3 mb-4">
+      <div class="d-flex">
+        <i class="ri-information-line text-primary fs-5 me-2 mt-1"></i>
+        <div>
+          <h6 class="fw-medium mb-1">Withdrawal Information</h6>
+          <p class="mb-0 small">Withdrawals are typically processed within 1-3 business days. A minimum withdrawal amount of GHS 1.00 is required.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="form-submit">
+      <button type="button" id="withdrawButton" class="btn btn-primary btn-lg w-100 py-3">
+        <span id="buttonText">Request Withdrawal</span>
+        <span id="loadingSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+      </button>
+    </div>
+</form>
+
+<script>
+    // Fetch and display available balance when scheme is selected
+    $(document).ready(function(){
+      $('#scheme-type').on('change', function(){
+        var schemeId = $(this).val();
+        var staff_id = "{{request.user.member.staff_id}}"
+        var tenant = "{{request.tenant.id}}"
+        var url = `/${tenant}/members/get-balance/${schemeId}/${staff_id}/`
+        
+        // Reset amount input
+        $('#amount').val('');
+        $('#amountProgress').css('width', '0%');
+        
+        // Show loading state
+        $('#availableBalance').html('<small class="spinner-border spinner-border-sm" role="status"></small>');
+        
+        $.ajax({
+          type: 'GET',
+          url: url,
+          success: function(response) {
+            if (response.status === "success"){
+              $('#availableBalance').text(response.balance);
+              
+              // Enable amount input
+              $('#amount').prop('disabled', false);
+              
+              // Set max attribute
+              $('#amount').attr('max', response.balance);
+            } else {
+              $('#availableBalance').text("0.00");
+              $('#amount').prop('disabled', true);
+            }
+          },
+          error: function(xhr, status, error) {
+            $('#availableBalance').text("0.00");
+            console.log("Error fetching balance:", error);
+          }
+        });
+      });
+      
+      // Update progress bar when amount changes
+      $('#amount').on('input', function() {
+        const amount = parseFloat($(this).val()) || 0;
+        const balance = parseFloat($('#availableBalance').text()) || 0;
+        
+        if (balance > 0) {
+          const percentage = Math.min((amount / balance) * 100, 100);
+          $('#amountProgress').css('width', percentage + '%');
+          
+          // Change color based on percentage
+          if (percentage > 90) {
+            $('#amountProgress').removeClass('bg-primary').addClass('bg-danger');
+          } else if (percentage > 70) {
+            $('#amountProgress').removeClass('bg-primary bg-danger').addClass('bg-warning');
+          } else {
+            $('#amountProgress').removeClass('bg-warning bg-danger').addClass('bg-primary');
+          }
+        }
+      });
+    });
+    
+    // Handle withdrawal request submission
+    document.getElementById("withdrawButton").addEventListener("click", function () {
+      const schemeId = document.getElementById("scheme-type").value;
+      const amount = document.getElementById("amount").value;
+      const availableBalance = parseFloat(document.getElementById("availableBalance").textContent) || 0;
+  
+      if (!schemeId || !amount) {
+        showToast("Please fill in all fields.", "warning");
+        return;
+      }
+  
+      // Validate amount
+      if (parseFloat(amount) < 1) {
+        showToast("Minimum withdrawal amount is GHS 1.00.", "warning");
+        return;
+      }
+      
+      // Validate against available balance
+      if (parseFloat(amount) > availableBalance) {
+        showToast("Withdrawal amount exceeds available balance.", "danger");
+        return;
+      }
+  
+      // Disable button and show spinner
+      const withdrawButton = document.getElementById("withdrawButton");
+      const buttonText = document.getElementById("buttonText");
+      const loadingSpinner = document.getElementById("loadingSpinner");
+  
+      withdrawButton.disabled = true;
+      buttonText.textContent = "Processing...";
+      loadingSpinner.classList.remove("d-none");
+  
+      fetch("", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token }}",
+        },
+        body: JSON.stringify({
+          scheme_id: schemeId,
+          amount: amount,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "success") {
+            showToast(data.message, "success");
+            // Reset form on success
+            document.getElementById("withdrawalForm").reset();
+            document.getElementById("availableBalance").textContent = "0.00";
+            $('#amountProgress').css('width', '0%');
+          } else {
+            showToast("Error: " + data.message, "danger");
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          showToast("An error occurred while processing the request.", "danger");
+        })
+        .finally(() => {
+          // Re-enable button and hide spinner
+          withdrawButton.disabled = false;
+          buttonText.textContent = "Request Withdrawal";
+          loadingSpinner.classList.add("d-none");
+        });
+    });
+    
+    // Toast notification function
+    function showToast(message, type) {
+      // Check if toast container exists, if not create it
+      let toastContainer = document.querySelector('.toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+      }
+      
+      // Create toast element
+      const toastEl = document.createElement('div');
+      toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+      toastEl.setAttribute('role', 'alert');
+      toastEl.setAttribute('aria-live', 'assertive');
+      toastEl.setAttribute('aria-atomic', 'true');
+      
+      // Toast content
+      toastEl.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      
+      // Add toast to container
+      toastContainer.appendChild(toastEl);
+      
+      // Initialize and show toast
+      const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+      toast.show();
+      
+      // Remove toast after it's hidden
+      toastEl.addEventListener('hidden.bs.toast', function() {
+        toastEl.remove();
+      });
+    }
+</script>

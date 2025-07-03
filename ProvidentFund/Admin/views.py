@@ -286,8 +286,9 @@ def custom_login(request, tenant_id):
         user = authenticate(request, username=username, password=password,tenant=tenant)
 
         # Redirect everyone who is not an admin
-        if not user.groups.filter(name='Admin'):
+        if user is None or not user.groups.filter(name='Admin').exists():
             return redirect('invalid_login_details', tenant_id=tenant_id)
+     
         
         if user is not None:
             # If authentication is successful, log the user in

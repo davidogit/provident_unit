@@ -29,7 +29,8 @@
                 </div>
               </div>
               <div class="card-body p-4">
-                <form id="withdrawalForm">
+                {% include "payments/partials/withdrawal_form.html" %}
+                {% comment %} <form id="withdrawalForm">
                   {% csrf_token %}
                   
                   <!-- Scheme Selection -->
@@ -94,7 +95,7 @@
                       <span id="loadingSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
                     </button>
                   </div>
-                </form>
+                </form> {% endcomment %}
               </div>
             </div>
           </div>

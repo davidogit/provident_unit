@@ -241,26 +241,47 @@ class Contribution(models.Model):
 
     # Saving every contribution for user whenever a contribution is made
     def save(self, *args, **kwargs):
+        """
+        Saving every contribution for user whenever a contribution is made
+        """
+        from decimal import Decimal
+        from django.db.models import Sum
+    
     # Extract month and year from the contribution_date
         if self.contribution_date:
-            self.month = self.contribution_date.month
-            self.year = self.contribution_date.year
+            self.month = str(self.contribution_date.month)
+            self.year = str(self.contribution_date.year)
         
-        # calculate sum of contribution on save
+        # Convert all amounts to Decimal before arithmetic (FIXES THE DECIMAL+FLOAT ERROR)
+        employee_amt = Decimal(str(self.employee_amount)) if self.employee_amount is not None else Decimal('0.00')
+        employer_amt = Decimal(str(self.employer_amount)) if self.employer_amount is not None else Decimal('0.00')
+        retro_employee_amt = Decimal(str(self.retro_employee_amount)) if self.retro_employee_amount is not None else Decimal('0.00')
+        retro_employer_amt = Decimal(str(self.retro_employer_amount)) if self.retro_employer_amount is not None else Decimal('0.00')
+        
+        # Calculate sum of contribution using safe Decimal arithmetic
         self.total_contribution = (
-            self.employee_amount+
-            self.employer_amount+
-            self.retro_employee_amount+
-            self.retro_employer_amount
+            employee_amt +
+            employer_amt +
+            retro_employee_amt +
+            retro_employer_amt
         )
 
         # Save the main object first to ensure total_contributions is saved
         super().save(*args, **kwargs)
 
-        # Check if member exists, then update member.amount field
+        # FIXED: Update member.contributions (not member.amount which doesn't exist)
         if self.member:
-           self.member.amount = self.total_contribution
-           self.member.save()
+            # Calculate total approved contributions for this member
+            total_member_contributions = Contribution.objects.filter(
+                member=self.member,
+                approved_contribution=True
+            ).aggregate(
+                total=Sum('total_contribution')
+            )['total'] or Decimal('0.00')
+            
+            # Update the member's contributions field
+            self.member.contributions = total_member_contributions
+            self.member.save(update_fields=['contributions'])
 
 
 # MEMBERSHIP MODEL FOR STAFF
