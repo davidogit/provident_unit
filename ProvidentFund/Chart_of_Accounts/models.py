@@ -284,7 +284,7 @@ class AccountingService:
                 tenant=self.tenant,
                 name=action,
                 scheme=self.scheme
-            )
+            ).first()
         else:
             return AccountMapping.objects.filter(
                 tenant=self.tenant,
@@ -396,7 +396,6 @@ class AccountingService:
 
         # Get the account mapping for the entry
         account_mapping = self.__get_account_mapping(action)
-
         if not account_mapping:
             raise ValidationError(f'No account mapping found for action: {action}')
 
