@@ -7,10 +7,11 @@ from django.shortcuts import render
 from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse
 from django.views.generic import ListView,CreateView,View,TemplateView,DetailView,UpdateView,DeleteView
+from openpyxl.styles.builtins import total
 from pyexpat.errors import messages
 
-from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule, build_amortization_schedule, \
-    LoanTopUp
+from Member.tasks import send_single_mail
+from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule, build_amortization_schedule,LoanTopUp
 from .forms import LoanForm, LoanTypeForm, LoanTopUpRequestForm
 from django.utils.decorators import method_decorator
 from Member.decorators import tenant_login_required,tenant_required
@@ -263,7 +264,7 @@ class LoanTypeDetail(DetailView):
 
         loan_type = self.get_object()
 
-        if(tenant and loan_type.tenant != tenant):
+        if tenant and loan_type.tenant != tenant:
             return JsonResponse({
                 'status':'error',
                 'message':'Invalid request - Access denied'
@@ -320,7 +321,19 @@ class HandleLoanSubmission(View):
                 'status':'error',
                 'message':'Could not find specified loan type.'
             })
-        
+
+        # check if the member has a pending loan application
+        pending_loan_application = LoanApplication.objects.filter(
+            tenant=tenant,
+            user=member,
+            status='PENDING'
+        )
+        if pending_loan_application.exists():
+            return JsonResponse({
+                'status':'error',
+                'message':'You already have a pending loan application. You cannot apply for another loan at this time.'
+            })
+
         # Eligibility Logic
         #TODO ensure min and max amount
 
@@ -1008,7 +1021,7 @@ class DisbursedLoanDetailView(DetailView):
 LOAN PAYMENT VIEW
 --FULL/PARTIAL REPAYMENT
 """
-class AdminLoanPaymentView(View):
+class LoanPaymentHandler(View):
     """
     View to handle loan payments by an admin user.
 
@@ -1031,7 +1044,7 @@ class AdminLoanPaymentView(View):
         loan_id = self.request.POST.get('loan_id')
         payment_amount_str = self.request.POST.get('payment_amount')
         payment_type = self.request.POST.get('payment_type')  # 'full' or 'partial'
-        user = self.request.user
+        user = getattr(request, 'user', None)
         print(f"USER: {user}")
 
         try:
@@ -1105,13 +1118,21 @@ class AdminLoanPaymentView(View):
                         payment_type='full'
                     )
                     # Mark all amortization installments as paid
+                    # TODO: David: Add third party payment gateway integration here
+                    # TODO: if payment is successful, then proceed to handle full repayment
                     loan.handle_full_repayment()
+                    subject = "Loan Repayment Confirmation"
+                    message = (f"Your loan with ID: {loan.id} has been fully repaid. "
+                               "Loan has been marked as repaid. "
+                               "All installments have been marked as paid. "
+                               "Thank you.")
+                    email = user.email
+                    send_single_mail.delay(email,message,subject)
             except Exception as e:
                 return JsonResponse({
                     'status': 'error',
                     'message': f'Error updating loan status: {e}'
                 })
-
             return JsonResponse({
                 'status': 'success',
                 'message': 'Loan has been fully repaid and marked as PAID.'
@@ -1177,6 +1198,14 @@ class AdminLoanPaymentView(View):
                         payment_type='partial'
                     )
 
+                    # TODO: David: Add third party payment gateway integration here
+                    # TODO: if payment is successful, then proceed to handle full repayment
+                    subject = "Partial Loan Repayment Confirmation"
+                    message = (f"Your partial payment of: {payment_amount} for loan with ID: {loan.id} has been received. "
+                               "The outstanding principal has been updated. ")
+                    email = user.email
+                    send_single_mail.delay(email,message,subject)
+
                     # Rebuild amortization schedule from today using a new principal
                     build_amortization_schedule(
                         loan=loan,
@@ -1197,7 +1226,7 @@ class AdminLoanPaymentView(View):
 
         return JsonResponse({
             'status': 'error',
-            'message': 'Invalid payment type. Must be "full", "partial", or "installment".'
+            'message': 'Invalid payment type. Must be "full", "partial".'
         })
 
 
@@ -1377,7 +1406,7 @@ class FetchLoanDetails(View):
         })
 
 
-class MemberLoanDetailView(ListView):
+class MemberLoanDetailView(DetailView):
     """
     A view to display the loan amortization schedule for a member.
 
@@ -1406,43 +1435,59 @@ class MemberLoanDetailView(ListView):
         Provides additional context data for the template, including loan
         information for the given tenant, member, and loan ID.
     """
-    model = LoanAmortizationSchedule
+    model = LoanApplication
     template_name = 'member_loan_details.html'
-    context_object_name = 'loan_amortization_schedule'
-    paginate_by = 12
+    context_object_name = 'loan'
 
-    def get_queryset(self):
+    def get_object(self, queryset=None):
         tenant = getattr(self.request, 'tenant', None)
         member = getattr(self.request.user, 'member', None)
-        loan_id = self.kwargs.get('loan_id')
+        loan_id = self.kwargs.get('pk')
 
         if tenant and member and loan_id:
-            print("Fetching Loan Amortization Schedule for Loan ID:", loan_id)
             return self.model.objects.filter(
                 tenant=tenant,
                 user=member,
-                loan__id=loan_id
-            ).order_by('installment_number')
+                id=loan_id,
+                approved=True
+            ).first()
 
         return self.model.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        tenant = getattr(self.request, 'tenant', None)
-        member = getattr(self.request.user, 'member', None)
-        loan_id = self.kwargs.get('loan_id')
+        loan = self.get_object()
 
-        print(f"Amortizations: {self.get_queryset()}")
+        now = timezone.now()
+        next_payment = LoanAmortizationSchedule.objects.filter(
+            loan=loan,
+            is_paid=False,
+            installment_date__gte=now.date()
+        ).order_by('installment_date').first()
 
-        if tenant and member and loan_id:
-            loan = LoanApplication.objects.filter(
-                tenant=tenant,
-                user=member,
-                id=loan_id
-            ).first()
+        next_payment_date = next_payment.installment_date if next_payment else None
 
-            if loan:
-                context['loan'] = loan
+        # calculate loan metrics
+        repayments = loan.loan_repayments.all().aggregate(
+            total_principal=Sum('principal_paid'),
+            total_interest=Sum('interest_paid')
+        )
+        total_interest = repayments['total_interest'] or Decimal('0.00')
+        total_principal = repayments['total_principal'] or Decimal('0.00')
+
+        total_repayments = Decimal(total_interest + total_principal).quantize(Decimal('0.00'))
+
+        total_loan_amount = loan.amount_requested + loan.interest_amount
+
+        context['next_payment_date'] = next_payment_date
+        context['total_repayments'] = total_repayments
+        context['outstanding_balance'] = (total_loan_amount - total_repayments).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        context['percentage_paid'] = Decimal(((total_repayments / total_loan_amount) * 100)).quantize(Decimal("0.01"), ROUND_HALF_UP) if total_loan_amount > 0 else Decimal('0.00')
+
+        if loan:
+            context['amortization_schedule'] = loan.amortization_schedule.all()
+        else:
+            context['amortization_schedule'] = []
 
         return context
 

@@ -164,7 +164,7 @@ class MemberLoginView(TemplateView):
         generated_otp = generate_unique_code()
 
         # send generated OTP via email
-        send_otp_code.delay(authenticated_user.email,EMAIL_HOST_USER,generated_otp)
+        send_otp_code.delay(authenticated_user.email,generated_otp)
 
         # Append OTP to session
         self.request.session['otp_token'] = generated_otp

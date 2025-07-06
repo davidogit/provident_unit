@@ -23,8 +23,24 @@ logger = logging.getLogger(__name__)
 # Task to check box for inactive users
 @shared_task(bind=True)
 def check_active_status_for_user(self):
+    """
+    Check and update the inactive status for users who belong to members that meet the criteria.
+
+    This task checks for members who are not scheme-approved and whose registration date exceeds
+    a certain threshold (14 days). It fetches the associated users and updates their inactive status
+    to True.
+
+    Args:
+        self: The task instance automatically passed in when the function is bound.
+
+    Raises:
+        Does not explicitly handle raised errors.
+
+    Returns:
+        None
+    """
     
-    # loop throug each member and set the checkbox if required
+    # loop through each member and set the checkbox if required
     cut_off_date = timezone.now() - timedelta(14) #this will subtract 90 days from current date and returns a DateTime value
     # filters members who are not yet scheme-approved and were registered more than 90 days ago.
     members_to_update = Member.objects.filter(scheme_approval=False, registration_date__lte=cut_off_date)
@@ -47,15 +63,28 @@ def check_active_status_for_user(self):
 
 # Task to delete Inactive users
 @shared_task(bind=True)
-@transaction.atomic #ensures that when there is an error in sending a mail to one person the process does not update any information for other users
+@transaction.atomic
 def delete_inactive_users(self):
+    """
+    Deletes inactive user accounts and sends notification emails. This task filters inactive users based on
+    their status, sends an email to each user about the deletion, and then removes those users from the
+    database. The method ensures the operation is atomic and logs any issues encountered during execution.
+
+    Args:
+        self: The task instance passed when invoked as a Celery-shared task.
+
+    Raises:
+        SMTPException: If sending email notifications fails for any user due to email-specific errors.
+        Exception: If any other error occurs during the deletion or email sending process, it is logged but not re-raised.
+    """
 
     try:
         # Filter inactive members based on their status
         inactive_users= get_user_model().objects.filter(inactive_status=True)
 
-        # For every member who is about to be deleted a message is sent to notify them on the deletion of their account
+        # For every member who is about to be deleted, a message is sent to notify them on the deletion of their account
         message_list = []
+        message = ""
         for user in inactive_users:
             try:
                 message=(
@@ -65,7 +94,7 @@ def delete_inactive_users(self):
                         user.email,
                 )
             except SMTPException as e:
-                logger.error(f'An unexpected error occured when trying to send an email to {user.email} error: {e}')
+                logger.error(f'An unexpected error occurred when trying to send an email to {user.email} error: {e}')
             message_list.append(message)
 
         try:
@@ -78,7 +107,7 @@ def delete_inactive_users(self):
             # Delete members
             inactive_users.delete()
         except Exception as e:
-            logger.error('An error occured while deleting inactive users.')
+            logger.error(f'An error occurred while deleting inactive users.: {e}')
 
     except Exception as e:
         logger.error(f'Error deleting dormant users from database : {e}')
@@ -87,7 +116,23 @@ def delete_inactive_users(self):
 
 # Task to send OTP to members upon login
 @shared_task(bind=True)
-def send_otp_code(self,email,host,otp):
+def send_otp_code(self,email,otp):
+    """
+    Send OTP code via an email task.
+
+    This function sends a One-Time Password (OTP) code to a specified email
+    address using the configured email backend. If any exception occurs
+    during the sending process, it is logged for further investigation.
+
+    Args:
+        self: The task instance (automatically provided by Celery).
+        email (str): The recipient's email address where the OTP should
+            be sent.
+        host: The host performing the operation (typically an identifier
+            for debugging/logging purposes).
+        otp (str): The actual One-Time Password (OTP) to be sent in the
+            email.
+    """
     # Send OTP to user via email
     try:
         send_mail(
@@ -98,15 +143,62 @@ def send_otp_code(self,email,host,otp):
             fail_silently=False,
         )
     except SMTPException as smtp:
-        logger.error(f'An error occured sending OTP: {smtp}')
+        logger.error(f'An error occurred sending OTP: {smtp}')
         return
     except Exception as e:
-        logger.error(f'An error occured sending OTP: {e}')
+        logger.error(f'An error occurred sending OTP: {e}')
         return
 
 
 @shared_task(bind=True)
+def send_single_mail(self, recipient_email, message, subject):
+    """
+    A task function to email a single recipient using Django's `send_mail` function.
+    The task ensures logging of the process, including errors during execution.
+
+    Parameters:
+        self: Any
+            The task instance, required for binding to shared_task.
+        recipient_email: str
+            The email address of the recipient.
+        message: str
+            The content of the email to be sent.
+        subject: str
+            The subject of the email to be sent.
+    """
+    logger.info(f'Sending mail to: {recipient_email}')
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=EMAIL_HOST_USER,
+            recipient_list=[recipient_email],
+            fail_silently=False,
+        )
+    except SMTPException as smtp:
+        logger.error(f'An SMTP error occurred while sending mail: {str(smtp)}')
+    except Exception as e:
+        logger.error(f'An error occurred while trying to send mail: {str(e)}')
+
+
+
+@shared_task(bind=True)
 def gen_send_email(self,recepient,message,subject):
+    """
+    A task function to send emails to multiple recipients using the Django `send_mass_mail`
+    function. Emails are sent with a common subject and message body to the given list of
+    recipients. The task ensures logging of the process, including errors during execution.
+
+    Parameters:
+        self: Any
+            The task instance, required for binding to shared_task.
+        recipient: list[str]
+            A list of email addresses to which the emails will be sent.
+        message: str
+            The content of the email to be sent.
+        subject: str
+            The subject of the email to be sent.
+    """
     logger.info(f'Sending mails to: {recepient}')
     from_email=EMAIL_HOST_USER
     message_list = []
@@ -124,9 +216,9 @@ def gen_send_email(self,recepient,message,subject):
             fail_silently=False
         )
     except SMTPException as smtp:
-        logger.error(f'An SMTP error occured: {str(smtp)}')
+        logger.error(f'An SMTP error occurred while sending mass mail: {str(smtp)}')
     except Exception as e:
-        logger.error(f'An error occured while trying to send mass mail: {str(e)}')
+        logger.error(f'An error occurred while trying to send mass mail: {str(e)}')
 
 
 

@@ -113,7 +113,7 @@ class StaffAPI(models.Model):
     
     @property
     def total_amount(self):
-        return (self.contributions+self.actual_amount)
+        return self.contributions+self.actual_amount
     
     # @property
     # def amount(self):
