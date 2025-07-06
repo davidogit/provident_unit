@@ -152,7 +152,7 @@ class LoanApplication(models.Model):
     disbursed = models.BooleanField(
         default=False
     )
-    disbursement_date = models.DateTimeField(
+    disbursement_date = models.DateField(
         null=True,
         blank=True,
         help_text='Date loan was paid to Member.'
@@ -345,7 +345,7 @@ class LoanApplication(models.Model):
         self.status = 'APPROVED'
         self.approved_by = user
         self.approved = True
-        self.approval_date = timezone.now()
+        self.approval_date = timezone.now().date()
         self.save()
 
 
@@ -602,7 +602,7 @@ class LoanAmortizationSchedule(models.Model):
         default='PENDING',
         help_text='Current status of this installment payment'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateField(auto_now_add=True)
 
     def __str__(self):
         return f'Loan: {self.loan.id} - Installment {self.installment_number}'

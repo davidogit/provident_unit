@@ -17,10 +17,10 @@ urlpatterns = [
     path('delete-loan-type/<int:pk>/', views.LoanTypeDelete.as_view()),
     path('<int:staff_id>/loan_types/', views.MemberLoanTypeView.as_view(), name='member_loan_type'),
     path('fetch_loan_type_details/', views.FetchLoanTypeDetails.as_view(), name='fetch_loan_types'),
-    path('<int:staff_id>/member-loan-details/<int:loan_id>/', views.MemberLoanDetailView.as_view(), name='member_loan_details'),
+    path('<int:staff_id>/member-loan-details/<int:pk>/', views.MemberLoanDetailView.as_view(), name='member_loan_details'),
     path('disbursed-loans/', views.DisbursedLoans.as_view(), name='disbursed_loans'),
     path('disbursed-loan-details/<int:pk>/', views.DisbursedLoanDetailView.as_view(), name='disbursed_loan_details'),
-    path('admin-loan-repayment/', views.AdminLoanPaymentView.as_view(), name='admin_loan_repayment'),
+    path('admin-loan-repayment/', views.LoanPaymentHandler.as_view(), name='admin_loan_repayment'),
     path('reject-loan/', views.RejectLoanApplication.as_view(), name='reject_loan'),
     path('loan-topup/', views.LoanTopUpRequestView.as_view(), name='loan_topup'),
 ]

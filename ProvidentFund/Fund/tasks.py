@@ -24,6 +24,28 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True)
 def member_interest(self):
+    """
+    Handles the calculation of profits for members based on their contributions and allocated interests
+    in various schemes across tenants. This task iterates through each tenant, their investment schemes,
+    and active investments to compute and update the estimated profits for memberships within the applicable schemes.
+
+    Calculations are performed using the contributions of each staff member relative to the total contributions
+    and the allocated interest percentages for the corresponding schemes. Results of the calculations are stored
+    within the membership model's `estimated_profit` field.
+
+    Errors encountered during the calculation process are logged, and execution continues for the next available
+    scheme or member.
+
+    Parameters:
+        self (BaseTask): Represents the task instance that is bound to the shared_task decorator.
+
+    Returns:
+        str or None: A success message indicating calculation completion with the current date in case of successful execution.
+        If any errors occur and the task fails, returns None.
+
+    Raises:
+        Exception: If an unhandled exception is encountered during the execution, it logs the exception.
+    """
     try:
         tenants = Tenant.objects.prefetch_related('investment_schemes','staff_api','membership') #prefetch schemes and staffs
         logger.info(f'Starting profit calculation for {tenants.count()} tenants.')
@@ -95,7 +117,7 @@ def member_interest(self):
                                     )
                                 except Exception as e:
                                     membership = None
-                                    logger.info(f'Membership for: {member.first_name} {member.last_name} not found')
+                                    logger.info(f'Membership for: {member.first_name} {member.last_name} not found: {e}')
 
                                 if membership:
                                     # Check date user joined scheme
@@ -125,19 +147,40 @@ def member_interest(self):
         return f'Profit successfully calculated for {timezone.now().date()}'
     except Exception as e:
         logger.error(f'Error in member_interest task: {str(e)}', exc_info=True)
-        return
+        return None
 
 
 # Task to calculate actual profit
 @shared_task(bind=True)
 def actual_member_interest(self,tenant_id,scheme_id,inv_id):
+    """
+    Calculates and updates the actual interest allocation for members linked to a specific
+    investment scheme and tenant. The function processes information like tenants,
+    investment schemes, members’ contributions, memberships, and investment details
+    to compute and distribute interest amounts to individual members based on their
+    contributions.
+
+    Parameters:
+        self: Self reference to denote instance binding by Celery task.
+        tenant_id (int): The ID of the tenant associated with the operation.
+        scheme_id (int): The ID of the investment scheme associated with the operation.
+        inv_id (int): The ID of the investment record to process.
+
+    Raises:
+        Returns None if the tenant, scheme, or investment records cannot be fetched.
+        Logs errors that occur during processing, particularly when fetching related
+        members, investments, memberships, or contributions.
+
+    Returns:
+        None
+    """
     try:
         tenant = get_object_or_404(Tenant, id=tenant_id)
         scheme = get_object_or_404(InvestmentScheme, id=scheme_id)
     except Exception as e:
-        logger.error(f'An error occured fetching Tenant and scheme: {str(e)}')
+        logger.error(f'An error occurred fetching Tenant and scheme: {str(e)}')
         return
-    # Use reverse relationship b/n staff and contribution to calculate each members contribution relating to the scheme
+    # Use reverse relationship b/n staff and contribution to calculate each member contribution relating to the scheme
     try:
         members = StaffAPI.objects.filter(
             tenant=tenant,
@@ -145,7 +188,7 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
             exited_flag=False
         ).annotate(total_contribution=Sum('contribution__total_contribution',filter=Q(contribution__approved_contribution=True,contribution__investment_scheme=scheme), output_field=DecimalField()))
     except Exception as e:
-        logger.error(f'An error occured while fetching members for {tenant}: {str(e)}')
+        logger.error(f'An error occurred while fetching members for {tenant}: {str(e)}')
         return
 
     # Get MEMBERSHIPS
@@ -155,7 +198,7 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
             scheme=scheme
         )
     except Exception as e:
-        logger.error(f'An error occured fetching Memberships: {str(e)}')
+        logger.error(f'An error occurred fetching Memberships: {str(e)}')
         return
 
     try:
@@ -167,7 +210,7 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
             approved=True
         )
     except Exception as e:
-        logger.error(f'An error occured fetching Investments for {tenant}: {str(e)}')
+        logger.error(f'An error occurred fetching Investments for {tenant}: {str(e)}')
         return
     
     # Get member allocation percentage
@@ -181,7 +224,7 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
     try:
         total_contribution = Contribution.objects.filter(investment_scheme__tenant=tenant,investment_scheme=scheme,approved_contribution=True).aggregate(total=Sum('total_contribution'))['total'] or Decimal(0.0)
     except Exception as e:
-        logger.error(f'An error occured fetching contributions. {str(e)}')
+        logger.error(f'An error occurred fetching contributions. {str(e)}')
         return
 
     logger.info(f'Total: {total_contribution}')
@@ -218,7 +261,7 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
                 
                 logger.info('STEP 4')
 
-                # Check if user was approved before an investment was made
+                # Check if a user was approved before an investment was made
                 if subscription_date is not None and subscription_date.date() < inv.interest_start_date:
                     
                     interest_on_inv = (contribution / total_contribution) * member_allocation
@@ -241,7 +284,7 @@ def actual_member_interest(self,tenant_id,scheme_id,inv_id):
     except Exception as e:
         logger.error(f'Error: {e}')
 
-        # If there is any error uncheck investment to make sure the error does not affect the investment status
+        # If there is any error, uncheck investment to make sure the error does not affect the investment status
         inv.approval_status = False
         inv.save()
         logger.info('Changes were not saved due to an error')
@@ -256,6 +299,31 @@ STATUS_NOT_STARTED = 'Not Start'
 
 @shared_task(bind=True)
 def update_investment_statuses(self):
+    """
+    This task function updates the statuses of investment records in the database based on
+    specific conditions, such as the current date in relation to the investment's interest
+    start and end dates. It processes and evaluates investment records for updates, executes
+    maturity-related accounting operations, and sends notifications to tenants. The function
+    handles errors gracefully, logs incidents, and ensures atomicity for database transactions.
+
+    Arguments:
+        self (Task): The task instance passed automatically by Celery.
+
+    Returns:
+        str: Returns 'investments_updated' on successful execution of the task, or None when
+             an error occurs.
+
+    Raises:
+        Exception: Any exceptions encountered during data fetching, processing, or database
+                   operations are logged internally but not re-raised.
+
+    Note:
+        - This is a Celery shared task and should be executed in an asynchronous context.
+        - The accounting service and email functionality must be correctly configured for this
+          task to work properly.
+        - Make sure proper database indexes and optimizations are applied to handle the filter
+          queries efficiently in production environments.
+    """
     current_date = timezone.now().date()
 
     try:
@@ -344,12 +412,28 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 @shared_task(bind=True)
 def track_page_visits(self,user_id,path,view_name,user_ip,*args):
+    """
+    Tracks and logs page visits by a user. Records details such as the user ID,
+    URL path, view name, and user IP address in the audit trail. Handles potential
+    errors in fetching user information and saving the audit trail data.
+
+    :param self: The Celery task instance.
+    :param user_id: The ID of the user who visited the page.
+    :type user_id: int
+    :param path: The URL path of the visited page.
+    :type path: str
+    :param view_name: The name of the view associated with the page.
+    :type view_name: str
+    :param user_ip: The IP address of the user.
+    :type user_ip: str
+    :param args: Additional arguments (if any).
+    :type args: tuple
+    """
     
     try:
-        # print(user_id)
         user = get_object_or_404(get_user_model(), pk=int(user_id))
-    except (ValueError,TypeError) as e:
-        logger(f'Error {e}')
+    except (ValueError,TypeError,Exception) as e:
+        logger.error(f'Error {e}')
         return
 
     try:
@@ -363,7 +447,7 @@ def track_page_visits(self,user_id,path,view_name,user_ip,*args):
             name = user.username
         )
     except Exception as e:
-        logger.error(f'An error occured while creating AuditTrail: {str(e)}')
+        logger.error(f'An error occurred while creating AuditTrail: {str(e)}')
         return
 
 
@@ -384,6 +468,16 @@ def rollover_inv_creation(self,**kwargs):
     debit_or_credit_amount = kwargs.get('debit_or_credit_amount')
     compounding_frequency = kwargs.get('compounding_frequency')
     duration = kwargs.get('duration')
+
+    all_fields = [
+        tenant_id, scheme_id, inv_name, rollover_rate, rollover_principal,
+        start_date, maturity_date, inv_type, account_type, account_number,
+        counter, debit_or_credit, debit_or_credit_amount, compounding_frequency, duration
+    ]
+
+    if not all(all_fields):
+        logger.info('One or more required fields are missing for rollover investment creation.')
+        return
 
     try:
         tenant = get_object_or_404(Tenant, id=tenant_id)
@@ -427,7 +521,7 @@ def rollover_inv_creation(self,**kwargs):
 
             logger.info(f'Roll over for inv {inv_name} added')
     except Exception as e:
-        logger.info(f'Inv Adding Error: {e}')
+        logger.info(f'Error occurred while trying to roll over investment: {e}')
         return
 
 
@@ -440,6 +534,11 @@ def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
     tenant = Tenant.objects.get(id=tenant_id)
     month = month
     year = year
+
+    if not tenant or not scheme_id or not month or not year:
+        # TODO: Maybe rollback contribution validation if this fails
+        logger.error('Invalid parameters provided for contribution calculation.')
+        return
 
 
     # Annotate month's contribution to staff queryset
@@ -469,13 +568,39 @@ def calculate_staff_contribution(self,scheme_id,tenant_id,month,year):
         StaffAPI.objects.bulk_update(staff_updates,['contributions'])
         logger.info(f'Updated {len(staff_updates)} staffs')
     else:
-        logger.infor('No staff contributions to update')
+        logger.info('No staff contributions to update')
 
 
 
 # SCHEDULED PAYOUTS ON DUE DATES + NOTIFY BANK TO PROCESS PAYMENTS
 @shared_task(bind=True)
 def run_scheduled_payments_and_send_sheet_to_bank_for_payment(self,schedule_payout_date_id):
+    """
+    Defines a task to process scheduled payments and generate an Excel sheet to send to a specified
+    bank for payouts. It involves gathering information about members under a specified scheme,
+    calculating payouts, generating an appropriate file, sending the file via email, and updating
+    member balances.
+
+    Arguments:
+        self: Reference to the task instance when used as a Celery shared task.
+        schedule_payout_date_id (int): ID of the scheduled payout date object.
+
+    Raises:
+        ObjectDoesNotExist: Raised if the scheduled payment date does not exist.
+        SMTPException: Raised if there are issues sending the email containing the generated sheet.
+        Exception: General exceptions caught during operations like database interactions or email
+                   sending.
+
+    Note:
+        - The method retrieves and processes data based on the entries in the ScheduledPaymentDates
+          and Membership models.
+        - It performs transactional updates to member balances on successful payout processing.
+        - The generated spreadsheet includes details such as the bank, branch, account number, and the
+          corresponding payout amount for each member.
+        - Payout details are emailed to the associated bank as an attachment.
+        - Specific exception handling ensures abnormal interruptions are logged and do not propagate
+          to break the Celery task workflow.
+    """
     # Get filter all due schedule_payment dates
     now = timezone.now().date()
     # Get Scheduled payout date
@@ -487,11 +612,11 @@ def run_scheduled_payments_and_send_sheet_to_bank_for_payment(self,schedule_payo
         logger.error('Scheduled date not found.')
         return
     except Exception as e:
-        logger.error(f'An error occured getting schedule dates: {str(e)}')
+        logger.error(f'An error occurred getting schedule dates: {str(e)}')
         return
     
     if not scheduled_date.bank:
-        logger.error(f'No bank acssociated with the schedule date: {scheduled_date}')
+        logger.error(f'No bank associated with the schedule date: {scheduled_date}')
         return
     
 
@@ -527,11 +652,11 @@ def run_scheduled_payments_and_send_sheet_to_bank_for_payment(self,schedule_payo
                     'amount':payout_amount
                 }
             )
-            # keep track of total amount
+            # keep track of the total amount
             total_amount += payout_amount
     
     if members_to_be_processed:
-        # Genereate excel sheet
+        # Generate excel sheet
         wb = Workbook()
         sheet = wb.active
         sheet['A1'] = 'Bank'
@@ -547,7 +672,7 @@ def run_scheduled_payments_and_send_sheet_to_bank_for_payment(self,schedule_payo
                 m['amount']
             ])
 
-        # Add source bank details to sheet
+        # Add source bank details to the sheet
         sheet.append([""]) #Empty row
         sheet.append([""])
         sheet.append(['Total Amount:','',f'{total_amount}'])
@@ -567,20 +692,20 @@ def run_scheduled_payments_and_send_sheet_to_bank_for_payment(self,schedule_payo
                 name = file_name
             )
         except Exception as e:
-            logger.error(f'An error occured creating Bank File object: {str(e)}')
+            logger.error(f'An error occurred creating Bank File object: {str(e)}')
             return
 
-        # Save file to bank sheet object
+        # Save file sent to bank the sheet object
         bank_sheet_object.excel_file.save(file_name,ContentFile(output.read()), save=True)
 
-        # Get file path
+        # Get the file path
         file_path = bank_sheet_object.excel_file.path if bank_sheet_object.excel_file else None
 
         if not file_path:
             logger.error('File path not found. Skipping email attachment')
             return
         
-        # Send email to bank with attached file
+        # Send email to bank with the attached file
         try:
             email = EmailMessage(
                 subject='Request to Pay',
@@ -596,10 +721,10 @@ def run_scheduled_payments_and_send_sheet_to_bank_for_payment(self,schedule_payo
             logger.info(f'Could not send mail due to an SMTP Error: {str(e)}')
             return
         except Exception as e:
-            logger.error(f'An error occured while sending mail: {str(e)}')
+            logger.error(f'An error occurred while sending mail: {str(e)}')
             return
         
-        # After email sent successfully Update all members account balances accordingly
+        # After the email sent successfully Update all the member account balances accordingly
         for m in member_to_update:
             amount = Decimal((percentage/Decimal(100))*m.total_earnings)
             m.total_earnings -= amount
@@ -609,7 +734,7 @@ def run_scheduled_payments_and_send_sheet_to_bank_for_payment(self,schedule_payo
             
             logger.info('Member balances updated successfully.')
         except Exception as e:
-            logger.error(f'An error occured while updating member balances: {str(e)}')
+            logger.error(f'An error occurred while updating member balances: {str(e)}')
             return
 
 
@@ -623,7 +748,19 @@ def run_scheduled_payments_and_send_sheet_to_bank_for_payment(self,schedule_payo
 @shared_task(bind=True)
 def notify_tenant_three_days_to_scheduled_payment(self):
     """
-    Notify designated staffs about tenants' upcoming payments scheduled in 3 days.
+    Send notifications to tenants three days before their scheduled payment dates.
+
+    This task fetches investment schemes with associated scheduled payment dates, checks if
+    any payment is scheduled within the next three days, and sends reminder emails to the tenants.
+    Additional task execution to process the scheduled payments and preparation of bank sheets
+    is also triggered within this function.
+
+    Parameters:
+    self (Task): The celery task instance (bind=True).
+
+    Raises:
+    SMTPException: If an error occurs while sending mass emails due to SMTP issues.
+    Exception: For any generic errors during execution.
     """
     # Fetch schemes with related scheduled payment dates
     schemes = InvestmentScheme.objects.prefetch_related('scheduledPaymentDate').all()
@@ -669,6 +806,7 @@ def notify_tenant_three_days_to_scheduled_payment(self):
                 if 0 < days_until_payment <= 3:
 
                     # Get related emails related to the schedule date
+                    email_list = None
                     try:
                         email_list = scheduled_date.tenant.tenant_event_notification.filter(
                                 event='upcoming_payment_reminder'
@@ -699,11 +837,11 @@ def notify_tenant_three_days_to_scheduled_payment(self):
                 )
             except SMTPException as smtp_error:
                 logger.error(
-                    f'SMTP Error occured when trying to send mass mail: {smtp_error}'
+                    f'SMTP Error occurred when trying to send mass mail: {smtp_error}'
                 )
             except Exception as e:
                 logger.error(
-                    f'An error occured: {str(e)}'
+                    f'An error occurred: {str(e)}'
                 )
     
 
@@ -712,6 +850,21 @@ def notify_tenant_three_days_to_scheduled_payment(self):
 from Member.models import WithdrawalBatch
 @shared_task(bind=True)
 def send_excel_sheet_to_bank_for_payment(self,batch_id):
+    """
+    Performs the task of sending an Excel sheet to the bank for payment, which contains
+    withdrawal details from approved batches. The function also updates member balances
+    based on the related withdrawals.
+
+    Arguments:
+        self: Current task instance, passed automatically when the function is executed within Celery.
+        batch_id (list[int]): A list of IDs for withdrawal batches to be processed.
+
+    Raises:
+        Exception: If an error occurs during database access, email sending, or file operations.
+
+    Returns:
+        None
+    """
     try:
         batches = WithdrawalBatch.objects.filter(
             id__in = batch_id,
@@ -720,7 +873,7 @@ def send_excel_sheet_to_bank_for_payment(self,batch_id):
             third_approval=True
         ).prefetch_related('withdrawal_request')
     except Exception as e:
-        logger.error(f'An error occured: {str(e)}')
+        logger.error(f'An error occurred: {str(e)}')
         return
     
     if not batches.exists():
@@ -730,7 +883,7 @@ def send_excel_sheet_to_bank_for_payment(self,batch_id):
     # List of members to be updated(Balances)
     members_to_be_updated_withdrawals = []
     for batch in batches:
-        # Create new sheet for every batch
+        # Create a new sheet for every batch
         new_sheet = Workbook()
         sheet = new_sheet.active
         sheet['A1'] = 'Bank'
@@ -739,7 +892,7 @@ def send_excel_sheet_to_bank_for_payment(self,batch_id):
         sheet['D1'] = 'Amount'
 
         withdrawals = batch.withdrawal_request.all()
-        # Get details of every withdrawal and append to worksheet
+        # Get details of every withdrawal and append to the worksheet
         if not withdrawals:
             logger.info('No withdrawals found.')
             return
@@ -750,12 +903,12 @@ def send_excel_sheet_to_bank_for_payment(self,batch_id):
             account_number = w.staff.bank_account_number
             amount = w.amount
 
-            # Append members to be updated to list
+            # Append members to be updated to the list
             members_to_be_updated_withdrawals.append(w)
-            # Append staff details to worksheet
+            # Append staff details to the worksheet
             sheet.append([bank,branch,account_number,amount])
         
-        # Add source bank details to sheet
+        # Add source bank details to the sheet
         sheet.append([""]) #Empty row
         sheet.append([""]) #Empty row
         sheet.append(['Total Amount:','',f'{batch.total_amount}'])
@@ -780,7 +933,7 @@ def send_excel_sheet_to_bank_for_payment(self,batch_id):
 
         
 
-        # Send email to bank with attached file
+        # Send email to bank with an attached file
         try:
             email = EmailMessage(
                 subject='Request to Pay',
@@ -796,7 +949,7 @@ def send_excel_sheet_to_bank_for_payment(self,batch_id):
             logger.error(f'Could not send mail due to an SMTP Error: {str(e)}')
             return
         except Exception as e:
-            logger.error(f'An error occured while sending mail: {str(e)}')
+            logger.error(f'An error occurred while sending mail: {str(e)}')
             return
         
         # Update member balances respectfully.
@@ -808,6 +961,6 @@ def send_excel_sheet_to_bank_for_payment(self,batch_id):
                     membership.save()
                 logger.info(f'Member balances updated successfully for tenant: {batch.tenant.name}')
         except Exception as e:
-            logger.error(f'An error occured: {str(e)}')
+            logger.error(f'An error occurred: {str(e)}')
             return
-    logger.info(f'Payment invoice sent to bank. Tenant:{batch.tenant}')
+        logger.info(f'Payment invoice sent to bank. Tenant:{batch.tenant}')
