@@ -86,7 +86,6 @@ class LoanType(models.Model):
 """
 LOAN APPLICATIONS-  Keeps track of all loan applications made
 """
-# Model for Loan tracking
 class LoanApplication(models.Model):
     loan_type = models.ForeignKey(
         LoanType,
@@ -152,6 +151,13 @@ class LoanApplication(models.Model):
     disbursed = models.BooleanField(
         default=False
     )
+    disbursed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='disbursed_loans',
+        null=True,
+        blank=True
+    )
     disbursement_date = models.DateField(
         null=True,
         blank=True,
@@ -205,7 +211,7 @@ class LoanApplication(models.Model):
     )
 
     def __str__(self):
-        return f'Loan application - {self.user.user.username} - Amount- {self.amount_requested}.'
+        return f'Loan application: id: {self.id} - {self.user.user.username} - Amount- {self.amount_requested}.'
 
 
     @property
@@ -258,7 +264,6 @@ class LoanApplication(models.Model):
             Decimal: The disbursement amount rounded to two decimal places.
         """
         return Decimal(self.amount_requested - self.loan_processing_fee_flat()).quantize(Decimal("0.01"),rounding= ROUND_HALF_UP)
-
 
 
     """
@@ -530,8 +535,6 @@ class LoanApplication(models.Model):
 
             LoanAmortizationSchedule.objects.bulk_create(schedule_list)
 
-    # TODO Add method to reject loan application
-
     """
     SAVE METHOD
     """
@@ -734,10 +737,10 @@ LOAN TOP UP MODEL
 """
 class LoanTopUp(models.Model):
     STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('APPROVED', 'Approved'),
-        ('DISBURSED', 'Disbursed'),
-        ('REJECTED', 'Rejected')
+        ('PENDING', 'PENDING'),
+        ('APPROVED', 'APPROVED'),
+        ('DISBURSED', 'DISBURSED'),
+        ('REJECTED', 'REJECTED')
     ]
     tenant = models.ForeignKey(
         Tenant,
@@ -759,6 +762,16 @@ class LoanTopUp(models.Model):
         max_digits=12,
         help_text='Amount to be added to the existing loan'
     )
+    topup_purpose = models.TextField(
+        null=True,
+        blank=True,
+        help_text='Purpose of the top-up request, to be displayed to the member'
+    )
+    topup_reason = models.TextField(
+        null=True,
+        blank=True,
+        help_text='Reason for the top-up request, to be displayed to the member'
+    )
     disbursed_amount = models.DecimalField(
         decimal_places=2,
         max_digits=12,
@@ -769,7 +782,7 @@ class LoanTopUp(models.Model):
         default=0,
         help_text='New tenure in months after the top-up is applied'
     )
-    created_at = models.DateTimeField(
+    requested_at = models.DateTimeField(
         auto_now_add=True
     )
     disbursed = models.BooleanField(
@@ -791,6 +804,22 @@ class LoanTopUp(models.Model):
         null=True,
         blank=True,
         help_text='User who approved the top-up'
+    )
+    rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='rejected_topups',
+        null=True,
+        blank=True,
+        help_text='User who rejected the top-up'
+    )
+    disbursed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='disbursed_topups',
+        null=True,
+        blank=True,
+        help_text='User who disbursed the top-up'
     )
     approved_at = models.DateTimeField(
         null=True,
@@ -850,6 +879,8 @@ class LoanTopUp(models.Model):
         Exception
             If the top-up is already approved or processed.
         """
+        if self.rejected:
+            raise Exception("Top-up already rejected.")
         if self.approved or self.disbursed:
             raise Exception("Top-up already processed.")
 
@@ -874,6 +905,8 @@ class LoanTopUp(models.Model):
         """
         if not self.approved:
             raise Exception("Top-up not approved yet.")
+        if self.rejected:
+            raise Exception("Top-up has been rejected")
         if self.disbursed:
             raise Exception("Top-up already disbursed.")
 

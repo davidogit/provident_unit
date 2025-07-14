@@ -490,8 +490,8 @@ class CalculatePotentialLoan(View):
     Attributes:
         None
     """
-    def get(self, *args, **kwargs):
-        tenant = self.request.tenant
+    def get(self, request, *args, **kwargs):
+        tenant = getattr(request, 'tenant', None)
         potential_loan_amount_str = self.request.GET.get('amount')
         tenure_str = self.request.GET.get('tenure')
         loan_type_id = self.request.GET.get('loan_type_id')
@@ -562,6 +562,7 @@ class CalculatePotentialLoan(View):
                 'formatted_total_repayment':total_repayment,
                 'formatted_monthly_installment':monthly_installment,
                 'formatted_disbursement_amount':disbursement_amount,
+                'formatted_total_interest': (total_repayment-amount)
             }
         })
 
@@ -1016,6 +1017,89 @@ class DisbursedLoanDetailView(DetailView):
         return context
 
 
+"""
+RETURNS THE ACTUAL REQUIRED PAYABLE AMOUNT FOR A LOAN AT A GIVEN DATE
+"""
+class ActualAmountPayable:
+    """
+    Represents the calculation of the actual amount payable for a given loan application.
+
+    Provides functionality to determine the total amount still payable on a loan, including
+    outstanding principal and accrued interest, based on the payment and loan details.
+    """
+    def __init__(self,loan:LoanApplication):
+        self.loan = loan
+
+    def get_actual_amount_payable(self):
+        loan = self.loan
+        total_principal_paid = loan.total_principal_paid
+
+        total_outstanding_principal = loan.amount_requested - total_principal_paid
+
+        last_payment = loan.amortization_schedule.filter(
+            is_paid=True
+        ).order_by('-installment_date').first()
+
+        if last_payment:
+            days = (timezone.now().date() - last_payment.installment_date).days
+            daily_rate = loan.interest_rate / Decimal('36500')
+            total_accrued_interest = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'),
+                                                                                                rounding=ROUND_HALF_UP)
+        else:
+            total_accrued_interest = Decimal('0.00')
+
+        total_amount_payable = (total_outstanding_principal + total_accrued_interest).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return total_amount_payable
+
+
+
+"""
+VIEW TO FETCH FULL AMOUNT PAYABLE FOR A LOAN
+"""
+class FetchFullAmountPayable(View):
+    """
+    FetchFullAmountPayable class is responsible for handling HTTP GET requests to calculate
+    and return the full amount payable for a specific loan application.
+
+    This class interacts with the LoanApplication model to retrieve a specific loan object
+    based on the provided loan ID and tenant information. It also utilizes the ActualAmountPayable
+    class to calculate the full amount payable for the retrieved loan. This functionality
+    is intended to be used in scenarios where precise payment amounts are required to be
+    calculated for a loan.
+
+    Attributes
+    ----------
+    model : LoanApplication
+        The ORM model class used to retrieve loan application instances.
+    """
+    model = LoanApplication
+    def get(self,request,*args, **kwargs):
+        tenant = getattr(self.request,'tenant',None)
+        loanId = request.GET.get("loan_id")
+
+        if not tenant or not loanId:
+            return JsonResponse({
+                'status':'error',
+                'message':'Unable to calculate amount payable at this time.'
+            })
+        loan = self.model.objects.filter(
+            tenant=tenant,
+            id=loanId
+        ).first()
+
+        if not loan:
+            return JsonResponse({
+                'status':'error',
+                'message':'Loan not found.'
+            })
+
+        amount_payable_calculator = ActualAmountPayable(loan)
+        return JsonResponse({
+            'status':'success',
+            'data': {
+                'amount_payable': amount_payable_calculator.get_actual_amount_payable()
+            }
+        })
 
 """
 LOAN PAYMENT VIEW
@@ -1080,22 +1164,24 @@ class LoanPaymentHandler(View):
             })
 
         if payment_type == 'full':
-            total_principal_paid = loan.total_principal_paid
+            total_payable_amount_calculator = ActualAmountPayable(loan)
+            # total_principal_paid = loan.total_principal_paid
+            #
+            # total_outstanding_principal = loan.amount_requested - total_principal_paid
+            #
+            # last_payment = loan.amortization_schedule.filter(
+            #     is_paid=True
+            # ).order_by('-installment_date').first()
+            #
+            # if last_payment:
+            #     days = (timezone.now().date() - last_payment.installment_date).days
+            #     daily_rate = loan.interest_rate / Decimal('36500')
+            #     total_accrued_interest = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            # else:
+            #     total_accrued_interest = Decimal('0.00')
 
-            total_outstanding_principal = loan.amount_requested - total_principal_paid
-
-            last_payment = loan.amortization_schedule.filter(
-                is_paid=True
-            ).order_by('-installment_date').first()
-
-            if last_payment:
-                days = (timezone.now().date() - last_payment.installment_date).days
-                daily_rate = loan.interest_rate / Decimal('36500')
-                total_accrued_interest = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            else:
-                total_accrued_interest = Decimal('0.00')
-
-            total_amount_payable = total_outstanding_principal + total_accrued_interest
+            # total_amount_payable = total_outstanding_principal + total_accrued_interest
+            total_amount_payable = total_payable_amount_calculator.get_actual_amount_payable()
 
             if payment_amount < total_amount_payable:
                 return JsonResponse({
@@ -1609,6 +1695,12 @@ class LoanTopUpRequestView(CreateView):
                 'message': 'Loan must be approved before requesting a top-up.'
             })
 
+        if loan.is_loan_fully_paid:
+            return JsonResponse({
+                'status':'error',
+                'message':'This loan is closed for top up.'
+            })
+
         if self.model.objects.filter(loan=loan, user=member, status='PENDING').exists():
             return JsonResponse({
                 'status': 'error',
@@ -1632,3 +1724,325 @@ class LoanTopUpRequestView(CreateView):
             'message': 'Invalid form data.',
             'errors': form.errors
         }, status=400)
+
+
+
+"""
+LOAN TOPUP APPROVAL VIEW
+"""
+class LoanTopUpApprovalView(ListView):
+    model = LoanTopUp
+    template_name = 'approve_topup.html'
+    paginate_by = 10
+    context_object_name = 'topups'
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        if not tenant:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            status='PENDING'
+        ).order_by('-requested_at')
+
+
+"""
+APPROVED LOAN TOP-UP VIEW
+"""
+class LoanTopUpDisbursementView(ListView):
+    model = LoanTopUp
+    paginate_by = 10
+    template_name = 'disburse_topup.html'
+    context_object_name = 'topups'
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        if not tenant:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            approved=True,
+            status='APPROVED'
+        ).order_by('-requested_at')
+
+
+"""
+DISBURSED LOAN TOP-UP VIEW
+"""
+class DisbursedLoanTopUps(ListView):
+    model = LoanTopUp
+    paginate_by = 10
+    template_name = 'disbursed_topups.html'
+    context_object_name = 'topups'
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        if not tenant:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            disbursed=True,
+            status='DISBURSED'
+        ).order_by('-disbursement_date')
+
+
+
+"""
+REJECTED TOP-UP REQUESTS VIEW
+"""
+class RejectedTopUpRequests(ListView):
+    model = LoanTopUp
+    paginate_by = 10
+    template_name = 'rejected_topups.html'
+    context_object_name = 'topups'
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        if not tenant:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            rejected=True,
+            status='REJECTED'
+        ).order_by('-requested_at')
+
+
+
+"""
+LOAN TOP-UP APPROVAL HANDLER
+"""
+class LoanTopUpApprovalHandler(View):
+    model = LoanTopUp
+
+    def get_object(self, topup_id):
+        tenant = getattr(self.request, 'tenant', None)
+
+        if not tenant or not topup_id:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            id=topup_id,
+            status='PENDING'
+        ).first()
+
+    def post(self, request, *args, **kwargs):
+        tenant = getattr(request, 'tenant', None)
+        topup_id = self.request.POST.get('topup_id')
+        user = getattr(request,'user', None)
+
+        if not tenant or not topup_id or not user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request.'
+            })
+
+        topup = self.get_object(topup_id)
+
+        if not topup:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Top-up request not found.'
+            })
+
+        try:
+            topup.approve_topup(user)
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Top-up request approved successfully.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error approving top-up request: {e}'
+            })
+
+
+
+"""
+LOAN TOP-UP DISBURSEMENT HANDLER
+"""
+class LoanTopUpDisbursementHandler(View):
+    model = LoanTopUp
+
+    def get_object(self, topup_id):
+        tenant = getattr(self.request, 'tenant', None)
+
+        if not tenant or not topup_id:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            id=topup_id,
+            status='APPROVED'
+        ).first()
+
+    def post(self, request, *args, **kwargs):
+        tenant = getattr(request, 'tenant', None)
+        topup_id = self.request.POST.get('topup_id')
+        user = getattr(request,'user', None)
+
+        if not tenant or not topup_id or not user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request.'
+            })
+
+        topup = self.get_object(topup_id)
+
+        if not topup:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Top-up request not found.'
+            })
+
+        try:
+            topup.disburse_topup(user)
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Top-up request disbursed successfully.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error disbursing top-up request: {e}'
+            })
+
+"""
+LOAN TOP-UP REJECTION HANDLER
+"""
+class LoanTopUpRejectionHandler(View):
+    model = LoanTopUp
+
+    def get_object(self, topup_id):
+        tenant = getattr(self.request, 'tenant', None)
+
+        if not tenant or not topup_id:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            id=topup_id,
+            status='PENDING'
+        ).first()
+
+    def post(self, request, *args, **kwargs):
+        tenant = getattr(request, 'tenant', None)
+        topup_id = self.request.POST.get('topup_id')
+        user = getattr(request,'user', None)
+        note = self.request.POST.get('notes')
+
+        if not tenant or not topup_id or not user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request.'
+            })
+
+        topup = self.get_object(topup_id)
+
+        if not topup:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Top-up request not found.'
+            })
+
+        try:
+            topup.reject_topup(user, note=note)
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Top-up request rejected successfully.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error rejecting top-up request: {e}'
+            })
+
+
+"""
+VIEW TO RETURN LOAN AND LOAN TOP-UP DETAILS AS JSON
+"""
+class FetchLoanAndTopUpDetails(View):
+    model = LoanTopUp
+
+    def get_object(self, loan_id):
+        tenant = getattr(self.request, 'tenant', None)
+
+        if not tenant or not loan_id:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            tenant=tenant,
+            id=loan_id
+        ).first()
+
+
+    def get(self, request, *args, **kwargs):
+        tenant = getattr(request, 'tenant', None)
+        top_up_id = kwargs.get('pk')
+
+        if not tenant or not top_up_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request.'
+            })
+
+        top_up = self.get_object(top_up_id)
+        if not top_up:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Top-up request not found.'
+            })
+
+        top_up_details = {
+            'id': top_up.id,
+            'topup_amount': top_up.topup_amount,
+            'application_date': top_up.requested_at,
+            'tenure_months': top_up.new_tenure_months,
+            'purpose': top_up.topup_purpose
+        }
+
+        user = top_up.user
+        user_details = {}
+        if user:
+            user_details = {
+                'full_name': user.user.get_full_name(),
+                'staff_id': user.staff_id,
+                'department': user.department,
+                'position': user.job_title,
+                'employment_date': user.employment_date,
+                'contact': user.tel_number
+            }
+
+        parent_loan = top_up.loan
+        loan_details = {}
+        if parent_loan:
+            total_interest_and_principal = parent_loan.loan_repayments.all().aggregate(
+                total_principal=Sum('principal_paid'),
+                total_interest=Sum('interest_paid')
+            )
+
+            total_repayment = total_interest_and_principal['total_principal'] + total_interest_and_principal['total_interest'] if total_interest_and_principal['total_principal'] and total_interest_and_principal['total_interest'] else Decimal('0.00')
+
+            outstanding_balance = (parent_loan.amount_requested + parent_loan.interest_amount) - total_repayment
+
+            loan_details = {
+                'amount_approved': parent_loan.amount_requested,
+                'outstanding_amount': outstanding_balance,
+                'payments_made': total_repayment,
+                'payment_status': 'PAID' if parent_loan.is_loan_fully_paid else 'UNPAID'
+            }
+
+
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'topup':top_up_details,
+                'user': user_details,
+                'original_loan': loan_details
+            }
+        })

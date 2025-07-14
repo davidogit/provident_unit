@@ -1,0 +1,101 @@
+{% extends 'loan_topup_base.html' %}
+
+{% block topup_title %} - Rejected{% endblock %}
+
+{% block content_title %}Rejected Top-up Applications{% endblock %}
+
+{% block empty_message %}There are no rejected top-up applications.{% endblock %}
+
+{% block bulk_actions %}
+<!-- No bulk actions for rejected applications -->
+{% endblock %}
+
+{% block action_buttons %}
+<button class="btn btn-sm btn-outline-primary view-topup" data-id="{{ topup.id }}" title="View Details">
+    <i class="bi bi-eye"></i>
+</button>
+{% endblock %}
+
+{% block modal_form %}
+<!-- Rejection Details (Read-only) -->
+<div class="col-12">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white py-3">
+            <h6 class="mb-0 fw-bold">
+                <i class="bi bi-x-circle me-2"></i>Rejection Details
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="text-muted small">Rejected Date</div>
+                    <div class="fw-medium" id="rejection-date">--</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Rejected By</div>
+                    <div class="fw-medium" id="rejected-by">--</div>
+                </div>
+                <div class="col-12">
+                    <div class="text-muted small">Rejection Reason</div>
+                    <div class="fw-medium" id="rejection-reason">--</div>
+                </div>
+                <div class="col-12">
+                    <div class="text-muted small">Additional Notes</div>
+                    <div class="fw-medium" id="rejection-notes">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modal_buttons %}
+<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+{% endblock %}
+
+{% block topup_scripts %}
+{{ block.super }}
+<script>
+    $(document).ready(function(){
+        // Override the updateTopupInfo function to include rejection details
+        const originalUpdateTopupInfo = window.updateTopupInfo;
+        window.updateTopupInfo = function(topup) {
+            if (originalUpdateTopupInfo) {
+                originalUpdateTopupInfo(topup);
+            }
+            
+            // Update rejection-specific information
+            $('#rejection-date').text(topup.rejection_date || 'N/A');
+            $('#rejected-by').text(topup.rejected_by || 'N/A');
+            $('#rejection-reason').text(topup.rejection_reason || 'No reason provided');
+            $('#rejection-notes').text(topup.rejection_notes || 'No additional notes');
+        };
+
+        // Remove bulk selection functionality for rejected applications
+        $('#select-all').prop('disabled', true).hide();
+        $('.topup-checkbox').prop('disabled', true).hide();
+        
+        // Hide checkbox column header
+        $('th:first-child').hide();
+        $('td:first-child').hide();
+    });
+</script>
+
+<style>
+    /* Hide checkbox column for rejected applications */
+    .table th:first-child,
+    .table td:first-child {
+        display: none;
+    }
+    
+    /* Style for rejection status */
+    .badge.bg-danger {
+        background-color: #dc3545 !important;
+    }
+    
+    /* Rejection card styling */
+    .card.border-danger {
+        border-color: #dc3545 !important;
+    }
+</style>
+{% endblock %}
