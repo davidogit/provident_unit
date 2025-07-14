@@ -4299,3 +4299,5 @@ media/
 /backup.json
 
 .env
+
+/.idea/misc.xml
