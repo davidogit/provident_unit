@@ -23,7 +23,7 @@ class LoanTypeForm(forms.ModelForm):
 class LoanTopUpRequestForm(forms.ModelForm):
     class Meta:
         model = LoanTopUp
-        fields = ['topup_amount', 'new_tenure_months', 'note']
+        fields = ['topup_amount', 'new_tenure_months', 'topup_reason','topup_purpose']
 
     def clean_topup_amount(self):
         amount = self.cleaned_data.get('topup_amount')

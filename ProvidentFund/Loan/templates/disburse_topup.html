@@ -1,0 +1,348 @@
+{% extends 'loan_topup_base.html' %}
+
+{% block topup_title %} - Disburse{% endblock %}
+
+{% block content_title %}Approved Top-up Applications{% endblock %}
+
+{% block empty_message %}There are no approved top-up applications ready for disbursement.{% endblock %}
+
+{% block bulk_actions %}
+<div class="dropdown d-inline-block">
+    <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="bulkActions" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-cash-stack me-1"></i>Bulk Actions
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bulkActions">
+        <li><a class="dropdown-item" href="#" id="bulk-disburse">Disburse Selected</a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block action_buttons %}
+<button class="btn btn-sm btn-outline-primary me-1 view-topup" data-id="{{ topup.id }}" title="View Details">
+    <i class="bi bi-eye"></i>
+</button>
+{% if topup.status == 'approved' %}
+<button class="btn btn-sm btn-outline-info disburse-topup" data-id="{{ topup.id }}" title="Disburse">
+    <i class="bi bi-cash-stack"></i>
+</button>
+{% endif %}
+{% endblock %}
+
+{% block modal_form %}
+<!-- Disbursement Form -->
+<div class="col-12">
+    <form id="disbursement-form">
+        <input type="hidden" id="topup-application-id" value="">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label for="disbursement-method" class="form-label">Disbursement Method</label>
+                <select class="form-select" id="disbursement-method" required>
+                    <option value="">Select method</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="cash">Cash</option>
+                    <option value="check">Check</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="disbursement-date" class="form-label">Disbursement Date</label>
+                <input type="date" class="form-control" id="disbursement-date" required>
+            </div>
+            <div class="col-12">
+                <label for="disbursement-notes" class="form-label">Disbursement Notes</label>
+                <textarea class="form-control" id="disbursement-notes" rows="3" placeholder="Add notes about this disbursement"></textarea>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block modal_buttons %}
+<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+<button type="button" class="btn btn-primary" id="modal-disburse-btn">
+    <i class="bi bi-cash-stack me-1"></i>Disburse Top-up
+</button>
+{% endblock %}
+
+{% block topup_scripts %}
+{{ block.super }}
+<script>
+    $(document).ready(function(){
+        // Set today's date as default
+        $('#disbursement-date').val(new Date().toISOString().split('T')[0]);
+
+        // Handle disburse top-up button (inline)
+        $('.disburse-topup').on('click', function() {
+            var topupId = $(this).data('id');
+            showDisbursementConfirmation(topupId);
+        });
+
+        // Handle disburse button in modal
+        $('#modal-disburse-btn').on('click', function() {
+            var topupId = $('#topup-application-id').val();
+            var method = $('#disbursement-method').val();
+            var date = $('#disbursement-date').val();
+            var notes = $('#disbursement-notes').val();
+            
+            if (!method || !date) {
+                showToast('Warning', 'Please fill in all required fields', 'warning');
+                return;
+            }
+            
+            showDisbursementConfirmation(topupId, method, date, notes);
+            $('#topupModal').modal('hide');
+        });
+
+        // Handle bulk disburse button
+        $('#bulk-disburse').on('click', function(e) {
+            e.preventDefault();
+            var selectedIds = [];
+            $('.topup-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                showToast('Warning', 'Please select at least one application to disburse', 'warning');
+                return;
+            }
+
+            showBulkDisbursementConfirmation(selectedIds);
+        });
+
+        // SweetAlert2 Disbursement Confirmation
+        function showDisbursementConfirmation(topupId, method, date, notes) {
+            Swal.fire({
+                title: 'Disburse Top-up',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">Please confirm the disbursement details:</p>
+                        <div class="mb-3">
+                            <label for="disburse-method" class="form-label fw-medium">Disbursement Method <span class="text-danger">*</span></label>
+                            <select id="disburse-method" class="swal2-select" required>
+                                <option value="">Select method</option>
+                                <option value="bank_transfer" ${method === 'bank_transfer' ? 'selected' : ''}>Bank Transfer</option>
+                                <option value="mobile_money" ${method === 'mobile_money' ? 'selected' : ''}>Mobile Money</option>
+                                <option value="cash" ${method === 'cash' ? 'selected' : ''}>Cash</option>
+                                <option value="check" ${method === 'check' ? 'selected' : ''}>Check</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="disburse-date" class="form-label fw-medium">Disbursement Date <span class="text-danger">*</span></label>
+                            <input type="date" id="disburse-date" class="swal2-input" value="${date || new Date().toISOString().split('T')[0]}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="disburse-notes" class="form-label fw-medium">Notes</label>
+                            <textarea id="disburse-notes" class="swal2-textarea" placeholder="Add disbursement notes...">${notes || ''}</textarea>
+                        </div>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Confirm Disbursement',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const method = document.getElementById('disburse-method').value;
+                    const date = document.getElementById('disburse-date').value;
+                    const notes = document.getElementById('disburse-notes').value;
+                    
+                    if (!method) {
+                        Swal.showValidationMessage('Please select a disbursement method');
+                        return false;
+                    }
+                    if (!date) {
+                        Swal.showValidationMessage('Please select a disbursement date');
+                        return false;
+                    }
+                    
+                    return { method: method, date: date, notes: notes };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const { method, date, notes } = result.value;
+                    disburseTopup(topupId, method, date, notes);
+                }
+            });
+        }
+
+        // SweetAlert2 Bulk Disbursement Confirmation
+        function showBulkDisbursementConfirmation(selectedIds) {
+            Swal.fire({
+                title: 'Bulk Disburse Top-ups',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">You are about to disburse <strong>${selectedIds.length}</strong> top-up applications.</p>
+                        <div class="mb-3">
+                            <label for="bulk-disburse-method" class="form-label fw-medium">Disbursement Method <span class="text-danger">*</span></label>
+                            <select id="bulk-disburse-method" class="swal2-select" required>
+                                <option value="">Select method</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="mobile_money">Mobile Money</option>
+                                <option value="cash">Cash</option>
+                                <option value="check">Check</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bulk-disburse-date" class="form-label fw-medium">Disbursement Date <span class="text-danger">*</span></label>
+                            <input type="date" id="bulk-disburse-date" class="swal2-input" value="${new Date().toISOString().split('T')[0]}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bulk-disburse-notes" class="form-label fw-medium">Notes</label>
+                            <textarea id="bulk-disburse-notes" class="swal2-textarea" placeholder="Add bulk disbursement notes..."></textarea>
+                        </div>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: `Disburse ${selectedIds.length} Top-ups`,
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const method = document.getElementById('bulk-disburse-method').value;
+                    const date = document.getElementById('bulk-disburse-date').value;
+                    const notes = document.getElementById('bulk-disburse-notes').value;
+                    
+                    if (!method) {
+                        Swal.showValidationMessage('Please select a disbursement method');
+                        return false;
+                    }
+                    if (!date) {
+                        Swal.showValidationMessage('Please select a disbursement date');
+                        return false;
+                    }
+                    
+                    return { method: method, date: date, notes: notes };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const { method, date, notes } = result.value;
+                    performBulkDisbursement(selectedIds, method, date, notes);
+                }
+            });
+        }
+
+        // Function to disburse a top-up
+        function disburseTopup(id, method, date, notes) {
+            var tenantId = '{{ request.tenant.id }}';
+            $.ajax({
+                url: `/${tenantId}/loans/disburse-topup/`,
+                type: 'POST',
+                data: {
+                    topup_id: id,
+                    disbursement_method: method,
+                    disbursement_date: date,
+                    notes: notes || ''
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            title: 'Disbursed!',
+                            text: response.message || 'Top-up has been successfully disbursed',
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+                        removeApplicationRow(id);
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to disburse top-up',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error disbursing top-up:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to disburse top-up. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+
+        // Function to perform bulk disbursement
+        function performBulkDisbursement(selectedIds, method, date, notes) {
+            var tenantId = '{{ request.tenant.id }}';
+            $.ajax({
+                url: `/${tenantId}/loans/bulk-disburse-topup/`,
+                type: 'POST',
+                data: {
+                    topup_ids: selectedIds.join(','),
+                    disbursement_method: method,
+                    disbursement_date: date,
+                    notes: notes || ''
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message || `${selectedIds.length} top-ups have been disbursed`,
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+                        removeBulkApplicationRows();
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to disburse top-ups',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error disbursing top-ups:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to disburse top-ups. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+
+        // Helper functions
+        function removeApplicationRow(id) {
+            $('[data-id="' + id + '"]').closest('tr').fadeOut(500, function() {
+                $(this).remove();
+                checkEmptyTable();
+            });
+        }
+
+        function removeBulkApplicationRows() {
+            $('.topup-checkbox:checked').closest('tr').fadeOut(500, function() {
+                $(this).remove();
+                checkEmptyTable();
+            });
+        }
+
+        function checkEmptyTable() {
+            if ($('tbody tr').length === 0) {
+                $('tbody').html(`
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                            <p class="mt-3 mb-0">No top-up applications found</p>
+                            <p class="text-muted">There are no approved top-up applications ready for disbursement.</p>
+                        </td>
+                    </tr>
+                `);
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,436 @@
+{% extends 'loan_topup_base.html' %}
+
+{% block topup_title %} - Approve{% endblock %}
+
+{% block content_title %}Pending Top-up Applications{% endblock %}
+
+{% block empty_message %}There are no pending top-up applications at this time.{% endblock %}
+
+{% block topup_scripts %}
+{{ block.super }}
+<script>
+    $(document).ready(function(){
+        // Handle approve top-up button (inline) - WITH SWEETALERT2 CONFIRMATION
+        $('.approve-topup').on('click', function() {
+            var topupId = $(this).data('id');
+            showApprovalConfirmation(topupId);
+        });
+
+        // Handle reject top-up button (inline) - WITH SWEETALERT2 CONFIRMATION
+        $('.reject-topup').on('click', function() {
+            var topupId = $(this).data('id');
+            showRejectionConfirmation(topupId);
+        });
+
+        // Handle approve button in modal - WITH SWEETALERT2 CONFIRMATION
+        $('#modal-approve-btn').on('click', function() {
+            var topupId = $('#topup-application-id').val();
+            var interestRate = $('#topup-interest-rate').val();
+            var notes = $('#topup-notes').val();
+            showApprovalConfirmation(topupId, interestRate, notes);
+            $('#topupModal').modal('hide');
+        });
+
+        // Handle reject button in modal - WITH SWEETALERT2 CONFIRMATION
+        $('#modal-reject-btn').on('click', function() {
+            var topupId = $('#topup-application-id').val();
+            var notes = $('#topup-notes').val();
+            showRejectionConfirmation(topupId, notes);
+            $('#topupModal').modal('hide');
+        });
+
+        // SweetAlert2 Approval Confirmation
+        function showApprovalConfirmation(topupId, interestRate, notes) {
+            Swal.fire({
+                title: 'Approve Top-up Application',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">Please provide a reason for approving this top-up application:</p>
+                        <div class="mb-3">
+                            <label for="approval-reason" class="form-label fw-medium">Approval Reason <span class="text-danger">*</span></label>
+                            <textarea id="approval-reason" class="swal2-textarea" placeholder="Enter the reason for approval (e.g., Good payment history, meets eligibility criteria, sufficient income...)" required></textarea>
+                        </div>
+                        ${interestRate ? `<div class="mb-2"><small class="text-muted">Interest Rate: ${interestRate}%</small></div>` : ''}
+                        ${notes ? `<div class="mb-2"><small class="text-muted">Additional Notes: ${notes}</small></div>` : ''}
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Approve Top-up',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const reason = document.getElementById('approval-reason').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage('Please provide a reason for approval');
+                        return false;
+                    }
+                    if (reason.length < 10) {
+                        Swal.showValidationMessage('Reason must be at least 10 characters long');
+                        return false;
+                    }
+                    return { reason: reason };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const approvalReason = result.value.reason;
+                    const finalNotes = notes ? `${notes}\n\nApproval Reason: ${approvalReason}` : `Approval Reason: ${approvalReason}`;
+                    approveTopup(topupId, interestRate, finalNotes);
+                }
+            });
+        }
+
+        // SweetAlert2 Rejection Confirmation
+        function showRejectionConfirmation(topupId, notes) {
+            Swal.fire({
+                title: 'Reject Top-up Application',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">Please provide a reason for rejecting this top-up application:</p>
+                        <div class="mb-3">
+                            <label for="rejection-reason" class="form-label fw-medium">Rejection Reason <span class="text-danger">*</span></label>
+                            <textarea id="rejection-reason" class="swal2-textarea" placeholder="Enter the reason for rejection (e.g., Poor payment history, insufficient income, policy violation...)" required></textarea>
+                        </div>
+                        ${notes ? `<div class="mb-2"><small class="text-muted">Additional Notes: ${notes}</small></div>` : ''}
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Reject Top-up',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const reason = document.getElementById('rejection-reason').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage('Please provide a reason for rejection');
+                        return false;
+                    }
+                    if (reason.length < 10) {
+                        Swal.showValidationMessage('Reason must be at least 10 characters long');
+                        return false;
+                    }
+                    return { reason: reason };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const rejectionReason = result.value.reason;
+                    const finalNotes = notes ? `${notes}\n\nRejection Reason: ${rejectionReason}` : `Rejection Reason: ${rejectionReason}`;
+                    rejectTopup(topupId, finalNotes);
+                }
+            });
+        }
+
+        // Handle bulk approve button
+        $('#bulk-approve').on('click', function(e) {
+            e.preventDefault();
+            var selectedIds = [];
+            $('.topup-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                showToast('Warning', 'Please select at least one application to approve', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Bulk Approve Top-ups',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">You are about to approve <strong>${selectedIds.length}</strong> top-up applications.</p>
+                        <p class="mb-3">Please provide a reason for this bulk approval:</p>
+                        <div class="mb-3">
+                            <label for="bulk-approval-reason" class="form-label fw-medium">Bulk Approval Reason <span class="text-danger">*</span></label>
+                            <textarea id="bulk-approval-reason" class="swal2-textarea" placeholder="Enter the reason for bulk approval (e.g., All applications meet standard criteria, batch processing approved...)" required></textarea>
+                        </div>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: `Approve ${selectedIds.length} Top-ups`,
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const reason = document.getElementById('bulk-approval-reason').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage('Please provide a reason for bulk approval');
+                        return false;
+                    }
+                    if (reason.length < 10) {
+                        Swal.showValidationMessage('Reason must be at least 10 characters long');
+                        return false;
+                    }
+                    return { reason: reason };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const approvalReason = result.value.reason;
+                    performBulkApproval(selectedIds, approvalReason);
+                }
+            });
+        });
+
+        // Handle bulk reject button
+        $('#bulk-reject').on('click', function(e) {
+            e.preventDefault();
+            var selectedIds = [];
+            $('.topup-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                showToast('Warning', 'Please select at least one application to reject', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Bulk Reject Top-ups',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">You are about to reject <strong>${selectedIds.length}</strong> top-up applications.</p>
+                        <p class="mb-3">Please provide a reason for this bulk rejection:</p>
+                        <div class="mb-3">
+                            <label for="bulk-rejection-reason" class="form-label fw-medium">Bulk Rejection Reason <span class="text-danger">*</span></label>
+                            <textarea id="bulk-rejection-reason" class="swal2-textarea" placeholder="Enter the reason for bulk rejection (e.g., Policy changes, insufficient documentation, batch review failed...)" required></textarea>
+                        </div>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: `Reject ${selectedIds.length} Top-ups`,
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const reason = document.getElementById('bulk-rejection-reason').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage('Please provide a reason for bulk rejection');
+                        return false;
+                    }
+                    if (reason.length < 10) {
+                        Swal.showValidationMessage('Reason must be at least 10 characters long');
+                        return false;
+                    }
+                    return { reason: reason };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const rejectionReason = result.value.reason;
+                    performBulkRejection(selectedIds, rejectionReason);
+                }
+            });
+        });
+
+        // Function to approve a top-up
+        function approveTopup(id, interestRate, notes) {
+            var tenantId = '{{ request.tenant.id }}';
+            $.ajax({
+                url: `/${tenantId}/loans/approve-topup/`,
+                type: 'POST',
+                data: {
+                    topup_id: id,
+                    interest_rate: interestRate || 12,
+                    notes: notes || ''
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            title: 'Approved!',
+                            text: response.message || 'Top-up application has been approved',
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+                        removeApplicationRow(id);
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to approve top-up application',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error approving top-up application:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to approve top-up application. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+
+        // Function to reject a top-up
+        function rejectTopup(id, notes) {
+            var tenantId = '{{ request.tenant.id }}';
+            $.ajax({
+                url: `/${tenantId}/loans/reject-topup/`,
+                type: 'POST',
+                data: {
+                    topup_id: id,
+                    notes: notes || ''
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            title: 'Rejected!',
+                            text: response.message || 'Top-up application has been rejected',
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+                        removeApplicationRow(id);
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to reject top-up application',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error rejecting top-up application:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to reject top-up application. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+
+        // Function to perform bulk approval
+        function performBulkApproval(selectedIds, reason) {
+            var tenantId = '{{ request.tenant.id }}';
+            $.ajax({
+                url: `/${tenantId}/loans/bulk-approve-topup/`,
+                type: 'POST',
+                data: {
+                    topup_ids: selectedIds.join(','),
+                    notes: `Bulk Approval Reason: ${reason}`
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message || `${selectedIds.length} top-up applications have been approved`,
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+                        removeBulkApplicationRows();
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to approve top-up applications',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error approving top-up applications:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to approve top-up applications. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+
+        // Function to perform bulk rejection
+        function performBulkRejection(selectedIds, reason) {
+            var tenantId = '{{ request.tenant.id }}';
+            $.ajax({
+                url: `/${tenantId}/loans/bulk-reject-topup/`,
+                type: 'POST',
+                data: {
+                    topup_ids: selectedIds.join(','),
+                    notes: `Bulk Rejection Reason: ${reason}`
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message || `${selectedIds.length} top-up applications have been rejected`,
+                            icon: 'success',
+                            confirmButtonColor: '#198754'
+                        });
+                        removeBulkApplicationRows();
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to reject top-up applications',
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error rejecting top-up applications:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to reject top-up applications. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+
+        // Helper function to remove single application row
+        function removeApplicationRow(id) {
+            $('[data-id="' + id + '"]').closest('tr').fadeOut(500, function() {
+                $(this).remove();
+                checkEmptyTable();
+            });
+        }
+
+        // Helper function to remove bulk application rows
+        function removeBulkApplicationRows() {
+            $('.topup-checkbox:checked').closest('tr').fadeOut(500, function() {
+                $(this).remove();
+                checkEmptyTable();
+            });
+        }
+
+        // Helper function to check if table is empty
+        function checkEmptyTable() {
+            if ($('tbody tr').length === 0) {
+                $('tbody').html(`
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                            <p class="mt-3 mb-0">No top-up applications found</p>
+                            <p class="text-muted">There are no pending top-up applications at this time.</p>
+                        </td>
+                    </tr>
+                `);
+            }
+        }
+    });
+</script>
+{% endblock %}
