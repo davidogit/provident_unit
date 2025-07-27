@@ -57,20 +57,6 @@
 {{ block.super }}
 <script>
     $(document).ready(function(){
-        // Override the updateTopupInfo function to include rejection details
-        const originalUpdateTopupInfo = window.updateTopupInfo;
-        window.updateTopupInfo = function(topup) {
-            if (originalUpdateTopupInfo) {
-                originalUpdateTopupInfo(topup);
-            }
-            
-            // Update rejection-specific information
-            $('#rejection-date').text(topup.rejection_date || 'N/A');
-            $('#rejected-by').text(topup.rejected_by || 'N/A');
-            $('#rejection-reason').text(topup.rejection_reason || 'No reason provided');
-            $('#rejection-notes').text(topup.rejection_notes || 'No additional notes');
-        };
-
         // Remove bulk selection functionality for rejected applications
         $('#select-all').prop('disabled', true).hide();
         $('.topup-checkbox').prop('disabled', true).hide();

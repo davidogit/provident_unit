@@ -28,6 +28,7 @@ urlpatterns = [
     path('loan-topup-applications/', views.LoanTopUpApprovalView.as_view(), name='loan_topup_applications'),
     path('approved-loan-topups/', views.LoanTopUpDisbursementView.as_view(), name='approved_loan_topups'),
     path('rejected-loan-topups/', views.RejectedTopUpRequests.as_view(), name='rejected_loan_topups'),
+    path('disbursed-loan-topups/', views.DisbursedLoanTopUps.as_view(), name='disbursed_loan_topups'),
 
     path('approve-loan-topup/',views.LoanTopUpApprovalHandler.as_view(), name='approve_loan_topup'),
     path('disburse-loan-topup/', views.LoanTopUpDisbursementHandler.as_view(), name='disburse_loan_topup'),

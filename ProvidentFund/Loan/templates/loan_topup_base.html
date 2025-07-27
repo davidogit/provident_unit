@@ -24,7 +24,7 @@
                         </a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link {% if active_tab == 'disbursed' %}active{% endif %} py-3" href="">
+                        <a class="nav-link {% if active_tab == 'disbursed' %}active{% endif %} py-3" href="{% url 'disbursed_loan_topups' tenant_id=request.tenant.id %}">
                             <i class="bi bi-cash-stack me-2"></i>Disbursed Top-ups
                             <span class="badge rounded-pill bg-success ms-2">{{ disbursed_count|default:"0" }}</span>
                         </a>
@@ -345,7 +345,7 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <div class="text-muted small">Original Amount</div>
+                                        <div class="text-muted small">Original Principal</div>
                                         <div class="fw-medium" id="original-amount">--</div>
                                     </div>
                                     <div class="col-md-3">
@@ -366,30 +366,7 @@
                     </div>
 
                     {% block modal_form %}
-                    <!-- Decision Form -->
-                    <div class="col-12">
-                        <form id="topup-form">
-                            <input type="hidden" id="topup-application-id" value="">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="topup-status" class="form-label">Decision</label>
-                                    <select class="form-select" id="topup-status" required>
-                                        <option value="">Select decision</option>
-                                        <option value="approved">Approve</option>
-                                        <option value="rejected">Reject</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="topup-interest-rate" class="form-label">Interest Rate (%)</label>
-                                    <input type="number" class="form-control" id="topup-interest-rate" value="12" min="0" max="30" step="0.5">
-                                </div>
-                                <div class="col-12">
-                                    <label for="topup-notes" class="form-label">Notes</label>
-                                    <textarea class="form-control" id="topup-notes" rows="3" placeholder="Add notes about this decision"></textarea>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+
                     {% endblock %}
                 </div>
             </div>
@@ -629,12 +606,32 @@
             $('#topup-interest').text(`${topup.interest_rate || 12}%`);
             $('#topup-installment').text(`₵${topup.new_monthly_payment || 'N/A'}`);
             $('#topup-purpose').text(topup.purpose);
+
+            // Rejection details
+            $('#rejected-by').text(topup.rejected_by || 'N/A');
+            $('#rejection-date').text(topup.rejection_date || 'N/A');
+            $('#rejection-reason').text(topup.rejection_reason || 'No reason provided');
+            $('#rejection-notes').text(topup.rejection_notes || 'No additional notes');
+
+            $('#disbursement-date').text(topup.disbursement_date || 'N/A');
+            $('#disbursement-method').text(topup.disbursement_method || 'N/A');
+            $('#disbursed-by').text(topup.disbursed_by || 'N/A');
+            $('#disbursed-amount').text(topup.disbursed_amount ? `₵${topup.disbursed_amount}` : 'N/A');
+            $('#transaction-reference').text(topup.transaction_reference || 'N/A');
+            $('#disbursement-notes').text(topup.disbursement_notes || 'No additional notes');
+
+            // Update payment schedule information
+            $('#new-monthly-payment').text(topup.new_monthly_payment ? `₵${topup.new_monthly_payment}` : 'N/A');
+            $('#remaining-tenure').text(topup.remaining_tenure ? `${topup.remaining_tenure} months` : 'N/A');
+            $('#next-payment-due').text(topup.next_payment_due || 'N/A');
+            $('#total-outstanding').text(topup.total_outstanding ? `₵${topup.total_outstanding}` : 'N/A');
+            $('#current-interest-rate').text(topup.current_interest_rate ? `${topup.current_interest_rate}%` : 'N/A');
         }
 
         // Function to update original loan information
         function updateOriginalLoanInfo(loan) {
             $('#original-amount').text(`₵${loan.amount_approved}`);
-            $('#outstanding-balance').text(`₵${loan.outstanding_balance}`);
+            $('#outstanding-balance').text(`₵${loan.outstanding_amount}`);
             $('#payments-made').text(`₵${loan.payments_made || '0'}`);
             $('#payment-status').text(loan.payment_status || 'N/A');
         }

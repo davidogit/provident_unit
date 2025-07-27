@@ -1,0 +1,176 @@
+{% extends 'loan_topup_base.html' %}
+
+{% block topup_title %} - Disbursed{% endblock %}
+
+{% block content_title %}Disbursed Top-up Applications{% endblock %}
+
+{% block empty_message %}There are no disbursed top-up applications.{% endblock %}
+
+{% block bulk_actions %}
+<!-- No bulk actions for disbursed applications -->
+<button class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-download me-1"></i>Export Report
+</button>
+{% endblock %}
+
+{% block action_buttons %}
+<button class="btn btn-sm btn-outline-primary view-topup" data-id="{{ topup.id }}" title="View Details">
+    <i class="bi bi-eye"></i>
+</button>
+{% endblock %}
+
+{% block modal_form %}
+<!-- Disbursement Details (Read-only) -->
+<div class="col-12">
+    <div class="card border-success">
+        <div class="card-header bg-success text-white py-3">
+            <h6 class="mb-0 fw-bold">
+                <i class="bi bi-check-circle me-2"></i>Disbursement Details
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="text-muted small">Disbursement Date</div>
+                    <div class="fw-medium" id="disbursement-date">--</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Disbursement Method</div>
+                    <div class="fw-medium" id="disbursement-method">--</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Disbursed By</div>
+                    <div class="fw-medium" id="disbursed-by">--</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Amount Disbursed</div>
+                    <div class="fw-medium text-success" id="disbursed-amount">--</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Transaction Reference</div>
+                    <div class="fw-medium" id="transaction-reference">--</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Status</div>
+                    <div class="fw-medium">
+                        <span class="badge bg-success" id="disbursement-status">Disbursed</span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="text-muted small">Disbursement Notes</div>
+                    <div class="fw-medium" id="disbursement-notes">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Schedule (if applicable) -->
+<div class="col-12">
+    <div class="card border">
+        <div class="card-header bg-light py-3">
+            <h6 class="mb-0 fw-bold">
+                <i class="bi bi-calendar-check me-2"></i>Updated Payment Schedule
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="text-muted small">New Monthly Payment</div>
+                    <div class="fw-medium text-primary" id="new-monthly-payment">--</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Remaining Tenure</div>
+                    <div class="fw-medium" id="remaining-tenure">--</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Next Payment Due</div>
+                    <div class="fw-medium" id="next-payment-due">--</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Total Outstanding</div>
+                    <div class="fw-medium" id="total-outstanding">--</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Interest Rate</div>
+                    <div class="fw-medium" id="current-interest-rate">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modal_buttons %}
+<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+{% endblock %}
+
+{% block topup_scripts %}
+{{ block.super }}
+<script>
+    $(document).ready(function(){
+        // Override the updateTopupInfo function to include disbursement details
+
+
+        // Remove bulk selection functionality for disbursed applications
+        $('#select-all').prop('disabled', true).hide();
+        $('.topup-checkbox').prop('disabled', true).hide();
+        
+        // Hide checkbox column header
+        $('th:first-child').hide();
+        $('td:first-child').hide();
+
+        // Add status indicators to the table rows
+        $('tbody tr').each(function() {
+            const statusBadge = $(this).find('.badge');
+            if (statusBadge.hasClass('bg-primary') || statusBadge.text().toLowerCase() === 'disbursed') {
+                $(this).addClass('table-success');
+            }
+        });
+    });
+</script>
+
+<style>
+    /* Hide checkbox column for disbursed applications */
+    .table th:first-child,
+    .table td:first-child {
+        display: none;
+    }
+    
+    /* Style for disbursed status */
+    .badge.bg-primary {
+        background-color: #0d6efd !important;
+    }
+    
+    /* Disbursement card styling */
+    .card.border-success {
+        border-color: #198754 !important;
+    }
+    
+    /* Success row highlighting */
+    .table-success {
+        background-color: rgba(25, 135, 84, 0.05) !important;
+    }
+    
+    /* Enhanced styling for disbursed amounts */
+    .text-success {
+        color: #198754 !important;
+        font-weight: 600;
+    }
+    
+    .text-primary {
+        color: #0d6efd !important;
+        font-weight: 600;
+    }
+    
+    /* Card enhancements */
+    .card.border-success .card-header {
+        background-color: #198754 !important;
+        color: white !important;
+    }
+    
+    .card.border .card-header {
+        background-color: #f8f9fa !important;
+    }
+</style>
+{% endblock %}

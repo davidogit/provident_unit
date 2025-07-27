@@ -1164,24 +1164,24 @@ class LoanPaymentHandler(View):
             })
 
         if payment_type == 'full':
-            total_payable_amount_calculator = ActualAmountPayable(loan)
-            # total_principal_paid = loan.total_principal_paid
-            #
-            # total_outstanding_principal = loan.amount_requested - total_principal_paid
-            #
-            # last_payment = loan.amortization_schedule.filter(
-            #     is_paid=True
-            # ).order_by('-installment_date').first()
-            #
-            # if last_payment:
-            #     days = (timezone.now().date() - last_payment.installment_date).days
-            #     daily_rate = loan.interest_rate / Decimal('36500')
-            #     total_accrued_interest = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            # else:
-            #     total_accrued_interest = Decimal('0.00')
+            # total_payable_amount_calculator = ActualAmountPayable(loan)
+            total_principal_paid = loan.total_principal_paid
 
-            # total_amount_payable = total_outstanding_principal + total_accrued_interest
-            total_amount_payable = total_payable_amount_calculator.get_actual_amount_payable()
+            total_outstanding_principal = loan.amount_requested - total_principal_paid
+
+            last_payment = loan.amortization_schedule.filter(
+                is_paid=True
+            ).order_by('-installment_date').first()
+
+            if last_payment:
+                days = (timezone.now().date() - last_payment.installment_date).days
+                daily_rate = loan.interest_rate / Decimal('36500')
+                total_accrued_interest = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            else:
+                total_accrued_interest = Decimal('0.00')
+
+            total_amount_payable = total_outstanding_principal + total_accrued_interest
+            # total_amount_payable = total_payable_amount_calculator.get_actual_amount_payable()
 
             if payment_amount < total_amount_payable:
                 return JsonResponse({
@@ -1701,6 +1701,12 @@ class LoanTopUpRequestView(CreateView):
                 'message':'This loan is closed for top up.'
             })
 
+        if form.cleaned_data['new_tenure_months'] <= loan.tenure_months:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'New tenure must be greater than the current tenure.'
+            })
+
         if self.model.objects.filter(loan=loan, user=member, status='PENDING').exists():
             return JsonResponse({
                 'status': 'error',
@@ -1786,7 +1792,7 @@ class DisbursedLoanTopUps(ListView):
             tenant=tenant,
             disbursed=True,
             status='DISBURSED'
-        ).order_by('-disbursement_date')
+        ).order_by('-disbursed_at')
 
 
 
@@ -1832,9 +1838,11 @@ class LoanTopUpApprovalHandler(View):
 
     def post(self, request, *args, **kwargs):
         tenant = getattr(request, 'tenant', None)
-        topup_id = self.request.POST.get('topup_id')
+        topup_id = request.POST.get('topup_id')
         user = getattr(request,'user', None)
-
+        print('REQUEST: ',request.POST)
+        print('Tenant: ', tenant)
+        print('Topup ID: ', topup_id)
         if not tenant or not topup_id or not user:
             return JsonResponse({
                 'status': 'error',
@@ -1901,6 +1909,7 @@ class LoanTopUpDisbursementHandler(View):
             })
 
         try:
+            # TODO Add payment gateway integration here
             topup.disburse_topup(user)
             return JsonResponse({
                 'status': 'success',
@@ -2003,7 +2012,20 @@ class FetchLoanAndTopUpDetails(View):
             'topup_amount': top_up.topup_amount,
             'application_date': top_up.requested_at,
             'tenure_months': top_up.new_tenure_months,
-            'purpose': top_up.topup_purpose
+            'purpose': top_up.topup_purpose,
+            # Disbursement details
+            'disbursed_by':top_up.disbursed_by.__str__() if top_up.disbursed_by else None,
+            'disbursement_date': top_up.disbursed_at,
+            'disbursed_amount': top_up.disbursed_amount,
+
+            # Updated schedule details
+            'new_monthly_payment':top_up.loan.monthly_installments,
+
+
+            # Rejection details
+            'rejection_date':top_up.rejected_at,
+            'rejected_by': top_up.rejected_by.__str__() if top_up.rejected_by else None,
+            'rejection_notes':top_up.note,
         }
 
         user = top_up.user
