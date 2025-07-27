@@ -231,8 +231,9 @@
         // Function to approve a top-up
         function approveTopup(id, interestRate, notes) {
             var tenantId = '{{ request.tenant.id }}';
+            console.log('TOP UP ID:', id);
             $.ajax({
-                url: `/${tenantId}/loans/approve-topup/`,
+                url: `/${tenantId}/loans/approve-loan-topup/`,
                 type: 'POST',
                 data: {
                     topup_id: id,
@@ -276,7 +277,7 @@
         function rejectTopup(id, notes) {
             var tenantId = '{{ request.tenant.id }}';
             $.ajax({
-                url: `/${tenantId}/loans/reject-topup/`,
+                url: `/${tenantId}/loans/reject-loan-topup/`,
                 type: 'POST',
                 data: {
                     topup_id: id,

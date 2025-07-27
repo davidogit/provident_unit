@@ -44,10 +44,6 @@
                     <option value="check">Check</option>
                 </select>
             </div>
-            <div class="col-md-6">
-                <label for="disbursement-date" class="form-label">Disbursement Date</label>
-                <input type="date" class="form-control" id="disbursement-date" required>
-            </div>
             <div class="col-12">
                 <label for="disbursement-notes" class="form-label">Disbursement Notes</label>
                 <textarea class="form-control" id="disbursement-notes" rows="3" placeholder="Add notes about this disbursement"></textarea>
@@ -81,15 +77,14 @@
         $('#modal-disburse-btn').on('click', function() {
             var topupId = $('#topup-application-id').val();
             var method = $('#disbursement-method').val();
-            var date = $('#disbursement-date').val();
             var notes = $('#disbursement-notes').val();
             
-            if (!method || !date) {
+            if (!method) {
                 showToast('Warning', 'Please fill in all required fields', 'warning');
                 return;
             }
             
-            showDisbursementConfirmation(topupId, method, date, notes);
+            showDisbursementConfirmation(topupId, method, notes);
             $('#topupModal').modal('hide');
         });
 
@@ -110,7 +105,7 @@
         });
 
         // SweetAlert2 Disbursement Confirmation
-        function showDisbursementConfirmation(topupId, method, date, notes) {
+        function showDisbursementConfirmation(topupId, method, notes) {
             Swal.fire({
                 title: 'Disburse Top-up',
                 html: `
@@ -118,17 +113,13 @@
                         <p class="mb-3">Please confirm the disbursement details:</p>
                         <div class="mb-3">
                             <label for="disburse-method" class="form-label fw-medium">Disbursement Method <span class="text-danger">*</span></label>
-                            <select id="disburse-method" class="swal2-select" required>
+                            <select id="disburse-method" class="swal2-select form-select" required disabled>
                                 <option value="">Select method</option>
                                 <option value="bank_transfer" ${method === 'bank_transfer' ? 'selected' : ''}>Bank Transfer</option>
                                 <option value="mobile_money" ${method === 'mobile_money' ? 'selected' : ''}>Mobile Money</option>
                                 <option value="cash" ${method === 'cash' ? 'selected' : ''}>Cash</option>
                                 <option value="check" ${method === 'check' ? 'selected' : ''}>Check</option>
                             </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="disburse-date" class="form-label fw-medium">Disbursement Date <span class="text-danger">*</span></label>
-                            <input type="date" id="disburse-date" class="swal2-input" value="${date || new Date().toISOString().split('T')[0]}" required>
                         </div>
                         <div class="mb-3">
                             <label for="disburse-notes" class="form-label fw-medium">Notes</label>
@@ -145,24 +136,19 @@
                 focusConfirm: false,
                 preConfirm: () => {
                     const method = document.getElementById('disburse-method').value;
-                    const date = document.getElementById('disburse-date').value;
                     const notes = document.getElementById('disburse-notes').value;
                     
                     if (!method) {
                         Swal.showValidationMessage('Please select a disbursement method');
                         return false;
                     }
-                    if (!date) {
-                        Swal.showValidationMessage('Please select a disbursement date');
-                        return false;
-                    }
                     
-                    return { method: method, date: date, notes: notes };
+                    return { method: method, notes: notes };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const { method, date, notes } = result.value;
-                    disburseTopup(topupId, method, date, notes);
+                    const { method, notes } = result.value;
+                    disburseTopup(topupId, method, notes);
                 }
             });
         }
@@ -176,17 +162,13 @@
                         <p class="mb-3">You are about to disburse <strong>${selectedIds.length}</strong> top-up applications.</p>
                         <div class="mb-3">
                             <label for="bulk-disburse-method" class="form-label fw-medium">Disbursement Method <span class="text-danger">*</span></label>
-                            <select id="bulk-disburse-method" class="swal2-select" required>
+                            <select id="bulk-disburse-method" class="swal2-select" required disabled>
                                 <option value="">Select method</option>
                                 <option value="bank_transfer">Bank Transfer</option>
                                 <option value="mobile_money">Mobile Money</option>
                                 <option value="cash">Cash</option>
                                 <option value="check">Check</option>
                             </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="bulk-disburse-date" class="form-label fw-medium">Disbursement Date <span class="text-danger">*</span></label>
-                            <input type="date" id="bulk-disburse-date" class="swal2-input" value="${new Date().toISOString().split('T')[0]}" required>
                         </div>
                         <div class="mb-3">
                             <label for="bulk-disburse-notes" class="form-label fw-medium">Notes</label>
@@ -203,38 +185,32 @@
                 focusConfirm: false,
                 preConfirm: () => {
                     const method = document.getElementById('bulk-disburse-method').value;
-                    const date = document.getElementById('bulk-disburse-date').value;
                     const notes = document.getElementById('bulk-disburse-notes').value;
                     
                     if (!method) {
                         Swal.showValidationMessage('Please select a disbursement method');
                         return false;
                     }
-                    if (!date) {
-                        Swal.showValidationMessage('Please select a disbursement date');
-                        return false;
-                    }
                     
-                    return { method: method, date: date, notes: notes };
+                    return { method: method, notes: notes };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const { method, date, notes } = result.value;
-                    performBulkDisbursement(selectedIds, method, date, notes);
+                    const { method, notes } = result.value;
+                    performBulkDisbursement(selectedIds, method, notes);
                 }
             });
         }
 
         // Function to disburse a top-up
-        function disburseTopup(id, method, date, notes) {
+        function disburseTopup(id, method, notes) {
             var tenantId = '{{ request.tenant.id }}';
             $.ajax({
-                url: `/${tenantId}/loans/disburse-topup/`,
+                url: `/${tenantId}/loans/disburse-loan-topup/`,
                 type: 'POST',
                 data: {
                     topup_id: id,
                     disbursement_method: method,
-                    disbursement_date: date,
                     notes: notes || ''
                 },
                 headers: {
@@ -271,7 +247,7 @@
         }
 
         // Function to perform bulk disbursement
-        function performBulkDisbursement(selectedIds, method, date, notes) {
+        function performBulkDisbursement(selectedIds, method, notes) {
             var tenantId = '{{ request.tenant.id }}';
             $.ajax({
                 url: `/${tenantId}/loans/bulk-disburse-topup/`,
@@ -279,7 +255,6 @@
                 data: {
                     topup_ids: selectedIds.join(','),
                     disbursement_method: method,
-                    disbursement_date: date,
                     notes: notes || ''
                 },
                 headers: {
@@ -342,6 +317,37 @@
                     </tr>
                 `);
             }
+        }
+
+        // Toast notification function
+        function showToast(title, message, type) {
+            var toast = $('#notificationToast');
+
+            toast.find('.toast-title').text(title);
+            toast.find('.toast-body').text(message);
+            toast.find('.toast-time').text('just now');
+
+            toast.removeClass('bg-success bg-danger bg-warning bg-info');
+
+            switch(type) {
+                case 'success':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-check-circle-fill text-success me-2');
+                    break;
+                case 'danger':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-circle-fill text-danger me-2');
+                    break;
+                case 'warning':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-exclamation-triangle-fill text-warning me-2');
+                    break;
+                case 'info':
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+                    break;
+                default:
+                    toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
+            }
+
+            var bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
         }
     });
 </script>

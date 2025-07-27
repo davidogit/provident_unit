@@ -502,6 +502,10 @@ class LoanApplication(models.Model):
             T = Decimal(self.tenure_months)
 
             monthly_installment = self.calculate_monthly_installments(principal_override=new_principal)
+            # Update monthly installments
+            self.monthly_installments = monthly_installment
+            self.save()
+
             remaining_balance = new_principal
 
             schedule_list = []
@@ -826,6 +830,16 @@ class LoanTopUp(models.Model):
         blank=True,
         help_text='Date when the top-up was approved'
     )
+    rejected_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Date when the top-up was rejected'
+    )
+    disbursed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Date when the top-up was disbursed'
+    )
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
@@ -887,6 +901,7 @@ class LoanTopUp(models.Model):
         self.status = 'REJECTED'
         self.rejected = True
         self.rejected_by = user
+        self.rejected_at = timezone.now()
         self.note = note
         self.save()
 
@@ -910,22 +925,44 @@ class LoanTopUp(models.Model):
         if self.disbursed:
             raise Exception("Top-up already disbursed.")
 
-        self.status = 'DISBURSED'
-        self.disbursed_by = user
-        self.disbursed = True
-        self.disbursement_date = timezone.now()
-        self.save()
+        with transaction.atomic():
+            self.status = 'DISBURSED'
+            self.disbursed_by = user
+            self.disbursed_at = timezone.now()
+            self.disbursed = True
+            self.disbursed_amount = self.disbursement_amount()  # Calculate disbursement amount
+            self.disbursement_date = timezone.now()
+            self.save()
 
-#       apply the top-up to the loan
-        self.loan.apply_topup(self)
+    #       apply the top-up to the loan
+            self.loan.apply_topup(self)
 
+    def loan_processing_fee_flat(self):
+        """
+        Calculates and returns the loan processing fee based on a flat percentage.
 
+        Computes the processing fee using the loan type's fee percentage and the
+        requested loan amount, rounding the result to two decimal places.
 
+        Returns:
+            Decimal: The calculated processing fee for the loan.
+        """
+        fee_percentage_in_decimal = self.loan.loan_type.loan_fee_percentage / Decimal('100')
+        processing_fee = Decimal(self.topup_amount * fee_percentage_in_decimal)
 
+        return processing_fee.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
+    def disbursement_amount(self):
+        """
+        Calculates the disbursement amount by subtracting the loan processing fee
+        from the requested loan amount. The result is rounded to two decimal places
+        using the HALF_UP rounding method.
 
-
-
+        Returns:
+            Decimal: The disbursement amount rounded to two decimal places.
+        """
+        return Decimal(self.topup_amount - self.loan_processing_fee_flat()).quantize(Decimal("0.01"),
+                                                                                         rounding=ROUND_HALF_UP)
 
 
 """
