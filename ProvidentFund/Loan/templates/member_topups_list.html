@@ -1,0 +1,460 @@
+{% extends 'member_base.html' %}
+
+{% block title %}<title>My Loan Top-ups</title>{% endblock %}
+
+{% block header %}<h5 class="fw-bold"><i class="bi bi-arrow-up-circle me-2"></i>My Loan Top-ups</h5>{% endblock %}
+
+{% block content %}
+<div class="main main-app p-3 p-lg-4">
+    <div class="container-fluid">
+        {% if topups %}
+            <!-- Top-up Filter and Search Section -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+                <div class="mb-3 mb-md-0">
+                    <h6 class="fw-bold mb-1">Your Loan Top-ups</h6>
+                    <p class="text-muted mb-0">Showing {{ topups|length }} top-up{% if topups|length != 1 %}s{% endif %}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
+                            <li><a class="dropdown-item active" href="#">All Top-ups</a></li>
+                            <li><a class="dropdown-item" href="#">Pending</a></li>
+                            <li><a class="dropdown-item" href="#">Approved</a></li>
+                            <li><a class="dropdown-item" href="#">Disbursed</a></li>
+                            <li><a class="dropdown-item" href="#">Rejected</a></li>
+                        </ul>
+                    </div>
+                    <div class="input-group" style="width: auto;">
+                        <input type="text" class="form-control" placeholder="Search top-ups" aria-label="Search top-ups">
+                        <button class="btn btn-outline-secondary" type="button">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top-ups Horizontal Scrolling Section -->
+            <div class="topups-container mb-4">
+                <div class="row flex-nowrap overflow-auto pb-3" style="scroll-padding: 1rem; scroll-behavior: smooth;">
+                    {% for topup in topups %}
+                    <div class="col-11 col-md-6 col-lg-4 col-xl-3">
+                        <div class="card h-100 shadow-sm 
+                            {% if topup.status == 'pending' %}border-warning-soft
+                            {% elif topup.status == 'approved' %}border-primary-soft
+                            {% elif topup.status == 'disbursed' %}border-success-soft
+                            {% elif topup.status == 'rejected' %}border-danger-soft
+                            {% endif %}">
+                            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold">
+                                    <i class="bi bi-arrow-up-circle me-1"></i>Top-up #{{ topup.id }}
+                                </h6>
+                                {% if topup.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark">{{ topup.status|title }}</span>
+                                {% elif topup.status == 'approved' %}
+                                    <span class="badge bg-primary">{{ topup.status|title }}</span>
+                                {% elif topup.status == 'disbursed' %}
+                                    <span class="badge bg-success">{{ topup.status|title }}</span>
+                                {% elif topup.status == 'rejected' %}
+                                    <span class="badge bg-danger">{{ topup.status|title }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ topup.status|title }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <!-- Parent Loan Information -->
+                                <div class="mb-3 p-2 rounded" style="background-color: rgba(108, 117, 125, 0.1);">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="text-muted small">Parent Loan</div>
+                                            <div class="fw-medium">Loan #{{ topup.loan.id }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="text-muted small">Original Amount</div>
+                                            <div class="fw-medium">₵{{ topup.loan.amount_approved|floatformat:2 }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Top-up Amount -->
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <div class="text-muted small">Top-up Amount</div>
+                                        <div class="fw-bold fs-4 
+                                            {% if topup.status == 'pending' %}text-warning
+                                            {% elif topup.status == 'approved' %}text-primary
+                                            {% elif topup.status == 'disbursed' %}text-success
+                                            {% elif topup.status == 'rejected' %}text-danger
+                                            {% endif %}">
+                                            ₵{{ topup.topup_amount|floatformat:2 }}
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-muted small">Current Monthly Payment</div>
+                                        <div class="fw-medium">₵{{ topup.loan.monthly_installments|floatformat:2 }}</div>
+                                    </div>
+                                </div>
+
+                                <!-- New Tenure and Payment Info -->
+                                {% if topup.status == 'approved' or topup.status == 'disbursed' %}
+                                <div class="mb-3 p-2 rounded" style="background-color: rgba(25, 135, 84, 0.1);">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <div class="text-muted small">New Tenure</div>
+                                            <div class="fw-medium text-success">{{ topup.new_tenure_months }} Months</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-muted small">New Monthly Payment</div>
+                                            <div class="fw-medium text-success">₵{{ topup.new_monthly_payment|floatformat:2 }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="mb-3 p-2 rounded" style="background-color: rgba(108, 117, 125, 0.1);">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <div class="text-muted small">Requested Tenure</div>
+                                            <div class="fw-medium">{{ topup.tenure_months }} Months</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-muted small">Interest Rate</div>
+                                            <div class="fw-medium">{{ topup.interest_rate|default:"TBD" }}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Additional Details -->
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <div class="text-muted small">Date Requested</div>
+                                        <div class="fw-medium">{{ topup.application_date|date:"M d, Y" }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">
+                                            {% if topup.status == 'disbursed' %}Disbursed Date
+                                            {% elif topup.status == 'approved' %}Approved Date
+                                            {% elif topup.status == 'rejected' %}Rejected Date
+                                            {% else %}Status
+                                            {% endif %}
+                                        </div>
+                                        <div class="fw-medium">
+                                            {% if topup.status == 'disbursed' %}
+                                                {{ topup.disbursement_date|date:"M d, Y"|default:"Pending" }}
+                                            {% elif topup.status == 'approved' %}
+                                                {{ topup.approval_date|date:"M d, Y"|default:"Recently" }}
+                                            {% elif topup.status == 'rejected' %}
+                                                {{ topup.rejection_date|date:"M d, Y"|default:"Recently" }}
+                                            {% else %}
+                                                Under Review
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Purpose -->
+                                <div class="mb-3">
+                                    <div class="text-muted small">Purpose</div>
+                                    <div class="fw-medium">{{ topup.purpose|truncatechars:50 }}</div>
+                                </div>
+
+                                <!-- Action Button -->
+                                <a href="{% url 'member_topup_details' tenant_id=request.tenant.id staff_id=request.user.member.staff_id pk=topup.id %}" 
+                                   class="btn w-100 
+                                   {% if topup.status == 'pending' %}btn-warning
+                                   {% elif topup.status == 'approved' %}btn-primary
+                                   {% elif topup.status == 'disbursed' %}btn-success
+                                   {% elif topup.status == 'rejected' %}btn-danger
+                                   {% else %}btn-secondary
+                                   {% endif %}">
+                                    <i class="bi bi-eye me-1"></i>View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Pagination for Mobile -->
+            <div class="d-flex justify-content-center mb-4">
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="Top-up pagination">
+                    <ul class="pagination pagination-sm">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link" aria-hidden="true">&laquo;</span>
+                            </li>
+                        {% endif %}
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link" aria-hidden="true">&raquo;</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+
+            <!-- Apply for New Top-up Card -->
+            <div class="card shadow-sm border-info-soft">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8 mb-3 mb-lg-0">
+                            <h5 class="fw-bold mb-2">Need additional funds for your existing loan?</h5>
+                            <p class="text-muted mb-0">You may be eligible for a loan top-up. Increase your loan amount with flexible terms.</p>
+                        </div>
+                        <div class="col-lg-4 text-lg-end">
+                            <a href="{% url 'member_topup_application' tenant_id=request.tenant.id staff_id=request.user.member.user_id %}" class="btn btn-info">
+                                <i class="bi bi-arrow-up-circle me-2"></i>Apply for Top-up
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- Empty State - No Top-ups -->
+            <div class="card shadow-sm">
+                <div class="card-body py-5">
+                    <div class="text-center">
+                        <div class="mb-4">
+                            <i class="bi bi-arrow-up-circle fs-1 text-muted"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">No Top-ups Found</h4>
+                        <p class="text-muted mb-4">You haven't applied for any loan top-ups yet. Increase your existing loan amount today.</p>
+                        <a href="{% url 'member_topup_application' tenant_id=request.tenant.id staff_id=request.user.member.user_id %}" class="btn btn-info">
+                            <i class="bi bi-arrow-up-circle me-2"></i>Apply for Top-up
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+
+    .card.border {
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Status-based Card Borders */
+    .card.border-warning-soft {
+        border: 2px solid rgba(255, 193, 7, 0.4) !important;
+        background-color: rgba(255, 193, 7, 0.02);
+    }
+
+    .card.border-primary-soft {
+        border: 2px solid rgba(13, 110, 253, 0.4) !important;
+        background-color: rgba(13, 110, 253, 0.02);
+    }
+
+    .card.border-success-soft {
+        border: 2px solid rgba(25, 135, 84, 0.4) !important;
+        background-color: rgba(25, 135, 84, 0.02);
+    }
+
+    .card.border-danger-soft {
+        border: 2px solid rgba(220, 53, 69, 0.4) !important;
+        background-color: rgba(220, 53, 69, 0.02);
+    }
+
+    .card.border-info-soft {
+        border: 1px solid rgba(13, 202, 240, 0.3) !important;
+        background-color: rgba(13, 202, 240, 0.03);
+    }
+
+    /* Badge Styles */
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+
+    /* Status Colors */
+    .text-warning {
+        color: #f57c00 !important;
+    }
+
+    .text-primary {
+        color: #0d6efd !important;
+    }
+
+    .text-success {
+        color: #198754 !important;
+    }
+
+    .text-danger {
+        color: #dc3545 !important;
+    }
+
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+
+    .btn-warning {
+        background-color: #f57c00;
+        border-color: #f57c00;
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background-color: #ef6c00;
+        border-color: #ef6c00;
+        color: white;
+    }
+
+    /* Horizontal Scrolling */
+    .topups-container .row {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        margin-left: -0.75rem;
+        margin-right: -0.75rem;
+    }
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .topups-container .row::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .topups-container .row {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+
+    /* Responsive adjustments */
+    @media (min-width: 768px) {
+        .topups-container .row {
+            flex-wrap: wrap;
+            overflow: visible;
+        }
+    }
+
+    /* Parent loan section styling */
+    .card-body .rounded {
+        border-radius: 0.5rem !important;
+    }
+
+    /* Enhanced card header for top-ups */
+    .card-header {
+        background-color: rgba(248, 249, 250, 0.8);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+</style>
+
+<script>
+    $(document).ready(function(){
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Add shadow to cards on hover
+        $('.card').hover(
+            function() {
+                $(this).addClass('shadow');
+            },
+            function() {
+                $(this).removeClass('shadow');
+            }
+        );
+
+        // Filter functionality
+        $('.dropdown-item').on('click', function(e) {
+            e.preventDefault();
+            $('.dropdown-item').removeClass('active');
+            $(this).addClass('active');
+            
+            var filterText = $(this).text();
+            $('#filterDropdown').html('<i class="bi bi-funnel me-1"></i>' + filterText);
+            
+            // Add your filtering logic here
+            filterTopups(filterText);
+        });
+
+        function filterTopups(filter) {
+            var cards = $('.topups-container .card');
+            
+            if (filter === 'All Top-ups') {
+                cards.parent().show();
+            } else {
+                cards.each(function() {
+                    var status = $(this).find('.badge').text().toLowerCase();
+                    if (status.includes(filter.toLowerCase())) {
+                        $(this).parent().show();
+                    } else {
+                        $(this).parent().hide();
+                    }
+                });
+            }
+        }
+
+        // Search functionality
+        $('input[placeholder="Search top-ups"]').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            var cards = $('.topups-container .card');
+            
+            cards.each(function() {
+                var cardText = $(this).text().toLowerCase();
+                if (cardText.includes(searchTerm)) {
+                    $(this).parent().show();
+                } else {
+                    $(this).parent().hide();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

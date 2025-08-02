@@ -1006,7 +1006,7 @@ class DisbursedLoanDetailView(DetailView):
 
         context['next_payment_date'] = next_payment_date
         context['total_repayments'] = total_repayments
-        context['outstanding_balance'] = (total_loan_amount - total_repayments).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        context['outstanding_balance'] = loan.outstanding_balance
         context['percentage_paid'] = Decimal(((total_repayments / total_loan_amount) * 100)).quantize(Decimal("0.01"), ROUND_HALF_UP) if total_loan_amount > 0 else Decimal('0.00')
 
         if loan:
@@ -1015,41 +1015,6 @@ class DisbursedLoanDetailView(DetailView):
             context['amortization_schedule'] = []
 
         return context
-
-
-"""
-RETURNS THE ACTUAL REQUIRED PAYABLE AMOUNT FOR A LOAN AT A GIVEN DATE
-"""
-class ActualAmountPayable:
-    """
-    Represents the calculation of the actual amount payable for a given loan application.
-
-    Provides functionality to determine the total amount still payable on a loan, including
-    outstanding principal and accrued interest, based on the payment and loan details.
-    """
-    def __init__(self,loan:LoanApplication):
-        self.loan = loan
-
-    def get_actual_amount_payable(self):
-        loan = self.loan
-        total_principal_paid = loan.total_principal_paid
-
-        total_outstanding_principal = loan.amount_requested - total_principal_paid
-
-        last_payment = loan.amortization_schedule.filter(
-            is_paid=True
-        ).order_by('-installment_date').first()
-
-        if last_payment:
-            days = (timezone.now().date() - last_payment.installment_date).days
-            daily_rate = loan.interest_rate / Decimal('36500')
-            total_accrued_interest = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'),
-                                                                                                rounding=ROUND_HALF_UP)
-        else:
-            total_accrued_interest = Decimal('0.00')
-
-        total_amount_payable = (total_outstanding_principal + total_accrued_interest).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        return total_amount_payable
 
 
 
@@ -1093,11 +1058,11 @@ class FetchFullAmountPayable(View):
                 'message':'Loan not found.'
             })
 
-        amount_payable_calculator = ActualAmountPayable(loan)
+        total_loan_amount_payable = loan.outstanding_balance
         return JsonResponse({
             'status':'success',
             'data': {
-                'amount_payable': amount_payable_calculator.get_actual_amount_payable()
+                'amount_payable': total_loan_amount_payable
             }
         })
 
@@ -1164,24 +1129,7 @@ class LoanPaymentHandler(View):
             })
 
         if payment_type == 'full':
-            # total_payable_amount_calculator = ActualAmountPayable(loan)
-            total_principal_paid = loan.total_principal_paid
-
-            total_outstanding_principal = loan.amount_requested - total_principal_paid
-
-            last_payment = loan.amortization_schedule.filter(
-                is_paid=True
-            ).order_by('-installment_date').first()
-
-            if last_payment:
-                days = (timezone.now().date() - last_payment.installment_date).days
-                daily_rate = loan.interest_rate / Decimal('36500')
-                total_accrued_interest = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            else:
-                total_accrued_interest = Decimal('0.00')
-
-            total_amount_payable = total_outstanding_principal + total_accrued_interest
-            # total_amount_payable = total_payable_amount_calculator.get_actual_amount_payable()
+            total_amount_payable = loan.outstanding_balance
 
             if payment_amount < total_amount_payable:
                 return JsonResponse({
@@ -1198,8 +1146,8 @@ class LoanPaymentHandler(View):
                         user=user,
                         loan=loan,
                         date_paid=timezone.now(),
-                        principal_paid=total_outstanding_principal,
-                        interest_paid=total_accrued_interest,
+                        principal_paid=loan.remaining_principal,
+                        interest_paid=loan.accrued_interest_to_date,
                         is_full_payment=True,
                         payment_type='full'
                     )
@@ -1207,6 +1155,7 @@ class LoanPaymentHandler(View):
                     # TODO: David: Add third party payment gateway integration here
                     # TODO: if payment is successful, then proceed to handle full repayment
                     loan.handle_full_repayment()
+
                     subject = "Loan Repayment Confirmation"
                     message = (f"Your loan with ID: {loan.id} has been fully repaid. "
                                "Loan has been marked as repaid. "
@@ -1234,33 +1183,16 @@ class LoanPaymentHandler(View):
                     'message': 'Payment amount must be greater than zero.'
                 })
 
-            # 1. Total principal paid so far
-            total_principal_paid = loan.total_principal_paid
-
-            total_outstanding_principal = loan.amount_requested - total_principal_paid
+            total_outstanding_principal = loan.remaining_principal
 
             if partial_payment_amount >= total_outstanding_principal:
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'Payment amount is too high. Use full repayment instead.'
+                    'message': 'For full payment please use full repayment option instead.'
                 })
 
-            # 2. Find the last paid installment (if any)
-            last_paid_schedule = loan.amortization_schedule.filter(
-                is_paid=True
-            ).order_by('-installment_date').first()
+            interest_accrued = loan.accrued_interest_to_date
 
-            # 3. Calculate interest accrued since the last paid installment (or disbursement)
-            last_payment_date = last_paid_schedule.installment_date if last_paid_schedule else loan.disbursement_date
-            today = timezone.now().date()
-            days = (today - last_payment_date).days if last_payment_date else 0
-
-            interest_accrued = Decimal('0.00')
-            if days > 0:
-                daily_rate = loan.interest_rate / Decimal('36500')
-                interest_accrued = (total_outstanding_principal * daily_rate * days).quantize(Decimal('0.01'))
-
-            # 4. Deduct interest from payment, rest goes to principal
             if partial_payment_amount <= interest_accrued:
                 return JsonResponse({
                     'status': 'error',
@@ -1567,7 +1499,7 @@ class MemberLoanDetailView(DetailView):
 
         context['next_payment_date'] = next_payment_date
         context['total_repayments'] = total_repayments
-        context['outstanding_balance'] = (total_loan_amount - total_repayments).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        context['outstanding_balance'] = loan.outstanding_balance
         context['percentage_paid'] = Decimal(((total_repayments / total_loan_amount) * 100)).quantize(Decimal("0.01"), ROUND_HALF_UP) if total_loan_amount > 0 else Decimal('0.00')
 
         if loan:
@@ -2050,7 +1982,7 @@ class FetchLoanAndTopUpDetails(View):
 
             total_repayment = total_interest_and_principal['total_principal'] + total_interest_and_principal['total_interest'] if total_interest_and_principal['total_principal'] and total_interest_and_principal['total_interest'] else Decimal('0.00')
 
-            outstanding_balance = (parent_loan.amount_requested + parent_loan.interest_amount) - total_repayment
+            outstanding_balance = parent_loan.outstanding_balance
 
             loan_details = {
                 'amount_approved': parent_loan.amount_requested,
@@ -2068,3 +2000,26 @@ class FetchLoanAndTopUpDetails(View):
                 'original_loan': loan_details
             }
         })
+
+
+"""
+MEMBER TOPUPS LISTVIEW
+"""
+class MemberTopUpsListView(ListView):
+    model = LoanTopUp
+    template_name = ''
+    context_object_name = 'member_topups'
+    paginate_by = 10
+
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        user = getattr(self.request,'user', None)
+
+        if not tenant or not user:
+            return self.model.objects.none()
+
+        member = user.member
+        return self.model.objects.filter(
+            user=member,
+            tenant=tenant
+        ).order_by('-requested_at')
