@@ -350,7 +350,7 @@ class LoanApplication(models.Model):
     """
     APPROVE LOAN AND GENERATE SCHEDULE-- BY ADMIN
     """ 
-    def approve_loan(self, user):
+    def approve(self, user):
         """
         Approves the loan request, updates its status, sets approval details, and
         generates the amortization schedule.
@@ -409,7 +409,7 @@ class LoanApplication(models.Model):
         self.save()
 
 
-    def reject_loan(self, user, note=None):
+    def reject(self, user, note=None):
         """
         Rejects the loan application, updates its status, and records the rejection details.
 
@@ -893,7 +893,7 @@ class LoanTopUp(models.Model):
     def __str__(self):
         return f'Top Up of {self.topup_amount} for {self.loan.id}'
 
-    def approve_topup(self, user):
+    def approve(self, user):
         """
         Approves the loan top-up request, updates its status, sets approval details,
         and marks it as approved.
@@ -915,7 +915,7 @@ class LoanTopUp(models.Model):
         self.approved_at = timezone.now()
         self.save()
 
-    def reject_topup(self, user, note=None):
+    def reject(self, user, note=None):
         """
         Rejects the loan top-up request, updates its status, sets rejection details,
         and marks it as rejected.

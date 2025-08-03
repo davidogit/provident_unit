@@ -1552,7 +1552,7 @@ class RejectLoanApplication(View):
             })
 
         try:
-            loan.reject_loan(user, note=note)
+            loan.reject(user, note=note)
             return JsonResponse({
                 'status': 'success',
                 'message': 'Loan application rejected successfully.'
@@ -1790,7 +1790,7 @@ class LoanTopUpApprovalHandler(View):
             })
 
         try:
-            topup.approve_topup(user)
+            topup.approve(user)
             return JsonResponse({
                 'status': 'success',
                 'message': 'Top-up request approved successfully.'
@@ -1892,7 +1892,7 @@ class LoanTopUpRejectionHandler(View):
             })
 
         try:
-            topup.reject_topup(user, note=note)
+            topup.reject(user, note=note)
             return JsonResponse({
                 'status': 'success',
                 'message': 'Top-up request rejected successfully.'
