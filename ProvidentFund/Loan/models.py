@@ -65,7 +65,7 @@ class LoanType(models.Model):
     )
     interest_calculation_type = models.CharField(
         max_length=8,
-        choices=[('FLAT','flat'),('REDUCING','Reducing')], default='FLAT',
+        choices=[('FLAT','Flat'),('REDUCING','Reducing')], default='FLAT',
         help_text='Interest calculation type: Flat or Reducing balance'
     )
     loan_fee_percentage = models.DecimalField(
@@ -204,6 +204,25 @@ class LoanApplication(models.Model):
         default=Decimal(0),
         help_text='to be calculated automatically when a payment is made'
     )
+    remaining_principal = models.DecimalField(
+        decimal_places=2,
+        max_digits=12,
+        blank=True,
+        null=True,
+        default=Decimal(0),
+        help_text="Remaining Principal of loan automatically updated when payment is recorded"
+    )
+    accrued_interest_to_date = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal(0),
+        help_text="Shows accrued interest to date, and automatically calculated and updated"
+    )
+    last_interest_accrual_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Keeps track of last date interest was accrued to prevent multiple calculation for a single day."
+    )
     note = models.TextField(
         null=True,
         blank=True,
@@ -213,6 +232,10 @@ class LoanApplication(models.Model):
     def __str__(self):
         return f'Loan application: id: {self.id} - {self.user.user.username} - Amount- {self.amount_requested}.'
 
+
+    @property
+    def outstanding_balance(self):
+        return self.remaining_principal + self.accrued_interest_to_date
 
     @property
     def total_principal_paid(self):
@@ -343,15 +366,19 @@ class LoanApplication(models.Model):
         if self.approved:
             raise Exception("Loan already processed.")
 
-        # Generate amortization schedule
-        build_amortization_schedule(loan=self, principal=self.amount_requested)
+        with transaction.atomic:
+            # Generate amortization schedule
+            build_amortization_schedule(loan=self, principal=self.amount_requested)
 
-        # update loan details
-        self.status = 'APPROVED'
-        self.approved_by = user
-        self.approved = True
-        self.approval_date = timezone.now().date()
-        self.save()
+            # initialize remaining_principal upon loan approval
+            self.remaining_principal = self.amount_requested
+
+            # update loan details
+            self.status = 'APPROVED'
+            self.approved_by = user
+            self.approved = True
+            self.approval_date = timezone.now().date()
+            self.save()
 
 
     """
@@ -538,6 +565,13 @@ class LoanApplication(models.Model):
                 start_date += datetime.timedelta(days=30)
 
             LoanAmortizationSchedule.objects.bulk_create(schedule_list)
+    
+
+    def apply_repayment(self, principal_component: 'Decimal', interest_component: 'Decimal'):
+
+        self.accrued_interest_to_date -= interest_component
+        self.remaining_principal -= principal_component
+        self.save()
 
     """
     SAVE METHOD
@@ -723,6 +757,9 @@ class LoanRepayment(models.Model):
         is_new = self.pk is None  # Check if this is a new record
 
         if is_new:
+            # update the remaining_principal field on Loan object
+            self.loan.apply_repayment(self.principal_paid,self.interest_paid)
+
             super().save(*args, **kwargs)  # Save to get an ID
 
         # Run dependent logic

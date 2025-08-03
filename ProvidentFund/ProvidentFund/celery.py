@@ -46,6 +46,10 @@ app.conf.beat_schedule = {
         'task': 'Fund.tasks.notify_tenant_three_days_to_scheduled_payment',
         'schedule': crontab(hour='*', minute='*') #Runs daily at midnight
     },
+    'accrue_interest_daily':{
+        'task':'Loan.tasks.accrue_interest_daily',
+        'schedule':crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
+    }
 }
 
 
