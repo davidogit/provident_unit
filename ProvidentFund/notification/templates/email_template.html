@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>{{subject}}</title>
+
+    <!--[if mso]>
+    <nxml:namespace xmlns:nxml="http://www.xmlsoap.org/schemas/soap/envelope/" prefix="v" />
+    <nxml:namespace xmlns:nxml="http://www.xmlsoap.org/schemas/soap/envelope/" prefix="o" />
+    <![endif]-->
+
+    <style>
+        /* Reset styles */
+        * {
+            box-sizing: border-box;
+        }
+
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+        }
+
+        /* Base styles */
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #f4f7fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333333;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* Header styles */
+        .email-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-subtitle {
+            color: #e8f0fe;
+            font-size: 16px;
+            margin: 10px 0 0 0;
+            font-weight: 400;
+        }
+
+        /* Content styles */
+        .email-content {
+            padding: 40px 30px;
+        }
+
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333333;
+            margin: 0 0 20px 0;
+        }
+
+        .message-content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #555555;
+            margin: 0 0 30px 0;
+        }
+
+        .message-content p {
+            margin: 0 0 16px 0;
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Button styles */
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Info box styles */
+        .info-box {
+            background-color: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box-title {
+            font-weight: 600;
+            color: #333333;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .info-box-content {
+            color: #555555;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* Alert styles */
+        .alert {
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        /* Table styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .data-table th {
+            background-color: #667eea;
+            color: #ffffff;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* Footer styles */
+        .email-footer {
+            background-color: #2c3e50;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer-content {
+            color: #bdc3c7;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .footer-content a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .footer-content a:hover {
+            text-decoration: underline;
+        }
+
+        .social-links {
+            margin: 20px 0 10px 0;
+        }
+
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #bdc3c7;
+            font-size: 18px;
+            text-decoration: none;
+        }
+
+        .social-links a:hover {
+            color: #3498db;
+        }
+
+        .unsubscribe {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 15px;
+        }
+
+        .unsubscribe a {
+            color: #95a5a6;
+        }
+
+        /* Responsive styles */
+        @media screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            .email-header,
+            .email-content,
+            .email-footer {
+                padding: 25px 20px !important;
+            }
+
+            .header-title {
+                font-size: 24px !important;
+            }
+
+            .cta-button {
+                display: block !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .data-table {
+                font-size: 12px !important;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 10px 8px !important;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .email-container {
+                background-color: #1a1a1a !important;
+            }
+
+            .email-content {
+                background-color: #1a1a1a !important;
+            }
+
+            .greeting,
+            .message-content {
+                color: #e0e0e0 !important;
+            }
+
+            .info-box {
+                background-color: #2a2a2a !important;
+                border-left-color: #667eea !important;
+            }
+
+            .data-table {
+                background-color: #2a2a2a !important;
+            }
+
+            .data-table td {
+                color: #e0e0e0 !important;
+                border-bottom-color: #404040 !important;
+            }
+
+            .data-table tr:nth-child(even) {
+                background-color: #333333 !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="email-header">
+            <!-- Replace with your logo -->
+            <img src="https://via.placeholder.com/150x60/ffffff/667eea?text=LOGO" alt="Company Logo" class="logo">
+            <h1 class="header-title">{{email_title|default:"Welcome"}}</h1>
+            <p class="header-subtitle">{{email_subtitle|default:"Thank you for being with us"}}</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="email-content">
+            <h2 class="greeting">Hello {{user_name|default:"Valued Customer"}},</h2>
+
+            <div class="message-content">
+                {{message_content|default:"<p>We hope this email finds you well. We wanted to reach out to share some important information with you.</p><p>Your account and services are important to us, and we're committed to providing you with the best possible experience.</p>"}}
+            </div>
+
+            <!-- Call to Action Button (Optional) -->
+            {% if cta_button_text and cta_button_url %}
+            <div class="button-container">
+                <a href="{{cta_button_url}}" class="cta-button">{{cta_button_text}}</a>
+            </div>
+            {% endif %}
+
+            <!-- Info Box (Optional) -->
+            {% if info_box_title or info_box_content %}
+            <div class="info-box">
+                {% if info_box_title %}
+                <h3 class="info-box-title">{{info_box_title}}</h3>
+                {% endif %}
+                {% if info_box_content %}
+                <p class="info-box-content">{{info_box_content}}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Alert (Optional) -->
+            {% if alert_type and alert_message %}
+            <div class="alert alert-{{alert_type}}">
+                {{alert_message}}
+            </div>
+            {% endif %}
+
+            <!-- Data Table (Optional) -->
+            {% if table_data %}
+            <table class="data-table">
+                {% if table_headers %}
+                <thead>
+                    <tr>
+                        {% for header in table_headers %}
+                        <th>{{header}}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                {% endif %}
+                <tbody>
+                    {% for row in table_data %}
+                    <tr>
+                        {% for cell in row %}
+                        <td>{{cell}}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+
+            <!-- Closing message -->
+            <div class="message-content">
+                <p>{{closing_message|default:"If you have any questions or need assistance, please don't hesitate to contact our support team."}}</p>
+                <p><strong>Best regards,<br>{{company_name|default:"The Team"}}</strong></p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="email-footer">
+            <div class="footer-content">
+                <div class="social-links">
+                    <a href="{{facebook_url|default:'#'}}">📘</a>
+                    <a href="{{twitter_url|default:'#'}}">🐦</a>
+                    <a href="{{linkedin_url|default:'#'}}">💼</a>
+                    <a href="{{instagram_url|default:'#'}}">📷</a>
+                </div>
+
+                <p>
+                    <strong>{{company_name|default:"Your Company"}}</strong><br>
+                    {{company_address|default:"123 Business Street, City, State 12345"}}<br>
+                    Phone: {{company_phone|default:"+1 (555) 123-4567"}} | Email: {{company_email|default:"support@company.com"}}
+                </p>
+
+                <p>
+                    <a href="{{website_url|default:'#'}}">Visit our website</a> |
+                    <a href="{{privacy_url|default:'#'}}">Privacy Policy</a> |
+                    <a href="{{terms_url|default:'#'}}">Terms of Service</a>
+                </p>
+
+                <div class="unsubscribe">
+                    <p>
+                        You received this email because you are subscribed to our mailing list.<br>
+                        <a href="{{unsubscribe_url|default:'#'}}">Unsubscribe</a> |
+                        <a href="{{preferences_url|default:'#'}}">Update Preferences</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
