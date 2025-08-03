@@ -76,7 +76,7 @@ class LoanType(models.Model):
     late_payment_penalty = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        help_text='Daily penalty for defaulters in percenrages. eg.1.5 for 1.5%'
+        help_text='Daily penalty for defaulters in percentages. eg.1.5 for 1.5%'
     )
     created_at = models.DateTimeField(
         auto_now_add=True
@@ -368,7 +368,7 @@ class LoanApplication(models.Model):
 
         user = kwargs.get('user')
 
-        with transaction.atomic:
+        with transaction.atomic():
             # Generate amortization schedule
             build_amortization_schedule(loan=self, principal=self.amount_requested)
 

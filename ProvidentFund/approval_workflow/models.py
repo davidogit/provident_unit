@@ -15,9 +15,9 @@ class ApprovalActionType(models.TextChoices):
 class RoleType(models.TextChoices):
     ADMIN = "Admin", "Admin"
     MEMBER = "Member", "Member"
-    CONTRIBUTION_MANAGER = "Contribution Manager", "Contribution Manager"
-    CONTRIBUTION_ANALYST = "Contribution Analyst", "Contribution Analyst"
-    CONTRIBUTION_SUPERVISOR = "Contribution Supervisor", "Contribution Supervisor"
+    CONTRIBUTION_MANAGER = "Contributions Manager", "Contributions Manager"
+    CONTRIBUTION_ANALYST = "Contributions Analyst", "Contributions Analyst"
+    CONTRIBUTION_SUPERVISOR = "Contributions Supervisor", "Contributions Supervisor"
     FINANCE_MANAGER = "Finance Manager", "Finance Manager"
     FINANCE_ANALYST = "Finance Analyst", "Finance Analyst"
     FINANCE_SUPERVISOR = "Finance Supervisor", "Finance Supervisor"
@@ -56,6 +56,11 @@ class ApprovalWorkflow(models.Model):
     updated_date = models.DateTimeField(
         auto_now=True
     )
+
+    class Meta:
+        ordering = ['-created_date']
+        verbose_name = "Approval Workflow"
+        verbose_name_plural = "Approval Workflows"
 
     def __str__(self):
         return f'{self.tenant.name} - {self.get_action_type_display()}'

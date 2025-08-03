@@ -5,10 +5,27 @@ from django.utils import timezone
 from django.apps import apps
 
 from ProvidentFund.settings import AUTH_USER_MODEL
+from approval_workflow.models import WorkflowStep
 from .models import ApprovalWorkflow, ApprovalInstance, ApprovalLog
 from MultiScheme.models import Tenant
 
 logger = logging.getLogger(__name__)
+
+
+def check_duplicate_action(user: 'AUTH_USER_MODEL', instance: 'ApprovalInstance', step: 'WorkflowStep'):
+    print(f"Checking for duplicate actions for user {user.username} in step {step.order} of workflow {instance.workflow.name}")
+    print(ApprovalLog.objects.filter(instance=instance,step=step,user=user).exists())
+    if ApprovalLog.objects.filter(instance=instance,step=step,user=user).exists():
+        print(f"User {user.username} has already taken action in step {step.order} of workflow {instance.workflow.name}")
+        raise ValueError(f"User {user.username} has already taken action in step {step.order} of workflow {instance.workflow.name}")
+
+
+def validate_user_role(user: 'AUTH_USER_MODEL', step: 'WorkflowStep'):
+    if not step:
+        raise ValueError("No approval step defined for this workflow")
+    if not user.groups.filter(name=step.role).exists():
+        raise PermissionError(f"User {user.username} does not have the required role {step.role} to approve this action")
+
 
 class ApprovalWorkflowEngine:
     def __init__(self,tenant: 'Tenant', target_object, action_type: str):
@@ -18,6 +35,21 @@ class ApprovalWorkflowEngine:
 
 
     def start_workflow(self):
+        # Check if there's already an existing instance for target and action
+        existing_instance = ApprovalInstance.objects.filter(
+            tenant=self.tenant,
+            target_object_type=self.target.__class__.__name__,
+            target_object_id=self.target.id,
+            action_type=self.action_type,
+            status='PENDING'
+        ).first()
+
+        if existing_instance:
+            logger.error(f"Found existing instance for target {self.target} and action {self.action_type} - {existing_instance}")
+            return existing_instance
+
+        logger.error(f"Creating new instance for target {self.target} and action {self.action_type}")
+        # If there is no instance for target and action, then proceed to create a new instance out of the workflow
         workflow = ApprovalWorkflow.objects.filter(
             tenant=self.tenant,
             action_type=self.action_type,
@@ -49,9 +81,10 @@ class ApprovalWorkflowEngine:
             step = instance.current_step
 
             # validate user
-            self._validate_user_role(user, step)
+            validate_user_role(user, step)
             # check for duplicate actions for a user
-            self._check_duplicate_action(user, instance, step)
+            logger.error(f"Checking for duplicate actions for user {user.username} in step {step.order} of workflow {instance.workflow.name} - 1")
+            check_duplicate_action(user, instance, step)
 
             ApprovalLog.objects.create(
                 instance=instance,
@@ -63,7 +96,7 @@ class ApprovalWorkflowEngine:
 
             kwargs.update({'comment':comment, 'user':user})
             # Proceed to finalize action if necessary
-            self._advance_step(user,instance, step, kwargs=kwargs)
+            self._advance_step(instance, step, **kwargs)
 
 
     def reject(self, user: 'AUTH_USER_MODEL', instance_id: int, comment: str = "", **kwargs):
@@ -75,8 +108,8 @@ class ApprovalWorkflowEngine:
             step = instance.current_step
 
             # Validate user and check for duplicates
-            self._validate_user_role(user, step)
-            self._check_duplicate_action(user, instance, step)
+            validate_user_role(user, step)
+            check_duplicate_action(user, instance, step)
 
             ApprovalLog.objects.create(
                 instance=instance,
@@ -92,22 +125,11 @@ class ApprovalWorkflowEngine:
             instance.save()
 
             kwargs.update({'comment':comment, 'user':user})
-            self._finalize(instance, approved=False, kwargs=kwargs)
+            self._finalize(instance, approved=False, **kwargs)
 
     # HELPER METHODS
-    def _validate_user_role(self, user, step):
-        if not user.groups.filter(name=step.role).exists():
-            raise PermissionError(f"User {user.username} does not have the required role {step.role} to approve this action")
 
-    def _check_duplicate_action(self, user, instance, step):
-        if ApprovalLog.objects.filter(
-            instance=instance,
-            step=step,
-            user=user
-        ).exists():
-            raise ValueError(f"User {user.username} has already taken action in step {step.order} of workflow {instance.workflow.name}")
-
-    def _advance_step(self,user, instance, step, **kwargs):
+    def _advance_step(self, instance, step, **kwargs):
         approvals = ApprovalLog.objects.filter(
             instance=instance,
             step=step,
@@ -124,7 +146,7 @@ class ApprovalWorkflowEngine:
             else:
                 instance.status = 'APPROVED'
                 instance.finalized_at = timezone.now()
-                self._finalize(instance, approved=True,kwargs=kwargs)
+                self._finalize(instance, approved=True,**kwargs)
 
         instance.save()
 
