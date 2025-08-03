@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     'MultiScheme',
     'Chart_of_Accounts',
     'Loan',
+    'approval_workflow',
+    'notification',
     
 
     'django_celery_beat',
