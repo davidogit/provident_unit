@@ -6,11 +6,11 @@ from ProvidentFund.settings import AUTH_USER_MODEL
 # Create your models here.
 
 class ApprovalActionType(models.TextChoices):
-    LOAN = "loan", "Loan Approval"
-    LOAN_TOPUP = "loan_topup", "Loan Topup Approval"
-    WITHDRAWAL = "withdrawal", "Withdrawal Approval"
-    INVESTMENT_APPROVAL = "investment_approval", "Investment Approval"
-    REQUISITION = "requisition", "Requisition"
+    LOAN_APPROVAL = "LOAN_APPROVAL", "Loan Approval"
+    LOAN_TOPUP_APPROVAL = "LOAN_TOPUP_APPROVAL", "Loan Topup Approval"
+    WITHDRAWAL_APPROVAL = "WITHDRAWAL_APPROVAL", "Withdrawal Approval"
+    INVESTMENT_APPROVAL = "INVESTMENT_APPROVAL", "Investment Approval"
+    REQUISITION_APPROVAL = "REQUISITION_APPROVAL", "Requisition Approval"
 
 class RoleType(models.TextChoices):
     ADMIN = "Admin", "Admin"
@@ -150,7 +150,7 @@ class ApprovalInstance(models.Model):
 
 
 class ApprovalLog(models.Model):
-    approval_instance = models.ForeignKey(
+    instance = models.ForeignKey(
         ApprovalInstance,
         on_delete=models.CASCADE,
         related_name='logs'
@@ -185,7 +185,7 @@ class ApprovalLog(models.Model):
 
 
     class Meta:
-        unique_together = ('approval_instance', 'step', 'user')
+        unique_together = ('instance', 'step', 'user')
 
     def __str__(self):
-        return f'{self.user.username} - {self.action} Step-{self.step.order} - {self.approval_instance.workflow.name} - {self.approval_instance.target_object_type} #{self.approval_instance.target_object_id}'
+        return f'{self.user.username} - {self.action} Step-{self.step.order} - {self.instance.workflow.name} - {self.instance.target_object_type} #{self.instance.target_object_id}'

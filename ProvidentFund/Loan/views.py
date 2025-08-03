@@ -11,6 +11,7 @@ from openpyxl.styles.builtins import total
 from pyexpat.errors import messages
 
 from Member.tasks import send_single_mail
+from approval_workflow.models import ApprovalActionType
 from .models import LoanApplication, LoanRepayment, LoanType, LoanAmortizationSchedule, build_amortization_schedule,LoanTopUp
 from .forms import LoanForm, LoanTypeForm, LoanTopUpRequestForm
 from django.utils.decorators import method_decorator
@@ -19,6 +20,8 @@ from Admin.decorators import role_required
 from decimal import Decimal,ROUND_HALF_UP
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+
+from approval_workflow.approval_engine import ApprovalWorkflowEngine
 
 
 # Create your views here.
@@ -731,7 +734,7 @@ class LoanApprovalView(ListView):
     context_object_name = 'loan_applications'
 
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request, 'tenant', None)
 
         if tenant:
             return self.model.objects.filter(
@@ -743,8 +746,8 @@ class LoanApprovalView(ListView):
     
     def post(self,request,*args,**kwargs):
         loan_id = self.request.POST.get("loan_id")
-        tenant = self.request.tenant
-        user = self.request.user
+        tenant = getattr(request, 'tenant', None)
+        user = getattr(request,'user',None)
 
         if not tenant:
             return JsonResponse({
@@ -764,11 +767,34 @@ class LoanApprovalView(ListView):
         ).first()
 
         if loan:
+            # create an Approval Engine to handle workflow
+            engine = ApprovalWorkflowEngine(
+                tenant=tenant,
+                target_object=loan,
+                action_type=ApprovalActionType.LOAN_APPROVAL.value
+            )
+
+
+
             try:
-                loan.approve_loan(user)
+                # start workflow
+                approval_instance = engine.start_workflow()
+
+                # start approval
+                engine.approve(user=user,instance_id=approval_instance.id)
                 return JsonResponse({
                     'status':'success',
                     'message':'Loan approved successfully.'
+                })
+            except ValueError as val_e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Error approving loan: {val_e}'
+                })
+            except PermissionError as perm_e:
+                return JsonResponse({
+                    'status':'error',
+                    'message':f'Permission denied: {perm_e}'
                 })
             except Exception as e:
                 return JsonResponse({
@@ -1551,11 +1577,33 @@ class RejectLoanApplication(View):
                 'message': 'Only pending applications can be rejected.'
             })
 
+        # initialize workflow engine
+        engine = ApprovalWorkflowEngine(
+            tenant=tenant,
+            target_object=loan,
+            action_type=ApprovalActionType.LOAN_APPROVAL.value
+        )
+
+
         try:
-            loan.reject(user, note=note)
+            # start workflow
+            approval_instance = engine.start_workflow()
+
+            # Reject application
+            engine.reject(user=user,instance_id=approval_instance.id,comment=note)
             return JsonResponse({
                 'status': 'success',
                 'message': 'Loan application rejected successfully.'
+            })
+        except ValueError as val_e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(val_e)
+            })
+        except PermissionError as perm_e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(perm_e)
             })
         except Exception as e:
             return JsonResponse({
@@ -1789,11 +1837,31 @@ class LoanTopUpApprovalHandler(View):
                 'message': 'Top-up request not found.'
             })
 
+        # initialize workflow engine
+        engine = ApprovalWorkflowEngine(
+            tenant=tenant,
+            target_object=topup,
+            action_type=ApprovalActionType.LOAN_TOPUP_APPROVAL.value
+        )
+
+
         try:
-            topup.approve(user)
+            approval_instance = engine.start_workflow()
+
+            engine.approve(user=user,instance_id=approval_instance.id)
             return JsonResponse({
                 'status': 'success',
                 'message': 'Top-up request approved successfully.'
+            })
+        except ValueError as val_e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(val_e)
+            })
+        except PermissionError as perm_e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(perm_e)
             })
         except Exception as e:
             return JsonResponse({
@@ -1891,11 +1959,31 @@ class LoanTopUpRejectionHandler(View):
                 'message': 'Top-up request not found.'
             })
 
+        # Initialize workflow engine
+        engine = ApprovalWorkflowEngine(
+            tenant=tenant,
+            target_object=topup,
+            action_type=ApprovalActionType.LOAN_TOPUP_APPROVAL.value
+        )
+
         try:
-            topup.reject(user, note=note)
+            # start workflow
+            approval_instance = engine.start_workflow()
+
+            engine.reject(user=user,instance_id=approval_instance.id,comment=note)
             return JsonResponse({
                 'status': 'success',
                 'message': 'Top-up request rejected successfully.'
+            })
+        except ValueError as val_e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(val_e)
+            })
+        except PermissionError as perm_e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(perm_e)
             })
         except Exception as e:
             return JsonResponse({

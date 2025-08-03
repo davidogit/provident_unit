@@ -350,7 +350,7 @@ class LoanApplication(models.Model):
     """
     APPROVE LOAN AND GENERATE SCHEDULE-- BY ADMIN
     """ 
-    def approve(self, user):
+    def approve(self, **kwargs):
         """
         Approves the loan request, updates its status, sets approval details, and
         generates the amortization schedule.
@@ -365,6 +365,8 @@ class LoanApplication(models.Model):
         """
         if self.approved:
             raise Exception("Loan already processed.")
+
+        user = kwargs.get('user')
 
         with transaction.atomic:
             # Generate amortization schedule
@@ -409,7 +411,7 @@ class LoanApplication(models.Model):
         self.save()
 
 
-    def reject(self, user, note=None):
+    def reject(self,**kwargs):
         """
         Rejects the loan application, updates its status, and records the rejection details.
 
@@ -426,6 +428,9 @@ class LoanApplication(models.Model):
         """
         if self.approved or self.disbursed:
             raise Exception("Loan already processed.")
+
+        user = kwargs.get('user')
+        note = kwargs.get('comment', None)
 
         self.status = 'REJECTED'
         self.rejected = True
@@ -893,7 +898,7 @@ class LoanTopUp(models.Model):
     def __str__(self):
         return f'Top Up of {self.topup_amount} for {self.loan.id}'
 
-    def approve(self, user):
+    def approve(self, **kwargs):
         """
         Approves the loan top-up request, updates its status, sets approval details,
         and marks it as approved.
@@ -909,13 +914,15 @@ class LoanTopUp(models.Model):
         if self.approved or self.disbursed:
             raise Exception("Top-up already processed.")
 
+        user = kwargs.get('user')
+
         self.status = 'APPROVED'
         self.approved_by = user
         self.approved = True
         self.approved_at = timezone.now()
         self.save()
 
-    def reject(self, user, note=None):
+    def reject(self,**kwargs):
         """
         Rejects the loan top-up request, updates its status, sets rejection details,
         and marks it as rejected.
@@ -934,6 +941,9 @@ class LoanTopUp(models.Model):
             raise Exception("Top-up already rejected.")
         if self.approved or self.disbursed:
             raise Exception("Top-up already processed.")
+
+        user = kwargs.get('user')
+        note = kwargs.get('comment', None)
 
         self.status = 'REJECTED'
         self.rejected = True

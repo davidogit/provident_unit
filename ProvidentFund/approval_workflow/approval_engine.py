@@ -61,13 +61,14 @@ class ApprovalWorkflowEngine:
                 comment=comment
             )
 
+            kwargs.update({'comment':comment, 'user':user})
             # Proceed to finalize action if necessary
-            self._advance_step(instance, step, **kwargs)
+            self._advance_step(user,instance, step, kwargs=kwargs)
 
 
     def reject(self, user: 'AUTH_USER_MODEL', instance_id: int, comment: str = "", **kwargs):
         with transaction.atomic():
-            instance = instance = ApprovalInstance.objects.select_related(
+            instance = ApprovalInstance.objects.select_related(
                 "current_step",
                 "workflow"
             ).get(id=instance_id)
@@ -90,7 +91,8 @@ class ApprovalWorkflowEngine:
             instance.finalized_at = timezone.now()
             instance.save()
 
-            self._finalize(instance, approved=False, **kwargs)
+            kwargs.update({'comment':comment, 'user':user})
+            self._finalize(instance, approved=False, kwargs=kwargs)
 
     # HELPER METHODS
     def _validate_user_role(self, user, step):
@@ -105,7 +107,7 @@ class ApprovalWorkflowEngine:
         ).exists():
             raise ValueError(f"User {user.username} has already taken action in step {step.order} of workflow {instance.workflow.name}")
 
-    def _advance_step(self, instance, step, **kwargs):
+    def _advance_step(self,user, instance, step, **kwargs):
         approvals = ApprovalLog.objects.filter(
             instance=instance,
             step=step,
@@ -122,7 +124,7 @@ class ApprovalWorkflowEngine:
             else:
                 instance.status = 'APPROVED'
                 instance.finalized_at = timezone.now()
-                self._finalize(instance, approved=True)
+                self._finalize(instance, approved=True,kwargs=kwargs)
 
         instance.save()
 
