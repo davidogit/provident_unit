@@ -1,0 +1,956 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .workflow-card {
+        transition: all 0.3s ease;
+        border: 1px solid var(--light-border);
+    }
+
+    .workflow-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .step-item {
+        background: var(--light-hover);
+        border: 1px solid var(--light-border);
+        border-radius: var(--radius-md);
+        transition: all 0.3s ease;
+    }
+
+    .step-item:hover {
+        box-shadow: var(--shadow-sm);
+    }
+
+    .step-number {
+        background: var(--primary-color);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+        background-color: var(--primary-color);
+    }
+
+    input:checked + .toggle-slider:before {
+        transform: translateX(26px);
+    }
+
+    .badge-active {
+        background-color: #28a745;
+    }
+
+    .badge-inactive {
+        background-color: #6c757d;
+    }
+
+    .form-floating > label {
+        color: #6c757d;
+    }
+
+    .btn-outline-danger:hover {
+        transform: scale(1.05);
+    }
+
+    .workflow-stats {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-radius: var(--radius-lg);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Dark mode adjustments */
+    body.dark-mode .workflow-card {
+        border-color: var(--dark-border);
+        background-color: var(--dark-secondary);
+    }
+
+    body.dark-mode .step-item {
+        background-color: var(--dark-hover);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .form-floating > label {
+        color: #adb5bd;
+    }
+
+    /* Custom styles matching your admin design */
+    .card {
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .form-select, .form-control, .input-group-text {
+        border-radius: 0.5rem;
+    }
+
+    .input-group > .form-select,
+    .input-group > .form-control {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
+    .input-group-text {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1.5rem;
+    }
+
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.75em;
+    }
+
+    .step-item {
+        transition: all 0.3s ease;
+    }
+
+    .step-item:hover {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Dark mode adjustments */
+    body.dark-mode .card {
+        background-color: var(--dark-secondary);
+    }
+
+    body.dark-mode .card-header,
+    body.dark-mode .card-footer {
+        background-color: var(--dark-primary) !important;
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .bg-light {
+        background-color: var(--dark-hover) !important;
+    }
+
+    body.dark-mode .text-muted {
+        color: #adb5bd !important;
+    }
+
+    body.dark-mode .table-light {
+        background-color: var(--dark-primary);
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .table {
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .table-hover tbody tr:hover {
+        background-color: transparent;
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .table td,
+    body.dark-mode .table th {
+        border-color: var(--dark-border);
+        border-top: none;
+        border-bottom: 1px solid var(--dark-border);
+    }
+
+    body.dark-mode .table thead th {
+        border-bottom: 1px solid var(--dark-border);
+    }
+
+    body.dark-mode .table tbody tr {
+        border: none;
+    }
+
+    body.dark-mode .table tbody td {
+        border-top: none;
+    }
+
+    body.dark-mode .list-group-item.bg-light {
+        background-color: var(--dark-hover) !important;
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .form-select,
+    body.dark-mode .form-control,
+    body.dark-mode .input-group-text {
+        background-color: var(--dark-hover);
+        border-color: var(--dark-border);
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .form-select option {
+        background-color: var(--dark-secondary);
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .alert-info {
+        background-color: rgba(13, 202, 240, 0.15);
+        border-color: rgba(13, 202, 240, 0.4);
+        color: #8ed8e6;
+    }
+
+    body.dark-mode .btn-outline-primary {
+        color: #6ea8fe;
+        border-color: #6ea8fe;
+    }
+
+    body.dark-mode .btn-outline-primary:hover {
+        background-color: #0d6efd;
+        color: #fff;
+    }
+
+    body.dark-mode .btn-outline-danger {
+        color: #ea868f;
+        border-color: #ea868f;
+    }
+
+    body.dark-mode .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: #fff;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h2 class="card-title mb-0 text-center fw-bold">
+                        <i class="ri-flow-chart me-2 text-primary"></i>Approval Workflow Management
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-7">
+                            <!-- Create Workflow Form -->
+                            <div class="p-3 p-lg-4">
+                                <h4 class="mb-4 fw-semibold border-start border-4 border-primary ps-3">Create New Workflow</h4>
+                                <form id="workflowForm" method="POST">
+                                    {% csrf_token %}
+
+                                    <!-- Display Django messages -->
+                                    {% if messages %}
+                                    <div class="mt-3">
+                                        {% for message in messages %}
+                                        <div class="alert alert-{{ message.tags }}">
+                                            <i class="ri-error-warning-line me-2"></i>
+                                            <strong>{{ message.tags|title }}:</strong> {{ message }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="mb-4">
+                                        <label for="workflowName" class="form-label fw-medium">Workflow Name</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-file-text-line"></i>
+                                            </span>
+                                            <input type="text" class="form-control form-control-lg" id="workflowName" name="name" placeholder="Enter workflow name" required>
+                                        </div>
+                                        <small class="text-muted">Choose a descriptive name for this approval workflow</small>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label for="actionType" class="form-label fw-medium">Action Type</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-settings-3-line"></i>
+                                            </span>
+                                            <select class="form-select form-control-lg" id="actionType" name="action_type" required>
+                                                {% if action_types %}
+                                                {% for value, label in action_types %}
+                                                    <option value="{{ value }}">{{ label }}</option>
+                                                {% endfor %}
+                                                {% endif %}
+                                            </select>
+                                        </div>
+                                        <small class="text-muted">Select the type of action this workflow will handle</small>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="form-label fw-medium">Active Status</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="activeStatus" name="is_active" checked>
+                                            <label class="form-check-label" for="activeStatus" id="activeStatusText">
+                                                Active
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Enable or disable this workflow</small>
+                                    </div>
+
+                                    <!-- Workflow Steps Section -->
+                                    <div class="mb-4">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="fw-semibold mb-0">Workflow Steps</h5>
+                                            <button type="button" class="btn btn-outline-primary btn-sm" id="addStepBtn">
+                                                <i class="ri-add-line me-1"></i>Add Step
+                                            </button>
+                                        </div>
+
+                                        <div id="stepsContainer">
+                                            <!-- Steps will be added dynamically -->
+                                        </div>
+
+                                        <div class="text-center py-4" id="emptySteps">
+                                            <i class="ri-list-check-2 text-muted" style="font-size: 3rem;"></i>
+                                            <p class="text-muted mb-0">No steps added yet. Click "Add Step" to create your first workflow step.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-grid gap-2 mt-4">
+                                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                            <i class="ri-save-line me-2"></i>Create Workflow
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div id="formErrors" class="alert alert-danger mt-4 d-none">
+                                    <i class="ri-error-warning-line me-2"></i>
+                                    <strong>Error:</strong> <span id="errorContent"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-5">
+                            <!-- Guidelines -->
+                            <div class="p-3 p-lg-4">
+                                <h4 class="mb-4 fw-semibold border-start border-4 border-primary ps-3">Guidelines</h4>
+                                <div class="bg-light p-4 rounded-3 mb-4">
+                                    <h5 class="fw-bold mb-3">
+                                        <i class="ri-information-line me-2 text-primary"></i>Workflow Setup
+                                    </h5>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Name:</strong> Use descriptive names for easy identification
+                                        </li>
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Steps:</strong> Add steps in sequential order
+                                        </li>
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Roles:</strong> Assign appropriate roles for each step
+                                        </li>
+                                        <li class="list-group-item bg-light">
+                                            <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                            <strong>Approvals:</strong> Set minimum required approvals per step
+                                        </li>
+                                    </ul>
+
+                                    <div class="alert alert-info mt-4 mb-0">
+                                        <i class="ri-lightbulb-line me-2"></i>
+                                        <strong>Tip:</strong> There can be only one active workflow per action type.
+                                    </div>
+                                </div>
+
+                                <div class="bg-light p-4 rounded-3">
+                                    <h5 class="fw-bold mb-3">
+                                        <i class="ri-shield-check-line me-2 text-primary"></i>Best Practices
+                                    </h5>
+                                    <p>When creating workflows:</p>
+                                    <ol class="ps-3">
+                                        <li class="mb-2">Keep step orders sequential (1, 2, 3...)</li>
+                                        <li class="mb-2">Assign roles based on organizational hierarchy</li>
+                                        <li class="mb-2">Set realistic approval requirements</li>
+                                        <li class="mb-2">Test thoroughly before activation</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Existing Workflows -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0 fw-semibold">
+                        <i class="ri-list-check me-2 text-primary"></i>Existing Workflows
+                    </h4>
+                    <button class="btn btn-sm btn-outline-primary" id="refreshBtn">
+                        <i class="ri-refresh-line me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    {% if workflows %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Workflow Name</th>
+                                    <th scope="col">Action Type</th>
+                                    <th scope="col">Steps</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workflowsTableBody">
+                                {% for workflow in workflows %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-medium">{{ workflow.name }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ workflow.action_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ workflow.steps.count }} step{{ workflow.steps.count|pluralize }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if workflow.active %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {% if workflow.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-primary" onclick="editWorkflow({{ workflow.id }})" title="Edit">
+                                                <i class="ri-edit-line"></i>
+                                            </button>
+                                            <button class="btn btn-outline-{% if workflow.is_active %}warning{% else %}success{% endif %}"
+                                                    onclick="toggleWorkflow({{ workflow.id }}, {{ workflow.is_active|yesno:'true,false' }})"
+                                                    title="{% if workflow.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                <i class="ri-{% if workflow.is_active %}pause{% else %}play{% endif %}-line"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="deleteWorkflow({{ workflow.id }})" title="Delete">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="ri-folder-open-line text-muted" style="font-size: 4rem;"></i>
+                        <p class="text-muted mb-0 mt-3">No workflows found. Create your first workflow to get started.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <i class="ri-check-line me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Workflow created successfully!
+        </div>
+    </div>
+
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <i class="ri-error-warning-line me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            An error occurred while processing your request.
+        </div>
+    </div>
+</div>
+
+<!-- SweetAlert2 and Form Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    let stepCounter = 0;
+
+    // Active status toggle
+    $('#activeStatus').on('change', function() {
+        $('#activeStatusText').text($(this).is(':checked') ? 'Active' : 'Inactive');
+    });
+
+    // Add step functionality
+    $('#addStepBtn').on('click', function() {
+        addWorkflowStep();
+    });
+
+    function addWorkflowStep() {
+        stepCounter++;
+        const $stepsContainer = $('#stepsContainer');
+        const $emptySteps = $('#emptySteps');
+
+        $emptySteps.hide();
+
+        const stepHtml = `
+            <div class="card mb-3 step-item" data-step="${stepCounter}">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                    <h6 class="mb-0 fw-semibold">
+                        <span class="badge bg-primary me-2">${stepCounter}</span>
+                        Step ${stepCounter}
+                    </h6>
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-step" data-step="${stepCounter}">
+                        <i class="ri-delete-bin-line"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-medium">Step Order</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="ri-sort-asc"></i>
+                                </span>
+                                <input type="number" class="form-control step-order" name="steps[${stepCounter}][order]"
+                                       placeholder="Order" min="1" value="${stepCounter}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-medium">Role</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="ri-user-star-line"></i>
+                                </span>
+                                <select class="form-select step-role" name="steps[${stepCounter}][role]" required>
+                                    {% if role_types %}
+                                    {% for value, label in role_types %}
+                                    <option value="{{ value }}" {% if value == 'admin' %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-medium">Required Approvals</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="ri-checkbox-multiple-line"></i>
+                                </span>
+                                <input type="number" class="form-control step-approvals" name="steps[${stepCounter}][required_approvals]"
+                                       placeholder="Approvals" min="1" value="1" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        $stepsContainer.append(stepHtml);
+
+        // Add event listener for remove button
+        $stepsContainer.find(`[data-step="${stepCounter}"] .remove-step`).on('click', function() {
+            removeWorkflowStep($(this).data('step'));
+        });
+
+        // Add event listener for step order validation
+        $stepsContainer.find(`[data-step="${stepCounter}"] .step-order`).on('change', validateStepOrders);
+    }
+
+    function removeWorkflowStep(stepId) {
+        Swal.fire({
+            title: 'Remove Step?',
+            text: 'Are you sure you want to remove this workflow step?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, remove it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $(`[data-step="${stepId}"]`).remove();
+
+                // Check if any steps remain
+                const remainingSteps = $('.step-item');
+                if (remainingSteps.length === 0) {
+                    $('#emptySteps').show();
+                }
+
+                // Renumber steps
+                renumberSteps();
+                validateStepOrders();
+
+                const successToast = new bootstrap.Toast($('#successToast')[0]);
+                $('#successToast .toast-body').text('Step removed successfully');
+                successToast.show();
+            }
+        });
+    }
+
+    function renumberSteps() {
+        const $steps = $('.step-item');
+        $steps.each(function(index) {
+            const newStepNumber = index + 1;
+            const $step = $(this);
+            const $stepBadge = $step.find('.badge').first();
+            const $stepTitle = $step.find('h6');
+            const $stepOrderInput = $step.find('.step-order');
+
+            $stepBadge.text(newStepNumber);
+            $stepTitle.html(`<span class="badge bg-primary me-2">${newStepNumber}</span>Step ${newStepNumber}`);
+            $stepOrderInput.val(newStepNumber);
+        });
+    }
+
+    function validateStepOrders() {
+        const stepOrders = $('.step-order').map(function() {
+            return parseInt($(this).val());
+        }).get();
+
+        const uniqueOrders = [...new Set(stepOrders)];
+
+        if (stepOrders.length !== uniqueOrders.length) {
+            showErrorToast('Step orders must be unique');
+            return false;
+        }
+
+        // Check if orders are sequential starting from 1
+        const sortedOrders = [...stepOrders].sort((a, b) => a - b);
+        for (let i = 0; i < sortedOrders.length; i++) {
+            if (sortedOrders[i] !== i + 1) {
+                showErrorToast('Step orders should be sequential starting from 1');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function showErrorToast(message) {
+        const errorToast = new bootstrap.Toast($('#errorToast')[0]);
+        $('#errorToast .toast-body').text(message);
+        errorToast.show();
+    }
+
+    function showSuccessToast(message) {
+        const successToast = new bootstrap.Toast($('#successToast')[0]);
+        $('#successToast .toast-body').text(message);
+        successToast.show();
+    }
+
+    // Form submission
+    $('#workflowForm').on('submit', function(e) {
+        e.preventDefault();
+
+        // Validate steps
+        const $steps = $('.step-item');
+        if ($steps.length === 0) {
+            showErrorToast('Please add at least one workflow step');
+            return;
+        }
+
+        if (!validateStepOrders()) {
+            return;
+        }
+
+        // Validate required approvals
+        const $approvalInputs = $('.step-approvals');
+        let isValid = true;
+        $approvalInputs.each(function() {
+            if (parseInt($(this).val()) < 1) {
+                showErrorToast('Required approvals must be at least 1');
+                isValid = false;
+                return false; // Break the loop
+            }
+        });
+
+        if (!isValid) return;
+
+        // Collect form data
+        const formData = new FormData(this);
+
+         // Clear any existing step data first
+        for (let pair of formData.entries()) {
+            if (pair[0].startsWith('steps[')) {
+                formData.delete(pair[0]);
+            }
+        }
+
+        // Collect steps data
+        $steps.each(function(index) {
+            const $step = $(this);
+            const stepData = {
+                order: parseInt($step.find('.step-order').val()),
+                role: $step.find('.step-role').val(),
+                required_approvals: parseInt($step.find('.step-approvals').val())
+            };
+
+            // Add step data to FormData
+            formData.append(`steps[${index}][order]`, stepData.order + "");
+            formData.append(`steps[${index}][role]`, stepData.role);
+            formData.append(`steps[${index}][required_approvals]`, stepData.required_approvals + "");
+        });
+
+        // Submit via AJAX
+        submitWorkflow(formData);
+    });
+
+    function submitWorkflow(formData) {
+        const $submitBtn = $('#submitBtn');
+        const originalText = $submitBtn.html();
+
+        // Show loading state
+        $submitBtn.html('<i class="ri-loader-4-line me-2"></i>Creating...');
+        $submitBtn.prop('disabled', true);
+
+        $.ajax({
+            url: 'create-workflow/',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(data) {
+                Swal.fire({
+                    title: 'Workflow Created!',
+                    html: `Workflow <strong>${formData.get('workflow_name')}</strong> has been created successfully.`,
+                    icon: 'success',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    // Reset form
+                    $('#workflowForm')[0].reset();
+                    $('#stepsContainer').empty();
+                    $('#emptySteps').show();
+                    $('#activeStatusText').text('Active');
+                    stepCounter = 0;
+
+                    // Reload page to show new workflow
+                    window.location.reload();
+                });
+            },
+            error: function(xhr, status, error) {
+                let errorHtml = '';
+
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    $.each(xhr.responseJSON.errors, function(field, errors) {
+                        errorHtml += `${field}: ${errors.join(', ')}<br>`;
+                    });
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorHtml = xhr.responseJSON.message;
+                } else {
+                    errorHtml = 'An error occurred while creating the workflow';
+                }
+
+                const $errorBox = $('#formErrors');
+                $('#errorContent').html(errorHtml);
+                $errorBox.removeClass('d-none');
+            },
+            complete: function() {
+                // Reset button
+                $submitBtn.html(originalText);
+                $submitBtn.prop('disabled', false);
+            }
+        });
+    }
+
+    // Workflow actions
+    window.editWorkflow = function(id) {
+        $.ajax({
+            url: 'test/endpoint',
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(data) {
+                // Handle edit workflow data
+                showErrorToast('Edit workflow feature coming soon!');
+            },
+            error: function() {
+                showErrorToast('Failed to load workflow data');
+            }
+        });
+    };
+
+    window.toggleWorkflow = function(id, isActive) {
+        const action = isActive ? 'deactivate' : 'activate';
+
+        Swal.fire({
+            title: `${action.charAt(0).toUpperCase() + action.slice(1)} Workflow?`,
+            text: `Are you sure you want to ${action} this workflow?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: isActive ? '#ffc107' : '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: `Yes, ${action} it!`
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const formData = new FormData();
+                formData.append('action', 'toggle');
+                formData.append('workflow_id', id);
+                formData.append('active', !isActive);
+
+                $.ajax({
+                    url: 'test/endpoint',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    success: function(data) {
+                        showSuccessToast(`Workflow ${action}d successfully!`);
+                        // Reload page to reflect changes
+                        setTimeout(() => window.location.reload(), 1000);
+                    },
+                    error: function(xhr) {
+                        const errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : `Failed to ${action} workflow`;
+                        showErrorToast(errorMessage);
+                    }
+                });
+            }
+        });
+    };
+
+    window.deleteWorkflow = function(id) {
+        Swal.fire({
+            title: 'Delete Workflow?',
+            text: 'This action cannot be undone!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                formData.append('workflow_id', id);
+
+                $.ajax({
+                    url: 'test/endpoint',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    success: function(data) {
+                        showSuccessToast('Workflow deleted successfully!');
+                        // Reload page to reflect changes
+                        setTimeout(() => window.location.reload(), 1000);
+                    },
+                    error: function(xhr) {
+                        const errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Failed to delete workflow';
+                        showErrorToast(errorMessage);
+                    }
+                });
+            }
+        });
+    };
+
+    // Refresh button
+    $('#refreshBtn').on('click', function() {
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+
+        $btn.html('<i class="ri-loader-4-line me-1"></i>Loading...');
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: 'test/endpoint',
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(data) {
+                showSuccessToast('Workflows refreshed successfully!');
+                // Reload page to show updated data
+                setTimeout(() => window.location.reload(), 1000);
+            },
+            error: function() {
+                showErrorToast('Failed to refresh workflows');
+            },
+            complete: function() {
+                $btn.html(originalHtml);
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
+    // Initialize with first step
+    //addWorkflowStep();
+});
+</script>
+
+{% endblock %}

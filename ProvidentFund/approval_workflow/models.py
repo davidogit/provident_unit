@@ -65,6 +65,17 @@ class ApprovalWorkflow(models.Model):
     def __str__(self):
         return f'{self.tenant.name} - {self.get_action_type_display()}'
 
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            #   Deactivate all other workflows with the same tenant and action_type
+            ApprovalWorkflow.objects.filter(
+                tenant=self.tenant,
+                action_type=self.action_type,
+                is_active=True
+            ).exclude(id=self.id).update(is_active=False)
+
+        super().save(*args, **kwargs)
+
 
 
 class WorkflowStep(models.Model):
