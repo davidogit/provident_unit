@@ -8,6 +8,7 @@ from ProvidentFund.settings import AUTH_USER_MODEL
 from approval_workflow.models import WorkflowStep
 from .models import ApprovalWorkflow, ApprovalInstance, ApprovalLog
 from MultiScheme.models import Tenant
+from notification.tasks import send_approval_email_to_next_step_users
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +46,8 @@ class ApprovalWorkflowEngine:
         ).first()
 
         if existing_instance:
-            logger.error(f"Found existing instance for target {self.target} and action {self.action_type} - {existing_instance}")
             return existing_instance
 
-        logger.error(f"Creating new instance for target {self.target} and action {self.action_type}")
         # If there is no instance for target and action, then proceed to create a new instance out of the workflow
         workflow = ApprovalWorkflow.objects.filter(
             tenant=self.tenant,
@@ -57,7 +56,7 @@ class ApprovalWorkflowEngine:
         ).first()
 
         if not workflow:
-            raise ValueError(f"No active workflow found for action {self.action_type} for this tenant")
+            raise ValueError(f"No active workflow found for action {self.action_type}.")
 
         instance = ApprovalInstance.objects.create(
             tenant=self.tenant,
@@ -68,7 +67,8 @@ class ApprovalWorkflowEngine:
             current_step=workflow.steps.first(),
             status='PENDING'
         )
-
+        # Notify the first step approvers
+        send_approval_email_to_next_step_users.delay(instance.id)
         return instance
 
 
@@ -143,6 +143,8 @@ class ApprovalWorkflowEngine:
 
             if next_step:
                 instance.current_step = next_step
+            #     Notify approvers of the next step if any
+                send_approval_email_to_next_step_users.delay(instance.id)
             else:
                 instance.status = 'APPROVED'
                 instance.finalized_at = timezone.now()

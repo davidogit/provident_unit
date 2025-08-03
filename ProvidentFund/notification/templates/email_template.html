@@ -354,7 +354,7 @@
             <h2 class="greeting">Hello {{user_name|default:"Valued Customer"}},</h2>
 
             <div class="message-content">
-                {{message_content|default:"<p>We hope this email finds you well. We wanted to reach out to share some important information with you.</p><p>Your account and services are important to us, and we're committed to providing you with the best possible experience.</p>"}}
+                {{message_content|safe}}
             </div>
 
             <!-- Call to Action Button (Optional) -->
@@ -371,7 +371,7 @@
                 <h3 class="info-box-title">{{info_box_title}}</h3>
                 {% endif %}
                 {% if info_box_content %}
-                <p class="info-box-content">{{info_box_content}}</p>
+                <p class="info-box-content">{{info_box_content|safe}}</p>
                 {% endif %}
             </div>
             {% endif %}

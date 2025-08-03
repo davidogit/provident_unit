@@ -349,8 +349,26 @@ class HandleLoanSubmission(View):
             form.instance.loan_type = loan_type
             
             try:
-                form.save()
+                loan = form.save()
+                engine = ApprovalWorkflowEngine(
+                    tenant=tenant,
+                    target_object=loan,
+                    action_type=ApprovalActionType.LOAN_APPROVAL.value
+                )
+                # start workflow
+                engine.start_workflow()
+
                 return JsonResponse({"status": "success", "message": "Loan application submitted."})
+            except ValidationError as e:
+                return JsonResponse({
+                    'status': 'error',
+                    'message':f'{e}'
+                })
+            except PermissionError as e:
+                return JsonResponse({
+                    'status': 'error',
+                    'message':f'{e}'
+                })
             except Exception as e:
                 return JsonResponse({
                     'status':'error',
@@ -1697,7 +1715,30 @@ class LoanTopUpRequestView(CreateView):
         form.instance.user = member
         form.instance.loan = loan
 
-        form.save(commit=True)
+        topup = form.save(commit=True)
+        try:
+            engine = ApprovalWorkflowEngine(
+                tenant=tenant,
+                target_object=topup,
+                action_type=ApprovalActionType.LOAN_TOPUP_APPROVAL.value
+            )
+
+            engine.start_workflow()
+        except ValueError as val_e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(val_e)
+            })
+        except PermissionError as perm_e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(perm_e)
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error processing top-up request: {e}'
+            })
 
         return JsonResponse({
             'status': 'success',

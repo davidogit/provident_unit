@@ -1,20 +1,26 @@
 from smtplib import SMTPException
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
 import logging
+from celery import shared_task
 
 
 from approval_workflow.models import ApprovalInstance
 
 logger = logging.getLogger(__name__)
 
-
-def send_approval_email_to_next_step_users(instance: 'ApprovalInstance'):
+@shared_task(bind=True)
+def send_approval_email_to_next_step_users(self,instance_id: 'int'):
+    instance = ApprovalInstance.objects.filter(id=instance_id).first()
+    if not instance:
+        return
     group = Group.objects.get(name=instance.current_step.role)
-    users = group.user_set.filter(is_active=True,tenant=instance.tenant).distinct()
+    users = get_user_model().objects.filter(is_active=True,tenant=instance.tenant,groups=group).distinct()
+    # users = group.user_set.filter(is_active=True,tenant=instance.tenant).distinct()
 
     for user in users:
         context = {
@@ -52,3 +58,4 @@ def send_approval_email_to_next_step_users(instance: 'ApprovalInstance'):
             logger.error(f'Error sending email: {smtp_e}')
         except Exception as e:
             logger.error(f'Error sending email: {e}')
+        return

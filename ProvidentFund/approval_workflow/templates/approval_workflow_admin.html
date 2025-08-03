@@ -727,26 +727,6 @@ $(document).ready(function() {
         const formData = new FormData(this);
 
          // Clear any existing step data first
-        for (let pair of formData.entries()) {
-            if (pair[0].startsWith('steps[')) {
-                formData.delete(pair[0]);
-            }
-        }
-
-        // Collect steps data
-        $steps.each(function(index) {
-            const $step = $(this);
-            const stepData = {
-                order: parseInt($step.find('.step-order').val()),
-                role: $step.find('.step-role').val(),
-                required_approvals: parseInt($step.find('.step-approvals').val())
-            };
-
-            // Add step data to FormData
-            formData.append(`steps[${index}][order]`, stepData.order + "");
-            formData.append(`steps[${index}][role]`, stepData.role);
-            formData.append(`steps[${index}][required_approvals]`, stepData.required_approvals + "");
-        });
 
         // Submit via AJAX
         submitWorkflow(formData);
