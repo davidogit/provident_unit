@@ -1,15 +1,4 @@
-{% extends 'dashboard/base.html' %}
-
-{% block title %}
-<title>Requisition Management</title>
-{% endblock %}
-
-{% block header %}
-<h5 class="fw-bold"><i class="bi bi-file-earmark-text me-2"></i>Requisition Management</h5>
-{% endblock %}
-
-{% block content %}
-<div class="main main-app p-3 p-lg-4">
+{% extends 'dashboard/base.html' %}{% block title %}<title>Requisition Management</title>{% endblock %}{% block header %}<h5 class="fw-bold"><i class="bi bi-file-earmark-text me-2"></i>Requisition Management</h5>{% endblock %}{% block content %}<div class="main main-app p-3 p-lg-4">
     <div class="container-fluid">
         <!-- Create Requisition Card -->
         {% if 'Finance Analyst' in user_groups %}
@@ -30,12 +19,11 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        
+
                         <div class="col-md-5">
                             <label for="description" class="form-label">Description</label>
                             <textarea class="form-control" name="description" id="description" maxlength="100" rows="1" required></textarea>
                         </div>
-
                         <div class="col-md-3">
                             <button class="btn btn-primary w-100" type="submit">
                                 <i class="bi bi-plus-circle me-2"></i>Create Requisition
@@ -46,7 +34,6 @@
             </div>
         </div>
         {% endif %}
-
         <!-- Requisitions List Card -->
         <div class="card shadow-sm">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -104,19 +91,19 @@
                                         <button class="btn btn-sm btn-primary view-items" data-requisition-id="{{ requisition.id }}" data-bs-toggle="modal" data-bs-target="#itemModal">
                                             <i class="bi bi-eye me-1"></i> View
                                         </button>
-                                        
+
                                         {% if 'Finance Analyst' in user_groups %}
                                             {% if not requisition.approved %}
                                             <button class="btn btn-sm btn-outline-info add-tax" data-requisition-id="{{ requisition.id }}">
                                                 <i class="bi bi-percent me-1"></i> Tax
                                             </button>
-                                            
+
                                             <button class="btn btn-sm btn-outline-danger delete-requisition" data-requisition-id="{{ requisition.id }}">
                                                 <i class="bi bi-trash me-1"></i> Delete
                                             </button>
                                             {% endif %}
                                         {% endif %}
-                                        
+
                                         {% if 'Finance Manager' in user_groups and not requisition.approved %}
                                         <button class="btn btn-sm btn-success approve-requisition" data-requisition-id="{{ requisition.id }}">
                                             <i class="bi bi-check-circle me-1"></i> Approve
@@ -136,7 +123,6 @@
                         </tbody>
                     </table>
                 </div>
-                
                 <!-- Empty State (will be shown when table is empty via JS) -->
                 <div id="emptyState" class="text-center py-5 d-none">
                     <div class="py-5">
@@ -149,7 +135,6 @@
         </div>
     </div>
 </div>
-
 <!-- Item Details Modal -->
 <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -206,10 +191,18 @@
                                 <span class="fw-bold final-amount">-</span>
                             </div>
                         </div>
-                        
+
                         <!-- Actions -->
                         <div class="col-md-5 p-3 d-flex flex-column justify-content-between">
                             {% if 'Finance Analyst' in user_groups %}
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="allItemsAddedCheckbox">
+                                <label class="form-check-label" for="allItemsAddedCheckbox"
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="Check this box if all items have been added and the requisition is ready for approval.">
+                                    All items added and ready for approval
+                                </label>
+                            </div>
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-primary add-item flex-grow-1">
                                     <i class="bi bi-plus-circle me-1"></i> Add Item
@@ -226,7 +219,6 @@
         </div>
     </div>
 </div>
-
 <!-- Toast Notification -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
     <div id="notificationToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
@@ -241,13 +233,12 @@
         </div>
     </div>
 </div>
-
 <style>
     /* General Styles */
     body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     }
-    
+
     /* Card Styles */
     .card {
         border: none;
@@ -255,55 +246,55 @@
         box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         transition: box-shadow 0.2s ease-in-out;
     }
-    
+
     .card:hover {
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
     }
-    
+
     /* Table Styles */
     .table {
         margin-bottom: 0;
     }
-    
+
     .table th {
         font-weight: 600;
         text-transform: uppercase;
         font-size: 0.75rem;
         letter-spacing: 0.5px;
     }
-    
+
     .table td {
         vertical-align: middle;
         padding: 0.75rem 0.5rem;
     }
-    
+
     .table-hover tbody tr {
         transition: background-color 0.15s ease-in-out;
     }
-    
+
     .table-hover tbody tr:hover {
         background-color: rgba(0, 0, 0, 0.02);
     }
-    
+
     /* Badge Styles */
     .badge {
         font-weight: 500;
         padding: 0.5rem 0.75rem;
         border-radius: 0.5rem;
     }
-    
+
     .bg-success-soft {
         background-color: rgba(25, 135, 84, 0.15);
     }
-    
+
     .bg-warning-soft {
         background-color: rgba(255, 193, 7, 0.15);
     }
-    
+
     .bg-primary-soft {
         background-color: rgba(13, 110, 253, 0.15);
     }
-    
+
     /* Avatar Circle */
     .avatar-circle {
         width: 32px;
@@ -315,49 +306,48 @@
         font-weight: 600;
         background-color: rgba(13, 110, 253, 0.1);
     }
-    
+
     /* Button Styles */
     .btn {
         border-radius: 0.5rem;
         padding: 0.5rem 1rem;
         font-weight: 500;
     }
-    
+
     .btn-sm {
         padding: 0.25rem 0.5rem;
         font-size: 0.875rem;
     }
-    
+
     /* Form Controls */
     .form-control, .form-select {
         border-radius: 0.5rem;
         padding: 0.5rem 0.75rem;
     }
-    
+
     /* Modal Styles */
     .modal-content {
         border: none;
         border-radius: 0.75rem;
         overflow: hidden;
     }
-    
+
     .modal-header {
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         padding: 1rem 1.25rem;
     }
-    
+
     /* Highlight animation */
     .highlight {
         animation: highlight 1.5s ease-in-out;
     }
-    
+
     @keyframes highlight {
         0% { background-color: rgba(255, 243, 205, 0); }
         50% { background-color: rgba(255, 243, 205, 0.5); }
         100% { background-color: rgba(255, 243, 205, 0); }
     }
 </style>
-
 <script>
     $(document).ready(function(){
         // Initialize tooltips
@@ -365,29 +355,29 @@
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-        
+
         // Update requisition count
         updateRequisitionCount();
-        
+
         // Save requisition
         $('#requisition-form').on('submit', function(e){
             e.preventDefault();
             var form = $(this);
             var url = form.attr('action');
             var data = form.serialize();
-            
+
             // Validate form
             if (!$('#supplier_id').val() || !$('#description').val().trim()) {
                 showToast('Error', 'Please fill in all required fields', 'danger');
                 return;
             }
-            
+
             // Show loading state
             const submitBtn = form.find('button[type="submit"]');
             const originalText = submitBtn.html();
             submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...');
             submitBtn.prop('disabled', true);
-            
+
             $.ajax({
                 url: url,
                 type: 'POST',
@@ -399,10 +389,10 @@
                     if(response.status === 'success'){
                         // Reset form
                         form[0].reset();
-                        
+
                         // Show success message
                         showToast('Success', response.message, 'success');
-                        
+
                         // Reload page after delay
                         setTimeout(function() {
                             window.location.reload();
@@ -421,13 +411,13 @@
                 }
             });
         });
-        
+
         // Fetch items for a requisition
         $('.view-items').on('click', function(e){
             var requisitionId = $(this).data('requisition-id');
             var tenantId = '{{ request.tenant.id }}';
             var tableBody = $('.modal-item-body');
-            
+
             // Reset modal content
             tableBody.html(`
                 <tr>
@@ -439,13 +429,18 @@
                     </td>
                 </tr>
             `);
-            
+
+            // Reset the "All items added" checkbox state when modal opens
+            //$('#allItemsAddedCheckbox').prop('checked', false);
+
             // Set requisition ID in modal title
             $('#itemModalLabel').html(`<i class="bi bi-box me-2"></i>Requisition Items <span class="badge bg-primary-soft text-primary ms-2">#${requisitionId}</span>`);
-            
+
             // Set requisition ID on buttons
             $('.add-item').data('requisition-id', requisitionId);
-            
+
+            $('#allItemsAddedCheckbox').attr('data-requisition-id', requisitionId);
+
             $.ajax({
                 url: `/${tenantId}/fund/get-requisition-items/${requisitionId}/`,
                 type: 'GET',
@@ -453,7 +448,7 @@
                     if (response.status === 'success'){
                         tableBody.html('');
                         var items = response.items;
-                        
+
                         if (items.length === 0){
                             const row = `
                                 <tr>
@@ -484,15 +479,21 @@
                                 tableBody.append(row);
                             });
                         }
-                        
+
                         // Update summary amounts
                         $('.total-amount').text(response.total_amount);
                         $('.tax-amount').text(response.tax_amount || '0.00');
-                        
+
                         // Calculate final amount (total + tax)
                         const totalAmount = parseFloat(response.total_amount) || 0;
                         const taxAmount = parseFloat(response.tax_amount) || 0;
                         $('.final-amount').text((totalAmount + taxAmount).toFixed(2));
+
+                        // If the backend sends a 'ready_for_approval' status, update the checkbox
+                        if (typeof response.ready_for_approval !== 'undefined') {
+                            $('#allItemsAddedCheckbox').prop('checked', response.ready_for_approval);
+                        }
+
                     } else {
                         showToast('Error', response.message, 'danger');
                     }
@@ -503,7 +504,48 @@
                 }
             });
         });
-        
+
+
+        // Handle checkbox change event
+        $(document).on('change', '#allItemsAddedCheckbox', function() {
+            var $this = $(this);
+            var requisitionId = $this.data('requisition-id');
+            var tenantId = '{{ request.tenant.id }}';
+            var isChecked = $this.is(':checked');
+
+            if (!requisitionId) {
+                showToast('Error', 'Requisition ID not found for status update.', 'danger');
+                return;
+            }
+
+            // Simple AJAX request to update the status
+            $.ajax({
+                url: `/${tenantId}/fund/update-requisition-ready-status/${requisitionId}/`, // Endpoint for status update
+                type: 'POST',
+                data: {
+                    ready_for_approval: isChecked
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}' // Also in headers for Django
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        showToast('Success', response.message, 'success');
+                    } else {
+                        showToast('Error', response.message, 'danger');
+                        // Revert checkbox state if update failed
+                        $this.prop('checked', !isChecked);
+                    }
+                },
+                error: function(error) {
+                    console.log(error);
+                    showToast('Error', 'Failed to update requisition status.', 'danger');
+                    // Revert checkbox state on AJAX error
+                    $this.prop('checked', !isChecked);
+                }
+            });
+        });
+
         // Delete requisition item
         $(document).on('click', '.delete-requisition-item', function(e){
             e.preventDefault();
@@ -511,7 +553,7 @@
             var itemId = $(this).data('item-id');
             var requisitionId = $(this).data('requisition-id');
             var tenantId = '{{ request.tenant.id }}';
-            
+
             // Confirm deletion with SweetAlert
             Swal.fire({
                 title: 'Delete Item?',
@@ -526,7 +568,7 @@
                     // Show loading state
                     $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
                     $this.prop('disabled', true);
-                    
+
                     $.ajax({
                         url: `/${tenantId}/fund/delete-requisition-item/${itemId}/${requisitionId}/`,
                         type: 'DELETE',
@@ -538,7 +580,7 @@
                                 // Remove row with animation
                                 $this.closest('tr').fadeOut(300, function(){
                                     $(this).remove();
-                                    
+
                                     // Check if table is empty
                                     if ($('.modal-item-body tr').length === 0) {
                                         $('.modal-item-body').html(`
@@ -551,16 +593,16 @@
                                         `);
                                     }
                                 });
-                                
+
                                 // Update amounts
                                 $('.total-amount').text(response.total_amount);
                                 const totalAmount = parseFloat(response.total_amount) || 0;
                                 const taxAmount = parseFloat($('.tax-amount').text()) || 0;
                                 $('.final-amount').text((totalAmount + taxAmount).toFixed(2));
-                                
+
                                 // Update requisition row in main table
                                 $(`.requisition-row[data-requisition-id="${requisitionId}"] .total_amount`).text(response.total_amount);
-                                
+
                                 showToast('Success', 'Item deleted successfully', 'success');
                             } else {
                                 showToast('Error', response.message, 'danger');
@@ -578,14 +620,14 @@
                 }
             });
         });
-        
+
         // Delete requisition
         $('.delete-requisition').on('click', function(e){
             e.preventDefault();
             var $this = $(this);
             var requisitionId = $(this).data('requisition-id');
             var tenantId = '{{ request.tenant.id }}';
-            
+
             // Confirm deletion with SweetAlert
             Swal.fire({
                 title: 'Delete Requisition?',
@@ -600,7 +642,7 @@
                     // Show loading state
                     $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
                     $this.prop('disabled', true);
-                    
+
                     $.ajax({
                         url: `/${tenantId}/fund/delete-requisition/${requisitionId}/`,
                         type: 'DELETE',
@@ -613,7 +655,7 @@
                                 $this.closest('tr').fadeOut(300, function(){
                                     $(this).remove();
                                     updateRequisitionCount();
-                                    
+
                                     // Check if table is empty
                                     if ($('#requisitionsTable tbody tr').length === 0) {
                                         $('#requisitionsTable tbody').html(`
@@ -626,7 +668,7 @@
                                         `);
                                     }
                                 });
-                                
+
                                 showToast('Success', response.message, 'success');
                             } else {
                                 showToast('Error', response.message, 'danger');
@@ -644,12 +686,12 @@
                 }
             });
         });
-        
+
         // Add requisition item
         $('.add-item').on('click', function(e){
             e.preventDefault();
             var requisitionId = $(this).data('requisition-id');
-            
+
             // Add new row to the table for user input
             const newRow = `
                 <tr class="new-item-row highlight">
@@ -677,24 +719,24 @@
                     </td>
                 </tr>
             `;
-            
+
             // Check if there's already a form row
             if ($('.new-item-row').length > 0) {
                 showToast('Info', 'Please complete the current item first', 'info');
                 return;
             }
-            
+
             // Check if table is empty (has the "No items" message)
             if ($('.modal-item-body tr td').length === 1 && $('.modal-item-body tr td').text().includes('No items')) {
                 $('.modal-item-body').empty();
             }
-            
+
             // Append new row to table
             $('.modal-item-body').append(newRow);
-            
+
             // Focus on first input
             $('.new-item-row input[name="item_name"]').focus();
-            
+
             // Calculate total on input change
             $('.new-item-row input[name="quantity"], .new-item-row input[name="amount"]').on('input', function(){
                 const quantity = parseFloat($('.new-item-row input[name="quantity"]').val()) || 0;
@@ -702,12 +744,12 @@
                 $('.calculated-total').text((quantity * amount).toFixed(2));
             });
         });
-        
+
         // Remove table row
         $(document).on('click', '.remove-row', function(e){
             e.preventDefault();
             $(this).closest('tr').remove();
-            
+
             // Check if table is empty
             if ($('.modal-item-body tr').length === 0) {
                 $('.modal-item-body').html(`
@@ -720,7 +762,7 @@
                 `);
             }
         });
-        
+
         // Save item
         $(document).on('click', '.save-item', function(e){
             e.preventDefault();
@@ -728,39 +770,41 @@
             var row = $this.closest('tr');
             var requisitionId = $('.add-item').data('requisition-id');
             var tenantId = '{{ request.tenant.id }}';
-            
+
             // Get form values
             var itemName = row.find('input[name="item_name"]').val();
             var quantity = row.find('input[name="quantity"]').val();
             var amount = row.find('input[name="amount"]').val();
-            
+
+
+
             // Validate inputs
             if (!itemName || !quantity || !amount) {
                 showToast('Error', 'All fields are required', 'danger');
                 return;
             }
-            
+
             if (quantity <= 0) {
                 showToast('Error', 'Quantity must be greater than zero', 'danger');
                 return;
             }
-            
+
             if (amount <= 0) {
                 showToast('Error', 'Amount must be greater than zero', 'danger');
                 return;
             }
-            
+
             // Show loading state
             $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
             $this.prop('disabled', true);
-            
+
             var data = {
                 item_name: itemName,
                 quantity: quantity,
                 amount: amount,
                 requisition_id: requisitionId
             };
-            
+
             $.ajax({
                 url: `/${tenantId}/fund/add-requisition-item/`,
                 type: 'POST',
@@ -787,18 +831,18 @@
                                 {% endif %}
                             </tr>
                         `;
-                        
+
                         row.replaceWith(newRow);
-                        
+
                         // Update amounts
                         $('.total-amount').text(response.total_amount);
                         const totalAmount = parseFloat(response.total_amount) || 0;
                         const taxAmount = parseFloat($('.tax-amount').text()) || 0;
                         $('.final-amount').text((totalAmount + taxAmount).toFixed(2));
-                        
+
                         // Update requisition row in main table
                         $(`.requisition-row[data-requisition-id="${requisitionId}"] .total_amount`).text(response.total_amount);
-                        
+
                         showToast('Success', 'Item added successfully', 'success');
                     } else {
                         showToast('Error', response.message, 'danger');
@@ -814,14 +858,14 @@
                 }
             });
         });
-        
+
         // Approve requisition
         $('.approve-requisition').on('click', function(e){
             e.preventDefault();
             var $this = $(this);
             var requisitionId = $(this).data('requisition-id');
             var tenantId = '{{ request.tenant.id }}';
-            
+
             // Confirm approval with SweetAlert
             Swal.fire({
                 title: 'Approve Requisition?',
@@ -836,7 +880,7 @@
                     // Show loading state
                     $this.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
                     $this.prop('disabled', true);
-                    
+
                     $.ajax({
                         url: `/${tenantId}/fund/approve-requisition/${requisitionId}/`,
                         type: 'POST',
@@ -849,10 +893,10 @@
                                 $(`.requisition-row[data-requisition-id="${requisitionId}"] td:nth-child(6)`).html(
                                     '<span class="badge bg-success-soft text-success">Approved</span>'
                                 );
-                                
+
                                 // Remove action buttons
                                 $this.closest('div').html('<span class="text-muted">Approved</span>');
-                                
+
                                 showToast('Success', response.message, 'success');
                             } else {
                                 showToast('Error', response.message, 'danger');
@@ -870,14 +914,14 @@
                 }
             });
         });
-        
+
         // Add tax
         $('.add-tax').on('click', function(e){
             e.preventDefault();
             var $this = $(this);
             var requisitionId = $(this).data('requisition-id');
             var tenantId = '{{ request.tenant.id }}';
-            
+
             // Prompt for tax amount with SweetAlert
             Swal.fire({
                 title: 'Add Tax',
@@ -897,7 +941,7 @@
                         Swal.showValidationMessage('Please enter a valid tax amount');
                         return false;
                     }
-                    
+
                     return $.ajax({
                         url: `/${tenantId}/fund/add-tax/${requisitionId}/`,
                         type: 'POST',
@@ -922,12 +966,12 @@
                 if (result.isConfirmed) {
                     // Update tax amount in table
                     $(`.requisition-row[data-requisition-id="${requisitionId}"] .tax_amount`).text(result.value.tax_amount);
-                    
+
                     showToast('Success', result.value.message, 'success');
                 }
             });
         });
-        
+
         // Function to update requisition count
         function updateRequisitionCount() {
             var count = $('#requisitionsTable tbody tr').length;
@@ -936,19 +980,19 @@
             }
             $('#requisition-count').text(count + (count === 1 ? ' requisition' : ' requisitions'));
         }
-        
+
         // Toast notification function
         function showToast(title, message, type) {
             var toast = $('#notificationToast');
-            
+
             // Set toast content
             toast.find('.toast-title').text(title);
             toast.find('.toast-body').text(message);
             toast.find('.toast-time').text('just now');
-            
+
             // Set toast color based on type
             toast.removeClass('bg-success bg-danger bg-warning bg-info');
-            
+
             switch(type) {
                 case 'success':
                     toast.find('.toast-header i').removeClass().addClass('bi bi-check-circle-fill text-success me-2');
@@ -965,11 +1009,10 @@
                 default:
                     toast.find('.toast-header i').removeClass().addClass('bi bi-info-circle-fill text-info me-2');
             }
-            
+
             // Show toast
             var bsToast = new bootstrap.Toast(toast);
             bsToast.show();
         }
     });
-</script>
-{% endblock %}
+</script>{% endblock %}

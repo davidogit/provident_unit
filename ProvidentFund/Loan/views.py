@@ -349,34 +349,34 @@ class HandleLoanSubmission(View):
             form.instance.user = member
             form.instance.status = 'Pending'
             form.instance.loan_type = loan_type
-            
-            try:
-                loan = form.save()
-                engine = ApprovalWorkflowEngine(
-                    tenant=tenant,
-                    target_object=loan,
-                    action_type=ApprovalActionType.LOAN_APPROVAL.value
-                )
-                # start workflow
-                engine.start_workflow()
+            with transaction.atomic():
+                try:
+                    loan = form.save()
+                    engine = ApprovalWorkflowEngine(
+                        tenant=tenant,
+                        target_object=loan,
+                        action_type=ApprovalActionType.LOAN_APPROVAL.value
+                    )
+                    # start workflow
+                    engine.start_workflow()
 
-                return JsonResponse({"status": "success", "message": "Loan application submitted."})
-            except ValidationError as e:
-                return JsonResponse({
-                    'status': 'error',
-                    'message':f'{e}'
-                })
-            except PermissionError as e:
-                return JsonResponse({
-                    'status': 'error',
-                    'message':f'{e}'
-                })
-            except Exception as e:
-                return JsonResponse({
-                    'status':'error',
-                    'message':f'{e}'
-                })
-
+                    return JsonResponse({
+                        "status": "success",
+                        "message": "Loan application submitted."
+                    })
+                except ValidationError as e:
+                    # Rollback loan submission
+                    transaction.set_rollback(True)
+                    return JsonResponse({
+                        'status': 'error',
+                        'message':f'{e}'
+                    })
+                except Exception as e:
+                    transaction.set_rollback(True)
+                    return JsonResponse({
+                        'status':'error',
+                        'message':f'{e}'
+                    })
         else:
             return JsonResponse({"status": "error", "errors": form.errors}, status=400)
 
@@ -1713,39 +1713,38 @@ class LoanTopUpRequestView(CreateView):
                 'message': 'You already have a pending top-up request for this loan.'
             })
 
-        form.instance.tenant = tenant
-        form.instance.user = member
-        form.instance.loan = loan
+        with transaction.atomic():
+            form.instance.tenant = tenant
+            form.instance.user = member
+            form.instance.loan = loan
 
-        topup = form.save(commit=True)
-        try:
-            engine = ApprovalWorkflowEngine(
-                tenant=tenant,
-                target_object=topup,
-                action_type=ApprovalActionType.LOAN_TOPUP_APPROVAL.value
-            )
+            topup = form.save(commit=True)
+            try:
+                engine = ApprovalWorkflowEngine(
+                    tenant=tenant,
+                    target_object=topup,
+                    action_type=ApprovalActionType.LOAN_TOPUP_APPROVAL.value
+                )
 
-            engine.start_workflow()
-        except ValueError as val_e:
-            return JsonResponse({
-                'status': 'error',
-                'message': str(val_e)
-            })
-        except PermissionError as perm_e:
-            return JsonResponse({
-                'status': 'error',
-                'message': str(perm_e)
-            })
-        except Exception as e:
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Error processing top-up request: {e}'
-            })
+                engine.start_workflow()
+            except ValueError as val_e:
+                # Rollback application
+                transaction.set_rollback(True)
+                return JsonResponse({
+                    'status': 'error',
+                    'message': str(val_e)
+                })
+            except Exception as e:
+                transaction.set_rollback(True)
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Error processing top-up request: {e}'
+                })
 
-        return JsonResponse({
-            'status': 'success',
-            'message': 'Top-up request submitted successfully.'
-        })
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Top-up request submitted successfully.'
+            })
 
     def form_invalid(self, form):
         return JsonResponse({

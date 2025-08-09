@@ -6,6 +6,7 @@ from ProvidentFund.settings import AUTH_USER_MODEL
 # Create your models here.
 
 class ApprovalActionType(models.TextChoices):
+    SCHEME_APPROVAL = "SCHEME_APPROVAL", "Scheme Approval"
     LOAN_APPROVAL = "LOAN_APPROVAL", "Loan Approval"
     LOAN_TOPUP_APPROVAL = "LOAN_TOPUP_APPROVAL", "Loan Topup Approval"
     WITHDRAWAL_APPROVAL = "WITHDRAWAL_APPROVAL", "Withdrawal Approval"
