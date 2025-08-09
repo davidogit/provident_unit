@@ -3273,6 +3273,67 @@ class UpdateTaxOnRequisition(View):
         })
 
 
+class UpdateReadyToApproveRequisition(View):
+    def post(self,*args,**kwargs):
+        tenant = getattr(self.request,'tenant',None)
+        req_id = self.kwargs.get('req_id')
+        ready_for_approval = self.request.POST.get('ready_for_approval')
+
+        if not req_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid requisition ID.'
+            })
+
+        requisition = Requisition.objects.filter(
+            id=req_id,
+            tenant=tenant
+        ).first()
+
+        if not requisition:
+            return JsonResponse({
+                'status':'error',
+                'message':'Requisition not found.'
+            })
+
+        if not ready_for_approval:
+            return JsonResponse({
+                'status':'error',
+                'message':'Status cannot be changed at this time.'
+            })
+        # initiate approval workflow
+        try:
+            requisition.ready_for_approval = True
+            requisition.save()
+
+            engine = ApprovalWorkflowEngine(
+                tenant=tenant,
+                target_object=requisition,
+                action_type=ApprovalActionType.REQUISITION_APPROVAL.value
+            )
+
+            engine.start_workflow()
+            return JsonResponse({
+                'status':'success',
+                'message':'Requisition is ready for approval.'
+            })
+        except ValueError as val_e:
+            return JsonResponse({
+                'status':'error',
+                'message':str(val_e)
+            })
+        except PermissionError as perm_e:
+            return JsonResponse({
+                'status':'error',
+                'message':str(perm_e)
+            })
+        except Exception as e:
+            logger.error(f'An error occurred while initiating approval workflow: {e}')
+            return JsonResponse({
+                'status':'error',
+                'message':'An error occurred'
+            },status=500)
+
 
 
 # ADD REQUISITION ITEM VIEW MODAL
@@ -3302,12 +3363,20 @@ class AddRequisitionItemView(CreateView):
                 'status':'error',
                 'message':'Requisition not found'
             })
+
+        if requisition.ready_for_approval:
+            return JsonResponse({
+                'status':'error',
+                'message':'Requisition is already marked as ready for approval, hence no addition is allowed.'
+            })
+
         # Dont allow addition to approved requisitions
         if requisition.approved:
             return JsonResponse({
-                'status':'error',
-                'message':'Can not add new item to an approved requisition'
+                'status': 'error',
+                'message': 'Can not add new item to an approved requisition'
             })
+
         try:
             form.instance.requisition = requisition
             form.save()
@@ -3375,7 +3444,8 @@ class FetchItemsView(View):
             'status':'success',
             'items':items_list,
             'total_amount':requisition.total_amount,
-            'tax_amount':requisition.tax_amount if requisition else 0.00
+            'tax_amount':requisition.tax_amount if requisition else 0.00,
+            'ready_for_approval':requisition.ready_for_approval
         })
 
 
@@ -3501,6 +3571,12 @@ class ApproveRequisitionView(View):
             return JsonResponse({
                 'status':'error',
                 'message':'No matching Requisition found'
+            })
+
+        if not requisition.ready_for_approval:
+            return JsonResponse({
+                'status':'error',
+                'message':'Requisition is not ready for approval.'
             })
 
         try:

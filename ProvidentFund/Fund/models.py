@@ -710,6 +710,9 @@ class Requisition(models.Model):
         blank=True,
         default=Decimal(0)
     )
+    ready_for_approval = models.BooleanField(
+        default=False
+    )
     approved = models.BooleanField(
         default=False
     )

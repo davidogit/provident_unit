@@ -113,7 +113,8 @@ urlpatterns =[
     path('approve-requisition/<int:req_id>/', views.ApproveRequisitionView.as_view(), name='approve_requisition'),
     #fetch requisition items
     path('get-requisition-items/<int:req_id>/', views.FetchItemsView.as_view(), name='fetch_items'),
-
+    # Update the ready_to_approve field on requisition
+    path('update-requisition-ready-status/<int:req_id>/', views.UpdateReadyToApproveRequisition.as_view(), name='update_requisition_ready_status'),
 
     # PURCHASE ORDER URL
     path('purchase-orders/', views.PurchaseOrderView.as_view(), name='purchase_order'),
