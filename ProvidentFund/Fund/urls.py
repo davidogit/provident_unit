@@ -100,7 +100,7 @@ urlpatterns =[
     path('search-suppliers/', views.SupplierSearchView.as_view(), name='search_supplier'),
 
     # REQUISITION URL
-    path('create-requisition/', views.RaiseRequisitionView.as_view(), name='raise_requisition'),
+    path('create-requisition/', views.CreateRequisitionView.as_view(), name='raise_requisition'),
     # Add tax to requisition
     path('add-tax/<int:req_id>/', views.UpdateTaxOnRequisition.as_view(), name='add_tax'),
     # delete requisition

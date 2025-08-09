@@ -703,9 +703,6 @@ class Requisition(models.Model):
     date_created = models.DateTimeField(
         auto_now_add=True
     )
-    approved = models.BooleanField(
-        default=False
-    )
     tax_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -713,6 +710,35 @@ class Requisition(models.Model):
         blank=True,
         default=Decimal(0)
     )
+    approved = models.BooleanField(
+        default=False
+    )
+    approved_by = models.ForeignKey(
+        AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_requisitions'
+    )
+    approved_date = models.DateField(
+        null=True,
+        blank=True
+    )
+    rejected = models.BooleanField(
+        default=False
+    )
+    rejected_by = models.ForeignKey(
+        AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rejected_requisitions'
+    )
+    rejected_date = models.DateField(
+        null=True,
+        blank=True
+    )
+
     class Meta:
         ordering = ['-date_created']
 
@@ -720,14 +746,71 @@ class Requisition(models.Model):
         self.total_amount = sum(item.total_cost for item in self.items.all())
         self.save()
 
-    def approve(self):
-        self.approved = True
-        PurchaseOrder.objects.create(
-            requisition=self,
-            # Purchase order amount is sum of amount + tax
-            amount=self.total_amount + self.tax_amount
-        )
-        self.save()
+    def approve(self, **kwargs):
+        """
+        Approve the requisition and create a corresponding purchase order if it has not been approved or
+        rejected previously.
+
+        Raises:
+            Exception: If the requisition is already approved.
+            Exception: If the requisition is already rejected.
+
+        Parameters:
+            kwargs (dict): A dictionary of keyword arguments. Expected key is:
+                - user: The user who approves the requisition.
+
+        """
+        if self.approved:
+            raise Exception('Requisition has already been approved')
+        if self.rejected:
+            raise Exception('Requisition has already been rejected')
+
+        user = kwargs.get('user')
+
+        with transaction.atomic():
+            self.approved = True
+            self.approved_by = user
+            self.approved_date = timezone.now().date()
+            self.save()
+
+            PurchaseOrder.objects.create(
+                requisition=self,
+                # Purchase order amount is sum of amount + tax
+                amount=self.total_amount + self.tax_amount
+            )
+
+    def reject(self, **kwargs):
+        """
+        Rejects the current requisition. This operation marks the requisition as rejected
+        and records relevant information such as the user who performed the rejection
+        and the date when the rejection occurred. The operation must ensure that the
+        requisition is not already rejected or approved to maintain data consistency.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            A dictionary of keyword arguments. Must include the `user` parameter, which
+            specifies the user performing the rejection (of any appropriate type).
+
+        Raises
+        ------
+        Exception
+            If the requisition has already been rejected.
+        Exception
+            If the requisition has already been approved.
+        """
+        if self.rejected:
+            raise Exception('Requisition has already been rejected')
+        if self.approved:
+            raise Exception('Requisition has already been approved')
+
+        user = kwargs.get('user')
+
+        with transaction.atomic():
+            self.rejected = True
+            self.rejected_by = user
+            self.rejected_date = timezone.now().date()
+            self.save()
 
 
     def __str__(self):

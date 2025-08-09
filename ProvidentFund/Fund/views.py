@@ -3169,15 +3169,15 @@ class SupplierSearchView(View):
 
 
 
-# RAISE REQUISITION VIEW
+# CREATE REQUISITION VIEW
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Finance Analyst','Finance Supervisor','Finance Manager']), name='dispatch')
-class RaiseRequisitionView(TemplateView):
+class CreateRequisitionView(TemplateView):
     template_name = 'suppliers_expenses/create_requisition.html'
 
     def post(self,*args,**kwargs):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         supplier_id = self.request.POST.get('supplier_id')
         description = self.request.POST.get('description')
 
@@ -3187,12 +3187,12 @@ class RaiseRequisitionView(TemplateView):
                 'message':'Missing required fields.'
             })
 
-        try:
-            supplier = Suppliers.objects.get(
-                tenant=tenant,
-                id=supplier_id
-            )
-        except ObjectDoesNotExist:
+        supplier = Suppliers.objects.filter(
+            tenant=tenant,
+            id=supplier_id
+        ).first()
+
+        if not supplier:
             return JsonResponse({
                 'status':'error',
                 'message':'Supplier not found.'
@@ -3211,12 +3211,12 @@ class RaiseRequisitionView(TemplateView):
         except Exception as e:
             return JsonResponse({
                 'status':'error',
-                'message':f'An error occured saving requisition: {str(e)}'
+                'message':f'An error occurred saving requisition: {str(e)}'
             })
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         if tenant:
             try:
                 suppliers = Suppliers.objects.filter(tenant=tenant)
@@ -3231,8 +3231,8 @@ class RaiseRequisitionView(TemplateView):
             except Requisition.DoesNotExist:
                 requisitions = None
 
-        context['suppliers'] = suppliers
-        context['requisition_headers'] = requisitions
+            context['suppliers'] = suppliers
+            context['requisition_headers'] = requisitions
 
         return context
 
@@ -3243,7 +3243,7 @@ class RaiseRequisitionView(TemplateView):
 @method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class UpdateTaxOnRequisition(View):
     def post(self,*args,**kwargs):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         req_id = self.kwargs.get('req_id')
         tax_amount = self.request.POST.get('tax')
         if not req_id:
@@ -3268,7 +3268,7 @@ class UpdateTaxOnRequisition(View):
 
         return JsonResponse({
             'status':'success',
-            'message':'Tax added successfully.',
+            'message':'Tax applied successfully.',
             'tax_amount':Decimal(tax_amount)
         })
 
@@ -3284,7 +3284,7 @@ class AddRequisitionItemView(CreateView):
     fields = ('item_name','quantity','amount')
 
     def form_valid(self, form):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         requisition_id = self.request.POST.get('requisition_id')
 
         if not requisition_id:
@@ -3292,18 +3292,18 @@ class AddRequisitionItemView(CreateView):
                 'status':'error',
                 'message':'Please select a requisition'
             })
-        try:
-            requisition = Requisition.objects.get(
-                tenant=tenant,
-                id=requisition_id
-            )
-        except ObjectDoesNotExist:
+        requisition = Requisition.objects.filter(
+            tenant=tenant,
+            id=requisition_id
+        ).first()
+
+        if not requisition:
             return JsonResponse({
                 'status':'error',
                 'message':'Requisition not found'
             })
         # Dont allow addition to approved requisitions
-        if requisition.approved == True:
+        if requisition.approved:
             return JsonResponse({
                 'status':'error',
                 'message':'Can not add new item to an approved requisition'
@@ -3318,9 +3318,10 @@ class AddRequisitionItemView(CreateView):
                 'total_amount':requisition.total_amount
             })
         except Exception as e:
+            logger.error(f'An error occurred while adding item to requisition: {e}')
             return JsonResponse({
                 'status':'error',
-                'message':f'An error occured saving item: {str(e)}'
+                'message':f'An error occurred saving item'
             })
     
     def form_invalid(self, form):
@@ -3330,7 +3331,7 @@ class AddRequisitionItemView(CreateView):
         })
 
     def get_success_url(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         url = reverse('raise_requisition', kwargs={'tenant_id':tenant.id})
         return url
 
@@ -3342,7 +3343,7 @@ class AddRequisitionItemView(CreateView):
 @method_decorator(role_required(role=['Finance Manager','Finance Supervisor','Finance Analyst']), name='dispatch')
 class FetchItemsView(View):
     def get(self,*args,**kwargs):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         req_id = self.kwargs['req_id']
 
         if not req_id:
@@ -3351,31 +3352,31 @@ class FetchItemsView(View):
                 'message':'Invalid requisition selected.'
             })
 
-        try:
-            requisition =  Requisition.objects.filter(id=req_id,tenant=tenant).prefetch_related('items').first()
-            items = requisition.items.all()
-            items_list = []
+        requisition =  Requisition.objects.filter(id=req_id,tenant=tenant).prefetch_related('items').first()
 
-            for item in items:
-                items_list.append({
-                    'id':item.id,
-                    'item_name':item.item_name,
-                    'quantity':item.quantity,
-                    'amount':item.amount,
-                    'total_cost':item.total_cost
-                })
+        if not requisition:
             return JsonResponse({
-                'status':'success',
-                'items':items_list,
-                'total_amount':requisition.total_amount,
-                'tax_amount':requisition.tax_amount if requisition else 0.00
-            })
-        except ObjectDoesNotExist:
-            return JsonResponse({
-                'status':'error',
-                'message':'Requisition does not exist.'
+                'status': 'error',
+                'message': 'Requisition does not exist.'
             })
 
+        items = requisition.items.all()
+        items_list = []
+
+        for item in items:
+            items_list.append({
+                'id':item.id,
+                'item_name':item.item_name,
+                'quantity':item.quantity,
+                'amount':item.amount,
+                'total_cost':item.total_cost
+            })
+        return JsonResponse({
+            'status':'success',
+            'items':items_list,
+            'total_amount':requisition.total_amount,
+            'tax_amount':requisition.tax_amount if requisition else 0.00
+        })
 
 
 # DELETE REQUISITION OBJECT VIEW
@@ -3386,7 +3387,7 @@ class DeleteRequisitionView(DeleteView):
     model = Requisition
 
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         return Requisition.objects.filter(tenant=tenant)
 
     def delete(self, request, *args, **kwargs):
@@ -3405,9 +3406,10 @@ class DeleteRequisitionView(DeleteView):
                 'message':f'{name} deleted.'
             })
         except Exception as e:
+            logger.error(f'An error occurred while deleting requisition: {e}')
             return JsonResponse({
                 'status':'error',
-                'message':f'An error occured while trying to delete {name}'
+                'message':f'An error occurred while trying to delete {name}'
             })
 
 
@@ -3420,14 +3422,18 @@ class DeleteRequisitionItemView(DeleteView):
     model = RequisitionItem
 
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         requisition_id = self.kwargs['req_id']
-        requisition = Requisition.objects.get(
+
+        requisition = Requisition.objects.filter(
             tenant=tenant,
             id=requisition_id
-        )
+        ).first()
 
-        return RequisitionItem.objects.filter(
+        if not requisition:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
             requisition=requisition
         )
 
@@ -3442,7 +3448,7 @@ class DeleteRequisitionItemView(DeleteView):
         name = self.object.item_name
         requisition = self.object.requisition
         # Prevent removing an item from an approved requisition
-        if self.object.requisition.approved == True:
+        if requisition.approved:
             return JsonResponse({
                 'status':'error',
                 'message':'Can not remove item from an approved requisition.'
@@ -3455,9 +3461,10 @@ class DeleteRequisitionItemView(DeleteView):
                 'total_amount':requisition.total_amount
             })
         except Exception as e:
+            logger.error(f'An error occurred while deleting requisition item: {e}')
             return JsonResponse({
                 'status':'error',
-                'message':f'An error occured while trying to delete {name}'
+                'message':f'An error occurred while trying to delete {name}'
             })
 
 
@@ -3469,8 +3476,15 @@ class DeleteRequisitionItemView(DeleteView):
 @method_decorator(role_required(role=['Finance Manager']), name='dispatch')
 class ApproveRequisitionView(View):
     def post(self,*args,**kwargs):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
+        user = getattr(self.request,'user',None)
         requisition_id = self.kwargs['req_id']
+
+        if not tenant or not user:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid request.'
+            })
 
         if not requisition_id:
             return JsonResponse({
@@ -3478,28 +3492,48 @@ class ApproveRequisitionView(View):
                 'message':'Please select a requisition'
             })
         
-        try:
-            requisition = Requisition.objects.get(
-                tenant=tenant,
-                id=requisition_id
-            )
-        except ObjectDoesNotExist:
+        requisition = Requisition.objects.filter(
+            tenant=tenant,
+            id=requisition_id
+        ).first()
+
+        if not requisition:
             return JsonResponse({
                 'status':'error',
                 'message':'No matching Requisition found'
             })
-        
-        # Approve Requisition
+
         try:
-            requisition.approve()
+            # initialize workflow engine
+            engine = ApprovalWorkflowEngine(
+                tenant=tenant,
+                target_object=requisition,
+                action_type=ApprovalActionType.REQUISITION_APPROVAL.value
+            )
+
+            approval_instance = engine.start_workflow()
+
+            engine.approve(user=user,instance_id=approval_instance.id)
+
             return JsonResponse({
                 'status':'success',
                 'message':f'{requisition.description}Approve successfully'
             })
-        except Exception as e:
+        except ValueError as val_e:
             return JsonResponse({
                 'status':'error',
-                'message':f'An error occured: {str(e)}'
+                'message':str(val_e)
+            })
+        except PermissionError as perm_e:
+            return JsonResponse({
+                'status':'error',
+                'message':str(perm_e)
+            })
+        except Exception as e:
+            logger.error(f'An error occurred while approving requisition: {e}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'An error occurred while approving {requisition.description}'
             })
 
 
