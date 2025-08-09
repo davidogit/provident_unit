@@ -550,19 +550,24 @@ class AddInvestment(CreateView):
                 # Workflow is initiated and approvers notified
                 engine.start_workflow()
             except ValidationError as e:
+                # Rollback investment creation
+                transaction.set_rollback(True)
                 return JsonResponse({
                     'status':'error',
                     'message':f'{str(e)}'
                 })
             except ValueError as val_e:
+                transaction.set_rollback(True)
                 return JsonResponse({
                     'status': 'error',
                     'message': str(val_e)
                 })
-            except PermissionError as perm_e:
+            except Exception as e:
+                transaction.set_rollback(True)
+                logger.error(f'Error occurred while creating investment: {e}')
                 return JsonResponse({
-                    'status': 'error',
-                    'message': str(perm_e)
+                    'status':'error',
+                    'message':'An error occurred while creating investment.'
                 })
 
         return JsonResponse({
@@ -3273,6 +3278,9 @@ class UpdateTaxOnRequisition(View):
         })
 
 
+@method_decorator(login_required, name='dispatch')
+@method_decorator(tenant_required, name='dispatch')
+@method_decorator(role_required(role=['Finance Analyst']), name='dispatch')
 class UpdateReadyToApproveRequisition(View):
     def post(self,*args,**kwargs):
         tenant = getattr(self.request,'tenant',None)

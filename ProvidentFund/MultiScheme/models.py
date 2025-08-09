@@ -11,7 +11,7 @@ from django.core.validators import MinValueValidator,MaxValueValidator
 from django.conf import settings
 # Create your models here.
 
-# Tenanat model
+# Tenant model
 
 class Tenant(models.Model):
     id = models.AutoField(primary_key=True, editable=False)
@@ -43,8 +43,9 @@ class InvestmentScheme(models.Model):
     )
     tenant = models.ForeignKey(
         Tenant,
-        on_delete=models.CASCADE, related_name='investment_schemes',
-        null=True
+        on_delete=models.CASCADE,
+        related_name='investment_schemes',
+        null=False
     )
     name = models.CharField(
         max_length=50,
@@ -75,10 +76,12 @@ class InvestmentScheme(models.Model):
         null=True
     )
     eligibility_criteria_months = models.IntegerField(
+        default=0,
         null=True
     )
     description = models.TextField(
-        blank=True, null=True
+        blank=True,
+        null=True
     )
     created_date = models.DateTimeField(
         auto_now_add=True
@@ -95,9 +98,58 @@ class InvestmentScheme(models.Model):
     approved = models.BooleanField(
         default=False
     )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_schemes'
+    )
+    approved_date = models.DateField(
+        null=True,
+        blank=True
+    )
+    rejected = models.BooleanField(
+        default=False
+    )
+    rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='rejected_schemes'
+    )
+    rejected_date = models.DateField(
+        null=True,
+    )
 
     def __str__(self):
         return f'{self.code} - {self.name}'
+
+    def approve(self, **kwargs):
+        if self.approved:
+            raise Exception('This scheme has already been approved.')
+        if self.rejected:
+            raise Exception('This scheme has already been rejected.')
+
+        user = kwargs.get('user')
+        self.approved = True
+        self.approved_by = user
+        self.approved_date = timezone.now().date()
+        self.save()
+
+
+    def reject(self, **kwargs):
+        if self.rejected:
+            raise Exception('This scheme has already been rejected.')
+        if self.approved:
+            raise Exception('This scheme has already been approved.')
+
+        user = kwargs.get('user')
+        self.rejected = True
+        self.rejected_by = user
+        self.rejected_date = timezone.now().date()
+        self.save()
     
 
 # Signals for StaffAPI

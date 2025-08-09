@@ -1,4 +1,6 @@
 from typing import Any
+
+from django.db import transaction
 from django.forms import BaseModelForm
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -11,11 +13,17 @@ from django.contrib.auth.decorators import login_required
 from Member.decorators import tenant_required
 from Admin.decorators import role_required
 from rest_framework.generics import ListAPIView,RetrieveAPIView
+
+from approval_workflow.approval_engine import ApprovalWorkflowEngine
+from approval_workflow.models import ApprovalActionType
 from .models import Tenant
 from .serializers import TenantSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from .forms import SchemeCreationForm
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Scheme List View
@@ -28,16 +36,16 @@ class SchemeList(ListView):
     paginate_by=10
 
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request,'tenant',None)
         
         # Filter Schemes based on tenant
         if tenant:
-            return InvestmentScheme.objects.filter(
+            return self.model.objects.filter(
                 tenant=tenant,
                 approved=True
             )
         else:
-            return InvestmentScheme.objects.none()
+            return self.model.objects.none()
 
 
 @method_decorator(login_required, name='dispatch')
@@ -50,16 +58,47 @@ class CreateScheme(CreateView):
     
     # Assign tenant before saving  
     def form_valid(self, form):
-        tenant = self.request.tenant
-        if tenant:
+        tenant = getattr(self.request, 'tenant', None)
+        if not tenant:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'An error occurred'
+            })
+
+        with transaction.atomic():
             form.instance.tenant = tenant
             instance = form.save()
             message = 'scheme created successfully, proceed to settings'
 
-            # Create associated setting obj
+            # Create the associated setting obj
             SchemeSettings.objects.create(
                 investment_scheme = instance,
             )
+
+            try:
+                # Initiate approval workflow
+                engine = ApprovalWorkflowEngine(
+                    tenant=tenant,
+                    target_object=instance,
+                    action_type=ApprovalActionType.SCHEME_APPROVAL.value
+                )
+
+                engine.start_workflow()
+            except ValueError as val_e:
+                # Rollback scheme and settings creation
+                transaction.set_rollback(True)
+                return JsonResponse({
+                    'status':'error',
+                    'message':str(val_e)
+                })
+            except Exception as e:
+                # Rollback changes
+                transaction.set_rollback(True)
+                logger.error(f'Error creating approval workflow: {e}')
+                return JsonResponse({
+                    'status':'error',
+                    'message':"An error occurred"
+                },status=500)
 
             redirect_url = reverse('scheme_settings', kwargs={
                 'tenant_id':tenant.id,
@@ -68,18 +107,14 @@ class CreateScheme(CreateView):
             return JsonResponse({
                 'status':'success',
                 'message':message, 'scheme_id':instance.id,
-                'redirect_url':redirect_url #Redirects user to settings page.
+                'redirect_url':redirect_url #Redirects user to the settings page.
             })
-        else:
-            return JsonResponse({
-                'status':'error',
-                'message':'An error occured'
-            })
+
     
     def form_invalid(self, form):
         return JsonResponse({
             'status':'error',
-            'message':'An error occured'
+            'message':'An error occurred'
         })
 
 
@@ -94,10 +129,10 @@ class SchemeSettingsView(UpdateView):
     template_name = 'multischeme/scheme_settings.html'
 
     def get_object(self, queryset = ...):
-        tenant=self.request.tenant
+        tenant= getattr(self.request, 'tenant', None)
         pk = self.kwargs.get('pk')
         return get_object_or_404(
-            SchemeSettings,
+            self.model,
             investment_scheme__tenant=tenant,
             investment_scheme__id=pk
         )
@@ -107,25 +142,25 @@ class SchemeSettingsView(UpdateView):
         context['settings'] = self.object
         return context
 
-    # Return invalid form response using Json
+    # Return invalid form response using JSON
     def form_invalid(self, form):
         print(f'Error: {form.errors}')
         return JsonResponse({
             'status':'error',
-            'message':'An error occured'
+            'message':'An error occurred'
         })
 
     def form_valid(self, form):
-        self.object = form.save()  # Simply save the form
+        self.object = form.save()  # Save the form
         return JsonResponse({
             'status': 'success',
             'message': 'Settings updated successfully.',
             'redirect_url': self.get_success_url()
         })
     
-    # After successful creation redirect to scheme list page
+    # After successful creation redirect to the scheme list page
     def get_success_url(self):
-        tenant =  self.request.tenant
+        tenant =  getattr(self.request, 'tenant', None)
         scheme_id = self.kwargs.get('pk')
         return reverse('scheme_settings', kwargs={'tenant_id' : tenant.id, 'pk':scheme_id})
 
@@ -141,38 +176,78 @@ class SchemeApproval(ListView):
     context_object_name = 'scheme_list'
 
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request, 'tenant', None)
         if tenant:
             # Filter only schemes with settings
-            return InvestmentScheme.objects.filter(
+            return self.model.objects.filter(
                 tenant=tenant,
                 approved=False
             ).exclude(scheme_settings=None).order_by('-created_date')
         else:
-            return InvestmentScheme.objects.none()
+            return self.model.objects.none()
 
     
     def post(self,*args,**kwargs):
-        tenant = self.request.tenant
+        tenant = getattr(self.request, 'tenant', None)
+        user = getattr(self.request, 'user', None)
         scheme_id = self.request.POST.get('scheme_id')
 
-        scheme = InvestmentScheme.objects.filter(
+        if not tenant or not user:
+            return JsonResponse({
+                'status':'error',
+                'message':'Invalid request.'
+            })
+
+        if not scheme_id:
+            return JsonResponse({
+                'status':'error',
+                'message':'No scheme id provided.'
+            })
+
+        scheme = self.model.objects.filter(
             id=scheme_id,
             tenant=tenant,
             approved=False
-        ).first() if scheme_id else InvestmentScheme.objects.none()
+        ).first()
 
-        if scheme:
-            scheme.approved = True
-            scheme.save()
+        if not scheme:
             return JsonResponse({
-                'status':'success',
-                'message':'Scheme approved successfully.'
+                'status': 'error',
+                'message': 'Scheme does not exist.'
             })
+
+        try:
+            engine = ApprovalWorkflowEngine(
+                tenant=tenant,
+                target_object=scheme,
+                action_type=ApprovalActionType.SCHEME_APPROVAL.value
+            )
+
+            approval_instance = engine.start_workflow()
+
+            engine.approve(user=user,instance_id=approval_instance.id)
+        except ValueError as val_e:
+            return JsonResponse({
+                'status':'error',
+                'message':str(val_e)
+            })
+        except PermissionError as perm_e:
+            return JsonResponse({
+                'status':'error',
+                'message':str(perm_e)
+            })
+        except Exception as e:
+            logger.error(f'Error during Scheme approval workflow: {e}')
+            return JsonResponse({
+                'status':'error',
+                'message':"An error occurred"
+            })
+
         return JsonResponse({
-            'status':'error',
-            'message':'Scheme does not exist.'
+            'status':'success',
+            'message':'Scheme approved successfully.'
         })
+
 
 
 # API list view
@@ -208,5 +283,3 @@ class TenantApiPatchView(RetrieveAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-
