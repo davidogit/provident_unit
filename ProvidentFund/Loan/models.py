@@ -146,7 +146,8 @@ class LoanApplication(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         related_name='approved_loans',
-        null=True
+        null=True,
+        blank=True
     )
     disbursed = models.BooleanField(
         default=False

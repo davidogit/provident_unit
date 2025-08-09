@@ -6,6 +6,8 @@ import pandas as pd
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder,ReceivedItems
 from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
 from MultiScheme.models import Tenant,SchemeSettings,TenantEventNotification
+from approval_workflow.approval_engine import ApprovalWorkflowEngine
+from approval_workflow.models import ApprovalActionType
 from contributions.models import StaffAPI, Contribution, Membership
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -64,7 +66,8 @@ class Invest(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        tenant = Tenant.objects.prefetch_related('staff_api').get(id=self.request.tenant.id)
+        tenant = getattr(self.request, 'tenant', None)
+        tenant = Tenant.objects.prefetch_related('staff_api').get(id=tenant.id)
 
         # Fetch schemes and related investments using prefetch
         schemes = InvestmentScheme.objects.filter(
@@ -190,10 +193,13 @@ class InvestmentListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
-        return InvestmentDetail.objects.filter(
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
             investment_scheme__tenant=tenant,
             investment_scheme__id = scheme_id,
         ).order_by('-created_date')
@@ -258,8 +264,11 @@ class AjaxInvestmentTypeView(View):
     paginate_by = 10
 
     def get_queryset(self):
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
+
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
 
         return self.model.objects.filter(
             investment_scheme__tenant=tenant,
@@ -278,7 +287,7 @@ class AjaxInvestmentTypeView(View):
                 investment_type=inv_type
             )
         if expiry_status == 'Expired': #For requests made from Approve matured Invs page
-            # We filter by approved,approval_status and _status
+            # We filter by approved, approval_status and _status
             queryset = queryset.filter(
                 _status=expiry_status,
                 approved=True,
@@ -357,14 +366,14 @@ class InvestmentDetailView(DetailView):
         tenant = getattr(self.request, 'tenant', None)
         scheme_id = getattr(self.request, 'scheme_name', None)
 
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
         # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(
-                investment_scheme__tenant=tenant,
-                investment_scheme__id = scheme_id
-            )
-        else:
-            return None
+        return InvestmentDetail.objects.filter(
+            investment_scheme__tenant=tenant,
+            investment_scheme__id = scheme_id
+        )
+
 
     def post(self, request, *args, **kwargs):
         tenant = request.tenant
@@ -521,10 +530,6 @@ class AddInvestment(CreateView):
                 'status':'error',
                 'message':'Mapping not found. Make sure a mapping is created for this event then try again.'
             })
-        
-        # Fetch investment principal
-        investment_amount = form.cleaned_data['principal_amount']
-
 
         if self.request.POST.get('type_of_tbill') == '':
             form.instance.type_of_tbill = 'Fixed Deposit'
@@ -534,16 +539,30 @@ class AddInvestment(CreateView):
         with transaction.atomic():
             self.object = form.save()
 
-            # perform debit anf credit operations
-            accounting_service = AccountingService(tenant=tenant,user=self.request.user,scheme=scheme)
-            action_name = 'Investment'
-            description = 'Investment purchased'
             try:
-                accounting_service.create_entry(action_name,Decimal(investment_amount),description)
+                # NB: Debit and Credit entries are handled after final approval
+                # initiate workflow for inv approval
+                engine = ApprovalWorkflowEngine(
+                    tenant=tenant,
+                    target_object=self.object,
+                    action_type=ApprovalActionType.INVESTMENT_APPROVAL.value
+                )
+                # Workflow is initiated and approvers notified
+                engine.start_workflow()
             except ValidationError as e:
                 return JsonResponse({
                     'status':'error',
                     'message':f'{str(e)}'
+                })
+            except ValueError as val_e:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': str(val_e)
+                })
+            except PermissionError as perm_e:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': str(perm_e)
                 })
 
         return JsonResponse({
@@ -559,7 +578,7 @@ class AddInvestment(CreateView):
         return reverse('investment_list', kwargs={'scheme_name':scheme, 'tenant_id':tenant.id}) 
 
 
-
+# TODO: All roles should be allowed since there is option for approval workflow which might involve other roles based on Tenanr
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury Manager']), name='dispatch')
@@ -570,26 +589,30 @@ class ApproveNewInvestments(ListView):
     context_object_name = 'new_investment_list'
 
     def get_queryset(self):
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-        return InvestmentDetail.objects.filter(
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
+
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
             investment_scheme__tenant=tenant,
             investment_scheme__id=scheme_id,
             approved=False,
-            approval_status=False
         ).order_by('-created_date')
     
     def post(self,*args,**kwargs):
-        tenant = self.request.tenant
+        tenant = getattr(self.request, 'tenant', None)
+        user = getattr(self.request, 'user', None)
         inv_id = self.request.POST.get('inv_id')
 
-        if not inv_id:
+        if not tenant or not inv_id or not user:
             return JsonResponse({
-                'status':'error',
-                'message':'Please provide an ID for the specified investment.'
+                'status': 'error',
+                'message': 'Invalid request.'
             })
         
-        inv = InvestmentDetail.objects.filter(
+        inv = self.model.objects.filter(
             investment_scheme__tenant=tenant,
             id=inv_id,
             approved=False
@@ -601,16 +624,39 @@ class ApproveNewInvestments(ListView):
                 'message':'Investment not found.'
             })
 
-        # Approve Inbvestment
-        inv.approved = True
-        inv.save()
+        try:
+            # Initialize workflow engine
+            engine = ApprovalWorkflowEngine(
+                tenant=tenant,
+                target_object=inv,
+                action_type=ApprovalActionType.INVESTMENT_APPROVAL.value
+            )
 
-        return JsonResponse({
-            'status':'success',
-            'message':'Investment approved successfully.'
-        })
+            approval_instance = engine.start_workflow()
 
-# Updating an Investement's details
+            engine.approve(user=user,instance_id=approval_instance.id)
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Investment approved successfully.'
+            })
+        except ValueError as val_e:
+            return JsonResponse({
+                'status':'error',
+                'message':str(val_e)
+            })
+        except PermissionError as perm_e:
+            return JsonResponse({
+                'status':'error',
+                'message':str(perm_e)
+            })
+        except Exception as e:
+            logger.info(f'An error occurred while approving investment: {e}')
+            return JsonResponse({
+                'status':'error',
+                'message':f'A server error occurred'
+            },status=500)
+
+# Updating an Investment's details
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
@@ -619,14 +665,16 @@ class InvestmentUpdateView(UpdateView):
     form_class = InvestmentUpdateForm
     template_name = 'dashboard/investment_update_form.html'
 
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+    # We override the get_queryset method to be able to filter the objects before its being accessed in this view
     def get_object(self):
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
-        # get inv pk
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
         pk = self.kwargs['pk']
-        print(f'SCHEME ID: {scheme_id}')
-        return InvestmentDetail.objects.filter(
+
+        if not tenant or not scheme_id or not pk:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
             pk=pk,
             investment_scheme__tenant=tenant,
             investment_scheme__id = scheme_id
@@ -642,7 +690,7 @@ class InvestmentUpdateView(UpdateView):
         context= super().get_context_data(**kwargs)
         inv = self.object
         
-        # Pass invoice number separately since its not part of the form
+        # Pass the invoice number separately since it's not part of the form
         context['invoice_number'] = inv.invoice_number
 
         form = InvestmentUpdateForm(instance=inv)
@@ -651,15 +699,15 @@ class InvestmentUpdateView(UpdateView):
         return context
     
     def get_success_url(self):
-        scheme_id = self.request.scheme_name
-        tenant =  self.request.tenant
+        scheme_id = getattr(self.request, 'scheme_name', None)
+        tenant =  getattr(self.request, 'tenant', None)
         return reverse('investment_list', kwargs={'scheme_name':scheme_id, 'tenant_id':tenant.id})
 
 
 
 
 
-# Updating rollover interest percentage field only
+# Updating the rollover interest percentage field only
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=['Treasury Analyst']), name='dispatch')
@@ -667,9 +715,16 @@ class RolloverInvestment(TemplateView):
     template_name = 'dashboard/rollover_percentage.html'
 
     def post(self, request, *args, **kwargs):
-        tenant = self.request.tenant
-        tenant_id = request.tenant.id
-        scheme_id = request.scheme_name
+        tenant = getattr(request, 'tenant', None)
+        scheme_id = getattr(request, 'scheme_name', None)
+
+        if not tenant or not scheme_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request.'
+            })
+
+        tenant_id = tenant.id
         # Collect all data in Post request 
         rollover_rate_str = request.POST.get('rate') 
         start_date_str = request.POST.get('start_date')
@@ -708,17 +763,17 @@ class RolloverInvestment(TemplateView):
             inv = get_object_or_404(
                 InvestmentDetail,
                 pk=pk,
-                investment_scheme__tenant=request.tenant,
+                investment_scheme__tenant=tenant,
                 investment_scheme__id=scheme_id,
                 approved=True,
                 approval_status=False,
                 termination_status=False
             )
-        except:
+        except Exception as e:
+            logger.info(f'An error occurred while getting the investment: {e}')
             return JsonResponse({'status':'error', 'message':'Investment object not found', 'redirect_url': self.get_success_url()})
 
         # Prevent cases where rollover principal is greater than the return of the previous investment interest+principal
-        print(f'New amount: {rollover_amount}')
         if rollover_amount > (inv.interest_amount + inv.principal_amount):
             message = f'Roll over principal cannot be greater than {(inv.interest_amount + inv.principal_amount)}'
             return JsonResponse({'status':'error','message':message})
@@ -772,7 +827,7 @@ class RolloverInvestment(TemplateView):
             return JsonResponse({'status':'error', 'message':'Some fields are missing'})
         # Call task to handle investment creation
         try:
-            # Debit and Credit operations to be done in tasks after succesful entry of DI object
+            # Debit and Credit operations to be done in tasks after successful entry of a DI object
             rollover_inv_creation.delay(
                 tenant_id=tenant_id,
                 scheme_id=scheme_id,
@@ -800,14 +855,10 @@ class RolloverInvestment(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Get Tenant
-        tenant = self.request.tenant
-        # Get scheme name
-        scheme_id = self.request.scheme_name
-        # Get inv pk
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
         pk = self.kwargs['pk']
 
-        # Fetch investment
         if tenant:
             inv = get_object_or_404(
                 InvestmentDetail,
@@ -815,14 +866,13 @@ class RolloverInvestment(TemplateView):
                 approved=True,
                 investment_scheme__tenant=tenant,
                 investment_scheme__id=scheme_id
-            ) 
-        
-        context['rollover']= inv
+            )
+            context['rollover']= inv
         return context
     
     def get_success_url(self):
-        scheme_id = self.request.scheme_name
-        tenant =  self.request.tenant
+        scheme_id = getattr(self.request, 'scheme_name', None)
+        tenant =  getattr(self.request, 'tenant', None)
         return reverse('investment_list', kwargs={'scheme_name':scheme_id, 'tenant_id':tenant.id})
 
 
@@ -849,7 +899,6 @@ class InvestmentDeleteView(TemplateView):
         return None
 
     def delete(self, request, *args, **kwargs):
-        print('Started Deletion')
         pk = kwargs.get('pk')
         investment = self.get_object(request, pk)
 
@@ -888,18 +937,15 @@ class ExitedMembers(ListView):
     template_name ='dashboard/exited_members.html'
     paginate_by=20
 
+    def get_queryset(self):
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
-    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
-    def get_queryset(self):  
-        # Get Tenant
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return StaffAPI.objects.filter(tenant=tenant, investment_scheme__id=scheme_id)
-        else:
-            return StaffAPI.objects.none()
+        return self.model.objects.filter(tenant=tenant, investment_scheme__id=scheme_id)
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -916,27 +962,22 @@ class ExitedMembers(ListView):
 
   
 
-# Memeber detailed View
+# Member detailed View
 @method_decorator(login_required, name='dispatch')
 @method_decorator(tenant_required, name='dispatch')
 @method_decorator(role_required(role=[]), name='dispatch')
 class MemberDetailView(DetailView):
-    # model = Member
     model = StaffAPI
     template_name = 'dashboard/member_details.html'
 
-    # We override the get_queryset method to be able to filter the Members before its being accesed in this view
     def get_queryset(self):
-         
-        # Get Tenant
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return StaffAPI.objects.filter(tenant=tenant, investment_scheme__id=scheme_id)
-        else:
-            return StaffAPI.objects.none()
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
+
+        return StaffAPI.objects.filter(tenant=tenant, investment_scheme__id=scheme_id)
 
 
 # Query For Investment View
@@ -946,22 +987,20 @@ class MemberDetailView(DetailView):
 class InvestmentQuery(ListView):
     template_name = 'dashboard/query.html'
     model = InvestmentDetail
-    paginate_by = 10  # Set the number of results per page
+    paginate_by = 10
 
     def get_queryset(self):
-        # Get Tenant
-        tenant = self.request.tenant
-        # Get scheme id
-        scheme_id = self.request.scheme_name
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return InvestmentDetail.objects.filter(
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
                 approved=True,
                 investment_scheme__id=scheme_id,
                 investment_scheme__tenant=tenant
             ).order_by('-created_date')
-        return None
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1177,10 +1216,16 @@ class DelayedInterestListView(ListView):
 @method_decorator(role_required(role=['Treasury Manager','Treasury Supervisor','Treasury Analyst']), name='dispatch')
 class DelayedInterestSearchView(View):
     def get(self,request,*args,**kwargs):
-        tenant = self.request.tenant
+        tenant = getattr(request, 'tenant', None)
         search_term = self.request.GET.get('search_term','')
         scheme_id = self.kwargs['scheme_name']
-        print(f'Scheme ID: {scheme_id}')
+
+        if not tenant or not scheme_id:
+            return JsonResponse({
+                'status': 'error',
+                'message':'Invalid request'
+            })
+
         if not search_term:
             return JsonResponse({
                 'status':'error',
@@ -1193,7 +1238,6 @@ class DelayedInterestSearchView(View):
             investment_scheme__tenant=tenant,
             investment_scheme__id=scheme_id
         )
-        print(f'Results: {results}')
         delayed_interest_list = [
             {
                 'id':d.pk,
@@ -1221,19 +1265,16 @@ class DelayedInterestQuery(ListView):
     model = DelayedInterest
     template_name = 'dashboard/delayed_interest_query.html'
     paginate_by = 20
-    # We override the get_queryset method to be able to filter the objects before its being accesed in this view
+
     def get_queryset(self):
-        # Get Tenant
-        tenant = self.request.tenant
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
-        # Get scheme name
-        scheme_id = self.request.scheme_name
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
 
-        # Filtering Queryset by Tenant
-        if tenant:
-            return DelayedInterest.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
-        else:
-            return DelayedInterest.objects.none()
+        return self.model.objects.filter(investment_scheme__tenant=tenant,investment_scheme__id = scheme_id).order_by('-created_date')
+
         
 
     def get_context_data(self, **kwargs):
@@ -1287,23 +1328,29 @@ class ApproveMaturedInvestment(ListView):
         tenant = getattr(self.request, 'tenant', None)
         scheme_id = getattr(self.request, 'scheme_name', None)
 
-        if tenant and scheme_id:
-            # Matured investments to be approved
-            return InvestmentDetail.objects.filter(
-                investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,
-                approval_status=False,
-                approved=True,
-                _status='Expired'
-            )
-        else:
-            return InvestmentDetail.objects.none()
+        if not tenant or not scheme_id:
+            return self.model.objects.none()
+
+        return self.model.objects.filter(
+            investment_scheme__tenant=tenant, investment_scheme__id=scheme_id,
+            approval_status=False,
+            approved=True,
+            _status='Expired'
+        )
+
         
     def post(self, request, *args, **kwargs):
         form = InvestmentApprovalForm(request.POST)
         inv_id = request.POST.get('investment_id')
-        tenant = request.tenant
-        scheme_id = request.scheme_name
-        tenant_id = tenant.id
+        tenant = getattr(request, 'tenant', None)
+        scheme_id = getattr(request, 'scheme_name', None)
+        user = getattr(request, 'user', None)
+
+        if not tenant or not scheme_id or not user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid request'
+            })
 
         if not inv_id:
             return JsonResponse({'status': 'error', 'message': 'Investment ID is required.'})
@@ -1331,38 +1378,25 @@ class ApproveMaturedInvestment(ListView):
                     'message':'Investment scheme not found.'
                 })
 
-            mapping = scheme.account_mapping.filter(name='Approved Revenue').first()
+            mapping = scheme.account_mapping.filter(name='Realize Matured Investment').first()
             if not mapping:
                 return JsonResponse({
                     'status':'error',
                     'message':'Mapping not found. Make sure a mapping is created for this event then try again.'
                 })
 
-            # Check if closing amount == expected amount
-            with transaction.atomic():
-                if investment.interest_amount==closing_amount:
-                    investment.approval_status = approval_status
-                    investment.closing_amount = closing_amount
-                    investment.save()
 
-                    # perform debit and credit operation
-                    accounting_service = AccountingService(tenant=tenant, user=request.user,scheme=scheme)
-                    action_name = 'Investment Approval'
-                    description = 'Investment Approval'
-
-                    try:
-                        accounting_service.create_entry(action_name,investment.interest_amount,description)
-                    except ValidationError as e:
-                        return JsonResponse({'status': 'error', 'message': str(e.message)})
-
-                    # After saving changes now we calculate members' actual profit using tasks
-                    actual_member_interest.delay(tenant_id,scheme_id,inv_id)
-
-                    return JsonResponse({'status':'success','message':'Investment approved successfully and accounts updated.'})
-                else:
-                    # Gather the error message
-                    error_message = 'Closing amount does not match with expected amount'
-                    return JsonResponse({'status':'error', 'message':error_message})
+            if (investment.interest_amount+ investment.principal_amount)==closing_amount:
+                # recognize investment's accrued interest
+                success,message = investment.realize_interest(closing_amount=closing_amount,user=user)
+                status = 'success' if success else 'error'
+                return JsonResponse({
+                    'status':status,
+                    'message':message
+                })
+            else:
+                error_message = 'Closing amount does not match with expected amount'
+                return JsonResponse({'status':'error', 'message':error_message})
 
         return JsonResponse({'status':'error','message':'Invalid form data.'})
 
@@ -1384,8 +1418,8 @@ class ApprovedInvestments(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        tenant = self.request.tenant
-        scheme_id = self.request.scheme_name
+        tenant = getattr(self.request, 'tenant', None)
+        scheme_id = getattr(self.request, 'scheme_name', None)
 
         if tenant and scheme_id:
             return InvestmentDetail.objects.filter(
@@ -1411,18 +1445,15 @@ class SchemeApplications(ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request, 'tenant', None)
 
         if tenant:
-            try:
-                # Filter where scheme hasnt been approved and tenant
-                return SchemeApproval.objects.filter(tenant=tenant)
-            except SchemeApproval.DoesNotExist:
-                return SchemeApproval.objects.none()
-        return super().get_queryset().none()
+            # Filter where scheme hasnt been approved and tenant
+            return SchemeApproval.objects.filter(tenant=tenant)
+        return self.model.objects.none()
     
     
-    # Using dispatch to be able to access the post method which is not directly in Listview
+    # Using dispatch to be able to access the post-method which is not directly in the Listview
     def dispatch(self, request, *args, **kwargs):
         if request.method == 'POST':
             return self.handle_post(request, *args, **kwargs)
@@ -1437,9 +1468,9 @@ class SchemeApplications(ListView):
 
 
         try:
-            application = self.get_queryset().get(tenant=tenant, id=application_id)
+            application = self.get_queryset().filter(tenant=tenant, id=application_id).first()
 
-            # Now we can approve using the approve method on the SchemeApproval Model
+            # Now we can approve using the approval method on the SchemeApproval Model
             application.approve()
 
             from contributions.models import Membership
@@ -1453,14 +1484,14 @@ class SchemeApplications(ListView):
             # Notify applicant upon scheme approval
             applicant_email = application.member.user.email
             try:
-                # Email notification to user
+                # Email notification to a user
                 subject='Your Scheme Application Approved'
                 message=f'Your application to enroll onto {application.scheme.name} has been approved successfully. Deductions will start at the end of the current month'
                 recipient=applicant_email
                 gen_send_email.delay(recipient,message,subject)
 
-            except Exception:
-                logger.info(f'couldnt send application approved message to {application.member.user.username}')
+            except Exception as e:
+                logger.info(f'couldn\'t send application approved message to {application.member.user.username}: {str(e)}')
             return JsonResponse({'status':'success', 'approved_by_hr':approved_by_hr})
         except SchemeApproval.DoesNotExist:
             return JsonResponse({'status':'error'},status=400)
@@ -1484,7 +1515,7 @@ class RecentActivities(ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = getattr(self.request, 'tenant', None)
         if tenant:
             return InvestmentDetail.objects.filter(investment_scheme__tenant=tenant).order_by('created_date')
         return InvestmentDetail.objects.none()
@@ -1492,7 +1523,7 @@ class RecentActivities(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        tenant = self.request.tenant
+        tenant = getattr(self.request, 'tenant', None)
         if tenant:
             inv_list = self.get_queryset() #Using the 'object_list to maintain the pagination
             history_list = []
@@ -1557,7 +1588,7 @@ class ApproveContributions(TemplateView):
         tenant_id = tenant.id
         month = request.POST.get('month')
         year = request.POST.get('year')
-        message_1 = '' #holder for an extra message to user
+        message_1 = '' #holder for an extra message to the user
 
         scheme = InvestmentScheme.objects.filter(
             id=scheme_id,

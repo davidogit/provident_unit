@@ -22,7 +22,9 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from approval_workflow.approval_engine import ApprovalWorkflowEngine
+import logging
 
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -1861,9 +1863,7 @@ class LoanTopUpApprovalHandler(View):
         tenant = getattr(request, 'tenant', None)
         topup_id = request.POST.get('topup_id')
         user = getattr(request,'user', None)
-        print('REQUEST: ',request.POST)
-        print('Tenant: ', tenant)
-        print('Topup ID: ', topup_id)
+
         if not tenant or not topup_id or not user:
             return JsonResponse({
                 'status': 'error',
@@ -1905,10 +1905,11 @@ class LoanTopUpApprovalHandler(View):
                 'message': str(perm_e)
             })
         except Exception as e:
+            logger.info(f'An error occurred while approving top-up request: {e}')
             return JsonResponse({
                 'status': 'error',
-                'message': f'Error approving top-up request: {e}'
-            })
+                'message': f'Error approving top-up request'
+            },status=500)
 
 
 
