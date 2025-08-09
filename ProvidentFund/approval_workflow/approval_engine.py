@@ -14,10 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def check_duplicate_action(user: 'AUTH_USER_MODEL', instance: 'ApprovalInstance', step: 'WorkflowStep'):
-    print(f"Checking for duplicate actions for user {user.username} in step {step.order} of workflow {instance.workflow.name}")
-    print(ApprovalLog.objects.filter(instance=instance,step=step,user=user).exists())
     if ApprovalLog.objects.filter(instance=instance,step=step,user=user).exists():
-        print(f"User {user.username} has already taken action in step {step.order} of workflow {instance.workflow.name}")
         raise ValueError(f"User {user.username} has already taken action in step {step.order} of workflow {instance.workflow.name}")
 
 

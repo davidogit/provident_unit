@@ -7,12 +7,15 @@ from django.urls import reverse
 from MultiScheme.models import InvestmentScheme,Tenant
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from ProvidentFund.settings import AUTH_USER_MODEL
 from .generate_invoice import generate_invoice_number,generate_short_alpha_numeric_id
-from Chart_of_Accounts.models import BankAccount,ChartOfAccounts
+from Chart_of_Accounts.models import BankAccount, ChartOfAccounts, AccountingService
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
-from django.db.models import ProtectedError
 from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
 
 class InvestmentDetail(models.Model):
     invoice_number = models.CharField(
@@ -20,8 +23,9 @@ class InvestmentDetail(models.Model):
         unique=True,
         null=True,
         blank=True,
-        editable=False
-    )#Set on saving using pre-save signals
+        editable=False,
+        help_text='specifies the item number'
+    )
     investment_scheme = models.ForeignKey(
         InvestmentScheme,
         on_delete=models.CASCADE,
@@ -37,7 +41,8 @@ class InvestmentDetail(models.Model):
     investment_type = models.CharField(
         max_length=50,
         choices=inv_type,
-        default=''
+        default='',
+        help_text='specifies the type of investment'
     )
     current = 'Current'
     checking ='Checking'
@@ -80,15 +85,18 @@ class InvestmentDetail(models.Model):
         decimal_places=2,
         default=0,
         null=False,
-        blank=False
+        blank=False,
+        help_text='specifies the interest rate'
     )
     interest_start_date = models.DateField(
         null=False,
-        blank=False
+        blank=False,
+        help_text='specifies the date the investment is starts accruing interest'
     )
     interest_end_date = models.DateField(
         null=False,
-        blank=False
+        blank=False,
+        help_text='specifies the maturity date of the investment'
     )
     created_date = models.DateField(
         auto_now_add=True
@@ -97,10 +105,12 @@ class InvestmentDetail(models.Model):
         auto_now=True
     )
     roll_over = models.BooleanField(
-        default=False
+        default=False,
+        help_text='specifies if the investment has been rolled over'
     )
     rollover_count = models.IntegerField(
-        default=0
+        default=0,
+        help_text='specifies how many times the investment has been rolled over'
     )
     _remaining_days = models.PositiveIntegerField(
         default=0
@@ -110,18 +120,62 @@ class InvestmentDetail(models.Model):
         default='Pending'
     )
     approved = models.BooleanField(
-        default=False
-    )#Approval of newly created investments
+        default=False,
+        help_text='specifies if the investment is approved or not'
+    )
     approval_status = models.BooleanField(
-        default=False
-    )#Final approval of matured investments
+        default=False,
+        help_text='specifies if matured investments have been recognized or not'
+    )
+    approved_by = models.ForeignKey(
+        AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='approved_investments',
+        null=True,
+        blank=True
+    )
+    approved_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Date investment was approved.'
+    )
+    rejected = models.BooleanField(
+        default=False,
+        help_text='If loan was rejected'
+    )
+    rejected_by = models.ForeignKey(
+        AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='rejected_investments',
+        null=True,
+        blank=True
+    )
+    rejected_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Date investment was rejected.'
+    )
+    realized_by = models.ForeignKey(
+        AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='realized_investments',
+        null=True,
+        blank=True,
+    )
+    realized_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Date investment was realized.'
+    )
     closing_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        default=0.00
+        default=0.00,
+        help_text='specifies the closing amount of the investment, value is entered during validating of matured investments'
     )
     termination_status = models.BooleanField(
-        default=False
+        default=False,
+        help_text='specifies if the investment is terminated or not'
     )
     interest_amount = models.DecimalField(
         max_digits=15,
@@ -131,17 +185,125 @@ class InvestmentDetail(models.Model):
     years = models.DecimalField(
         max_digits=4,
         decimal_places=2,
-        null=False
-    ) #Time the money is invested or borrowed for, in years.
+        null=False,
+        help_text='specifies how many years the money is invested or borrowed for'
+    )
     compounding_frequency = models.PositiveIntegerField(
-        null=False
-    ) # Number of times the interest is compounded per year.
+        null=False,
+        help_text='specifies how often the interest is compounded'
+    )
     type_of_tbill = models.CharField(
         max_length=10,
         default='',
         null=True,
-        blank=True
-    )#specifies if 91,182,365 day for only Tbill
+        blank=True,
+        help_text='specifies if 91,182,365 day for only T-bill'
+    )
+
+
+    def approve(self,**kwargs):
+        """
+        Approves an investment if it has not already been approved. This method handles
+        the process of updating approval status and performing necessary accounting
+        entries for the investment.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments where:
+                user: The user who is approving the investment.
+
+        Raises:
+            Exception: If the investment has already been approved.
+        """
+        if self.approved:
+            raise Exception('Investment has already been approved')
+
+        user = kwargs.get('user')
+        scheme = self.investment_scheme
+        tenant = scheme.tenant
+        principal_amount = self.principal_amount
+
+        with transaction.atomic():
+            # Perform debit and credit
+            accounting_service = AccountingService(tenant=tenant, user=user, scheme=scheme)
+            action_name = 'Investment'
+            description = 'Investment purchased'
+            try:
+                accounting_service.create_entry(action_name, principal_amount, description)
+            except Exception as e:
+                logger.error(f'Error creating accounting entry for {tenant.name} {action_name}: {e}')
+
+            self.approved_by = user
+            self.approved = True
+            self.approved_date = timezone.now().date()
+            self.save()
+
+
+    def reject(self,**kwargs):
+        """
+        Rejects an investment if it has not already been approved or rejected. Updates
+        the status of the investment to reject, records the user who performed the
+        rejection, and sets the rejection date to the current date.
+
+        Raises
+        ------
+        Exception
+            If the investment has already been rejected.
+        Exception
+            If the investment has already been approved.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments. Expected to contain the following:
+            'user' : Any
+                The user who is rejecting the investment.
+        """
+        if self.rejected:
+            raise Exception('Investment has already been rejected')
+        if self.approved:
+            raise Exception('Investment has already been approved')
+
+        user = kwargs.get('user')
+
+        with transaction.atomic():
+            self.rejected_by = user
+            self.rejected = True
+            self.rejected_date = timezone.now().date()
+            self.save()
+
+
+    def realize_interest(self,**kwargs):
+        if self.approval_status:
+            raise Exception('Investment has already been realized')
+
+        user = kwargs.get('user')
+        closing_amount = kwargs.get('closing_amount')
+        scheme = self.investment_scheme
+        tenant = scheme.tenant
+
+        with transaction.atomic():
+            accounting_service = AccountingService(tenant=tenant, user=user, scheme=scheme)
+            action_name = 'Realize Matured Investment'
+            description = 'Realize Matured Investment'
+            try:
+                accounting_service.create_entry(action_name, self.interest_amount, description)
+
+                # Compute and distribute members' actual profits earned from this investment
+                from Fund.tasks import actual_member_interest
+                actual_member_interest.delay(tenant.id, scheme.id, self.id)
+
+                self.approval_status = True
+                self.closing_amount = closing_amount
+                self.realized_by = user
+                self.realized_date = timezone.now().date()
+                self.save()
+                return True,'Investment has been realized successfully.'
+            except ValidationError as val_e:
+                logger.error(f'Error realizing investment: {val_e}')
+                return False,str(val_e)
+            except Exception as e:
+                logger.error(f'Error realizing investment: {e}')
+                return False,'An error occurred while realizing the investment'
 
 
     def calculate_inv_interest(self):
@@ -149,7 +311,7 @@ class InvestmentDetail(models.Model):
         p = self.principal_amount
         r = self.interest_percentage/100
         t = self.years
-        n = self.compounding_frequency # daily,monthly,quaterly,yearly
+        n = self.compounding_frequency # daily,monthly,quarterly,yearly
         c = p*(1+(r/n))**(n*t) #compound interest
         interest = c-p #interest amount only
         return interest
@@ -166,12 +328,12 @@ class InvestmentDetail(models.Model):
     def remaining_days(self):
         return self._remaining_days
     
-    # remainig_days setter to allow write to remaining_days
+    # remaining_days setter to allow writing to remaining_days
     @remaining_days.setter
     def remaining_days(self,value):
         self._remaining_days = value
 
-    # Status of Investment to be set by task
+    # Status of Investment to be set by a task
     @property
     def status(self):
         return self._status
