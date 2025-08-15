@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Confirmation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .container {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+      }
+      .header h1 {
+        color: #007bff;
+        margin: 0;
+        font-size: 24px;
+      }
+      .transaction-details {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        padding: 5px 0;
+        border-bottom: 1px solid #dee2e6;
+      }
+      .detail-row:last-child {
+        border-bottom: none;
+      }
+      .detail-label {
+        font-weight: bold;
+        color: #495057;
+      }
+      .detail-value {
+        color: #212529;
+      }
+      .amount {
+        font-size: 20px;
+        font-weight: bold;
+        color: #28a745;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #dee2e6;
+        color: #6c757d;
+        font-size: 14px;
+      }
+      .success-icon {
+        color: #28a745;
+        font-size: 48px;
+        text-align: center;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Payment Confirmation</h1>
+        <p>Your payment has been successfully processed</p>
+      </div>
+
+      <div class="success-icon">✓</div>
+
+      <div class="transaction-details">
+        <h3>Transaction Details</h3>
+
+        <div class="detail-row">
+          <span class="detail-label">Transaction Reference:</span>
+          <span class="detail-value">{{ reference }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Amount:</span>
+          <span class="detail-value amount">₦{{ amount }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Payment Date:</span>
+          <span class="detail-value">{{ date|date:"F j, Y, g:i A" }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Scheme:</span>
+          <span class="detail-value">{{ scheme.name }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Staff ID:</span>
+          <span class="detail-value">{{ staff.staff_number }}</span>
+        </div>
+      </div>
+
+      <p>
+        Thank you for your contribution to the {{ scheme.name }} scheme. Your
+        payment has been received and your account has been updated accordingly.
+      </p>
+
+      <p>
+        If you have any questions about this transaction, please contact our
+        support team.
+      </p>
+
+      <div class="footer">
+        <p>This is an automated message from the Provident Fund System.</p>
+        <p>Please do not reply to this email.</p>
+      </div>
+    </div>
+  </body>
+</html>

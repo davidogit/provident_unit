@@ -1,0 +1,20 @@
+PAYMENT CONFIRMATION
+====================
+
+Your payment has been successfully processed!
+
+TRANSACTION DETAILS:
+-------------------
+Transaction Reference: {{ reference }}
+Amount: ₦{{ amount }}
+Payment Date: {{ date|date:"F j, Y, g:i A" }}
+Scheme: {{ scheme.name }}
+Staff ID: {{ staff.staff_number }}
+
+Thank you for your contribution to the {{ scheme.name }} scheme. Your payment has been received and your account has been updated accordingly.
+
+If you have any questions about this transaction, please contact our support team.
+
+---
+This is an automated message from the Provident Fund System.
+Please do not reply to this email.

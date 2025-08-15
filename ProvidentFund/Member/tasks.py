@@ -14,7 +14,7 @@ from phonenumbers import parse as parse_phone, format_number, PhoneNumberFormat
 import logging
 from MultiScheme.models import TenantEventNotification
 from django.core.mail import send_mail
-from .models import WithdrawalRequest
+from Payments.models import WithdrawalRequest
 
 logger = logging.getLogger(__name__)
 

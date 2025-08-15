@@ -107,87 +107,15 @@ class StaffAPI(models.Model):
         blank=True
     )
 
-
     def __str__(self):
         return f'{self.last_name} {self.first_name}'
     
     @property
     def total_amount(self):
         return self.contributions+self.actual_amount
-    
-    # @property
-    # def amount(self):
-    #     return self._amount
-    
-    # @amount.setter
-    # def amount(self,value):
-    #     self._amount += value
-
-
-
-# Signals for StaffAPI
-# @receiver(post_save, sender=StaffAPI)
-# def audit_log_save(sender,instance,created,update_fields,**kwargs):
-#     from Fund.middleware import get_current_user
-
-#     object_id = instance.pk
-
-#     action = 'created' if created else 'updated'
-
-#     # User making the change
-#     # user = get_current_user() or None
-#     user = middleware.get_current_user()
-#     # Assign name 
-#     if created:
-#         instance.name = user
-#         instance.save()
-
-#     # Get changes to model
-#     changes = {}
-
-#     for field in instance._meta.fields:
-#         field_name = field.name
-#         new_value = getattr(instance,field_name)
-#         changes[field_name] = force_str(new_value)
-        
-#     logger.info(f'User: {user}')
-#     # Create an AuditTrail instance
-#     AuditTrail.objects.create(
-#         user = user,
-#         model_name = StaffAPI.__name__,
-#         action = action,
-#         object_id = object_id,
-#         changes = json.dumps(changes),
-#         timestamp = timezone.now(),
-#         name = user.username
-#     )
-
-# @receiver(pre_delete, sender=StaffAPI)
-# def audit_log_delete(sender,instance,**kwargs):
-#     from Fund.middleware import get_current_user
-#     # current_user = CurrentUserMiddleware(None)
-#     object_id = instance.pk
-
-#     action = 'deleted'
-
-#     user = get_current_user()
-#     # get_object_or_404(get_user_model(),id=instance.pk)
-    
-#     # Create an AuditTrail instance
-#     AuditTrail.objects.create(
-#         user = user,
-#         model_name = StaffAPI.__name__,
-#         action = action,
-#         object_id = object_id,
-#         changes = f'User {user} made a delete operation at {timezone.now()}',
-#         timestamp = timezone.now(),
-#         name = user.username
-#     )
-
 
 
 class Contribution(models.Model):
-    # tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True)
     investment_scheme = models.ForeignKey(
         InvestmentScheme,
         on_delete=models.CASCADE,
@@ -238,21 +166,19 @@ class Contribution(models.Model):
     def __str__(self):
         return f"{self.member.last_name}'s - {self.month} {self.year}"
     
-
-    # Saving every contribution for user whenever a contribution is made
     def save(self, *args, **kwargs):
         """
-        Saving every contribution for user whenever a contribution is made
+        Optimized save method that incrementally updates member contributions
+        instead of recalculating from scratch every time
         """
         from decimal import Decimal
-        from django.db.models import Sum
-    
-    # Extract month and year from the contribution_date
+        
+        # Extract month and year from the contribution_date
         if self.contribution_date:
             self.month = str(self.contribution_date.month)
             self.year = str(self.contribution_date.year)
         
-        # Convert all amounts to Decimal before arithmetic (FIXES THE DECIMAL+FLOAT ERROR)
+        # Convert all amounts to Decimal before arithmetic
         employee_amt = Decimal(str(self.employee_amount)) if self.employee_amount is not None else Decimal('0.00')
         employer_amt = Decimal(str(self.employer_amount)) if self.employer_amount is not None else Decimal('0.00')
         retro_employee_amt = Decimal(str(self.retro_employee_amount)) if self.retro_employee_amount is not None else Decimal('0.00')
@@ -266,33 +192,70 @@ class Contribution(models.Model):
             retro_employer_amt
         )
 
-        # Save the main object first to ensure total_contributions is saved
+        # Check if this is a new object or an update
+        is_new = self.pk is None
+        
+        # Get old values for comparison if this is an update
+        old_total = Decimal('0.00')
+        old_approved = False
+        
+        if not is_new:
+            try:
+                old_contribution = Contribution.objects.get(pk=self.pk)
+                old_total = old_contribution.total_contribution or Decimal('0.00')
+                old_approved = old_contribution.approved_contribution
+            except Contribution.DoesNotExist:
+                # Handle edge case where object doesn't exist
+                is_new = True
+
+        # Save the main object first
         super().save(*args, **kwargs)
 
-        # FIXED: Update member.contributions (not member.amount which doesn't exist)
+        # OPTIMIZED: Incrementally update member contributions
         if self.member:
-            # Calculate total approved contributions for this member
-            total_member_contributions = Contribution.objects.filter(
-                member=self.member,
-                approved_contribution=True
-            ).aggregate(
-                total=Sum('total_contribution')
-            )['total'] or Decimal('0.00')
+            # Get current contributions (handle None case)
+            current_contributions = self.member.contributions or Decimal('0.00')
+            new_total = self.total_contribution or Decimal('0.00')
             
-            # Update the member's contributions field
-            self.member.contributions = total_member_contributions
+            if is_new:
+                # New contribution - add if approved
+                if self.approved_contribution:
+                    current_contributions += new_total
+            else:
+                # Existing contribution - handle all change scenarios
+                if old_approved and self.approved_contribution:
+                    # Both old and new are approved - adjust by difference
+                    difference = new_total - old_total
+                    current_contributions += difference
+                elif old_approved and not self.approved_contribution:
+                    # Was approved, now not approved - subtract old amount
+                    current_contributions -= old_total
+                elif not old_approved and self.approved_contribution:
+                    # Wasn't approved, now approved - add new amount
+                    current_contributions += new_total
+                # If both old and new are not approved, no change needed
+            
+            # Update member's contributions
+            self.member.contributions = max(current_contributions, Decimal('0.00'))  # Ensure non-negative
             self.member.save(update_fields=['contributions'])
 
 
-# MEMBERSHIP MODEL FOR STAFF
-"""
-This model is to track how many schemes a member
-belongs to and it is unique by scheme and member hence 
-a member can belong to one scheme once.
+# Signal to handle contribution deletions
+@receiver(pre_delete, sender=Contribution)
+def update_member_contributions_on_delete(sender, instance, **kwargs):
+    """
+    Update member contributions when a contribution is deleted
+    """
+    if instance.member and instance.approved_contribution:
+        current_contributions = instance.member.contributions or Decimal('0.00')
+        contribution_amount = instance.total_contribution or Decimal('0.00')
+        
+        # Subtract the deleted contribution
+        new_contributions = current_contributions - contribution_amount
+        instance.member.contributions = max(new_contributions, Decimal('0.00'))  # Ensure non-negative
+        instance.member.save(update_fields=['contributions'])
 
-This allows to know how much a user has made from a
-particular scheme... both total and estimated earnings
-"""
+
 class Membership(models.Model):
     tenant = models.ForeignKey(
         Tenant,
@@ -338,18 +301,69 @@ class Membership(models.Model):
     def __str__(self):
         return f'{self.staff.first_name} - Membership'
     
-    # Update both membership and corresponding staff balances(total_amount)
-    def save(self,*args,**kwargs):
-        super().save(*args,**kwargs) #save membership update
-        # Update the amount field on the parent StaffApi model to reflect change in amount
-        total_earnings = Membership.objects.filter(
-            staff=self.staff,
-        ).aggregate(total=Sum('total_earnings'))['total'] or Decimal(0.0)
+    def save(self, *args, **kwargs):
+        """
+        Optimized save method that incrementally updates staff amounts
+        """
+        # Check if this is a new object or an update
+        is_new = self.pk is None
+        
+        # Get old values for comparison if this is an update
+        old_total_earnings = Decimal('0.00')
+        old_estimated_profit = Decimal('0.00')
+        
+        if not is_new:
+            try:
+                old_membership = Membership.objects.get(pk=self.pk)
+                old_total_earnings = old_membership.total_earnings or Decimal('0.00')
+                old_estimated_profit = old_membership.estimated_profit or Decimal('0.00')
+            except Membership.DoesNotExist:
+                is_new = True
+        
+        # Save membership first
+        super().save(*args, **kwargs)
+        
+        # OPTIMIZED: Incrementally update staff amounts
+        current_actual_amount = self.staff.actual_amount or Decimal('0.00')
+        current_estimated_profit = self.staff.estimated_profit or Decimal('0.00')
+        
+        new_total_earnings = self.total_earnings or Decimal('0.00')
+        new_estimated_profit = self.estimated_profit or Decimal('0.00')
+        
+        if is_new:
+            # New membership - add amounts
+            current_actual_amount += new_total_earnings
+            current_estimated_profit += new_estimated_profit
+        else:
+            # Existing membership - adjust by differences
+            earnings_difference = new_total_earnings - old_total_earnings
+            profit_difference = new_estimated_profit - old_estimated_profit
+            
+            current_actual_amount += earnings_difference
+            current_estimated_profit += profit_difference
+        
+        # Update staff fields
+        self.staff.actual_amount = max(current_actual_amount, Decimal('0.00'))
+        self.staff.estimated_profit = max(current_estimated_profit, Decimal('0.00'))
+        self.staff.save(update_fields=['actual_amount', 'estimated_profit'])
 
-        estimated_profit = Membership.objects.filter(
-            staff=self.staff,
-        ).aggregate(total=Sum('estimated_profit'))['total'] or Decimal(0.0)
-        self.staff.actual_amount = total_earnings
-        self.staff.estimated_profit = estimated_profit
-        # save staff update
-        self.staff.save()
+
+# Signal to handle membership deletions
+@receiver(pre_delete, sender=Membership)
+def update_staff_amounts_on_delete(sender, instance, **kwargs):
+    """
+    Update staff amounts when a membership is deleted
+    """
+    current_actual_amount = instance.staff.actual_amount or Decimal('0.00')
+    current_estimated_profit = instance.staff.estimated_profit or Decimal('0.00')
+    
+    membership_earnings = instance.total_earnings or Decimal('0.00')
+    membership_profit = instance.estimated_profit or Decimal('0.00')
+    
+    # Subtract the deleted membership amounts
+    new_actual_amount = current_actual_amount - membership_earnings
+    new_estimated_profit = current_estimated_profit - membership_profit
+    
+    instance.staff.actual_amount = max(new_actual_amount, Decimal('0.00'))
+    instance.staff.estimated_profit = max(new_estimated_profit, Decimal('0.00'))
+    instance.staff.save(update_fields=['actual_amount', 'estimated_profit'])

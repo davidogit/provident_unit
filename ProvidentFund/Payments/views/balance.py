@@ -11,7 +11,8 @@ from Admin.decorators import role_required
 from django.core.exceptions import ObjectDoesNotExist
 from contributions.models import Contribution, Membership, StaffAPI
 from MultiScheme.models import InvestmentScheme, TenantEventNotification
-from Member.models import Member,SchemeApproval, Transaction,ExitApproval,WithdrawalRequest
+from Member.models import Member,SchemeApproval, ExitApproval
+from Payments.models import Transaction, WithdrawalRequest
 from Member.tasks import notify_user_email_sms,notify_withdrawal_approval,send_otp_code,gen_send_email
 from django.db.models import Sum,F,Q
 from django.views.generic import TemplateView,UpdateView,CreateView,ListView

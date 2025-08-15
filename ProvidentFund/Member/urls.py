@@ -29,13 +29,9 @@ urlpatterns=[
 
     #Member Contributions
     path('<str:scheme_name>/member_contributions/<int:member_id>/', views.Contributed.as_view(), name='member_contribution'),
-    # path('create_transaction/<int:staff_id>/', views.CreateTransactionView.as_view(),name='create_transaction'),
     path('transaction_history/<int:staff_id>/', views.TransactionView.as_view(),  name='transaction_history'), 
-    # path('withdraw/<int:staff_id>/', views.WithdrawalView.as_view(), name='withdraw'),
-    # path('verify-transaction/<str:reference>/', views.verify_transaction, name='verify_transaction'),
-    # path('manager/approval/', ManagerApprovalView.as_view(), name='manager_approval'),
-    # path('get-balance/<int:scheme_id>/<int:staff_id>/', GetBalanceView.as_view(), name='get_balance'),
-    # path('<int:tenant_id>/members/withdraw/<int:staff_id>/get-balance/', GetBalanceView.as_view(), name='get_balance'),
+
+    
 
 ]
 

@@ -49,6 +49,27 @@ app.conf.beat_schedule = {
     'accrue_interest_daily':{
         'task':'Loan.tasks.accrue_interest_daily',
         'schedule':crontab(hour='*', minute='*', day_of_week='*', day_of_month='*', month_of_year='*')
+    },
+    # Payment processing tasks
+    'process_failed_transactions': {
+        'task': 'Payments.tasks.process_failed_transactions',
+        'schedule': crontab(hour='*/2', minute=0),  # Every 2 hours
+    },
+    'cleanup_expired_transactions': {
+        'task': 'Payments.tasks.cleanup_expired_transactions',
+        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
+    },
+    'retry_pending_transactions': {
+        'task': 'Payments.tasks.retry_pending_transactions',
+        'schedule': crontab(hour='*/1', minute=30),  # Every hour at 30 minutes
+    },
+    'monitor_payment_gateway_health': {
+        'task': 'Payments.tasks.monitor_payment_gateway_health',
+        'schedule': crontab(hour='*/4', minute=15),  # Every 4 hours at 15 minutes
+    },
+    'generate_monthly_payment_reports': {
+        'task': 'Payments.tasks.generate_monthly_payment_report',
+        'schedule': crontab(day_of_month=1, hour=6, minute=0),  # First day of month at 6 AM
     }
 }
 

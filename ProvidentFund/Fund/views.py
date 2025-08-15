@@ -4,7 +4,8 @@ from django.http import HttpRequest
 from django.views.generic import TemplateView, ListView,DetailView,UpdateView,CreateView,DeleteView,View
 import pandas as pd
 from Fund.models import InvestmentDetail,DelayedInterest,BankInterestRate,ScheduledPaymentDates,Suppliers,Requisition,RequisitionItem,PaymentInvoice,PurchaseOrder,ReceivedItems
-from Member.models import Member,WithdrawalRequest,SchemeApproval,Transaction,WithdrawalBatch
+from Member.models import Member, SchemeApproval, WithdrawalBatch
+from Payments.models import WithdrawalRequest, Transaction
 from MultiScheme.models import Tenant,SchemeSettings,TenantEventNotification
 from approval_workflow.approval_engine import ApprovalWorkflowEngine
 from approval_workflow.models import ApprovalActionType
